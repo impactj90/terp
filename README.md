@@ -173,3 +173,45 @@ The hash fragment is never sent to any server — it exists only in the browser 
 **`NEXT_PUBLIC_APP_URL`**: set in `.env.local` for local dev. Without it, the default from `src/lib/config.ts` (`http://127.0.0.1:3001`) is used. In production/staging, set this to the public app URL and mirror it in `supabase/config.toml` (or the equivalent Dashboard setting).
 
 **HMR cross-origin warning**: because the Supabase verify endpoint (`:54321`) redirects to the dev server (`:3001`), Next.js 16 would otherwise log a cross-origin HMR warning. `allowedDevOrigins: ['127.0.0.1']` in `next.config.ts` silences this without affecting production builds.
+
+### Demo-Tenant System
+
+Internal sales-enablement tooling for spinning up fully populated demo tenants on the production infrastructure. Not a customer feature — only users with the `tenants.manage` permission see it.
+
+**Lifecycle**:
+
+1. **Create** — Admin opens `/admin/tenants → Neue Demo`, fills the sheet (tenant name, address, demo admin email, template, duration in days, optional notes) and submits. The service (`src/lib/services/demo-tenant-service.ts`, function `createDemo`) atomically creates:
+   - Tenant row with `is_demo=true`, `demo_expires_at=now()+N days`
+   - All 4 demo modules (`core`, `crm`, `billing`, `warehouse`) via `tenant-module-repository.upsert`
+   - Admin user with a Supabase Auth identity (reuses the welcome-email flow from above, so the admin receives a recovery link; if SMTP is down, the UI falls back to a copyable invite link)
+   - Template data applied via `src/lib/demo/templates/*.ts` (today: `industriedienstleister_150` — ~150 employees, departments, bookings, groups)
+   - `audit_logs` entry `demo_create`
+2. **Banner** — Once the demo admin logs in, the dashboard layout (`src/components/layout/demo-banner.tsx`) shows a yellow sticky banner "Demo-Modus: noch X Tage verbleibend". Countdown is computed client-side from `tenant.demo_expires_at`.
+3. **Extend** — Admin can extend a demo by +7 or +14 days from the row action menu. If the demo was already expired (`isActive=false`), extend reactivates it atomically — useful when sales wants to rescue a demo after a last-minute deal conversation.
+4. **Expire** — Automatic via the Vercel Cron `/api/cron/expire-demo-tenants` (daily at `0 1 * * *`), which finds rows with `is_demo=true AND demo_expires_at < now() AND is_active=true`, flips them to `is_active=false`, and writes a `demo_expired` audit log. Manual "Expire Now" is available from the row action menu.
+5. **Expired gate** — When an expired demo's admin user refreshes, `DemoExpirationGate` (`src/components/layout/demo-expiration-gate.tsx`, mounted in the dashboard layout) redirects to `/demo-expired`. The check is `isDemo && demo_expires_at < now()` — NOT `isDemo && !isActive`, so a regular soft-deactivated tenant is not misclassified.
+6. **Convert** — Admin can convert a demo to a real tenant from the row action menu. Dialog offers two options:
+   - **Discard demo data (default)** — wipes all tenant content, keeps only the tenant shell + admin user + `user_tenants` + `user_groups` + `audit_logs`. Useful when the prospect wants a clean start.
+   - **Keep demo data** — only strips the demo flags (`is_demo`, `demo_expires_at`, `demo_template`, `demo_created_by`), everything else stays. Useful for seamless handover.
+7. **Delete** — Hard-delete is only allowed on already-expired demos (to force the admin to expire first as a safeguard). Writes a `demo_delete` audit entry before the delete so the history survives in `audit_logs`.
+8. **Convert request from /demo-expired** — The demo admin can click "In echten Kunden konvertieren" on the expired page. This calls the self-service `requestConvertFromExpired` endpoint, which writes an `email_send_log` row for `DEMO_CONVERT_NOTIFICATION_EMAIL` (fallback `sales@terp.dev`) so the existing email-retry cron delivers the notification. No state change on the tenant. **Follow-up**: once the platform-admin system exists (see `thoughts/shared/plans/2026-04-09-platform-admin-system.md`), this should additionally surface the request in the platform dashboard so it's not email-only.
+
+**Key files**:
+
+- Router: `src/trpc/routers/demo-tenants.ts` (all procedures gated by `tenants.manage`, except `requestConvertFromExpired` which is gated by tenant membership)
+- Service + repository: `src/lib/services/demo-tenant-service.ts`, `src/lib/services/demo-tenant-repository.ts`
+- Template engine: `src/lib/demo/registry.ts`, `src/lib/demo/templates/industriedienstleister_150.ts`
+- Cron: `src/app/api/cron/expire-demo-tenants/route.ts` (registered in `vercel.json`)
+- Admin UI: `src/components/tenants/demo/*` mounted in `/admin/tenants/page.tsx`
+- Expired page + gate: `src/app/[locale]/demo-expired/`, `src/components/layout/demo-expiration-gate.tsx`
+
+**Environment variables**:
+
+| Variable | Description |
+|----------|-------------|
+| `DEMO_CONVERT_NOTIFICATION_EMAIL` | Optional. Recipient for demo-convert-request notifications. Default: `sales@terp.dev`. |
+| `CRON_SECRET` | Already documented above. Required for the expire-demo-tenants cron. |
+
+**Adding a new template**: create `src/lib/demo/templates/<key>.ts` exporting a `DemoTemplate` (key, label, description, `apply(tx, tenantId)` function). Register it in `src/lib/demo/registry.ts`. The UI template dropdown is automatically populated from the registry.
+
+**Rollback plan**: if the feature needs to be disabled temporarily, (a) remove the cron entry from `vercel.json`, (b) hide the demo panel in `/admin/tenants/page.tsx`, (c) set all demos to `is_demo=false, demo_expires_at=null` via one-off SQL. Data is preserved.
