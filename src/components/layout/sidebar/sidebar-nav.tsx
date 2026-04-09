@@ -17,6 +17,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuAction,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   Collapsible,
@@ -91,6 +92,12 @@ export function SidebarNav() {
   const pathname = usePathname()
   const { check, isLoading } = usePermissionChecker()
   const { data: modulesData, isLoading: modulesLoading } = useModules()
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  // On mobile, auto-close the sidebar sheet when a nav link is clicked.
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false)
+  }
 
   const enabledModules = useMemo(() => {
     if (!modulesData?.modules) return new Set<string>(['core'])
@@ -156,7 +163,7 @@ export function SidebarNav() {
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={active} tooltip={title}>
-                      <Link href={item.href} prefetch={false}>
+                      <Link href={item.href} prefetch={false} onClick={handleNavClick}>
                         <Icon />
                         <span>{title}</span>
                       </Link>
@@ -206,7 +213,7 @@ export function SidebarNav() {
                           return (
                             <SidebarMenuSubItem key={item.href} className="group/sub-item">
                               <SidebarMenuSubButton asChild isActive={active}>
-                                <Link href={item.href} prefetch={false}>
+                                <Link href={item.href} prefetch={false} onClick={handleNavClick}>
                                   <span>{title}</span>
                                 </Link>
                               </SidebarMenuSubButton>
