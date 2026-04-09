@@ -51,7 +51,7 @@ export default async function LocaleLayout({
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
-          <ThemeProvider defaultTheme="system">
+          <ThemeProvider defaultTheme="light" defaultColorTheme="modern">
             <TRPCReactProvider>
               <AuthProvider>
                 {children}

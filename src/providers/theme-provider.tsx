@@ -52,6 +52,20 @@ export function ThemeProvider({
 
   // Initialize from localStorage on mount
   React.useEffect(() => {
+    // One-time migration: reset existing users to the new defaults (light + modern).
+    // Bumping THEME_RESET_VERSION will re-trigger this for everyone.
+    const THEME_RESET_VERSION = '2026-04-09-light-modern'
+    const resetKey = 'terp-theme-reset-version'
+    const appliedReset = localStorage.getItem(resetKey)
+    if (appliedReset !== THEME_RESET_VERSION) {
+      localStorage.setItem(storageKey, defaultTheme)
+      localStorage.setItem(colorThemeStorageKey, defaultColorTheme)
+      localStorage.setItem(resetKey, THEME_RESET_VERSION)
+      setAppearanceState(defaultTheme)
+      setColorThemeState(defaultColorTheme)
+      return
+    }
+
     const storedAppearance = localStorage.getItem(storageKey) as Appearance | null
     if (storedAppearance && ['light', 'dark', 'system'].includes(storedAppearance)) {
       setAppearanceState(storedAppearance)
@@ -61,7 +75,7 @@ export function ThemeProvider({
     if (storedColorTheme && ['default', 'modern'].includes(storedColorTheme)) {
       setColorThemeState(storedColorTheme)
     }
-  }, [storageKey, colorThemeStorageKey])
+  }, [storageKey, colorThemeStorageKey, defaultTheme, defaultColorTheme])
 
   // Update resolved appearance and DOM classes
   React.useEffect(() => {
