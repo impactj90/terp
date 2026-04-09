@@ -79,6 +79,7 @@
     "@trpc/client": "^11.11.0",
     "@trpc/server": "^11.11.0",
     "@trpc/tanstack-react-query": "^11.11.0",
+    "argon2": "^0.41.1",
     "class-variance-authority": "^0.7.1",
     "client-only": "^0.0.1",
     "clsx": "^2.1.1",
@@ -91,6 +92,7 @@
     "html5-qrcode": "^2.3.8",
     "iconv-lite": "^0.7.2",
     "imapflow": "^1.2.18",
+    "jose": "^5.9.6",
     "liquidjs": "^10.25.4",
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.6",
@@ -98,6 +100,7 @@
     "next-intl": "^4.7.0",
     "nodemailer": "^8.0.4",
     "openapi-fetch": "^0.17.0",
+    "otpauth": "^9.3.4",
     "pdf-lib": "^1.17.1",
     "pg": "^8.19.0",
     "qrcode": "^1.5.4",
@@ -138,9 +141,15 @@
     "prettier": "^3.4.0",
     "prisma": "^7.4.2",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.53.1",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2"
+    ]
   }
 }

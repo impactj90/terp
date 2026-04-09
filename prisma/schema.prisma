@@ -270,6 +270,9 @@ model Tenant {
   exportTemplateSnapshots ExportTemplateSnapshot[]
   exportTemplateSchedules ExportTemplateSchedule[]
 
+  // Platform admin domain
+  supportSessions SupportSession[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -1171,6 +1174,85 @@ model UserTenant {
   // Composite primary key
   @@id([userId, tenantId])
   @@map("user_tenants")
+}
+
+// -----------------------------------------------------------------------------
+// Platform Admin Domain (separate from tenant auth)
+// -----------------------------------------------------------------------------
+// Migration: 20260421000000_create_platform_admin_tables
+
+model PlatformUser {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String    @map("password_hash") @db.Text
+  displayName   String    @map("display_name") @db.VarChar(255)
+  isActive      Boolean   @default(true) @map("is_active")
+  mfaSecret     String?   @map("mfa_secret") @db.Text
+  mfaEnrolledAt DateTime? @map("mfa_enrolled_at") @db.Timestamptz(6)
+  recoveryCodes Json?     @map("recovery_codes") @db.JsonB
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(6)
+  lastLoginIp   String?   @map("last_login_ip") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy     String?   @map("created_by") @db.Uuid
+
+  supportSessions SupportSession[]
+
+  @@map("platform_users")
+}
+
+model SupportSession {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  platformUserId    String?   @map("platform_user_id") @db.Uuid
+  requestedByUserId String    @map("requested_by_user_id") @db.Uuid
+  reason            String    @db.Text
+  consentReference  String?   @map("consent_reference") @db.VarChar(255)
+  status            String    @db.VarChar(20)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  activatedAt       DateTime? @map("activated_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platformUser PlatformUser? @relation(fields: [platformUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status], map: "idx_support_sessions_tenant_status")
+  @@index([platformUserId, status], map: "idx_support_sessions_platform_user_status")
+  @@index([status, expiresAt], map: "idx_support_sessions_status_expires")
+  @@map("support_sessions")
+}
+
+model PlatformAuditLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId   String?  @map("platform_user_id") @db.Uuid
+  action           String   @db.VarChar(50)
+  entityType       String?  @map("entity_type") @db.VarChar(100)
+  entityId         String?  @map("entity_id") @db.Uuid
+  targetTenantId   String?  @map("target_tenant_id") @db.Uuid
+  supportSessionId String?  @map("support_session_id") @db.Uuid
+  changes          Json?    @db.JsonB
+  metadata         Json?    @db.JsonB
+  ipAddress        String?  @map("ip_address") @db.Text
+  userAgent        String?  @map("user_agent") @db.Text
+  performedAt      DateTime @default(now()) @map("performed_at") @db.Timestamptz(6)
+
+  @@index([platformUserId, performedAt], map: "idx_platform_audit_logs_user_performed")
+  @@index([targetTenantId, performedAt], map: "idx_platform_audit_logs_tenant_performed")
+  @@index([action, performedAt], map: "idx_platform_audit_logs_action_performed")
+  @@map("platform_audit_logs")
+}
+
+model PlatformLoginAttempt {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String   @db.VarChar(255)
+  ipAddress   String   @map("ip_address") @db.Text
+  success     Boolean
+  failReason  String?  @map("fail_reason") @db.VarChar(50)
+  attemptedAt DateTime @default(now()) @map("attempted_at") @db.Timestamptz(6)
+
+  @@index([email, attemptedAt], map: "idx_platform_login_attempts_email")
+  @@index([ipAddress, attemptedAt], map: "idx_platform_login_attempts_ip")
+  @@map("platform_login_attempts")
 }
 
 // -----------------------------------------------------------------------------

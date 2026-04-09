@@ -276,7 +276,8 @@ Also add to `model Tenant` (inside the `// Relations` block):
 
 #### 1.2 — SQL migration
 
-**File**: `supabase/migrations/20260420000000_create_platform_admin_tables.sql` (new)
+**File**: `supabase/migrations/20260421000000_create_platform_admin_tables.sql` (new)
+*(Implementation note: original plan timestamp `20260420000000` was bumped to `20260421000000` because migrations `20260420100000–20260420100002` already exist and would sort after the new one, which would apply the platform tables before the tenant-demo changes. Phase 6/7 platform migrations follow the same `20260421*` pattern.)*
 
 ```sql
 -- =============================================================
@@ -518,17 +519,17 @@ main()
 
 #### Automated verification
 
-- [ ] `pnpm db:reset` applies migrations cleanly
-- [ ] `pnpm db:generate` regenerates the client
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm vitest run src/lib/platform/__tests__/password.test.ts` — round-trip and length check
-- [ ] `pnpm lint` passes
+- [x] `pnpm db:reset` applies migrations cleanly
+- [x] `pnpm db:generate` regenerates the client
+- [x] `pnpm typecheck` passes (no errors introduced by Phase 1 files; 59 pre-existing baseline errors unchanged)
+- [x] `pnpm vitest run src/lib/platform/__tests__/password.test.ts` — round-trip and length check (5 tests pass)
+- [x] `pnpm lint` passes (no issues in `src/lib/platform/*` or `scripts/bootstrap-platform-user.ts`)
 
 #### Manual verification
 
-- [ ] `pnpm tsx scripts/bootstrap-platform-user.ts tolga@terp.de "Tolga"` creates a row; `password_hash` starts with `$argon2id$v=19$`
-- [ ] Second invocation with same email fails with "already exists"
-- [ ] `--reset-mfa` nulls the MFA columns
+- [x] `pnpm tsx scripts/bootstrap-platform-user.ts tolga@terp.de "Tolga"` creates a row; `password_hash` starts with `$argon2id$v=19$`
+- [x] Second invocation with same email fails with "already exists"
+- [x] `--reset-mfa` nulls the MFA columns
 
 **Pause for manual confirmation before proceeding to Phase 2.**
 
