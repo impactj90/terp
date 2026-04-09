@@ -10,6 +10,7 @@ import { aiAssistantRouter } from "./aiAssistant"
 import { authRouter } from "./auth"
 import { permissionsRouter } from "./permissions"
 import { tenantsRouter } from "./tenants"
+import { demoTenantsRouter } from "./demo-tenants"
 import { userGroupsRouter } from "./userGroups"
 import { usersRouter } from "./users"
 import { departmentsRouter } from "./departments"
@@ -116,6 +117,7 @@ export const appRouter = createTRPCRouter({
   auth: authRouter,
   permissions: permissionsRouter,
   tenants: tenantsRouter,
+  demoTenants: demoTenantsRouter,
   users: usersRouter,
   userGroups: userGroupsRouter,
   departments: departmentsRouter,

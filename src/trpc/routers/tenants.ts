@@ -47,7 +47,69 @@ const tenantOutputSchema = z.object({
   settings: z.unknown().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
+  // Demo-tenant fields — see plan 2026-04-09-demo-tenant-system.md (Phase 3).
+  // Exposed so the frontend TenantProvider / demo-expired gate can read them
+  // from tenants.list without a dedicated query.
+  isDemo: z.boolean(),
+  demoExpiresAt: z.date().nullable(),
+  demoTemplate: z.string().nullable(),
+  demoCreatedById: z.string().nullable(),
+  demoNotes: z.string().nullable(),
 })
+
+// --- Helpers ---
+/**
+ * Projects a prisma Tenant row onto the tRPC output schema. Centralized so
+ * all four CRUD procedures (list, getById, create, update) stay in sync with
+ * the schema above.
+ */
+function toTenantOutput(t: {
+  id: string
+  name: string
+  slug: string
+  isActive: boolean | null
+  addressStreet: string | null
+  addressZip: string | null
+  addressCity: string | null
+  addressCountry: string | null
+  phone: string | null
+  email: string | null
+  payrollExportBasePath: string | null
+  notes: string | null
+  vacationBasis: string
+  settings: unknown
+  createdAt: Date | null
+  updatedAt: Date | null
+  isDemo: boolean
+  demoExpiresAt: Date | null
+  demoTemplate: string | null
+  demoCreatedById: string | null
+  demoNotes: string | null
+}) {
+  return {
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    isActive: t.isActive,
+    addressStreet: t.addressStreet,
+    addressZip: t.addressZip,
+    addressCity: t.addressCity,
+    addressCountry: t.addressCountry,
+    phone: t.phone,
+    email: t.email,
+    payrollExportBasePath: t.payrollExportBasePath,
+    notes: t.notes,
+    vacationBasis: t.vacationBasis,
+    settings: t.settings,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+    isDemo: t.isDemo,
+    demoExpiresAt: t.demoExpiresAt,
+    demoTemplate: t.demoTemplate,
+    demoCreatedById: t.demoCreatedById,
+    demoNotes: t.demoNotes,
+  }
+}
 
 // --- Input: Create ---
 
@@ -160,24 +222,7 @@ export const tenantsRouter = createTRPCRouter({
           tenants = tenants.filter((t) => t.isActive === input.active)
         }
 
-        return tenants.map((t) => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          isActive: t.isActive,
-          addressStreet: t.addressStreet,
-          addressZip: t.addressZip,
-          addressCity: t.addressCity,
-          addressCountry: t.addressCountry,
-          phone: t.phone,
-          email: t.email,
-          payrollExportBasePath: t.payrollExportBasePath,
-          notes: t.notes,
-          vacationBasis: t.vacationBasis,
-          settings: t.settings,
-          createdAt: t.createdAt,
-          updatedAt: t.updatedAt,
-        }))
+        return tenants.map(toTenantOutput)
       } catch (err) {
         handleServiceError(err)
       }
@@ -209,24 +254,7 @@ export const tenantsRouter = createTRPCRouter({
           })
         }
 
-        return {
-          id: tenant.id,
-          name: tenant.name,
-          slug: tenant.slug,
-          isActive: tenant.isActive,
-          addressStreet: tenant.addressStreet,
-          addressZip: tenant.addressZip,
-          addressCity: tenant.addressCity,
-          addressCountry: tenant.addressCountry,
-          phone: tenant.phone,
-          email: tenant.email,
-          payrollExportBasePath: tenant.payrollExportBasePath,
-          notes: tenant.notes,
-          vacationBasis: tenant.vacationBasis,
-          settings: tenant.settings,
-          createdAt: tenant.createdAt,
-          updatedAt: tenant.updatedAt,
-        }
+        return toTenantOutput(tenant)
       } catch (err) {
         handleServiceError(err)
       }
@@ -353,24 +381,7 @@ export const tenantsRouter = createTRPCRouter({
           userAgent: ctx.userAgent,
         }).catch(err => console.error('[AuditLog] Failed:', err))
 
-        return {
-          id: tenant.id,
-          name: tenant.name,
-          slug: tenant.slug,
-          isActive: tenant.isActive,
-          addressStreet: tenant.addressStreet,
-          addressZip: tenant.addressZip,
-          addressCity: tenant.addressCity,
-          addressCountry: tenant.addressCountry,
-          phone: tenant.phone,
-          email: tenant.email,
-          payrollExportBasePath: tenant.payrollExportBasePath,
-          notes: tenant.notes,
-          vacationBasis: tenant.vacationBasis,
-          settings: tenant.settings,
-          createdAt: tenant.createdAt,
-          updatedAt: tenant.updatedAt,
-        }
+        return toTenantOutput(tenant)
       } catch (err) {
         handleServiceError(err)
       }
@@ -509,24 +520,7 @@ export const tenantsRouter = createTRPCRouter({
           userAgent: ctx.userAgent,
         }).catch(err => console.error('[AuditLog] Failed:', err))
 
-        return {
-          id: tenant.id,
-          name: tenant.name,
-          slug: tenant.slug,
-          isActive: tenant.isActive,
-          addressStreet: tenant.addressStreet,
-          addressZip: tenant.addressZip,
-          addressCity: tenant.addressCity,
-          addressCountry: tenant.addressCountry,
-          phone: tenant.phone,
-          email: tenant.email,
-          payrollExportBasePath: tenant.payrollExportBasePath,
-          notes: tenant.notes,
-          vacationBasis: tenant.vacationBasis,
-          settings: tenant.settings,
-          createdAt: tenant.createdAt,
-          updatedAt: tenant.updatedAt,
-        }
+        return toTenantOutput(tenant)
       } catch (err) {
         handleServiceError(err)
       }
