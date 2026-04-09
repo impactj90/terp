@@ -15,6 +15,14 @@ time-boxed approval from a tenant admin. Every platform-initiated tenant write
 produces a double audit entry (tenant `AuditLog` + new `PlatformAuditLog`),
 so both the tenant and the platform operator can trace exactly what happened.
 
+The plan also gives the operator **full tenant lifecycle sovereignty** —
+create a tenant (including the initial admin user), change its plan tier,
+deactivate/reactivate it, soft-delete it, and book or unbook modules — all
+without tenant consent, because these are operator-hoheit actions that do
+not exist inside the tenant's own security model. Phase 9 covers this
+surface and removes the self-service module-toggle UI that tenants have
+today.
+
 This replaces the prior, weaker ticket
 `thoughts/shared/tickets/misc/platform-admin-tenant-access.md`, which proposed
 a simple `platform_admins` flag on `auth.users` with a read-only bypass of
@@ -133,6 +141,18 @@ When this plan is complete:
 12. The prior-art ticket
     `thoughts/shared/tickets/misc/platform-admin-tenant-access.md` is renamed
     to `_OBSOLETE.md` with a pointer to this plan.
+13. **Tenant lifecycle hoheit (Phase 9).** A platform operator can create
+    new tenants (including the initial admin user via the existing Supabase
+    admin API path), change the plan tier, book/unbook modules with a
+    mandatory contract reference on enable, deactivate and reactivate
+    tenants, and soft-delete tenants — all **without tenant consent**
+    because these are operator-hoheit actions, not access into tenant data.
+    Every mutation writes a `platform_audit_logs` row with a distinct
+    `action` (`tenant.created`, `tenant.deactivated`, `module.enabled`,
+    `module.disabled`, `plan.changed` …). The self-service module-toggle
+    UI that tenants have today (`src/components/settings/module-settings.tsx`)
+    becomes strictly read-only and the corresponding `tenantModules.enable`
+    / `.disable` endpoints are removed.
 
 ### Verification
 
@@ -146,7 +166,10 @@ When this plan is complete:
 ## What We're NOT Doing
 
 - Feature flags, maintenance mode, system-wide banners.
-- Subscription billing / MRR / Stripe.
+- Subscription billing / MRR / Stripe. The `Tenant.plan` column added in
+  Phase 9 is a data-only field — no pricing logic, no invoicing, no
+  Stripe webhook wiring. Billing integration is a follow-up project that
+  will read this column later.
 - IP allow-listing, CSP headers, CORS hardening.
 - Migrating existing users to `PlatformUser` (greenfield; first operator comes
   from the bootstrap script).
@@ -156,6 +179,17 @@ When this plan is complete:
 - Rate limiting via Redis/Upstash (we reuse the DB-counter pattern).
 - Changing the existing `src/proxy.ts` middleware API beyond the rename and
   the new host/path branch.
+- **Self-service module booking for tenants.** Phase 9 deliberately removes
+  the tenant-facing module toggles (`tenantModules.enable` / `.disable`);
+  only platform operators can book modules, always with a mandatory
+  `contractReference`. Tenants see which modules they have as read-only.
+- **Hard-deleting tenants from the Platform UI.** Soft-delete (Phase 9)
+  flips `isActive=false`; the existing schema convention (`prisma/schema.prisma:93`:
+  *"No deleted_at column. Tenants use is_active = false for deactivation."*)
+  is preserved. Hard-delete remains a DB/CLI operation. We intentionally
+  do **not** add a `deletedAt` column — the user prompt for Phase 9
+  initially suggested it, but deviating from the existing convention
+  would churn every `tenants` query without a user-visible benefit.
 
 ## Implementation Approach
 
@@ -985,25 +1019,25 @@ cookie on the current host).
 
 #### Automated verification
 
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm vitest run src/trpc/platform/__tests__/init.test.ts`:
+- [x] `pnpm typecheck` passes
+- [x] `pnpm vitest run src/trpc/platform/__tests__/init.test.ts`:
   - No cookie → `ctx.platformUser === null`
   - Valid cookie → populated, `x-auth-domain: platform` set
   - Expired cookie → 401 + `Set-Cookie` clearing the cookie
   - `mfaVerified: false` → `platformAuthedProcedure` throws `UNAUTHORIZED`
-- [ ] `pnpm vitest run src/trpc/platform/routers/__tests__/auth.test.ts`
-- [ ] `pnpm vitest run src/trpc/platform/routers/__tests__/supportSessions.test.ts`:
+- [x] `pnpm vitest run src/trpc/platform/routers/__tests__/auth.test.ts`
+- [x] `pnpm vitest run src/trpc/platform/routers/__tests__/supportSessions.test.ts`:
   - List scoped to operator
   - Activate pending → active
   - Activate already-active → `CONFLICT`
   - Revoke → revoked
   - Expired cannot be activated
-- [ ] `pnpm vitest run src/trpc/platform/routers/__tests__/tenants.test.ts`:
+- [x] `pnpm vitest run src/trpc/platform/routers/__tests__/tenants.test.ts`:
   - `tenants.detail` without active session → `FORBIDDEN`
 
 #### Manual verification
 
-- [ ] `curl -i http://localhost:3001/api/trpc-platform/auth.me` (no cookie) → 401 with `x-auth-domain: platform`
+- [x] `curl -i http://localhost:3001/api/trpc-platform/auth.me` (no cookie) → 401 with `x-auth-domain: platform`
 
 **Pause for manual confirmation before proceeding to Phase 4.**
 
@@ -2057,6 +2091,435 @@ login. Covers the tenant-side consent flow:
 
 ---
 
+## Phase 9 — Tenant management in the Platform UI
+
+### Overview
+
+Phase 9 gives the operator full lifecycle control over tenants from the
+Platform UI: create, update, deactivate/reactivate, soft-delete, change
+plan tier, and book or unbook modules. Unlike Phases 6–7 (support access
+with tenant consent), **none of these actions require tenant approval**,
+because they are operator-hoheit actions that exist outside the tenant's
+own security model — a tenant cannot consent to "being deactivated".
+
+The phase also **removes the self-service module-toggle UI that tenants
+have today** (`src/components/settings/module-settings.tsx`) and makes
+the module list read-only on the tenant side. Tenants keep seeing what
+they have booked; only operators can change it.
+
+Every mutation writes **only** a `platform_audit_logs` row — **not** a
+tenant `audit_logs` row. The reason: the impersonation audit double-write
+introduced in Phase 7 hinges on `AsyncLocalStorage.getStore()`, which is
+deliberately empty for non-impersonation platform requests. A tenant
+manager action like "deactivate tenant X" is not something the tenant
+would or should see in their own audit log — the legal basis is the
+operator's contract with the customer, not an action inside the tenant
+trust boundary.
+
+### Pre-flight inventory (from codebase research 2026-04-09)
+
+The plan is written against these concrete facts, verified against the
+current `staging` branch:
+
+- **Tenant-side module UI** lives at `src/components/settings/module-settings.tsx:1-97`,
+  mounted on `src/app/[locale]/(dashboard)/admin/settings/page.tsx:40`,
+  gated by `settings.manage`, with actual toggle switches (core is
+  already hardcoded read-only). The sidebar entry is
+  `src/components/layout/sidebar/sidebar-nav-config.ts:532-536`.
+- **Hooks**: `src/hooks/use-modules.ts:10` (`list`), `:24` (`enable`),
+  `:39` (`disable`).
+- **tRPC endpoints**: `src/trpc/routers/tenantModules.ts:53` (`enable`)
+  and `:75` (`disable`), both gated by `settings.manage`.
+- **`TenantModule` schema** (`prisma/schema.prisma:288-311`): already
+  has `enabledById String?` referencing `users.id`. Phase 9 adds
+  `enabledByPlatformUserId String? @db.Uuid` as a second, parallel
+  nullable column — no FK to `platform_users` (to keep
+  `onDelete: SetNull` semantics symmetric across both origins), plus
+  `contractReference String?` for billing traceability.
+- **Tenant schema** (`prisma/schema.prisma:95-152`): has `isActive`,
+  `createdAt`, `updatedAt`. **No** `plan`. **No** `deletedAt` (and a
+  comment at line 93 codifies: *"No deleted_at column. Tenants use
+  is_active = false for deactivation."*). Phase 9 adds `plan` only.
+- **Existing tenant-create endpoint**: `src/trpc/routers/tenants.ts:271-388`,
+  inlined (no service), gated by `TENANTS_MANAGE`, does **not** create an
+  initial admin user. Callers must separately call `users-service.create`.
+- **`supabase.auth.admin.createUser` is called in exactly one place**:
+  `src/lib/services/users-service.ts:174`. That function also calls
+  `auth.admin.generateLink` at `:239` for the welcome/recovery link and
+  `auth.admin.deleteUser` at `:219` for rollback on Prisma failure.
+  `src/lib/services/demo-tenant-service.ts:161` already reuses this
+  function — Phase 9 does the same, so **no new Supabase admin code path**.
+- **Platform sidebar file** (`src/components/platform/sidebar.tsx`) does
+  not exist yet — it's delivered by Phase 5. Phase 9's sidebar additions
+  are edits to that already-created file, not a new file.
+
+### Changes required
+
+#### 9.1 — Decision: read-only tenant module list, not removed
+
+Based on the inventory above, the tenant-side module UI is **kept as
+read-only** rather than removed outright:
+
+- `src/components/settings/module-settings.tsx` — Switch components are
+  disabled, the mutation hooks are dropped, helper text "Kontaktiere den
+  Support zum Buchen weiterer Module" is shown below the list. The page
+  stays so tenants can see which modules they have booked.
+- `src/app/[locale]/(dashboard)/admin/settings/page.tsx` — no change;
+  still mounts `<ModuleSettings />`, still gated by `settings.manage`.
+- `src/components/layout/sidebar/sidebar-nav-config.ts:532-536` — sidebar
+  entry stays.
+- `src/trpc/routers/tenantModules.ts` — **`enable` and `disable` are
+  removed entirely** (lines 53-98). `list` is kept. Any stale frontend
+  caller hard-errors at compile time thanks to tRPC's generated types.
+- `src/hooks/use-modules.ts` — `useEnableModule` and `useDisableModule`
+  hooks are removed.
+
+The plan deliberately does not leave dead endpoints behind. A read-only
+UI with live write endpoints is a foot-gun; a read-only UI with the
+write endpoints deleted is self-enforcing.
+
+#### 9.2 — Prisma schema + migrations
+
+**File**: `prisma/schema.prisma` — `model Tenant`
+
+Add after the existing `isActive` line:
+
+```prisma
+  plan       String   @default("core") @db.VarChar(20)  // "core" | "business" | "enterprise"
+```
+
+Plain `VarChar` with a runtime CHECK constraint is preferred over a
+Postgres `ENUM` to match the existing schema style (see
+`booking_types.direction`, `support_sessions.status`, etc.), which keeps
+later enum extensions as trivial ALTERs.
+
+**File**: `prisma/schema.prisma` — `model TenantModule`
+
+Add after the existing `enabledById` line:
+
+```prisma
+  enabledByPlatformUserId String? @map("enabled_by_platform_user_id") @db.Uuid
+  contractReference       String? @map("contract_reference") @db.VarChar(255)
+```
+
+No FK to `platform_users` (keep `onDelete: SetNull` semantically
+symmetric across both origin columns — a deleted platform user's audit
+history survives in `platform_audit_logs`).
+
+**File**: `supabase/migrations/20260421100000_add_tenant_plan.sql` (new)
+
+```sql
+ALTER TABLE tenants
+  ADD COLUMN plan VARCHAR(20) NOT NULL DEFAULT 'core'
+  CHECK (plan IN ('core', 'business', 'enterprise'));
+
+CREATE INDEX idx_tenants_plan ON tenants(plan);
+```
+
+**File**: `supabase/migrations/20260421100001_add_tenant_module_platform_fields.sql` (new)
+
+```sql
+ALTER TABLE tenant_modules
+  ADD COLUMN enabled_by_platform_user_id UUID,
+  ADD COLUMN contract_reference VARCHAR(255);
+
+-- Helpful index for billing queries that scan by contract reference.
+CREATE INDEX idx_tenant_modules_contract_reference
+  ON tenant_modules(contract_reference)
+  WHERE contract_reference IS NOT NULL;
+```
+
+*(Timestamps are chosen to sort after the existing `20260420100000*` and
+Phase 1's `20260421000000*` migrations. The prompt suggested
+`20260420000003`/`20260420000004` which would sort **before** the
+tenant-demo migrations and fail — see Phase 1's note on the same issue.)*
+
+#### 9.3 — Platform tRPC: `tenantManagement` router
+
+**File**: `src/trpc/platform/routers/tenantManagement.ts` (new)
+
+Exports `platformTenantManagementRouter` using `platformAuthedProcedure`
+(MFA required, **no** impersonation — these are hoheit actions, not
+tenant-world writes):
+
+```ts
+export const platformTenantManagementRouter = createTRPCRouter({
+  // --- Tenant CRUD ---
+  list: platformAuthedProcedure
+    .input(z.object({
+      search: z.string().optional(),
+      status: z.enum(["active", "inactive", "all"]).default("all"),
+      page: z.number().int().min(1).default(1),
+      pageSize: z.number().int().min(1).max(100).default(20),
+    }))
+    .query(...),
+
+  getById: platformAuthedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(...),  // includes counts: users, modules, active support sessions
+
+  create: platformAuthedProcedure
+    .input(z.object({
+      name: z.string().min(2).max(255),
+      slug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/),
+      contactEmail: z.string().email(),
+      plan: z.enum(["core", "business", "enterprise"]).default("core"),
+      initialAdminEmail: z.string().email(),
+      initialAdminDisplayName: z.string().min(2).max(255),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // 1. Create tenant row (reuse the inline pattern from
+      //    tenants.ts:335 but without a creator user-tenants upsert —
+      //    the platform user is NOT a member of this tenant).
+      // 2. Call users-service.create() with tenantId + initialAdminEmail.
+      //    This is the EXISTING code path that already writes to
+      //    auth.users (via supabase.auth.admin.createUser), public.users,
+      //    user_tenants (as the initial admin), and triggers the
+      //    welcome-email flow. No new Supabase admin code.
+      // 3. platformAudit.log({ action: 'tenant.created',
+      //    targetTenantId: tenant.id, entityType: 'tenant',
+      //    entityId: tenant.id, metadata: { plan, initialAdminEmail } })
+      // 4. Return { tenant, inviteLink, welcomeEmailSent } — mirrors
+      //    demo-tenant-service.createDemo's return shape so the UI can
+      //    fall back to a copyable invite link if SMTP is down.
+    }),
+
+  update: platformAuthedProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      name: z.string().min(2).max(255).optional(),
+      contactEmail: z.string().email().optional(),
+      plan: z.enum(["core", "business", "enterprise"]).optional(),
+    }))
+    .mutation(...),  // computeChanges() → audit log action 'tenant.updated'
+
+  deactivate: platformAuthedProcedure
+    .input(z.object({ id: z.string().uuid(), reason: z.string().min(3).max(500) }))
+    .mutation(...),  // isActive=false, audit 'tenant.deactivated' with reason
+
+  reactivate: platformAuthedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(...),  // audit 'tenant.reactivated'
+
+  softDelete: platformAuthedProcedure
+    .input(z.object({ id: z.string().uuid(), reason: z.string().min(3).max(500) }))
+    .mutation(...),  // isActive=false + audit 'tenant.soft_deleted'
+                     // (no deletedAt column — see "What We're NOT Doing")
+
+  // --- Module management ---
+  listModules: platformAuthedProcedure
+    .input(z.object({ tenantId: z.string().uuid() }))
+    .query(...),  // returns all TenantModule rows for the tenant, joined
+                  // with the enabling user/platform-user displayName
+
+  enableModule: platformAuthedProcedure
+    .input(z.object({
+      tenantId: z.string().uuid(),
+      moduleKey: z.enum(["core", "crm", "billing", "warehouse", "ai"]),
+      contractReference: z.string().max(255).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Upsert TenantModule row with:
+      //   enabledAt = now()
+      //   enabledByPlatformUserId = ctx.platformUser.id
+      //   enabledById = null (platform origin)
+      //   contractReference = input.contractReference ?? null
+      // platformAudit.log({ action: 'module.enabled',
+      //   targetTenantId, entityType: 'tenant_module', entityId,
+      //   metadata: { moduleKey, contractReference } })
+    }),
+
+  disableModule: platformAuthedProcedure
+    .input(z.object({
+      tenantId: z.string().uuid(),
+      moduleKey: z.enum(["core", "crm", "billing", "warehouse", "ai"]),
+      reason: z.string().max(500).optional(),  // e.g. "Kündigung zum 31.12."
+    }))
+    .mutation(...),  // deletes TenantModule row. audit 'module.disabled'
+                     // metadata includes { moduleKey, reason }.
+                     // Missing row → NOT_FOUND.
+})
+```
+
+Register in `src/trpc/platform/_app.ts` as `tenantManagement`:
+
+```ts
+import { platformTenantManagementRouter } from "./routers/tenantManagement"
+
+export const platformAppRouter = createTRPCRouter({
+  auth: platformAuthRouter,
+  platformUsers: platformUsersRouter,
+  tenants: platformTenantsRouter,
+  tenantManagement: platformTenantManagementRouter,  // NEW
+  supportSessions: platformSupportSessionsRouter,
+  auditLogs: platformAuditLogsRouter,
+})
+```
+
+Note the split: `tenants` (Phase 3) is the *impersonation-guarded* router
+for reading/writing tenant-internal data through a SupportSession;
+`tenantManagement` is the operator-hoheit router for the tenant envelope
+itself. They are separate intentionally because they need different
+middleware (`platformImpersonationProcedure` vs `platformAuthedProcedure`).
+
+#### 9.4 — Platform UI pages
+
+**Modified** — `src/app/platform/tenants/page.tsx` (from Phase 5)
+
+Extended with an actions column on each row: dropdown menu containing
+**Details** · **Module verwalten** · **Deaktivieren / Reaktivieren** ·
+**Löschen (soft)**. A "+ Neuer Tenant" button at the top-right of the
+table header.
+
+**New** — `src/app/platform/tenants/new/page.tsx`
+
+Server component that renders a client form:
+
+- Fields: `name` (required), `slug` (auto-derived from name, editable),
+  `contactEmail` (required), `initialAdminEmail` (required),
+  `initialAdminDisplayName` (required), `plan` (select: core/business/
+  enterprise).
+- On submit → `platformTrpc.tenantManagement.create`.
+- On success: if `inviteLink` is returned (SMTP failed), show a
+  "Kopieren" button + the raw URL so the operator can hand it to the
+  customer manually. Otherwise show a success toast and redirect to
+  `/platform/tenants/[id]`.
+
+**Modified** — `src/app/platform/tenants/[id]/page.tsx` (from Phase 5)
+
+Extended with tabs: **Übersicht** · **Module** · **Settings** · **Audit**.
+- Übersicht: name, slug, plan, isActive, created, counts (users, active
+  modules, active support sessions) — read-only.
+- Settings: inline edit form calling `tenantManagement.update`.
+- Audit: pre-filtered `platformAuditLogs.list` where
+  `targetTenantId = id`.
+
+**New** — `src/app/platform/tenants/[id]/modules/page.tsx`
+
+Table of all 5 possible modules × enabled/disabled state:
+
+| Modul | Status | Aktiviert am | Vertragsreferenz | Operator |
+|-------|--------|--------------|------------------|----------|
+| core | ✓ | 2026-03-01 | — | Platform System (seed) |
+| crm | ✓ | 2026-04-10 | `#INV-2026-042` | Tolga |
+| billing | ✗ | — | — | — |
+| warehouse | ✗ | — | — | — |
+| ai | ✗ | — | — | — |
+
+- Per-row action: **Aktivieren** / **Deaktivieren**.
+- **Aktivieren** opens a modal with a mandatory-feeling (but technically
+  optional) **Vertragsreferenz** input (Vertrags-Nr., Angebots-ID, or
+  the subject of the confirmation mail). If left empty, the UI surfaces
+  a yellow warning *"Keine Vertragsreferenz hinterlegt — spätere
+  Rechnungs-Zuordnung erschwert"* but still lets the operator proceed,
+  because sometimes the contract number isn't known yet.
+- **Deaktivieren** opens a modal with an optional `reason` text field
+  (e.g. "Kündigung zum 31.12.").
+- Top of the page: text search input that filters the list by
+  `contractReference` (client-side — the table has at most 5 rows per
+  tenant, but the same component is reused on a planned global
+  "contract register" view).
+
+**Query-use case — why `contractReference` matters beyond the UI**
+
+Once the column exists, we can answer questions like *"which tenant
+bought CRM under which contract?"* directly from Postgres, without
+trawling email archives:
+
+```sql
+SELECT
+  t.name,
+  tm.module,
+  tm.contract_reference,
+  tm.enabled_at,
+  pu.display_name AS enabled_by
+FROM tenant_modules tm
+JOIN tenants t ON t.id = tm.tenant_id
+LEFT JOIN platform_users pu ON pu.id = tm.enabled_by_platform_user_id
+WHERE tm.contract_reference IS NOT NULL
+ORDER BY tm.enabled_at DESC;
+```
+
+This unlocks the Steuerberater-Reports + future billing automation
+called out in the "What We're NOT Doing" note — Phase 9 writes the data,
+a later plan reads it.
+
+#### 9.5 — Tenant-side module-settings → read-only
+
+**File**: `src/components/settings/module-settings.tsx`
+
+- Remove the `useEnableModule` / `useDisableModule` hook imports.
+- Change the `<Switch>` components to `disabled={true}`.
+- Replace the click handler with a no-op.
+- Add a paragraph below the list:
+  *"Module werden vom Betreiber gebucht. Zum Aktivieren oder Kündigen
+  von Modulen wende dich bitte an den Support."*
+
+**File**: `src/trpc/routers/tenantModules.ts`
+
+- **Delete** the `enable` and `disable` procedures (lines 53-98). Keep
+  `list`.
+
+**File**: `src/hooks/use-modules.ts`
+
+- **Delete** `useEnableModule` and `useDisableModule`. Keep the `list`
+  hook.
+
+No permission catalog change needed — `settings.manage` continues to
+gate the settings page as a whole. The page is still useful to tenant
+admins for other settings (address, payroll export paths, etc.).
+
+#### 9.6 — Platform sidebar update
+
+**File**: `src/components/platform/sidebar.tsx` (created in Phase 5)
+
+Add a nested "+ Neuer Tenant" quick-action under the "Tenants" entry,
+linking to `/platform/tenants/new`. Layout mirrors the existing
+`sidebar-nav-config.ts` pattern (label, href, icon) but stays inside
+the minimal platform sidebar component — no shared config file, no
+cross-import with the tenant sidebar.
+
+### Success criteria
+
+#### Automated verification
+
+- [ ] `pnpm db:reset` applies both new migrations cleanly
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm lint` passes
+- [ ] `pnpm vitest run src/trpc/platform/routers/__tests__/tenantManagement.test.ts`:
+  - `create` → creates tenant + writes `auth.users` + `public.users` + `user_tenants` row for the initial admin; returns `{ tenant, inviteLink, welcomeEmailSent }`
+  - `create` with an already-used `slug` → `CONFLICT`
+  - `deactivate` → `isActive=false`, `platform_audit_logs` has `action='tenant.deactivated'` with the supplied reason in `metadata.reason`
+  - `reactivate` on an inactive tenant → flips back, audit entry
+  - `enableModule` with `contractReference` → row persisted with
+    `contract_reference` populated AND `platform_audit_logs.metadata.contractReference`
+    matches
+  - `enableModule` without `contractReference` → still succeeds,
+    `contract_reference` is `NULL`, audit metadata has `contractReference: null`
+  - `disableModule` with a `reason` → row deleted, audit `action='module.disabled'`
+    has `metadata.reason`
+  - `disableModule` on a module that isn't enabled → `NOT_FOUND`
+- [ ] `pnpm vitest run src/trpc/routers/__tests__/tenant-modules-readonly.test.ts`:
+  - `tenantModules.list` still exists and returns rows for tenant users
+  - Calling `tenantModules.enable` or `.disable` from tenant context is
+    a **compile-time error** (the procedures are gone) — captured in
+    the test as a TypeScript `@ts-expect-error` directive that would
+    fail the build if the procedures came back
+
+#### Manual verification
+
+- [ ] As PlatformUser: open `/platform/tenants/new`, create tenant "Test GmbH" with admin `admin@testgmbh.de`
+- [ ] Admin receives a welcome email (or the invite link fallback if SMTP is down); can log in and reaches the tenant dashboard
+- [ ] As PlatformUser: open `/platform/tenants/<id>/modules`, enable **CRM** with contract reference `#INV-2026-042`
+- [ ] Next login by the tenant admin shows "CRM" in the tenant sidebar
+- [ ] As tenant admin: `/admin/settings` shows the module list but toggles are disabled; the helper text is visible
+- [ ] As PlatformUser: `/platform/audit-logs` shows one row per platform action (`tenant.created`, `module.enabled` with `contractReference: #INV-2026-042`)
+- [ ] As PlatformUser: deactivate "Test GmbH" with reason "Test". Tenant admin's next login fails with an appropriate error. Reactivate → login works again.
+
+**Pause for manual confirmation before declaring Phase 9 complete.**
+
+---
+
 ## Testing Strategy
 
 ### Unit tests (Vitest)
@@ -2155,3 +2618,4 @@ Revisions applied after the 2026-04-09 review:
 8. Desired End State #9 now explicitly covers the 30-minute pending-session auto-expire.
 9. Phase 2.5 makes failed recovery-code verifications also record `PlatformLoginAttempt` rows with `failReason: 'bad_recovery_code'`, closing the brute-force gap. Phase 2 tests extended to cover this path.
 10. Phase 6 documents that no new-tenant permission-backfill code change is required: `tenant-service.ts:76-149` does not create user groups, and tenant admins get the permission via the `isAdmin` bypass in `permissions.ts:73-93`. A regression test `tenants-support-access-new-tenant.test.ts` codifies this invariant.
+11. **Phase 9 added**: tenant lifecycle management in the Platform UI. Covers tenant CRUD (create with initial admin user via the existing `users-service.create` Supabase admin path, update, deactivate/reactivate, soft-delete via `isActive=false`), module booking (`enableModule` / `disableModule` with a mandatory-ish `contractReference` on enable and an optional `reason` on disable), and a `Tenant.plan` column (core/business/enterprise, data-only — no billing logic). Removes the self-service module toggles on the tenant side: `tenantModules.enable` and `.disable` endpoints are deleted, `src/components/settings/module-settings.tsx` becomes read-only. Schema additions: `tenants.plan`, `tenant_modules.enabled_by_platform_user_id`, `tenant_modules.contract_reference` (three new migrations under `20260421100000*`). Plan explicitly rejects the initial suggestion to add a `deletedAt` column because the existing project convention is `isActive=false` for deactivation (`prisma/schema.prisma:93`).
