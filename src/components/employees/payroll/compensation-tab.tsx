@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useUpdateEmployee, useHasPermission } from '@/hooks'
+import { SalaryHistorySection } from './salary-history-section'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Employee = any
@@ -285,6 +286,8 @@ export function CompensationTab({ employeeId, employee }: CompensationTabProps) 
           </div>
         </CardContent>
       </Card>
+
+      <SalaryHistorySection employeeId={employeeId} />
     </div>
   )
 }

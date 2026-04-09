@@ -315,6 +315,30 @@ export {
   useTestExportTemplate,
 } from './use-export-templates'
 
+// System Export Templates (Phase 3 — standard-template library)
+export {
+  useSystemExportTemplates,
+  useSystemExportTemplate,
+  useCopySystemExportTemplate,
+} from './use-system-export-templates'
+
+// Payroll Bulk Import (Phase 3)
+export {
+  useParsePayrollBulkFile,
+  useConfirmPayrollBulkImport,
+} from './use-payroll-bulk-import'
+
+// Employee Salary History (Phase 3)
+export {
+  useEmployeeSalaryHistory,
+  useCreateSalaryHistoryEntry,
+  useUpdateSalaryHistoryEntry,
+  useDeleteSalaryHistoryEntry,
+} from './use-employee-salary-history'
+
+// DATEV Onboarding status (Phase 3)
+export { useDatevOnboardingStatus } from './use-datev-onboarding'
+
 // Export Interfaces (admin CRUD)
 export {
   useExportInterfaces as useExportInterfacesList,

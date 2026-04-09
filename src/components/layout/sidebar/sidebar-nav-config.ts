@@ -565,6 +565,18 @@ export const navConfig: NavSection[] = [
         permissions: ['personnel.payroll_data.view'],
       },
       {
+        titleKey: 'payrollBulkImport',
+        href: '/admin/payroll-import',
+        icon: FileInput,
+        permissions: ['personnel.payroll_data.edit'],
+      },
+      {
+        titleKey: 'datevOnboarding',
+        href: '/admin/datev-onboarding',
+        icon: FileCheck,
+        permissions: ['payroll.view'],
+      },
+      {
         titleKey: 'monthlyEvaluations',
         href: '/admin/monthly-evaluations',
         icon: ClipboardList,

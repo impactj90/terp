@@ -1,7 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { Plus } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Library } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -75,15 +76,22 @@ export default function ExportTemplatesPage() {
           </p>
         </div>
         {!showEditor && (
-          <Button
-            onClick={() => {
-              setCreating(true)
-              setEditingId(null)
-            }}
-            data-testid="export-template-new"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Neues Template
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild data-testid="export-template-library-link">
+              <Link href="/admin/export-templates/library">
+                <Library className="mr-2 h-4 w-4" /> Template-Bibliothek
+              </Link>
+            </Button>
+            <Button
+              onClick={() => {
+                setCreating(true)
+                setEditingId(null)
+              }}
+              data-testid="export-template-new"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Neues Template
+            </Button>
+          </div>
         )}
       </div>
 

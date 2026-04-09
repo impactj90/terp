@@ -254,6 +254,9 @@ model Tenant {
   exportTemplates    ExportTemplate[]
   tenantPayrollWages TenantPayrollWage[]
 
+  // Payroll salary history (Phase 3)
+  employeeSalaryHistory EmployeeSalaryHistory[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -1621,6 +1624,7 @@ model Employee {
   maternityLeaves        EmployeeMaternityLeave[]
   foreignAssignments     EmployeeForeignAssignment[]
   otherEmployments       EmployeeOtherEmployment[]
+  salaryHistory          EmployeeSalaryHistory[]
 
   // Relations to group/order/activity models
   employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
@@ -3445,6 +3449,61 @@ model TenantPayrollWage {
   @@unique([tenantId, code])
   @@index([tenantId], map: "idx_tenant_payroll_wages_tenant")
   @@map("tenant_payroll_wages")
+}
+
+// -----------------------------------------------------------------------------
+// SystemExportTemplate (Phase 3)
+// -----------------------------------------------------------------------------
+// Global, read-only standard templates shipped with Terp. The template
+// library UI lists these and offers "Als Vorlage verwenden" which copies
+// the row into the tenant-specific `export_templates`.
+model SystemExportTemplate {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String   @unique @db.VarChar(200)
+  description      String?  @db.Text
+  targetSystem     String   @map("target_system") @db.VarChar(20)
+  templateBody     String   @map("template_body") @db.Text
+  outputFilename   String   @map("output_filename") @db.VarChar(200)
+  encoding         String   @default("windows-1252") @db.VarChar(20)
+  lineEnding       String   @default("crlf") @map("line_ending") @db.VarChar(4)
+  fieldSeparator   String   @default(";") @map("field_separator") @db.VarChar(5)
+  decimalSeparator String   @default(",") @map("decimal_separator") @db.VarChar(1)
+  dateFormat       String   @default("TT.MM.JJJJ") @map("date_format") @db.VarChar(20)
+  version          Int      @default(1)
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_export_templates")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeSalaryHistory (Phase 3)
+// -----------------------------------------------------------------------------
+// Historical salary records per employee. The newest entry (valid_to IS NULL)
+// is synchronised with Employee.grossSalary / hourlyRate.
+model EmployeeSalaryHistory {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  employeeId   String    @map("employee_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  grossSalary  Decimal?  @map("gross_salary") @db.Decimal(10, 2)
+  hourlyRate   Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  paymentType  String    @map("payment_type") @db.VarChar(20)
+  changeReason String    @map("change_reason") @db.VarChar(50)
+  notes        String?   @db.Text
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_salary_history_employee")
+  @@index([tenantId], map: "idx_salary_history_tenant")
+  @@index([employeeId, validFrom, validTo], map: "idx_salary_history_valid")
+  @@map("employee_salary_history")
 }
 
 // -----------------------------------------------------------------------------
