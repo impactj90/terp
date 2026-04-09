@@ -162,6 +162,10 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20f.5 Monatlicher Export-Lauf (Buchhaltung)](#20f5-monatlicher-export-lauf--schritt-für-schritt)
     - [20f.6 Audit-Log](#20f6-audit-log)
     - [20f.7 Was Terp mit Templates NICHT tut](#20f7-was-terp-mit-templates-nicht-tut)
+    - [20f.8 Template-Bibliothek (Standard-Vorlagen)](#20f8-template-bibliothek-standard-vorlagen)
+    - [20f.9 DATEV-Onboarding-Checkliste](#20f9-datev-onboarding-checkliste)
+    - [20f.10 Steuerberater-PDF](#20f10-steuerberater-pdf)
+    - [20f.11 Lohn-Massenimport](#20f11-lohn-massenimport)
 21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
     - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
     - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
@@ -8847,6 +8851,10 @@ Drei Felder: IBAN (maskiert), BIC, Kontoinhaber. Die IBAN wird bei der Eingabe m
 
 📍 Mitarbeiter öffnen → Tab **"Vergütung"**
 
+Der Tab besteht aus zwei Blöcken: die **aktuellen Vergütungs-Stammdaten** (oben) und die **Gehaltshistorie** (unten).
+
+#### 20e.5.1 Aktuelle Vergütungs-Stammdaten
+
 | Feld | Typ |
 |------|-----|
 | Entgeltart | Select (Monatsgehalt / Stundenlohn / Provision) |
@@ -8858,6 +8866,76 @@ Drei Felder: IBAN (maskiert), BIC, Kontoinhaber. Die IBAN wird bei der Eingabe m
 | Probezeit (Monate) | Zahl |
 | Kündigungsfrist (Arbeitnehmer) | Text |
 | Kündigungsfrist (Arbeitgeber) | Text |
+
+💡 **Bruttogehalt** und **Stundenlohn** sind mit der Gehaltshistorie verknüpft (siehe 20e.5.2). Wenn Sie hier manuell einen Wert ändern, stimmen die Stammdaten zwar sofort, aber die Historie bleibt unverändert — für Nachvollziehbarkeit gegenüber dem Steuerberater sollten Sie Änderungen stets über die **Gehaltshistorie** vornehmen.
+
+#### 20e.5.2 Gehaltshistorie
+
+**Was ist das?** Die Gehaltshistorie ist eine Zeitleiste aller Gehaltsänderungen pro Mitarbeiter. Jede Zeile hat ein `Gültig ab`-Datum, einen Änderungsgrund und den neuen Wert. Der jüngste Eintrag ist der **aktuell gültige** — Terp markiert ihn in der Tabelle mit einem grünen **„aktuell"**-Badge.
+
+**Warum wichtig?**
+
+- **Nachvollziehbarkeit** gegenüber Steuerberater, Betriebsrat, Arbeitsgericht (z. B. "Seit wann bekommt Anna Müller 3.300 €?")
+- **Automatische Sync** mit den Stammdaten: der aktuelle Eintrag wird mit `Employee.grossSalary` / `Employee.hourlyRate` / `Employee.paymentType` synchronisiert, sodass bestehende Exports unverändert funktionieren
+- **Audit-Trail**: jede Erstellung und Löschung erscheint im Audit-Protokoll (Entitätstyp `Gehaltshistorie`)
+
+**Neuen Eintrag anlegen:**
+
+1. 📍 Tab **"Vergütung"** → ganz unten Block **"Gehaltshistorie"** → **„Neuer Eintrag"**
+2. **Gültig ab** — Datum, ab dem der neue Wert gilt (z. B. `01.07.2024`)
+3. **Zahlungstyp** — `Monatsgehalt` oder `Stundenlohn`
+4. **Bruttogehalt** (bei Monatsgehalt) **oder** **Stundenlohn** (bei Stundenlohn) — der neue Wert
+5. **Änderungsgrund** — einer von: `Initial`, `Gehaltserhöhung`, `Tarifänderung`, `Beförderung`, `Sonstige`
+6. **Notiz** (optional) — Freitext
+7. 📍 **„Speichern"**
+
+✅ Was dann automatisch passiert:
+
+- Der bisherige offene Eintrag (mit `Gültig bis = –`) wird automatisch geschlossen: sein `Gültig bis` wird auf `neues Gültig ab − 1 Tag` gesetzt
+- Der neue Eintrag wird mit `Gültig bis = –` angelegt und erhält das grüne **„aktuell"**-Badge
+- `Employee.grossSalary` / `hourlyRate` / `paymentType` werden mit den Werten des neuen Eintrags überschrieben
+- Ein Audit-Log-Eintrag `create` auf `employee_salary_history` wird geschrieben
+
+**Beispiel:**
+
+| Gültig ab | Gültig bis | Typ | Wert | Grund |
+|---|---|---|---|---|
+| 01.07.2024 | — (**aktuell**) | Monatsgehalt | 3.300,00 € | Gehaltserhöhung |
+| 01.01.2024 | 30.06.2024 | Monatsgehalt | 3.000,00 € | Initial |
+
+Wenn Sie am 15.10.2024 eine weitere Erhöhung auf 3.500 € mit `Gültig ab = 01.11.2024` eintragen, wird die Tabelle zu:
+
+| Gültig ab | Gültig bis | Typ | Wert | Grund |
+|---|---|---|---|---|
+| 01.11.2024 | — (**aktuell**) | Monatsgehalt | 3.500,00 € | Gehaltserhöhung |
+| 01.07.2024 | 31.10.2024 | Monatsgehalt | 3.300,00 € | Gehaltserhöhung |
+| 01.01.2024 | 30.06.2024 | Monatsgehalt | 3.000,00 € | Initial |
+
+**Validierungen:**
+
+- `Gültig ab` ist Pflicht
+- Bei Zahlungstyp `Monatsgehalt` ist `Bruttogehalt` Pflicht
+- Bei Zahlungstyp `Stundenlohn` ist `Stundenlohn` Pflicht
+- `Gültig ab` darf **nicht vor** dem `Gültig ab` des aktuell offenen Eintrags liegen (sonst wird der neue Eintrag abgelehnt mit der Meldung „Das neue validFrom darf nicht vor dem validFrom des offenen Eintrags liegen")
+
+**Eintrag löschen:**
+
+📍 Mülleimer-Icon rechts in der Zeile → Bestätigungsdialog → **„Löschen"**
+
+⚠️ **Vorsicht:** Das Löschen eines Eintrags schließt den Vorgänger **nicht** automatisch wieder auf. Wenn Sie den aktuell offenen Eintrag löschen, bleibt der Vorgänger geschlossen (mit seinem alten `Gültig bis`-Datum). `Employee.grossSalary` wird **nicht** automatisch auf den Vorgänger zurückgesetzt — das müssen Sie manuell in den Stammdaten oder über einen neuen Eintrag korrigieren.
+
+#### 20e.5.3 Praxisbeispiel: Gehaltserhöhung per Gehaltshistorie
+
+**Rolle:** HR-Mitarbeiter
+**Ausgangslage:** Anna Müller verdient seit 01.01.2024 3.000 € brutto. Zum 01.07.2024 bekommt sie eine Erhöhung auf 3.300 €.
+
+1. 📍 Administration → **Mitarbeiter** → Anna Müller → Tab **"Vergütung"**
+2. Scrollen Sie zum Block **"Gehaltshistorie"**
+3. Falls noch kein Initial-Eintrag existiert: 📍 **„Neuer Eintrag"** → `Gültig ab: 01.01.2024` → `Monatsgehalt` → `3000` → `Initial` → Speichern
+4. 📍 **„Neuer Eintrag"** → `Gültig ab: 01.07.2024` → `Monatsgehalt` → `3300` → `Gehaltserhöhung` → optional Notiz `Tarifrunde 2024` → Speichern
+5. ✅ Die Tabelle zeigt jetzt zwei Zeilen; die neue ist grün als **„aktuell"** markiert, die alte hat `Gültig bis = 30.06.2024`
+6. ✅ Im oberen Block der Vergütungs-Stammdaten steht jetzt `Bruttogehalt: 3.300,00 €`
+7. Im nächsten Monats-Export (ab Juli) wird der neue Wert automatisch verwendet
 
 ### 20e.6 Tab "Familie"
 
@@ -9431,7 +9509,285 @@ Jede Template-Aktion wird im Audit-Log protokolliert:
 - **Kein Filesystem-/Netzwerk-Zugriff** — `{% include "datei.txt" %}` ist gesperrt
 - **Keine Berechtigungsprüfung im Template** — die Berechtigung wird beim Template-Aufruf einmal geprüft, im Template selbst nicht
 - **Keine automatische Migration bei Terp-Updates** — wenn sich das Kontext-Objekt ändert (z. B. neue Felder), müssen Sie Ihre Templates manuell anpassen. Die Versionierung zeigt dann, was wann geändert wurde.
-- **Keine Template-Bibliothek** (Phase 2) — Standard-Templates für DATEV/Lexware/SAGE werden in Phase 3 mitgeliefert. Bis dahin müssen Templates manuell angelegt oder vom Implementierungspartner bereitgestellt werden.
+
+---
+
+### 20f.8 Template-Bibliothek (Standard-Vorlagen)
+
+**Was ist das?** Die Template-Bibliothek enthält **mitgelieferte Standard-Vorlagen** für die häufigsten Lohnabrechnungs-Formate. Sie können diese mit einem Klick in Ihre mandantenspezifischen Templates kopieren und dort anpassen. Die System-Vorlagen selbst sind schreibgeschützt — sie dienen nur als Ausgangspunkt.
+
+📍 Seitenleiste → **Administration** → **Export-Templates** → oben rechts **„Template-Bibliothek"**
+
+Direkt-URL: `/admin/export-templates/library`
+
+⚠️ Berechtigung: `export_template.view` (Ansehen), `export_template.create` (Kopieren)
+
+#### 20f.8.1 Mitgelieferte Standard-Templates
+
+Terp liefert **6 Standard-Templates** aus, die im ersten Setup sofort verfügbar sind:
+
+| Template | Zielsystem | Encoding | Zweck |
+|---|---|---|---|
+| **DATEV LODAS — Bewegungsdaten** | `datev_lodas` | Windows-1252 | Nur Bewegungsdaten (Satzart 21). Minimale Basis-Vorlage zum Einstieg. |
+| **DATEV LODAS — Stamm + Bewegungsdaten** | `datev_lodas` | Windows-1252 | Stammdaten (Satzart 11–13) + Bewegungsdaten. **Vor Produktivlauf unbedingt mit Steuerberater verifizieren** — LODAS hat > 90 Stammdaten-Felder, die Vorlage liefert die Basis. |
+| **DATEV Lohn und Gehalt — Bewegungsdaten** | `datev_lug` | Windows-1252 | DATEV LuG (Lohn und Gehalt) — wie LODAS, aber mit `Ziel=LUG` und 4-stelligen Lohnarten (`0001`–`9999`). |
+| **Lexware Lohn+Gehalt — Standard** | `lexware` | UTF-8 mit BOM | CSV mit Semikolon-Trennung für Lexware Lohn+Gehalt. |
+| **SAGE HR — Standard** | `sage` | UTF-8 | CSV mit Semikolon-Trennung und Punkt als Dezimaltrenner für SAGE HR. |
+| **Generische CSV — Standard** | `custom` | UTF-8 | Universelle Vorlage mit allen verfügbaren Feldern — für eigene Auswertungen oder als Ausgangspunkt für neue Formate. |
+
+Jedes System-Template enthält:
+
+- Einen kommentierten Liquid-Body mit **Inline-Hinweisen**, was anzupassen ist (Lohnart-Codes, BeraterNr, MandantenNr)
+- Eine **Versionsangabe** im Kommentar (`Version: 1.0`)
+- Einen Hinweis für sensitive Abschnitte (z. B. „ANPASSUNG ERFORDERLICH: Lohnart-Codes müssen mit dem Steuerberater abgestimmt werden")
+
+#### 20f.8.2 "Als Vorlage verwenden" — Template kopieren
+
+1. Öffnen Sie die **Template-Bibliothek** (siehe oben)
+2. Wählen Sie die gewünschte Karte — z. B. **„DATEV LODAS — Bewegungsdaten"**
+3. 📍 **„Als Vorlage verwenden"** (unten rechts auf der Karte)
+4. Im Bestätigungsdialog: 📍 **„Kopieren"**
+5. ✅ Toast `Template ... wurde in Ihre Templates kopiert.` erscheint
+6. Navigieren Sie zurück zu **„Meine Templates"** → in der Liste taucht das kopierte Template mit Version `v1` auf
+
+💡 **Mehrfach-Kopieren:** Wenn Sie dasselbe System-Template ein zweites Mal kopieren, vergibt Terp automatisch den Suffix **„(Kopie)"**. Bei weiteren Kopien wird der Suffix hochgezählt: `(Kopie 2)`, `(Kopie 3)`, …. So können Sie mehrere Varianten derselben Vorlage pflegen, z. B. eine für Stb. Müller und eine für Stb. Schulze.
+
+#### 20f.8.3 Praxisbeispiel: DATEV LODAS aus der Bibliothek übernehmen
+
+**Rolle:** Administrator
+**Ziel:** Eine einsatzbereite DATEV-LODAS-Basis-Vorlage in Ihren Mandanten bringen, ohne sie selbst zu schreiben.
+
+1. 📍 Administration → **Export-Templates** → **„Template-Bibliothek"**
+2. ✅ Die Seite zeigt 6 Karten. Finden Sie die Karte **„DATEV LODAS — Bewegungsdaten"**
+3. 📍 **„Als Vorlage verwenden"** → **„Kopieren"**
+4. 📍 **„Zurück zu meinen Templates"** (oben links)
+5. ✅ Neue Zeile **„DATEV LODAS — Bewegungsdaten"** mit Version `v1` in der Liste
+6. 📍 Bearbeiten-Icon → Template-Name anpassen, z. B. **„DATEV LODAS — Stb. Müller"**
+7. Lohnart-Codes im Body anpassen (nach Absprache mit dem Steuerberater)
+8. 📍 **„Speichern"** → Template ist jetzt v2 (da sich der Body geändert hat)
+9. Vorschau erzeugen (siehe 20f.3.5), dann produktiven Monats-Export durchführen (siehe 20f.5)
+
+---
+
+### 20f.9 DATEV-Onboarding-Checkliste
+
+**Was ist das?** Die Onboarding-Checkliste ist ein **Statusboard**, das Ihnen auf einen Blick zeigt, ob alle Voraussetzungen für den ersten Produktivlauf des DATEV-Lohnexports erfüllt sind. Sie aggregiert Daten aus Exportschnittstellen, Templates, Audit-Log, Lohnart-Mapping und Mitarbeiter-Stammdaten.
+
+📍 Seitenleiste → **Administration** → **DATEV-Onboarding**
+
+Direkt-URL: `/admin/datev-onboarding`
+
+⚠️ Berechtigung: `payroll.view`
+
+#### 20f.9.1 Die 6 Status-Zeilen
+
+Die Seite zeigt zwei Karten. Die erste Karte **„Schnittstellen-Konfiguration"** enthält 6 Checklisten-Zeilen, jede mit ✅ (grün, erfüllt) oder ❌ (rot, offen):
+
+| Zeile | Grün wenn… | Was tun, wenn rot? |
+|---|---|---|
+| **BeraterNr gepflegt** | Mindestens eine aktive Exportschnittstelle hat eine `beraterNr` (4–7 Ziffern) | 📍 Administration → Exportschnittstellen → neue Schnittstelle anlegen oder bestehende bearbeiten |
+| **MandantNr gepflegt** | Mindestens eine aktive Exportschnittstelle hat eine `mandantNumber` | Wie oben |
+| **Aktives Template vorhanden** | Mindestens ein Template mit `isActive = true` existiert | 📍 Administration → Export-Templates → neues Template anlegen oder aus der Bibliothek kopieren (siehe 20f.8) |
+| **Default-Template auf Schnittstelle gesetzt** | Mindestens eine aktive Schnittstelle hat eine `defaultTemplateId` gesetzt | 📍 Administration → Exportschnittstellen → Schnittstelle bearbeiten → Default-Template wählen |
+| **Test-/Produktivexport bereits ausgeführt** | Im Audit-Log existiert mindestens ein Eintrag der Aktionen `run`, `preview` oder `test` auf `export_template` | Einmal eine Vorschau oder einen Test-Export ausführen (siehe 20f.3.5 / 20f.5) |
+| **Lohnart-Mapping angepasst** | Mindestens eine Lohnart im Mandanten weicht vom Default-Seed ab (oder es wurde eine neue hinzugefügt) | 📍 Administration → Lohnart-Mapping → mit dem Steuerberater abstimmen und Codes anpassen (siehe 20f.4) |
+
+💡 **Reihenfolge der Bearbeitung:** Die Liste ist absichtlich in der empfohlenen Einrichtungs-Reihenfolge aufgebaut. Wenn Sie von oben nach unten abarbeiten, kommen Sie am Ende zu einem vollständig produktionsbereiten Setup.
+
+#### 20f.9.2 Mitarbeiter-Vollständigkeit
+
+Die zweite Karte **„Mitarbeiter-Vollständigkeit"** zeigt:
+
+- **Zähler** `X / Y vollständig` — wie viele der aktiven Mitarbeiter alle Pflichtfelder haben
+- **Tabelle der unvollständigen Mitarbeiter** (falls vorhanden) mit Spalten: Pers.-Nr., Name, **fehlende Felder**
+
+Als Pflichtfelder gelten:
+
+- `Steuer-ID` (`taxId`)
+- `SV-Nr.` (`socialSecurityNumber`)
+- `IBAN` (`iban`)
+- `Krankenkasse` (`healthInsuranceProviderId`)
+- `Steuerklasse` (`taxClass`)
+- `Personengruppenschlüssel` (`personnelGroupCode`)
+- `Beitragsgruppenschlüssel` (`contributionGroupCode`)
+
+In jeder Zeile gibt es einen **„Öffnen"**-Link, der direkt zum betroffenen Mitarbeiter-Detail springt. Dort können Sie die fehlenden Felder in den Payroll-Tabs (siehe 20e) nachpflegen und kehren dann zur Onboarding-Seite zurück — der Zähler aktualisiert sich nach Seitenwechsel.
+
+💡 **Wichtig:** Die Vollständigkeitsprüfung berücksichtigt nur **aktive** Mitarbeiter (isActive = true, deletedAt IS NULL). Ausgetretene oder gelöschte Mitarbeiter erscheinen nicht in der Liste.
+
+#### 20f.9.3 Praxisbeispiel: Onboarding zum ersten Produktivexport
+
+**Rolle:** Administrator / Implementierungspartner
+**Ausgangslage:** Neuer Terp-Mandant, der Steuerberater braucht ab kommendem Monat DATEV-LODAS-Dateien.
+
+1. 📍 **DATEV-Onboarding** aufrufen → alle 6 Flags sind ❌
+2. **Zeile 1 & 2:** 📍 Exportschnittstellen → neue Schnittstelle anlegen mit BeraterNr = `12345` und MandantNr = `67890`
+3. Zurück zu **DATEV-Onboarding** → Zeile 1 & 2 sind jetzt ✅
+4. **Zeile 3:** 📍 Export-Templates → Template-Bibliothek → `DATEV LODAS — Bewegungsdaten` kopieren → Lohnart-Codes mit Steuerberater abstimmen und anpassen
+5. **Zeile 4:** 📍 Exportschnittstellen → unsere Schnittstelle öffnen → Default-Template auf das neue Template setzen
+6. **Zeile 6:** 📍 Lohnart-Mapping → Codes nach Vorgabe des Steuerberaters anpassen
+7. **Zeile 5:** Eine Vorschau erzeugen (📍 Template öffnen → Jahr/Monat wählen → Vorschau) → prüfen, dass die Datei wie erwartet aussieht
+8. Zurück zu **DATEV-Onboarding** → alle 6 Flags grün ✅
+9. **Mitarbeiter-Vollständigkeit:** durch die Liste der unvollständigen MA gehen, Felder nachpflegen
+10. Wenn alle aktiven MA vollständig sind: ersten Produktivlauf durchführen (siehe 20f.5)
+
+---
+
+### 20f.10 Steuerberater-PDF
+
+**Was ist das?** Ein **PDF-Dokument**, das Sie Ihrem Steuerberater als Anleitung mitschicken können. Es enthält die aktuelle Schnittstellen-Konfiguration, das Lohnart-Mapping und eine Schritt-für-Schritt-Anleitung zum DATEV-Import. Das PDF wird bei jedem Klick neu generiert, sodass es immer dem aktuellen Mandanten-Stand entspricht.
+
+📍 Seitenleiste → **Administration** → **DATEV-Onboarding** → oben rechts **„Steuerberater-PDF"**
+
+⚠️ Berechtigung: `payroll.view`
+
+#### 20f.10.1 Inhalt der PDF
+
+Das generierte PDF enthält 6 Abschnitte:
+
+1. **Einführung** — Erklärung, dass Terp ausschließlich Datenlieferant ist (keine Brutto-Netto-Berechnung, keine SV-Beitragsermittlung)
+2. **Schnittstellen-Konfiguration** — BeraterNr, MandantenNr, aktives Default-Template, Zielsystem (z. B. "DATEV LODAS (ASCII-Import)")
+3. **Template-Anpassung** — Hinweis auf das Liquid-Template-System, die Versionierung, eine Warnbox: „Ändern Sie nie den `[Allgemein]`-Header ohne Rücksprache — sonst wird die Datei von DATEV abgewiesen"
+4. **Schritt-für-Schritt Import in DATEV LODAS** — 5 nummerierte Schritte vom Terp-Export bis zum Probeimport in DATEV
+5. **Lohnart-Mapping** — Tabelle mit allen aktiven Tenant-Lohnarten (Code, Bezeichnung, Kategorie, Terp-Quelle). Diese Tabelle ist der wichtigste Teil für den Steuerberater — er kann daran prüfen, ob Ihre Codes mit seinen LODAS-Einstellungen übereinstimmen.
+6. **Ansprechpartner** — (aktuell leer, Feld für eine zukünftige Konfigurationsoption)
+
+Kopfzeile: Mandantenname + Erstellungsdatum. Fußzeile: Seitennummerierung.
+
+#### 20f.10.2 Dateiname
+
+Das PDF heisst: `DATEV_Import_Anleitung_YYYYMMDD.pdf` (z. B. `DATEV_Import_Anleitung_20260409.pdf`)
+
+#### 20f.10.3 Wann verwenden?
+
+- **Einmalig beim Onboarding** — dem Steuerberater zusammen mit dem ersten Test-Export mitschicken
+- **Bei Änderungen** — wenn sich das Lohnart-Mapping ändert, neu generieren und dem Steuerberater schicken, damit er seine LODAS-Einstellungen anpassen kann
+- **Bei Team-Übergaben** — wenn jemand anderes die Betreuung übernimmt (z. B. Urlaubsvertretung im Lohnbüro)
+
+---
+
+### 20f.11 Lohn-Massenimport
+
+**Was ist das?** Statt Lohn-Stammdaten Mitarbeiter für Mitarbeiter manuell einzutippen, können Sie bis zu **mehrere hundert Datensätze auf einmal** per CSV- oder XLSX-Datei hochladen. Terp validiert jede Zeile vor dem Import, zeigt eine Vorschau der Änderungen und schreibt erst nach Ihrer Bestätigung in die Datenbank.
+
+📍 Seitenleiste → **Administration** → **Lohn-Massenimport**
+
+Direkt-URL: `/admin/payroll-import`
+
+⚠️ Berechtigung: `personnel.payroll_data.edit`
+
+#### 20f.11.1 Wann ist das sinnvoll?
+
+- **Initial-Befüllung** eines neuen Mandanten: der Steuerberater liefert einen Export aus seinem Lohnsystem, Sie importieren ihn in Terp
+- **Massen-Updates**: wenn sich Krankenkassen fusionieren oder neue Beitragsgruppenschlüssel zum Jahreswechsel gelten, aktualisieren Sie alle Mitarbeiter auf einmal
+- **Datenkorrekturen** nach Audit: wenn der Steuerberater auffällt, dass bei 20 MA die Tätigkeitsschlüssel falsch sind, updaten Sie alle gleichzeitig
+
+#### 20f.11.2 CSV-Vorlage herunterladen
+
+1. 📍 **„CSV-Vorlage herunterladen"** (oben links)
+2. Datei `payroll_bulk_import_template.csv` wird heruntergeladen
+3. Header-Zeile: `personnelNumber;firstName;lastName;email;iban;bic;accountHolder;taxId;taxClass;childTaxAllowance;denomination;socialSecurityNumber;personnelGroupCode;contributionGroupCode;activityCode;grossSalary;hourlyRate;paymentType`
+
+Füllen Sie die Vorlage mit den zu importierenden Daten. Sie können Spalten weglassen, wenn Sie nichts ändern wollen — nur **`personnelNumber`** ist Pflicht.
+
+#### 20f.11.3 Unterstützte Spalten und Aliasse
+
+Die Header-Erkennung ist **tolerant gegenüber deutschen und englischen Spaltennamen** — Sie können die Vorlage mit Ihren gewohnten Begriffen ausfüllen:
+
+| Interner Feldname | Akzeptierte Header (case-insensitive) |
+|---|---|
+| `personnelNumber` | `personnelNumber`, `personalnummer`, `Pers.-Nr.`, `pers nr`, `pnr` |
+| `firstName` | `firstName`, `vorname` |
+| `lastName` | `lastName`, `nachname`, `name` |
+| `iban` | `iban`, `bankverbindung` |
+| `taxId` | `taxId`, `steuer-id`, `steuer id`, `steuerid`, `stid` |
+| `taxClass` | `taxClass`, `steuerklasse`, `stkl` |
+| `socialSecurityNumber` | `socialSecurityNumber`, `svnr`, `sozialversicherungsnummer`, `rentenversicherungsnummer` |
+| `personnelGroupCode` | `personnelGroupCode`, `persgruppe`, `pgr` |
+| `contributionGroupCode` | `contributionGroupCode`, `beitragsgruppe`, `bgs` |
+| `activityCode` | `activityCode`, `tätigkeitsschlüssel`, `taetigkeitsschluessel`, `tks` |
+| `grossSalary` | `grossSalary`, `bruttogehalt`, `brutto` |
+| `hourlyRate` | `hourlyRate`, `stundenlohn` |
+
+Unbekannte Spalten werden **ignoriert** (nicht als Fehler gemeldet). So können Sie eigene Notiz-Spalten in der Datei haben, ohne dass der Import fehlschlägt.
+
+#### 20f.11.4 Datei hochladen und Vorschau prüfen
+
+1. 📍 **„Datei wählen"** → Ihre vorbereitete CSV oder XLSX auswählen
+2. Terp liest die Datei ein und zeigt eine **Vorschau-Karte** mit vier Zählern:
+   - **Zeilen** — wie viele Datenzeilen die Datei enthält
+   - **Valide** (grün) — wie viele Zeilen fehlerfrei sind
+   - **Ungültig** (rot) — wie viele Zeilen Fehler haben
+   - **Mitarbeiter gefunden** — wie viele der `personnelNumber`-Werte in Ihrem Mandanten existieren
+3. **Fehlerliste** (falls vorhanden) — zeilenweise Auflistung aller Validierungsfehler mit Zeilennummer, Personalnummer und Fehlermeldung. Die Liste zeigt maximal 100 Zeilen.
+
+Beispiel einer Fehlerliste:
+
+```
+Zeile 5 (P-042): IBAN: Ungültige IBAN-Prüfziffern
+Zeile 7 (P-101): Steuer-ID: Ungültige Steuer-ID-Prüfziffer
+Zeile 12 (P-999): Personalnummer "P-999" existiert nicht
+```
+
+#### 20f.11.5 Validierungen pro Spalte
+
+| Feld | Validierung |
+|---|---|
+| `personnelNumber` | Pflicht. Muss im Mandanten existieren. |
+| `iban` | MOD-97-Prüfziffern, 15–34 Zeichen, DE-IBAN genau 22 Zeichen |
+| `taxId` | ELSTER-Algorithmus: 11 Ziffern, darf nicht mit 0 beginnen, genau eine doppelte + eine fehlende Ziffer in den ersten 10, Prüfziffer |
+| `socialSecurityNumber` | 8 Ziffern + 1 Buchstabe + 3 Ziffern |
+| `taxClass` | Ganzzahl 1–6 |
+| `personnelGroupCode` | 3-stelliger Code aus der gültigen Liste |
+| `contributionGroupCode` | 4-stelliger numerischer Code |
+| `activityCode` | 9-stelliger Tätigkeitsschlüssel |
+| `childTaxAllowance` | Dezimalzahl ≥ 0 |
+| `grossSalary`, `hourlyRate` | Dezimalzahl ≥ 0. Deutsches Komma-Format (`1234,56`) wird automatisch erkannt |
+
+#### 20f.11.6 Import ausführen
+
+Wenn **alle** Zeilen valide sind, wird unter der Vorschau ein grüner Banner angezeigt:
+
+> ✅ Alle N Zeilen sind valide und können importiert werden.
+
+Und der Button **„Import bestätigen (N Zeilen)"** wird aktiv.
+
+1. 📍 **„Import bestätigen (N Zeilen)"**
+2. Terp führt alle Updates in **einer einzigen Transaktion** durch (alles oder nichts)
+3. Sensible Felder (`iban`, `taxId`, `socialSecurityNumber`) werden vor dem Schreiben **verschlüsselt**
+4. ✅ Toast `N Mitarbeiter aktualisiert, 0 übersprungen.` + grüne Success-Karte
+
+Wenn **mindestens eine** Zeile ungültig ist, ist der Button **deaktiviert** — Sie müssen die Datei korrigieren und neu hochladen. Terp importiert **niemals** teilweise: entweder alle oder keine Zeilen.
+
+#### 20f.11.7 Audit-Log
+
+Nach einem erfolgreichen Massenimport schreibt Terp einen Audit-Log-Eintrag:
+
+- Entitätstyp: `employee`
+- Aktion: `bulk_import`
+- Entitätsname: `Massenimport <filename>`
+- Änderungen: `{ updated: N, failed: 0, totalRows: N }`
+
+📍 Administration → Audit-Protokoll → Filter nach Aktion `bulk_import`
+
+💡 **Nicht im Audit-Log:** Die tatsächlich importierten Feldwerte werden **nicht** geloggt, damit sensible Daten (Steuer-ID, IBAN) nicht im Klartext im Audit-Protokoll auftauchen.
+
+#### 20f.11.8 Praxisbeispiel: Initial-Befüllung aus Steuerberater-Export
+
+**Rolle:** Administrator / HR
+**Ausgangslage:** Neuer Mandant mit 180 Mitarbeitern. Der Steuerberater liefert eine CSV mit allen Lohnstammdaten aus seinem System.
+
+1. 📍 Administration → **Lohn-Massenimport**
+2. 📍 **„CSV-Vorlage herunterladen"** → Referenz für die erwarteten Spaltennamen
+3. In Excel / LibreOffice: die Steuerberater-CSV öffnen, die Spaltennamen in die erwarteten umbenennen (oder die Aliasse aus 20f.11.3 verwenden), als CSV (Semikolon, UTF-8) speichern
+4. 📍 **„Datei wählen"** → die bearbeitete CSV auswählen
+5. Vorschau zeigt: `Zeilen: 180, Valide: 176, Ungültig: 4, Mitarbeiter gefunden: 180`
+6. Fehlerliste zeigt z. B. 4 IBAN-Prüfzifferfehler (Tippfehler im Original)
+7. CSV korrigieren, erneut hochladen → `Valide: 180, Ungültig: 0`
+8. 📍 **„Import bestätigen (180 Zeilen)"**
+9. ✅ `180 Mitarbeiter aktualisiert, 0 übersprungen.`
+10. Stichprobe: Einen der importierten Mitarbeiter öffnen → Tab **Steuern & SV** → Steuer-ID ist gesetzt (nur sichtbar für Berechtigte, in der DB verschlüsselt)
+11. 📍 **DATEV-Onboarding** → Mitarbeiter-Vollständigkeit sollte jetzt den Großteil der MA als vollständig zeigen
 
 ---
 
