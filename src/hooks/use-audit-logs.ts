@@ -1,5 +1,5 @@
 import { useTRPC } from "@/trpc"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 
 // --- Interfaces ---
 
@@ -43,4 +43,24 @@ export function useAuditLog(id: string | undefined) {
       { enabled: !!id }
     )
   )
+}
+
+// --- Export Mutation Hooks ---
+
+/**
+ * Export audit logs as CSV (tRPC mutation).
+ * Returns base64-encoded CSV with filename and count.
+ */
+export function useExportAuditLogsCsv() {
+  const trpc = useTRPC()
+  return useMutation(trpc.auditLogs.exportCsv.mutationOptions())
+}
+
+/**
+ * Export audit logs as PDF (tRPC mutation).
+ * Returns base64-encoded PDF with filename and count.
+ */
+export function useExportAuditLogsPdf() {
+  const trpc = useTRPC()
+  return useMutation(trpc.auditLogs.exportPdf.mutationOptions())
 }

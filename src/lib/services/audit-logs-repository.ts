@@ -131,6 +131,41 @@ export async function createBulk(
   })
 }
 
+// --- Export support ---
+
+export interface AuditLogExportParams {
+  userId?: string
+  entityType?: string
+  entityId?: string
+  action?: string
+  fromDate?: string
+  toDate?: string
+}
+
+export async function findAllForExport(
+  prisma: PrismaClient,
+  tenantId: string,
+  params?: AuditLogExportParams,
+  limit = 10000
+) {
+  const where = buildWhere(tenantId, params as AuditLogListParams)
+  return prisma.auditLog.findMany({
+    where,
+    include: auditLogUserInclude,
+    orderBy: { performedAt: "desc" },
+    take: limit,
+  })
+}
+
+export async function countForExport(
+  prisma: PrismaClient,
+  tenantId: string,
+  params?: AuditLogExportParams
+) {
+  const where = buildWhere(tenantId, params as AuditLogListParams)
+  return prisma.auditLog.count({ where })
+}
+
 export async function findById(
   prisma: PrismaClient,
   tenantId: string,

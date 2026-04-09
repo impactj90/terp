@@ -9,9 +9,30 @@ import {
   createMockUserTenant,
 } from "./helpers"
 
+// Mock the export service for export tests
+vi.mock("@/lib/services/audit-log-export-service", () => ({
+  exportCsv: vi.fn().mockResolvedValue({
+    csv: "\uFEFF\"Zeitstempel\";\"Benutzer\"\n\"08.04.2026\";\"Admin\"",
+    filename: "Audit-Log_20260408.csv",
+    count: 1,
+  }),
+  exportPdf: vi.fn().mockResolvedValue({
+    pdf: Buffer.from("fake-pdf-content"),
+    filename: "Audit-Log_20260408.pdf",
+    count: 1,
+  }),
+  AuditLogExportValidationError: class AuditLogExportValidationError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "AuditLogExportValidationError"
+    }
+  },
+}))
+
 // --- Constants ---
 
 const USERS_MANAGE = permissionIdByKey("users.manage")!
+const AUDIT_LOG_EXPORT = permissionIdByKey("audit_log.export")!
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
 const AUDIT_LOG_ID = "a0000000-0000-4000-a000-000000000810"
@@ -77,6 +98,18 @@ function createNoPermContext(prisma: Record<string, unknown>) {
     prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
     authToken: "test-token",
     user: createUserWithPermissions([], {
+      userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
+    }),
+    session: createMockSession(),
+    tenantId: TENANT_ID,
+  })
+}
+
+function createExportContext(prisma: Record<string, unknown>) {
+  return createMockContext({
+    prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
+    authToken: "test-token",
+    user: createUserWithPermissions([AUDIT_LOG_EXPORT], {
       userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
     }),
     session: createMockSession(),
@@ -247,5 +280,80 @@ describe("auditLogs.getById", () => {
 
     expect(result.userId).toBeNull()
     expect(result.user).toBeNull()
+  })
+})
+
+// --- auditLogs.exportCsv tests ---
+
+describe("auditLogs.exportCsv", () => {
+  it("returns base64-encoded CSV with filename and count", async () => {
+    const mockPrisma = { auditLog: {} }
+    const caller = createCaller(createExportContext(mockPrisma))
+    const result = await caller.exportCsv({})
+
+    expect(result.csv).toBeTruthy()
+    expect(typeof result.csv).toBe("string")
+    expect(result.filename).toMatch(/^Audit-Log_\d{8}\.csv$/)
+    expect(result.count).toBe(1)
+
+    // Verify it's valid base64
+    const decoded = Buffer.from(result.csv, "base64").toString("utf-8")
+    expect(decoded).toContain("Zeitstempel")
+  })
+
+  it("denies access without audit_log.export permission", async () => {
+    const mockPrisma = { auditLog: {} }
+    const caller = createCaller(createNoPermContext(mockPrisma))
+    await expect(caller.exportCsv({})).rejects.toThrow("Insufficient permissions")
+  })
+
+  it("passes filter inputs to service", async () => {
+    const { exportCsv: mockExportCsv } = await import("@/lib/services/audit-log-export-service")
+    const mockPrisma = { auditLog: {} }
+    const caller = createCaller(createExportContext(mockPrisma))
+
+    await caller.exportCsv({
+      userId: TARGET_USER_ID,
+      entityType: "employee",
+      action: "update",
+      fromDate: "2026-01-01T00:00:00Z",
+      toDate: "2026-12-31T23:59:59Z",
+    })
+
+    expect(mockExportCsv).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        userId: TARGET_USER_ID,
+        entityType: "employee",
+        action: "update",
+        fromDate: "2026-01-01T00:00:00Z",
+        toDate: "2026-12-31T23:59:59Z",
+      }),
+      expect.objectContaining({
+        userId: expect.any(String),
+      })
+    )
+  })
+})
+
+// --- auditLogs.exportPdf tests ---
+
+describe("auditLogs.exportPdf", () => {
+  it("returns base64-encoded PDF with filename and count", async () => {
+    const mockPrisma = { auditLog: {} }
+    const caller = createCaller(createExportContext(mockPrisma))
+    const result = await caller.exportPdf({})
+
+    expect(result.pdf).toBeTruthy()
+    expect(typeof result.pdf).toBe("string")
+    expect(result.filename).toMatch(/^Audit-Log_\d{8}\.pdf$/)
+    expect(result.count).toBe(1)
+  })
+
+  it("denies access without audit_log.export permission", async () => {
+    const mockPrisma = { auditLog: {} }
+    const caller = createCaller(createNoPermContext(mockPrisma))
+    await expect(caller.exportPdf({})).rejects.toThrow("Insufficient permissions")
   })
 })

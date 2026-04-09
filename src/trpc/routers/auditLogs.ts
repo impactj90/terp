@@ -21,6 +21,7 @@ import * as auditLogsService from "@/lib/services/audit-logs-service"
 
 const USERS_MANAGE = permissionIdByKey("users.manage")!
 const REPORTS_VIEW = permissionIdByKey("reports.view")!
+const AUDIT_LOG_EXPORT = permissionIdByKey("audit_log.export")!
 
 // --- Output Schemas ---
 
@@ -62,6 +63,15 @@ const listInputSchema = z
     toDate: z.string().optional(),
   })
   .optional()
+
+const exportInputSchema = z.object({
+  userId: z.string().optional(),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  action: z.string().optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+})
 
 // --- Router ---
 
@@ -111,6 +121,71 @@ export const auditLogsRouter = createTRPCRouter({
           ctx.tenantId!,
           input.id
         )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * auditLogs.exportCsv -- Export audit log entries as CSV.
+   *
+   * Returns base64-encoded UTF-8 CSV with BOM.
+   * Limit: 10,000 entries max.
+   *
+   * Requires: audit_log.export permission
+   */
+  exportCsv: tenantProcedure
+    .use(requirePermission(AUDIT_LOG_EXPORT))
+    .input(exportInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { exportCsv } = await import(
+          "@/lib/services/audit-log-export-service"
+        )
+        const audit = {
+          userId: ctx.user!.id,
+          ipAddress: ctx.ipAddress ?? null,
+          userAgent: ctx.userAgent ?? null,
+        }
+        const result = await exportCsv(ctx.prisma, ctx.tenantId!, input, audit)
+        return {
+          csv: Buffer.from(result.csv, "utf-8").toString("base64"),
+          filename: result.filename,
+          count: result.count,
+        }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * auditLogs.exportPdf -- Export audit log entries as PDF.
+   *
+   * Returns base64-encoded PDF buffer.
+   * A4 landscape with tenant branding.
+   * Limit: 10,000 entries max.
+   *
+   * Requires: audit_log.export permission
+   */
+  exportPdf: tenantProcedure
+    .use(requirePermission(AUDIT_LOG_EXPORT))
+    .input(exportInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { exportPdf } = await import(
+          "@/lib/services/audit-log-export-service"
+        )
+        const audit = {
+          userId: ctx.user!.id,
+          ipAddress: ctx.ipAddress ?? null,
+          userAgent: ctx.userAgent ?? null,
+        }
+        const result = await exportPdf(ctx.prisma, ctx.tenantId!, input, audit)
+        return {
+          pdf: result.pdf.toString("base64"),
+          filename: result.filename,
+          count: result.count,
+        }
       } catch (err) {
         handleServiceError(err)
       }
