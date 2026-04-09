@@ -61,6 +61,7 @@ model User {
   reportsCreated             Report[]
   scheduleExecutionsTriggers ScheduleExecution[]
   enabledModules             TenantModule[] @relation("moduleEnabledBy")
+  demoTenantsCreated         Tenant[] @relation("DemoTenantCreatedBy")
   emailSendLogs              EmailSendLog[]
 
   // Inbound Invoices
@@ -109,7 +110,15 @@ model Tenant {
   notes                 String?   @db.Text
   vacationBasis         String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
+  // Demo-Tenant fields (see plan 2026-04-09-demo-tenant-system.md)
+  isDemo          Boolean   @default(false) @map("is_demo")
+  demoExpiresAt   DateTime? @map("demo_expires_at") @db.Timestamptz(6)
+  demoTemplate    String?   @map("demo_template") @db.VarChar(100)
+  demoCreatedById String?   @map("demo_created_by") @db.Uuid
+  demoNotes       String?   @map("demo_notes") @db.Text
+
   // Relations
+  demoCreatedBy               User?                    @relation("DemoTenantCreatedBy", fields: [demoCreatedById], references: [id], onDelete: SetNull)
   users                       User[]
   userGroups                  UserGroup[]
   userTenants                 UserTenant[]
@@ -264,6 +273,7 @@ model Tenant {
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
+  @@index([isDemo, demoExpiresAt], map: "idx_tenant_demo_expiration")
   @@map("tenants")
 }
 
