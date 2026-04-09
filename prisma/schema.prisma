@@ -250,6 +250,10 @@ model Tenant {
   employeeForeignAssignments EmployeeForeignAssignment[]
   employeeOtherEmployments   EmployeeOtherEmployment[]
 
+  // Payroll export templates (Phase 2)
+  exportTemplates    ExportTemplate[]
+  tenantPayrollWages TenantPayrollWage[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -3328,27 +3332,119 @@ model EmployeeAccessAssignment {
 // Defines an export interface for payroll system integration.
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model ExportInterface {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @map("tenant_id") @db.Uuid
-  interfaceNumber Int      @map("interface_number")
-  name            String   @db.VarChar(255)
-  mandantNumber   String?  @map("mandant_number") @db.VarChar(50)
-  exportScript    String?  @map("export_script") @db.VarChar(255)
-  exportPath      String?  @map("export_path") @db.VarChar(500)
-  outputFilename  String?  @map("output_filename") @db.VarChar(255)
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  interfaceNumber   Int      @map("interface_number")
+  name              String   @db.VarChar(255)
+  mandantNumber     String?  @map("mandant_number") @db.VarChar(50)
+  beraterNr         String?  @map("berater_nr") @db.VarChar(7)
+  defaultTemplateId String?  @map("default_template_id") @db.Uuid
+  exportScript      String?  @map("export_script") @db.VarChar(255)
+  exportPath        String?  @map("export_path") @db.VarChar(500)
+  outputFilename    String?  @map("output_filename") @db.VarChar(255)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  accounts       ExportInterfaceAccount[]
-  payrollExports PayrollExport[]
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accounts        ExportInterfaceAccount[]
+  payrollExports  PayrollExport[]
+  defaultTemplate ExportTemplate?          @relation("DefaultTemplateForInterface", fields: [defaultTemplateId], references: [id], onDelete: SetNull)
 
   // Indexes
   @@unique([tenantId, interfaceNumber])
   @@index([tenantId], map: "idx_ei_tenant")
   @@map("export_interfaces")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplate (Phase 2)
+// -----------------------------------------------------------------------------
+// Per-tenant Liquid templates used by the export-engine to generate
+// DATEV LODAS, LuG, Lexware, SAGE, or generic CSV export files.
+model ExportTemplate {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String   @db.VarChar(200)
+  description      String?  @db.Text
+  targetSystem     String   @map("target_system") @db.VarChar(20)
+  templateBody     String   @map("template_body") @db.Text
+  outputFilename   String   @default("export_{{period.year}}{{period.monthPadded}}.txt") @map("output_filename") @db.VarChar(200)
+  encoding         String   @default("windows-1252") @db.VarChar(20)
+  lineEnding       String   @default("crlf") @map("line_ending") @db.VarChar(4)
+  fieldSeparator   String   @default(";") @map("field_separator") @db.VarChar(5)
+  decimalSeparator String   @default(",") @map("decimal_separator") @db.VarChar(1)
+  dateFormat       String   @default("TT.MM.JJJJ") @map("date_format") @db.VarChar(20)
+  version          Int      @default(1)
+  isActive         Boolean  @default(true) @map("is_active")
+  createdBy        String?  @map("created_by") @db.Uuid
+  updatedBy        String?  @map("updated_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions          ExportTemplateVersion[]
+  exportInterfaces  ExportInterface[]        @relation("DefaultTemplateForInterface")
+
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_export_templates_tenant")
+  @@map("export_templates")
+}
+
+model ExportTemplateVersion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId   String   @map("template_id") @db.Uuid
+  version      Int
+  templateBody String   @map("template_body") @db.Text
+  changedBy    String?  @map("changed_by") @db.Uuid
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId], map: "idx_export_template_versions_template")
+  @@map("export_template_versions")
+}
+
+// -----------------------------------------------------------------------------
+// PayrollWage (Phase 2)
+// -----------------------------------------------------------------------------
+// Default and tenant-specific Lohnart mapping (DATEV-Lohnart codes).
+// DefaultPayrollWage holds the global seed; TenantPayrollWage is the
+// per-tenant editable copy. Templates reference these via context.
+model DefaultPayrollWage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(10)
+  name        String   @db.VarChar(200)
+  terpSource  String   @map("terp_source") @db.VarChar(50)
+  category    String   @db.VarChar(30)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("default_payroll_wages")
+}
+
+model TenantPayrollWage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(10)
+  name        String   @db.VarChar(200)
+  terpSource  String   @map("terp_source") @db.VarChar(50)
+  category    String   @db.VarChar(30)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_tenant_payroll_wages_tenant")
+  @@map("tenant_payroll_wages")
 }
 
 // -----------------------------------------------------------------------------

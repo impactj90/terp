@@ -294,6 +294,27 @@ export {
   type PayrollExportPreview,
 } from './use-payroll-exports'
 
+// Payroll Wages (Lohnart-Mapping, Phase 2)
+export {
+  usePayrollWages,
+  useDefaultPayrollWages,
+  useInitializePayrollWages,
+  useUpdatePayrollWage,
+  useResetPayrollWages,
+} from './use-payroll-wages'
+
+// Export Templates (Phase 2)
+export {
+  useExportTemplates,
+  useExportTemplate,
+  useExportTemplateVersions,
+  useCreateExportTemplate,
+  useUpdateExportTemplate,
+  useDeleteExportTemplate,
+  usePreviewExportTemplate,
+  useTestExportTemplate,
+} from './use-export-templates'
+
 // Export Interfaces (admin CRUD)
 export {
   useExportInterfaces as useExportInterfacesList,

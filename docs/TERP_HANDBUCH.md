@@ -154,6 +154,14 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20e.15 Praxisbeispiel: Kind erfassen und Elternzeit zuordnen](#20e15-praxisbeispiel-kind-erfassen-und-elternzeit-zuordnen)
     - [20e.16 Praxisbeispiel: Dienstwagen erfassen](#20e16-praxisbeispiel-dienstwagen-erfassen)
     - [20e.17 Was Terp NICHT tut](#20e17-was-terp-nicht-tut)
+20f. [Export-Templates (Lohn-Export-Engine)](#20f-export-templates-lohn-export-engine)
+    - [20f.1 Was ist das?](#20f1-was-ist-das)
+    - [20f.2 Architektur: Zwei getrennte Schichten](#20f2-architektur-zwei-getrennte-schichten)
+    - [20f.3 Template-Verwaltung (Administratoren)](#20f3-template-verwaltung)
+    - [20f.4 Lohnart-Mapping (Administratoren)](#20f4-lohnart-mapping)
+    - [20f.5 Monatlicher Export-Lauf (Buchhaltung)](#20f5-monatlicher-export-lauf--schritt-für-schritt)
+    - [20f.6 Audit-Log](#20f6-audit-log)
+    - [20f.7 Was Terp mit Templates NICHT tut](#20f7-was-terp-mit-templates-nicht-tut)
 21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
     - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
     - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
@@ -3393,6 +3401,8 @@ Der vollständige Ablauf „Monatswerte prüfen → Korrekturassistent → Masse
 💡 **Hinweis:** Schließen Sie Monate erst ab, wenn alle Fehler im Korrekturassistenten behoben sind. Nach dem Abschluss können keine Buchungen mehr geändert werden. Falls doch eine Korrektur nötig ist: Einzelnen Mitarbeiter über ⋯ → „Wieder öffnen" → korrigieren → erneut abschließen.
 
 ### 8.5 Lohnexporte (DATEV/CSV)
+
+> **Dieser Abschnitt richtet sich an Buchhaltungsmitarbeiter**, die den monatlichen Lohnexport durchführen. Er beschreibt den **Legacy-CSV-Export**. Wenn Ihr Administrator die neue **Template-basierte Export-Engine** (DATEV LODAS, DATEV LuG, Lexware, SAGE) eingerichtet hat, benutzen Sie stattdessen **Abschnitt 20f.5** — der Ablauf ist gleich, nur die Formate sind flexibler.
 
 **Was ist es?** Lohnexporte generieren CSV-Dateien mit allen relevanten Arbeitszeitdaten eines Monats — aufgeschlüsselt nach Mitarbeiter, mit Soll-/Ist-Stunden, Überstunden, Urlaubs- und Krankheitstagen sowie den Werten aller zugeordneten Konten.
 
@@ -9045,6 +9055,383 @@ Ungültige Werte werden mit einer klaren Fehlermeldung abgelehnt — sowohl im U
 - **Keine Pfändungsberechnung** — nur Erfassung; die Abrechnung macht das Lohnsystem
 
 Terp bleibt konsequent ein Datenvorbereitungs- und Exportsystem.
+
+---
+
+## 20f. Export-Templates (Lohn-Export-Engine)
+
+### 20f.1 Was ist das?
+
+**Terp erzeugt Export-Dateien für die Lohnabrechnung über benutzerdefinierte Templates.** Statt fester Formate (nur DATEV LODAS oder nur Lexware) schreiben Sie einmal pro Mandant ein Template, das aus den Terp-Stammdaten und Monatswerten genau die Datei erzeugt, die Ihr Lohnbüro oder Ihr Steuerberater braucht — egal ob DATEV LODAS, DATEV Lohn und Gehalt, Lexware, SAGE oder eine selbst definierte CSV.
+
+Die Template-Sprache ist **LiquidJS**, eine einfache, sichere Templating-Sprache, die ursprünglich von Shopify für Shop-Betreiber entwickelt wurde. Templates enthalten **keinen ausführbaren Code** — nur Platzhalter, Schleifen, Bedingungen und Formatierungs-Filter. Das System ist gegen Dateisystem-Zugriffe, Netzwerk-Zugriffe und Prototype-Chain-Angriffe gesperrt ("Sandboxed").
+
+**Wichtig: Terp berechnet KEINE Lohnabrechnung.** Brutto-Netto-Berechnung, SV-Beiträge, Lohnsteuer, Sachbezugsbewertung, DEÜV-Meldungen — all das macht Ihr Lohnsystem, nicht Terp. Terp stellt nur die Daten bereit und formatiert sie so, wie Ihr Lohnsystem sie erwartet.
+
+### 20f.2 Architektur: Zwei getrennte Schichten
+
+Das Lohn-Export-System besteht aus **zwei klar getrennten Schichten** — das ist wichtig für das Verständnis der Rollenteilung:
+
+| Schicht | Was sie tut | Wer pflegt sie | Wie oft |
+|---|---|---|---|
+| **1. Stammdatenpflege** | Erfassen aller lohnrelevanten Daten pro Mitarbeiter (Steuer-ID, SV-Nummer, IBAN, Steuerklasse, Krankenkasse, Gehalt, Dienstwagen, Kinder, Pfändungen, …). Siehe Abschnitt **20e**. | HR / Personalabteilung | Bei Einstellung, Änderung der Lebensumstände |
+| **2. Export-Mapping** | Template definieren, das aus den Stammdaten + Monatswerten eine Datei im gewünschten Format erzeugt. Wird einmalig pro Mandant eingerichtet (oder vom Implementierungspartner bereitgestellt). | Administrator / Implementierungspartner / Steuerberater | Einmalig bei Einrichtung + bei Format-Änderungen |
+
+**Und die Nutzung:**
+
+| Aktion | Wer führt sie aus | Wie oft |
+|---|---|---|
+| **3. Monatlicher Export-Lauf** | Einmal pro Monat ein Template auswählen → Jahr/Monat wählen → Datei herunterladen → an Steuerberater senden | Buchhaltungsmitarbeiter | Monatlich |
+
+Das Handbuch trennt die folgenden Abschnitte nach diesen Rollen.
+
+---
+
+### 20f.3 Template-Verwaltung
+
+> **Dieser Abschnitt richtet sich an Administratoren und Implementierungspartner.** Er beschreibt, wie Export-Templates angelegt, bearbeitet und getestet werden. Buchhaltungsmitarbeiter brauchen diesen Abschnitt nicht — sie wählen in der monatlichen Nutzung nur fertige Templates aus (siehe Abschnitt 20f.5).
+
+#### 20f.3.1 Template-Liste aufrufen
+
+📍 Seitenleiste → **Administration** → **Export-Templates**
+
+⚠️ Berechtigung: `export_template.view` (Ansehen), `export_template.create`/`.edit`/`.delete` (Verwalten), `export_template.execute` (Vorschau / Test-Export ausführen)
+
+✅ Sie sehen eine Tabelle mit allen Templates des Mandanten. Spalten:
+- **Name** — z. B. "DATEV LODAS — Steuerberater Müller"
+- **Zielsystem** — DATEV LODAS, DATEV LuG, Lexware, SAGE oder Generisch
+- **Encoding** — Windows-1252 (DATEV-Standard), UTF-8, UTF-8 mit BOM
+- **Version** — wird automatisch erhöht bei jeder Änderung des Template-Bodys (siehe 20f.3.6)
+- **Status** — Aktiv / Inaktiv (nur aktive Templates erscheinen im monatlichen Export-Dialog)
+
+#### 20f.3.2 Neues Template anlegen
+
+1. 📍 **„Neues Template"** (oben rechts)
+2. **Metadaten ausfüllen:**
+
+| Feld | Bedeutung | Beispiel |
+|---|---|---|
+| Name | Eindeutig pro Mandant | "DATEV LODAS — Stb. Müller" |
+| Beschreibung | Freitext (für Ihre eigenen Notizen) | "Version 2026-04, Abstimmung mit Steuerberater" |
+| Zielsystem | Einer von: `datev_lodas`, `datev_lug`, `lexware`, `sage`, `custom` | `datev_lodas` |
+| Encoding | Zeichenkodierung der erzeugten Datei | `Windows-1252 (DATEV)` |
+| Zeilenende | CRLF (Windows, für DATEV) oder LF (Unix) | `CRLF` |
+| Feldtrennzeichen | Zeichen zwischen CSV-Feldern | `;` |
+| Dezimaltrenner | Komma (DE) oder Punkt (EN) | `,` |
+| Datumsformat | Hinweis für die Filter (`TT.MM.JJJJ`, `TTMMJJJJ`, `JJJJMMTT`) | `TT.MM.JJJJ` |
+| Dateiname-Muster | Wird selbst als Template gerendert | `lodas_{{period.year}}{{period.monthPadded}}.txt` |
+
+3. **Template-Body schreiben** (siehe 20f.3.3 für die Syntax)
+4. 📍 **„Anlegen"**
+
+✅ Das Template erscheint in der Liste mit Version `v1` und Status `Aktiv`.
+
+#### 20f.3.3 Template-Syntax — das Kontext-Objekt
+
+Im Template-Body haben Sie Zugriff auf ein **Kontext-Objekt**, das alle Daten des aktuellen Export-Laufs enthält. Die Top-Level-Felder:
+
+| Feld | Enthält |
+|---|---|
+| `exportInterface` | `name`, `mandantNumber`, `beraterNr` (wenn Exportschnittstelle gewählt) |
+| `period` | `year`, `month`, `monthPadded` (`04`), `monthName` (`April`), `monthNameEn`, `isoDate` (`2026-04`), `ddmmyyyy` (`01042026`), `firstDay` (`01.04.2026`), `lastDay` (`30.04.2026`) |
+| `tenant` | `name`, `addressStreet`, `addressZip`, `addressCity`, `addressCountry` |
+| `template` | `fieldSeparator`, `decimalSeparator`, `dateFormat`, `targetSystem` (die Metadaten des Templates selbst) |
+| `payrollWages` | Array der Lohnart-Codes aus dem Lohnart-Mapping (siehe 20f.4) |
+| `employees` | Array aller im Zeitraum aktiven Mitarbeiter (siehe nächste Tabelle) |
+
+**Pro Mitarbeiter verfügbar (`employees[i].*`):**
+
+| Unterpfad | Felder |
+|---|---|
+| `personnelNumber`, `firstName`, `lastName`, `birthName`, `birthDate`, `gender`, `nationality`, `maritalStatus` | Basis-Stammdaten |
+| `address` | `street`, `houseNumber`, `zip`, `city`, `country` |
+| `tax` | `taxId` (entschlüsselt!), `taxClass`, `taxFactor`, `denomination`, `spouseDenomination`, `childAllowance`, `freeAllowance`, `additionAmount`, `isPrimaryEmployer` |
+| `socialSecurity` | `ssn` (entschlüsselt!), `healthInsurance`, `healthInsuranceCode`, `healthInsuranceStatus`, `privateHealthContribution`, `personnelGroupCode`, `contributionGroupCode`, `activityCode`, `midijobFlag` |
+| `bank` | `iban` (entschlüsselt!), `bic`, `accountHolder` |
+| `compensation` | `grossSalary`, `hourlyRate`, `paymentType`, `salaryGroup` |
+| `contract` | `entryDate`, `exitDate`, `contractType`, `department`, `departmentCode`, `costCenter`, `costCenterCode` |
+| `monthlyValues` | `targetHours`, `workedHours`, `overtimeHours`, `vacationDays`, `sickDays`, `otherAbsenceDays` (nur aus abgeschlossenen Monaten) |
+| `benefits.companyCars[]` | `listPrice`, `propulsionType`, `distanceToWorkKm`, `usageType` |
+| `benefits.jobBikes[]`, `.mealAllowances[]`, `.vouchers[]`, `.jobTickets[]`, `.pensions[]`, `.savings[]` | siehe Stammdaten-Tabs (20e.7) |
+| `garnishments[]` | `creditorName` (entschlüsselt), `fileReference` (entschlüsselt), `amount`, `method`, `dependents`, `rank` |
+| `children[]` | `firstName`, `lastName`, `birthDate`, `taxAllowanceShare` |
+| `foreignAssignments[]`, `parentalLeaves[]`, `maternityLeaves[]` | Zeitraum-bezogene Datensätze |
+| `disability` | `degree`, `equalStatus`, `markers`, `idValidUntil` |
+| `pension` | `receivesOldAge`, `receivesDisability`, `receivesSurvivor`, `startDate` |
+
+💡 **Wichtig — Zeitraum-Filterung:** Benefit-Arrays (`companyCars`, `jobBikes`, `mealAllowances`, `vouchers`, `jobTickets`, `pensions`, `savings`, `garnishments`, `foreignAssignments`, `parentalLeaves`, `maternityLeaves`) enthalten **nur Datensätze, die im gewählten Abrechnungsmonat aktiv waren**. Ein Dienstwagen, der bis März gefahren wurde und ab April durch einen neuen ersetzt wurde, erscheint im April-Export nur mit dem Nachfolger. Die Filter-Logik: `start_date <= Monatsende` UND (`end_date IS NULL` ODER `end_date >= Monatsanfang`).
+
+💡 **Sensible Felder:** `tax.taxId`, `socialSecurity.ssn`, `bank.iban`, `savings[].recipientIban`, `garnishments[].creditorName`, `garnishments[].fileReference` sind in der Datenbank **verschlüsselt** gespeichert und werden nur für die Template-Ausführung entschlüsselt. Die entschlüsselten Klartext-Werte dürfen in Templates verwendet werden, sind aber **niemals** im Audit-Log oder in Vorschauen der Monatswerte sichtbar.
+
+#### 20f.3.4 Custom Filter (DATEV-spezifisch)
+
+Zusätzlich zu den eingebauten Liquid-Filtern stellt Terp sechs DATEV-Filter bereit, die Werte für die typischen DATEV/Lohnsystem-Formate aufbereiten:
+
+| Filter | Funktion | Beispiel | Ergebnis |
+|---|---|---|---|
+| `datev_date` | Datum formatieren (Standard `TT.MM.JJJJ`) | `{{ emp.birthDate \| datev_date: "TTMMJJJJ" }}` | `15051985` |
+| `datev_decimal` | Zahl mit Komma als Dezimaltrenner | `{{ 1234.5 \| datev_decimal: 2 }}` | `1234,50` |
+| `datev_string` | String für Semikolon-getrennte Felder escapen (doppelte Anführungszeichen bei Sonderzeichen) | `{{ "Müller; GmbH" \| datev_string }}` | `"Müller; GmbH"` |
+| `pad_left` | Feste Feldlänge, links aufgefüllt | `{{ 42 \| pad_left: 5, "0" }}` | `00042` |
+| `pad_right` | Feste Feldlänge, rechts aufgefüllt | `{{ "abc" \| pad_right: 6 }}` | `abc␣␣␣` |
+| `mask_iban` | IBAN nur Anfang + Ende zeigen (für Vorschauen) | `{{ "DE89370400440532013000" \| mask_iban }}` | `DE89****3000` |
+
+Beispiel-Template:
+
+```liquid
+[Allgemein]
+Ziel=LODAS
+BeraterNr={{ exportInterface.beraterNr }}
+MandantenNr={{ exportInterface.mandantNumber }}
+
+[Mitarbeiter]
+Personalnummer;Nachname;Vorname;Eintrittsdatum;Bruttogehalt
+{%- for emp in employees %}
+{{ emp.personnelNumber | pad_left: 5, "0" }};{{ emp.lastName | datev_string }};{{ emp.firstName | datev_string }};{{ emp.contract.entryDate | datev_date }};{{ emp.compensation.grossSalary | datev_decimal: 2 }}
+{%- endfor %}
+```
+
+#### 20f.3.5 Live-Vorschau erzeugen
+
+Um ein Template während der Entwicklung zu testen, ohne eine echte Export-Datei zu erzeugen:
+
+1. Template öffnen (📍 Bearbeiten-Icon in der Liste)
+2. Am unteren Rand des Editors: **Jahr** und **Monat** wählen (nur vergangene Monate mit abgeschlossenen Monatswerten liefern Daten)
+3. 📍 **„Vorschau erzeugen"**
+
+✅ Der gerenderte Text erscheint in einem grauen Kasten unter dem Formular. Über dem Kasten steht die Statistik: Anzahl Mitarbeiter, Byte-Größe, Datei-Hash (SHA-256).
+
+💡 Die Vorschau wird auf **50 KB gekürzt** angezeigt, damit die UI bei großen Exporten schnell bleibt. Für den vollständigen Output nutzen Sie den Test-Export (siehe 20f.3.8) oder den echten Monats-Export (siehe 20f.5).
+
+💡 Wenn die Vorschau leer ist: prüfen Sie, ob der gewählte Monat abgeschlossene Monatswerte enthält. Der Monatsabschluss erfolgt unter 📍 Administration → Monatswerte (siehe Abschnitt 8.4).
+
+#### 20f.3.6 Versionierung
+
+Jede Änderung des **Template-Bodys** erhöht automatisch die `version`-Zahl und archiviert den alten Body in der Versions-Historie. Metadaten-Änderungen (Name, Encoding, Feldtrennzeichen etc.) lassen die Version unverändert.
+
+- **v1** → erste Anlage
+- **v2** → Body geändert
+- **v3** → Body erneut geändert
+
+Die archivierten Versionen sind im Audit-Log sichtbar (📍 Administration → Audit-Protokoll) und können über die API gelesen werden. Das erlaubt nachträgliche Fehlersuche, wenn ein alter Export-Lauf nachvollzogen werden muss.
+
+#### 20f.3.7 Sicherheit & Sandboxing
+
+Die Template-Engine läuft in einem **Sandbox-Modus** mit folgenden Einschränkungen:
+
+| Einschränkung | Bedeutung |
+|---|---|
+| Kein Dateisystem-Zugriff | `{% include "/etc/passwd" %}` und `{% render ... %}` sind gesperrt. |
+| Kein Netzwerk-Zugriff | Templates können keine HTTP-Anfragen stellen. |
+| Keine Prototype-Chain-Traversal | `{{ obj.__proto__ }}` und `{{ obj.constructor }}` liefern leeren Output (Schutz gegen Prototype-Pollution-Angriffe). |
+| Render-Timeout | 30 Sekunden (Standard). Länger laufende Renders mit async-Operationen brechen ab. |
+| Maximum-Output | 100 MB pro Datei. Bei Überschreitung: `ExportTemplateSizeValidationError`. |
+| Ungültige Liquid-Syntax | Wird beim Speichern sofort abgelehnt mit deutlicher Fehlermeldung ("Invalid Liquid syntax: …"). |
+
+💡 Templates werden trotz Sandboxing **nur von Administratoren** gepflegt. Normale Benutzer können sie weder ansehen noch bearbeiten (Berechtigung `export_template.edit` ist standardmäßig nur dem Admin-Benutzergruppe zugewiesen).
+
+#### 20f.3.8 Praxisbeispiel: DATEV LODAS-Template anlegen
+
+**Rolle:** Administrator oder Implementierungspartner
+**Ziel:** Ein lauffähiges DATEV LODAS ASCII-Template anlegen, das Personalnummer, Name und monatliche Soll-/Ist-Stunden exportiert.
+
+1. 📍 Administration → **Export-Templates** → **„Neues Template"**
+2. Metadaten:
+   - Name: `DATEV LODAS — Steuerberater Müller`
+   - Beschreibung: `Version 2026-04, abgestimmt am 2026-04-15`
+   - Zielsystem: `DATEV LODAS`
+   - Encoding: `Windows-1252 (DATEV)`
+   - Zeilenende: `CRLF (Windows)`
+   - Feldtrennzeichen: `;`
+   - Dezimaltrenner: `,`
+   - Datumsformat: `TT.MM.JJJJ`
+   - Dateiname-Muster: `lodas_{{period.year}}{{period.monthPadded}}.txt`
+3. Template-Body:
+   ```liquid
+   [Allgemein]
+   Ziel=LODAS
+   Version_SST=1.0
+   BeraterNr={{ exportInterface.beraterNr }}
+   MandantenNr={{ exportInterface.mandantNumber }}
+   Datumsformat={{ template.dateFormat }}
+   Feldtrennzeichen={{ template.fieldSeparator }}
+   Zahlenkomma={{ template.decimalSeparator }}
+
+   [Satzbeschreibung]
+   21;u_lod_bwd_buchung_standard;pnr#bwd;abrechnung_zeitraum#bwd;buchungswert#bwd;lohnart#bwd
+
+   [Bewegungsdaten]
+   {%- for emp in employees -%}
+   {%- if emp.monthlyValues.targetHours > 0 %}
+   {{ emp.personnelNumber }};{{ period.ddmmyyyy }};{{ emp.monthlyValues.targetHours | datev_decimal: 2 }};1000
+   {%- endif -%}
+   {%- if emp.monthlyValues.workedHours > 0 %}
+   {{ emp.personnelNumber }};{{ period.ddmmyyyy }};{{ emp.monthlyValues.workedHours | datev_decimal: 2 }};1001
+   {%- endif -%}
+   {%- if emp.monthlyValues.overtimeHours > 0 %}
+   {{ emp.personnelNumber }};{{ period.ddmmyyyy }};{{ emp.monthlyValues.overtimeHours | datev_decimal: 2 }};1002
+   {%- endif -%}
+   {%- endfor %}
+   ```
+4. 📍 **„Anlegen"** → Template erscheint mit `v1` in der Liste.
+5. 📍 Bearbeiten-Icon → nach unten scrollen → Jahr/Monat des letzten abgeschlossenen Monats wählen → **„Vorschau erzeugen"**
+6. ✅ Output enthält `[Allgemein]`, `[Satzbeschreibung]` und `[Bewegungsdaten]` mit einer Zeile pro aktivem Mitarbeiter.
+7. Testen Sie das Template beim Steuerberater: Datei via Monats-Export herunterladen (siehe 20f.5) und per Mandant > Daten übernehmen > ASCII-Import in DATEV LODAS importieren. Bei Fehlern: Feedback des Steuerberaters einholen, Template anpassen → Version wird automatisch auf `v2` erhöht.
+
+---
+
+### 20f.4 Lohnart-Mapping
+
+> **Dieser Abschnitt richtet sich an Administratoren.** Das Lohnart-Mapping wird vom Steuerberater vorgegeben und einmalig eingerichtet. Buchhaltungsmitarbeiter haben hier nichts zu tun.
+
+**Was ist es?** Das Lohnart-Mapping definiert, welche DATEV-Lohnart-Codes (vierstellige Zahlen wie 1000, 1001, 2000) für welche Terp-Datenquelle (targetHours, workedHours, vacationDays, …) verwendet werden. Templates referenzieren diese Codes über das `payrollWages`-Array im Kontext-Objekt.
+
+📍 Seitenleiste → **Administration** → **Lohnart-Mapping**
+
+⚠️ Berechtigung: `personnel.payroll_data.view` (Ansehen), `personnel.payroll_data.edit` (Bearbeiten)
+
+#### 20f.4.1 Standard-Lohnarten
+
+Terp liefert **20 Standard-Lohnarten** als Seed, die als Ausgangspunkt dienen:
+
+| Code | Name | Terp-Quelle | Kategorie |
+|---|---|---|---|
+| 1000 | Sollstunden | targetHours | time |
+| 1001 | Iststunden | workedHours | time |
+| 1002 | Mehrarbeit/Überstunden | overtimeHours | time |
+| 1003 | Nachtarbeit | nightHours | time |
+| 1004 | Sonntagsarbeit | sundayHours | time |
+| 1005 | Feiertagsarbeit | holidayHours | time |
+| 2000 | Urlaub | vacationDays | absence |
+| 2001 | Krankheit | sickDays | absence |
+| 2002 | Sonstige Fehlzeit | otherAbsenceDays | absence |
+| 2003 | Mutterschutz | maternityDays | absence |
+| 2004 | Elternzeit | parentalLeaveDays | absence |
+| 2005 | Bezahlte Freistellung | paidLeaveDays | absence |
+| 2100 | Bruttogehalt | grossSalary | compensation |
+| 2101 | Stundenlohn | hourlyRate | compensation |
+| 2200 | Dienstwagen | companyCar | benefit |
+| 2201 | Jobrad | jobBike | benefit |
+| 2202 | Essenszuschuss | mealAllowance | benefit |
+| 2203 | Sachgutschein | voucher | benefit |
+| 2204 | Jobticket | jobTicket | benefit |
+| 2900 | Pfändung | garnishment | deduction |
+
+#### 20f.4.2 Codes pro Mandant anpassen
+
+Beim ersten Aufruf der Seite wird der Standard-Seed automatisch in den Mandanten kopiert. Danach können Sie pro Zeile:
+
+1. **Code** ändern (alphanumerisch, max. 10 Zeichen) — z. B. wenn Ihr Steuerberater eigene Codes verwendet
+2. **Name** ändern — z. B. "Grundgehalt" statt "Bruttogehalt"
+3. **Aktiv**-Schalter umlegen — inaktive Einträge erscheinen nicht mehr im `payrollWages`-Array von neuen Exports
+
+Speichern: Nach einer Änderung in einer Zeile erscheint das Disketten-Icon rechts → Klick speichert nur diese Zeile.
+
+#### 20f.4.3 Reset auf Defaults
+
+📍 **„Auf Defaults zurücksetzen"** (oben rechts) → Bestätigung → **alle** Mandanten-Einträge werden gelöscht und durch den aktuellen Default-Seed ersetzt.
+
+⚠️ **Vorsicht:** Alle mandantenspezifischen Änderungen gehen verloren. Verwenden Sie diese Funktion nur, wenn Sie wirklich alles zurücksetzen wollen.
+
+---
+
+### 20f.5 Monatlicher Export-Lauf — Schritt für Schritt
+
+> **Dieser Abschnitt richtet sich an Buchhaltungsmitarbeiter, die den monatlichen Lohnexport durchführen.** Sie müssen **keine** Templates anlegen oder bearbeiten — das hat der Administrator bereits getan. Sie wählen nur ein vorhandenes Template aus und erzeugen die Datei für den Steuerberater.
+
+#### 20f.5.1 Voraussetzungen
+
+Bevor Sie einen Template-basierten Export erzeugen können, müssen folgende Dinge eingerichtet sein (das erledigt der Administrator einmalig — fragen Sie im Zweifelsfall nach):
+
+- ✅ Ein aktives Export-Template für das gewünschte Zielsystem (z. B. DATEV LODAS)
+- ✅ Eine Exportschnittstelle mit gepflegter `beraterNr` und `mandantNumber` (falls Ihr Template diese Felder verwendet)
+- ✅ Ein **abgeschlossener Monat** in den Monatswerten (📍 Administration → Monatswerte → siehe 8.4) — ohne abgeschlossene Monatswerte sind die Stunden im Export leer oder fehlerhaft
+
+⚠️ Berechtigung: `export_template.execute` (zum Ausführen des Exports)
+
+#### 20f.5.2 Export durchführen
+
+1. 📍 Seitenleiste → **Administration** → **Lohnexporte**
+2. 📍 **„Export erstellen"** (oben rechts) → Dialog öffnet sich von rechts
+3. **Export-Methode** → **„Template-basiert"** wählen
+
+   ✅ Sobald Sie "Template-basiert" auswählen, verschwinden die Felder "Exporttyp" und "Format" (diese sind nur für den Legacy-CSV-Export relevant). Stattdessen erscheint ein **Template**-Dropdown.
+4. **Template** → z. B. `DATEV LODAS — Steuerberater Müller` wählen
+5. **Jahr** → das zu exportierende Jahr (Standard: aktuelles Jahr)
+6. **Monat** → den zu exportierenden Monat wählen (zukünftige Monate sind gesperrt)
+7. **Exportschnittstelle** → optional die Schnittstelle mit BeraterNr/MandantenNr wählen (falls das Template diese Felder verwendet)
+8. 📍 **„Generieren"**
+
+✅ Der Browser lädt die Datei sofort herunter. Der Dateiname richtet sich nach dem Muster im Template (z. B. `lodas_202604.txt`).
+
+#### 20f.5.3 Legacy CSV-Export vs. Template-basiert
+
+Der Dialog unterstützt zwei Methoden — Sie können jederzeit wechseln:
+
+| Methode | Wann verwenden? |
+|---|---|
+| **Legacy CSV-Export** | Für einfache CSV/XLSX/XML/JSON-Exporte ohne besondere Format-Anforderungen. Verwendet die alten Exportschnittstellen mit Konten-Mapping. Siehe Abschnitt 8.5. |
+| **Template-basiert** | Für alle Lohnsystem-Importe (DATEV LODAS, DATEV LuG, Lexware, SAGE), für die der Administrator ein Template angelegt hat. |
+
+💡 Die beiden Methoden schließen sich nicht aus — Sie können parallel Legacy-Exporte und Template-Exporte erzeugen. Der Audit-Log unterscheidet beide Typen.
+
+#### 20f.5.4 Was tun bei Fehlern?
+
+| Fehlermeldung | Ursache | Lösung |
+|---|---|---|
+| "Noch kein aktives Template vorhanden" | Kein Template im Dropdown | Administrator bitten, ein Template anzulegen |
+| "Month not closed" / "Monatswerte nicht abgeschlossen" | Der Monat wurde noch nicht in der Monatswerte-Seite geschlossen | 📍 Administration → Monatswerte → Monat abschließen (siehe 8.4) |
+| "Template render timeout" | Das Template hat sich in einer Endlosschleife verfangen | Administrator bitten, das Template zu prüfen |
+| "Invalid Liquid syntax" | Das Template enthält einen Syntaxfehler | Das sollte nicht passieren, da Templates beim Speichern geprüft werden — Administrator informieren |
+| "Template output exceeds maximum size" | Der Export ist größer als 100 MB | Export auf weniger Mitarbeiter oder Monate einschränken |
+
+#### 20f.5.5 Praxisbeispiel: Monats-Export mit DATEV LODAS-Template
+
+**Rolle:** Buchhaltungsmitarbeiter
+**Ausgangslage:** März 2026 ist abgeschlossen, Sie müssen den Export für den Steuerberater erzeugen.
+
+1. 📍 Seitenleiste → **Administration** → **Lohnexporte**
+2. 📍 **„Export erstellen"**
+3. **Export-Methode**: `Template-basiert`
+4. **Template**: `DATEV LODAS — Steuerberater Müller`
+5. **Jahr**: `2026`
+6. **Monat**: `März`
+7. 📍 **„Generieren"**
+8. ✅ Datei `lodas_202603.txt` wird heruntergeladen
+9. E-Mail an den Steuerberater mit der Datei als Anhang — fertig.
+
+Beim nächsten Monats-Export (April) wiederholen Sie den Ablauf — nur der Monat ändert sich. Das Template und die Exportschnittstelle bleiben gleich, solange das Lohnsystem-Format nicht wechselt.
+
+---
+
+### 20f.6 Audit-Log
+
+Jede Template-Aktion wird im Audit-Log protokolliert:
+
+| Aktion | Wer | Was wird geloggt |
+|---|---|---|
+| Template erstellt | Administrator | Name, Zielsystem, Encoding |
+| Template bearbeitet | Administrator | Neue Version, alte Version archiviert |
+| Template gelöscht | Administrator | Name |
+| Vorschau erzeugt | Administrator | Typ `test`, Template-ID, Version, Zeitraum, Mitarbeiter-Anzahl, Datei-Hash (SHA-256), Byte-Größe |
+| Monats-Export erzeugt | Buchhaltungsmitarbeiter | Typ `export`, Template-ID, Version, Zeitraum, Mitarbeiter-Anzahl, Datei-Hash (SHA-256), Byte-Größe |
+| Lohnart-Code geändert | Administrator | Code, alter/neuer Name |
+| Lohnart-Reset | Administrator | Anzahl gelöschter + eingefügter Einträge |
+
+📍 Seitenleiste → **Administration** → **Audit-Protokoll** → Filter nach Entitätstyp `Export-Template` oder `Lohnart-Mapping`
+
+💡 **Nicht geloggt:** Die entschlüsselten Klartext-Werte sensibler Felder (Steuer-ID, SV-Nummer, IBAN). Geloggt wird nur der SHA-256-Hash der erzeugten Datei — damit lässt sich nachträglich beweisen, dass eine bestimmte Datei von Terp erzeugt wurde, ohne die Datei selbst zu speichern.
+
+---
+
+### 20f.7 Was Terp mit Templates NICHT tut
+
+- **Keine Brutto-Netto-Berechnung im Template** — Filter rechnen nur formatieren, nicht berechnen
+- **Keine Code-Ausführung** — Templates sind deklarativ, kein JavaScript/Python-Eval
+- **Kein Filesystem-/Netzwerk-Zugriff** — `{% include "datei.txt" %}` ist gesperrt
+- **Keine Berechtigungsprüfung im Template** — die Berechtigung wird beim Template-Aufruf einmal geprüft, im Template selbst nicht
+- **Keine automatische Migration bei Terp-Updates** — wenn sich das Kontext-Objekt ändert (z. B. neue Felder), müssen Sie Ihre Templates manuell anpassen. Die Versionierung zeigt dann, was wann geändert wurde.
+- **Keine Template-Bibliothek** (Phase 2) — Standard-Templates für DATEV/Lexware/SAGE werden in Phase 3 mitgeliefert. Bis dahin müssen Templates manuell angelegt oder vom Implementierungspartner bereitgestellt werden.
 
 ---
 

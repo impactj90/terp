@@ -111,6 +111,8 @@
     "monthlyValues": "Monatswerte",
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
+    "exportTemplates": "Export-Templates",
+    "payrollWages": "Lohnart-Mapping",
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
     "evaluations": "Auswertungen",
@@ -271,6 +273,8 @@
     "monthlyValues": "Monatswerte",
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
+    "exportTemplates": "Export-Templates",
+    "payrollWages": "Lohnart-Mapping",
     "monthlyEvaluations": "Auswertungsvorlagen",
     "vacationBalances": "Urlaubskonten",
     "evaluations": "Auswertungen",
@@ -3746,7 +3750,9 @@
       "travel_allowance_rule_set": "Reisekostenregelwerk",
       "local_travel_rule": "Nahreiseregel",
       "extended_travel_rule": "Fernreiseregel",
-      "monthly_eval_template": "Auswertungsvorlage"
+      "monthly_eval_template": "Auswertungsvorlage",
+      "export_template": "Export-Template",
+      "tenant_payroll_wage": "Lohnart-Mapping"
     },
     "detail": {
       "title": "Audit-Protokoll Details",

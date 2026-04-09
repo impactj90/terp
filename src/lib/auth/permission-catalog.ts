@@ -361,6 +361,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("personnel.garnishment.edit", "personnel", "garnishment.edit", "Edit employee garnishment data"),
   p("personnel.foreign_assignment.view", "personnel", "foreign_assignment.view", "View employee foreign assignment data"),
   p("personnel.foreign_assignment.edit", "personnel", "foreign_assignment.edit", "Edit employee foreign assignment data"),
+
+  // Export Templates (Phase 2 - Template-based export engine)
+  p("export_template.view", "export_template", "view", "View export templates"),
+  p("export_template.create", "export_template", "create", "Create export templates"),
+  p("export_template.edit", "export_template", "edit", "Edit export templates"),
+  p("export_template.delete", "export_template", "delete", "Delete export templates"),
+  p("export_template.execute", "export_template", "execute", "Execute export templates (generate exports)"),
 ]
 
 // Lookup maps

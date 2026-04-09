@@ -90,6 +90,7 @@
     "html5-qrcode": "^2.3.8",
     "iconv-lite": "^0.7.2",
     "imapflow": "^1.2.18",
+    "liquidjs": "^10.25.4",
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.6",
     "next": "^16.2.1",

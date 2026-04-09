@@ -553,6 +553,18 @@ export const navConfig: NavSection[] = [
         permissions: ['payroll.manage'],
       },
       {
+        titleKey: 'exportTemplates',
+        href: '/admin/export-templates',
+        icon: FileStack,
+        permissions: ['export_template.view'],
+      },
+      {
+        titleKey: 'payrollWages',
+        href: '/admin/payroll-wages',
+        icon: Tag,
+        permissions: ['personnel.payroll_data.view'],
+      },
+      {
         titleKey: 'monthlyEvaluations',
         href: '/admin/monthly-evaluations',
         icon: ClipboardList,

@@ -101,6 +101,8 @@ import { employeeForeignAssignmentsRouter } from "./employeeForeignAssignments"
 import { employeeOtherEmploymentsRouter } from "./employeeOtherEmployments"
 import { healthInsuranceProvidersRouter } from "./healthInsuranceProviders"
 import { activityCodesKldbRouter } from "./activityCodesKldb"
+import { payrollWagesRouter } from "./payrollWages"
+import { exportTemplatesRouter } from "./exportTemplates"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -199,6 +201,8 @@ export const appRouter = createTRPCRouter({
   employeeOtherEmployments: employeeOtherEmploymentsRouter,
   healthInsuranceProviders: healthInsuranceProvidersRouter,
   activityCodesKldb: activityCodesKldbRouter,
+  payrollWages: payrollWagesRouter,
+  exportTemplates: exportTemplatesRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -111,6 +111,8 @@
     "monthlyValues": "Monthly Values",
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
+    "exportTemplates": "Export Templates",
+    "payrollWages": "Wage Code Mapping",
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
     "evaluations": "Evaluations",
@@ -271,6 +273,8 @@
     "monthlyValues": "Monthly Values",
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
+    "exportTemplates": "Export Templates",
+    "payrollWages": "Wage Code Mapping",
     "monthlyEvaluations": "Evaluation Templates",
     "vacationBalances": "Vacation Balances",
     "evaluations": "Evaluations",
@@ -3746,7 +3750,9 @@
       "travel_allowance_rule_set": "Travel Allowance Rule Set",
       "local_travel_rule": "Local Travel Rule",
       "extended_travel_rule": "Extended Travel Rule",
-      "monthly_eval_template": "Evaluation Template"
+      "monthly_eval_template": "Evaluation Template",
+      "export_template": "Export Template",
+      "tenant_payroll_wage": "Wage Code Mapping"
     },
     "detail": {
       "title": "Audit Log Details",

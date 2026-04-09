@@ -25,6 +25,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useGeneratePayrollExport, useExportInterfaces } from '@/hooks'
+import { useExportTemplates } from '@/hooks/use-export-templates'
+import { useTRPC } from '@/trpc'
+import { useMutation } from '@tanstack/react-query'
 import { parseApiError } from '@/lib/api/errors'
 import { Link } from '@/i18n/navigation'
 
@@ -49,6 +52,8 @@ export function GenerateExportDialog({
   // Form state
   const [year, setYear] = useState(defaultYear)
   const [month, setMonth] = useState(defaultMonth)
+  const [exportMethod, setExportMethod] = useState<'legacy' | 'template'>('legacy')
+  const [templateId, setTemplateId] = useState<string | null>(null)
   const [exportType, setExportType] = useState('standard')
   const [format, setFormat] = useState('csv')
   const [interfaceId, setInterfaceId] = useState<string | null>(null)
@@ -62,6 +67,12 @@ export function GenerateExportDialog({
   const generateMutation = useGeneratePayrollExport()
   const { data: interfacesData } = useExportInterfaces(open)
   const interfaces = interfacesData?.data ?? []
+  const { data: templatesData } = useExportTemplates(open)
+  const templates = (templatesData ?? []).filter((t) => t.isActive)
+  const trpc = useTRPC()
+  const runTemplateExport = useMutation(
+    trpc.exportTemplates.runExport.mutationOptions(),
+  )
 
   const isFutureMonth = (y: number, m: number) => {
     const now = new Date()
@@ -82,6 +93,8 @@ export function GenerateExportDialog({
       setAccountIds('')
       setError(null)
       setIsMonthNotClosed(false)
+      setExportMethod('legacy')
+      setTemplateId(null)
     }
   }, [open, defaultYear, defaultMonth])
 
@@ -99,6 +112,45 @@ export function GenerateExportDialog({
   const handleSubmit = async () => {
     setError(null)
     setIsMonthNotClosed(false)
+
+    if (exportMethod === 'template') {
+      if (!templateId) {
+        setError('Bitte ein Template auswählen.')
+        return
+      }
+      try {
+        const result = await runTemplateExport.mutateAsync({
+          id: templateId,
+          exportInterfaceId: interfaceId ?? undefined,
+          year,
+          month,
+          employeeIds: parseIdList(employeeIds).length > 0 ? parseIdList(employeeIds) : undefined,
+        })
+        // Trigger client-side download
+        if (typeof window !== 'undefined' && result) {
+          const binary = atob(result.contentBase64)
+          const buffer = new Uint8Array(binary.length)
+          for (let i = 0; i < binary.length; i++) {
+            buffer[i] = binary.charCodeAt(i)
+          }
+          const blob = new Blob([buffer], { type: result.contentType })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = result.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        }
+        onSuccess?.(year, month)
+        handleClose()
+      } catch (err) {
+        const apiError = parseApiError(err)
+        setError(apiError.message ?? t('generate.error'))
+      }
+      return
+    }
 
     // Validation
     if (!year || !month || !format) {
@@ -166,6 +218,55 @@ export function GenerateExportDialog({
               </Alert>
             )}
 
+            {/* Export Method (Phase 2: Template-based vs Legacy) */}
+            <div className="space-y-2">
+              <Label>Export-Methode</Label>
+              <Select
+                value={exportMethod}
+                onValueChange={(v) => setExportMethod(v as 'legacy' | 'template')}
+              >
+                <SelectTrigger data-testid="export-method-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="legacy">Legacy CSV-Export</SelectItem>
+                  <SelectItem value="template">Template-basiert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {exportMethod === 'template' && (
+              <div className="space-y-2">
+                <Label>Template</Label>
+                {templates.length === 0 ? (
+                  <Alert>
+                    <AlertDescription>
+                      Noch kein aktives Template vorhanden.{' '}
+                      <Link href="/admin/export-templates" className="underline">
+                        Template anlegen
+                      </Link>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Select
+                    value={templateId ?? ''}
+                    onValueChange={(v) => setTemplateId(v)}
+                  >
+                    <SelectTrigger data-testid="export-template-select">
+                      <SelectValue placeholder="Template auswählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((tpl) => (
+                        <SelectItem key={tpl.id} value={tpl.id}>
+                          {tpl.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
             {/* Year */}
             <div className="space-y-2">
               <Label>{t('generate.yearLabel')}</Label>
@@ -198,7 +299,8 @@ export function GenerateExportDialog({
               )}
             </div>
 
-            {/* Export Type */}
+            {/* Export Type (legacy only) */}
+            {exportMethod === 'legacy' && (
             <div className="space-y-2">
               <Label>{t('generate.exportTypeLabel')}</Label>
               <Select value={exportType} onValueChange={setExportType}>
@@ -213,8 +315,10 @@ export function GenerateExportDialog({
                 </SelectContent>
               </Select>
             </div>
+            )}
 
-            {/* Format */}
+            {/* Format (legacy only) */}
+            {exportMethod === 'legacy' && (
             <div className="space-y-2">
               <Label>{t('generate.formatLabel')}</Label>
               <Select value={format} onValueChange={setFormat}>
@@ -229,6 +333,7 @@ export function GenerateExportDialog({
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             {/* Export Interface (optional) */}
             {interfaces.length > 0 && (
@@ -313,10 +418,15 @@ export function GenerateExportDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={generateMutation.isPending || isFutureMonth(year, month)}
+            disabled={
+              generateMutation.isPending ||
+              runTemplateExport.isPending ||
+              isFutureMonth(year, month)
+            }
             className="flex-1"
+            data-testid="generate-export-submit"
           >
-            {generateMutation.isPending && (
+            {(generateMutation.isPending || runTemplateExport.isPending) && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             {t('generate.submit')}

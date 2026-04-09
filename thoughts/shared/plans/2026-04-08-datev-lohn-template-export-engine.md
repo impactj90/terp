@@ -1667,14 +1667,15 @@ test("infinite loop times out", async () => {
 ### Success Criteria Phase 2
 
 #### Automated Verification
-- [ ] Migration: `pnpm db:reset`
-- [ ] LiquidJS installiert, Engine-Tests grün
-- [ ] Export-Engine-Tests grün (inkl. Encoding, Timeout)
-- [ ] Sicherheits-Tests grün (Sandbox-Verletzungen abgelehnt)
-- [ ] Template CRUD-Tests grün
-- [ ] Payroll Wage-Tests grün
-- [ ] TypeScript: `pnpm typecheck`
-- [ ] Build: `pnpm build`
+- [x] Migration: `pnpm db:reset`
+- [x] LiquidJS installiert, Engine-Tests grün
+- [x] Export-Engine-Tests grün (inkl. Encoding, Timeout)
+- [x] Sicherheits-Tests grün (Sandbox-Verletzungen abgelehnt)
+- [x] Template CRUD-Tests grün
+- [x] Payroll Wage-Tests grün
+- [x] TypeScript: `pnpm typecheck` (no new errors in new files)
+- [x] Build: `pnpm build` (export-templates + payroll-wages routes registered)
+- [x] E2E Browser Tests grün (10/10 in 62-export-templates.spec.ts)
 
 #### Manual Verification
 - [ ] Template-Verwaltung: Erstellen, Bearbeiten, Löschen funktioniert
