@@ -18,6 +18,7 @@ import {
   TenantFormSheet,
   TenantDetailSheet,
   TenantDeactivateDialog,
+  DemoTenantsPanel,
 } from '@/components/tenants'
 import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
@@ -116,6 +117,9 @@ export default function TenantsPage() {
           {t('newTenant')}
         </Button>
       </div>
+
+      {/* Demo Tenants Panel */}
+      <DemoTenantsPanel />
 
       {/* Filters bar */}
       <div className="flex flex-wrap items-center gap-4">

@@ -3,7 +3,12 @@
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { TenantGuard } from '@/components/auth/tenant-guard'
 import { TenantProvider } from '@/providers/tenant-provider'
-import { AppLayout, LoadingSkeleton } from '@/components/layout'
+import {
+  AppLayout,
+  DemoBanner,
+  DemoExpirationGate,
+  LoadingSkeleton,
+} from '@/components/layout'
 
 export default function DashboardLayout({
   children,
@@ -14,7 +19,12 @@ export default function DashboardLayout({
     <ProtectedRoute loadingFallback={<LoadingSkeleton />}>
       <TenantProvider>
         <TenantGuard loadingFallback={<LoadingSkeleton />}>
-          <AppLayout>{children}</AppLayout>
+          <DemoExpirationGate>
+            <AppLayout>
+              <DemoBanner />
+              {children}
+            </AppLayout>
+          </DemoExpirationGate>
         </TenantGuard>
       </TenantProvider>
     </ProtectedRoute>

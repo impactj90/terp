@@ -406,6 +406,18 @@ export {
   useDeactivateTenant,
 } from './use-tenants'
 
+// Demo Tenants
+export {
+  useDemoTenants,
+  useDemoTemplates,
+  useCreateDemoTenant,
+  useExtendDemoTenant,
+  useConvertDemoTenant,
+  useExpireDemoTenantNow,
+  useDeleteDemoTenant,
+  useRequestConvertFromExpired,
+} from './use-demo-tenants'
+
 // Booking Type Groups
 export {
   useBookingTypeGroups,

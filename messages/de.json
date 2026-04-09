@@ -750,6 +750,18 @@
     "selectOrganization": "Organisation auswählen",
     "selectOrganizationDescription": "Wählen Sie die Organisation, mit der Sie arbeiten möchten."
   },
+  "demoExpired": {
+    "title": "Demo abgelaufen",
+    "body": "Ihre 14-taegige Testphase von Terp ist abgelaufen.",
+    "contactIntro": "Wenn Sie Terp produktiv nutzen moechten, kontaktieren Sie uns:",
+    "contactEmail": "E-Mail: sales@terp.dev",
+    "contactPhone": "Telefon: +49 xxx xxx xxx",
+    "convertCta": "In echten Kunden konvertieren",
+    "convertCtaSuccessBody": "Ihre Anfrage wurde gesendet. Unser Sales-Team meldet sich in Kuerze bei Ihnen.",
+    "convertCtaSuccessToast": "Anfrage an unser Sales-Team gesendet",
+    "convertCtaErrorToast": "Anfrage konnte nicht gesendet werden. Bitte kontaktieren Sie uns per E-Mail.",
+    "dataRetention": "Ihre Daten bleiben erhalten, bis Sie entscheiden."
+  },
   "login": {
     "welcomeTitle": "Willkommen bei Terp",
     "welcomeSubtitle": "Zeiterfassung und Personalverwaltung",
@@ -4028,7 +4040,114 @@
     "emptyGetStarted": "Keine Mandanten konfiguriert. Erstellen Sie Ihren ersten Mandanten.",
     "addTenant": "Mandant hinzufuegen",
     "countSingular": "{count} Mandant",
-    "countPlural": "{count} Mandanten"
+    "countPlural": "{count} Mandanten",
+    "demo": {
+      "panelTitle": "Aktive Demos",
+      "newDemoButton": "Neue Demo",
+      "emptyState": "Keine aktiven Demo-Mandanten. Klicken Sie auf \"Neue Demo\", um eine anzulegen.",
+      "banner": {
+        "message": "Demo-Modus: noch {count, plural, one {# Tag} other {# Tage}} verbleibend"
+      },
+      "table": {
+        "name": "Name",
+        "template": "Template",
+        "creator": "Ersteller",
+        "created": "Erstellt",
+        "daysRemaining": "Restzeit"
+      },
+      "daysRemaining": {
+        "days": "{count, plural, one {# Tag} other {# Tage}}",
+        "expired": "Abgelaufen"
+      },
+      "actions": {
+        "label": "Aktionen",
+        "extend": "Verlaengern",
+        "extend7": "+7 Tage",
+        "extend14": "+14 Tage",
+        "convert": "In echten Kunden konvertieren",
+        "expireNow": "Jetzt ablaufen lassen",
+        "delete": "Loeschen"
+      },
+      "toast": {
+        "extendSuccess": "Demo um {days} Tage verlaengert",
+        "extendError": "Demo konnte nicht verlaengert werden",
+        "expireSuccess": "Demo wurde abgelaufen gesetzt",
+        "expireError": "Demo konnte nicht abgelaufen werden",
+        "deleteSuccess": "Demo geloescht",
+        "deleteError": "Demo konnte nicht geloescht werden"
+      },
+      "createSheet": {
+        "title": "Neuen Demo-Mandant anlegen",
+        "description": "Legt einen vollstaendig befuellten Demo-Mandanten fuer einen Interessenten an.",
+        "sectionTenant": "Mandant",
+        "sectionAddress": "Adresse",
+        "sectionAdmin": "Demo-Admin",
+        "sectionDemo": "Demo-Einstellungen",
+        "fieldName": "Mandantenname",
+        "fieldNamePlaceholder": "z.B. Acme GmbH",
+        "fieldSlug": "Slug",
+        "fieldSlugPlaceholder": "z.B. acme-gmbh",
+        "fieldStreet": "Strasse",
+        "fieldZip": "PLZ",
+        "fieldCity": "Stadt",
+        "fieldCountry": "Land",
+        "fieldAdminEmail": "Admin E-Mail",
+        "fieldAdminEmailPlaceholder": "admin@beispiel.de",
+        "fieldAdminName": "Admin Anzeigename",
+        "fieldAdminNamePlaceholder": "z.B. Jane Doe",
+        "fieldTemplate": "Template",
+        "fieldTemplatePlaceholder": "Template waehlen",
+        "fieldDuration": "Laufzeit (Tage)",
+        "fieldDurationHint": "Demo laeuft nach dieser Anzahl von Tagen automatisch ab (1-90).",
+        "fieldNotes": "Notizen",
+        "fieldNotesPlaceholder": "Optionale Notizen zu dieser Demo",
+        "inviteLinkLabel": "Einladungslink",
+        "inviteLinkNote": "Demo angelegt. Falls die Willkommens-E-Mail nicht zugestellt werden konnte, kopieren Sie diesen Link fuer den manuellen Versand.",
+        "linkCopied": "Einladungslink in die Zwischenablage kopiert",
+        "linkCopyFailed": "Einladungslink konnte nicht kopiert werden",
+        "validationNameRequired": "Mandantenname ist erforderlich",
+        "validationSlugRequired": "Slug muss mindestens 3 Zeichen lang sein",
+        "validationSlugPattern": "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten",
+        "validationStreetRequired": "Strasse ist erforderlich",
+        "validationZipRequired": "PLZ ist erforderlich",
+        "validationCityRequired": "Stadt ist erforderlich",
+        "validationCountryRequired": "Land ist erforderlich",
+        "validationEmailRequired": "Gueltige Admin-E-Mail ist erforderlich",
+        "validationDisplayNameRequired": "Admin-Anzeigename ist erforderlich",
+        "validationTemplateRequired": "Template muss ausgewaehlt werden",
+        "validationDurationRange": "Laufzeit muss zwischen 1 und 90 Tagen liegen",
+        "successToast": "Demo-Mandant erstellt",
+        "failedCreate": "Demo-Mandant konnte nicht erstellt werden",
+        "cancel": "Abbrechen",
+        "create": "Demo erstellen",
+        "saving": "Wird erstellt...",
+        "close": "Schliessen"
+      },
+      "convertDialog": {
+        "title": "Demo in echten Kunden konvertieren",
+        "description": "\"{name}\" in einen regulaeren Mandanten konvertieren. Waehlen Sie, wie mit den bestehenden Demo-Daten verfahren werden soll.",
+        "discardLabel": "Demo-Daten verwerfen (Standard)",
+        "discardDescription": "Nur Mandanten-Huelle und Admin-User bleiben; alle Demo-Daten wie Mitarbeitende, Buchungen usw. werden entfernt.",
+        "keepLabel": "Demo-Daten behalten",
+        "keepDescription": "Nahtloser Uebergang — der Kunde nutzt die bestehenden Daten weiter.",
+        "cancel": "Abbrechen",
+        "confirm": "Konvertieren",
+        "successToast": "Demo erfolgreich konvertiert",
+        "errorToast": "Konvertierung fehlgeschlagen"
+      },
+      "expireNowConfirm": {
+        "title": "Demo jetzt ablaufen lassen",
+        "description": "Demo \"{name}\" sofort ablaufen lassen? Der Demo-Admin wird beim naechsten Request auf /demo-expired umgeleitet.",
+        "confirm": "Jetzt ablaufen",
+        "cancel": "Abbrechen"
+      },
+      "deleteConfirm": {
+        "title": "Demo dauerhaft loeschen",
+        "description": "Demo \"{name}\" unwiderruflich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden. Alle Mandantendaten werden entfernt.",
+        "confirm": "Loeschen",
+        "cancel": "Abbrechen"
+      }
+    }
   },
   "adminContactTypes": {
     "title": "Kontaktarten",

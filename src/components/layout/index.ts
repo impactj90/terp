@@ -31,6 +31,10 @@ export { SkipLink } from './skip-link'
 // Loading states
 export { LoadingSkeleton } from './loading-skeleton'
 
+// Demo lifecycle
+export { DemoExpirationGate } from './demo-expiration-gate'
+export { DemoBanner } from './demo-banner'
+
 // Layout primitives
 export { Stack, HStack, VStack, type StackProps } from '@/components/ui/stack'
 export { Container, type ContainerProps } from '@/components/ui/container'

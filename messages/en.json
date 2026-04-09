@@ -750,6 +750,18 @@
     "selectOrganization": "Select Organization",
     "selectOrganizationDescription": "Choose the organization you want to work with."
   },
+  "demoExpired": {
+    "title": "Demo expired",
+    "body": "Your 14-day trial of Terp has ended.",
+    "contactIntro": "If you would like to continue using Terp in production, get in touch:",
+    "contactEmail": "Email: sales@terp.dev",
+    "contactPhone": "Phone: +49 xxx xxx xxx",
+    "convertCta": "Convert to real customer",
+    "convertCtaSuccessBody": "Your request has been sent. Our sales team will contact you shortly.",
+    "convertCtaSuccessToast": "Request sent to our sales team",
+    "convertCtaErrorToast": "Request could not be sent. Please contact us by email.",
+    "dataRetention": "Your data is retained until you decide."
+  },
   "login": {
     "welcomeTitle": "Welcome to Terp",
     "welcomeSubtitle": "Time tracking and employee management",
@@ -4028,7 +4040,114 @@
     "emptyGetStarted": "No tenants configured. Create your first tenant.",
     "addTenant": "Add Tenant",
     "countSingular": "{count} tenant",
-    "countPlural": "{count} tenants"
+    "countPlural": "{count} tenants",
+    "demo": {
+      "panelTitle": "Active Demos",
+      "newDemoButton": "New demo",
+      "emptyState": "No active demo tenants. Click \"New demo\" to create one.",
+      "banner": {
+        "message": "Demo mode: {count, plural, one {# day} other {# days}} remaining"
+      },
+      "table": {
+        "name": "Name",
+        "template": "Template",
+        "creator": "Creator",
+        "created": "Created",
+        "daysRemaining": "Days remaining"
+      },
+      "daysRemaining": {
+        "days": "{count, plural, one {# day} other {# days}}",
+        "expired": "Expired"
+      },
+      "actions": {
+        "label": "Actions",
+        "extend": "Extend",
+        "extend7": "+7 days",
+        "extend14": "+14 days",
+        "convert": "Convert to real customer",
+        "expireNow": "Expire now",
+        "delete": "Delete"
+      },
+      "toast": {
+        "extendSuccess": "Demo extended by {days} days",
+        "extendError": "Failed to extend demo",
+        "expireSuccess": "Demo has been expired",
+        "expireError": "Failed to expire demo",
+        "deleteSuccess": "Demo deleted",
+        "deleteError": "Failed to delete demo"
+      },
+      "createSheet": {
+        "title": "New demo tenant",
+        "description": "Provision a fully populated demo tenant for a sales prospect.",
+        "sectionTenant": "Tenant",
+        "sectionAddress": "Address",
+        "sectionAdmin": "Demo admin",
+        "sectionDemo": "Demo settings",
+        "fieldName": "Tenant name",
+        "fieldNamePlaceholder": "e.g. Acme GmbH",
+        "fieldSlug": "Slug",
+        "fieldSlugPlaceholder": "e.g. acme-gmbh",
+        "fieldStreet": "Street",
+        "fieldZip": "ZIP",
+        "fieldCity": "City",
+        "fieldCountry": "Country",
+        "fieldAdminEmail": "Admin email",
+        "fieldAdminEmailPlaceholder": "admin@example.com",
+        "fieldAdminName": "Admin display name",
+        "fieldAdminNamePlaceholder": "e.g. Jane Doe",
+        "fieldTemplate": "Template",
+        "fieldTemplatePlaceholder": "Select a template",
+        "fieldDuration": "Duration (days)",
+        "fieldDurationHint": "Demo expires automatically after this many days (1-90).",
+        "fieldNotes": "Notes",
+        "fieldNotesPlaceholder": "Optional notes about this demo",
+        "inviteLinkLabel": "Invite link",
+        "inviteLinkNote": "Demo created. If the welcome email failed to deliver, copy this link to send it manually.",
+        "linkCopied": "Invite link copied to clipboard",
+        "linkCopyFailed": "Could not copy invite link",
+        "validationNameRequired": "Tenant name is required",
+        "validationSlugRequired": "Slug must be at least 3 characters",
+        "validationSlugPattern": "Slug may only contain lowercase letters, digits and hyphens",
+        "validationStreetRequired": "Street is required",
+        "validationZipRequired": "ZIP is required",
+        "validationCityRequired": "City is required",
+        "validationCountryRequired": "Country is required",
+        "validationEmailRequired": "Valid admin email is required",
+        "validationDisplayNameRequired": "Admin display name is required",
+        "validationTemplateRequired": "Template must be selected",
+        "validationDurationRange": "Duration must be between 1 and 90 days",
+        "successToast": "Demo tenant created",
+        "failedCreate": "Could not create demo tenant",
+        "cancel": "Cancel",
+        "create": "Create demo",
+        "saving": "Creating...",
+        "close": "Close"
+      },
+      "convertDialog": {
+        "title": "Convert demo to real customer",
+        "description": "Convert \"{name}\" to a real tenant. Choose how to handle the existing demo data.",
+        "discardLabel": "Discard demo data (default)",
+        "discardDescription": "Only the tenant shell + admin user survive; all demo-seeded employees, bookings, etc. are removed.",
+        "keepLabel": "Keep demo data",
+        "keepDescription": "Seamless transition — the customer continues using the existing data.",
+        "cancel": "Cancel",
+        "confirm": "Convert",
+        "successToast": "Demo successfully converted",
+        "errorToast": "Failed to convert demo"
+      },
+      "expireNowConfirm": {
+        "title": "Expire demo now",
+        "description": "Immediately expire demo \"{name}\"? The demo admin will be redirected to /demo-expired on next request.",
+        "confirm": "Expire now",
+        "cancel": "Cancel"
+      },
+      "deleteConfirm": {
+        "title": "Delete demo permanently",
+        "description": "Hard-delete demo \"{name}\"? This cannot be undone. All tenant data will be removed.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    }
   },
   "adminContactTypes": {
     "title": "Contact Types",

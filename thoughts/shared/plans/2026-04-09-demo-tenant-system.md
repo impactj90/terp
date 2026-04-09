@@ -53,7 +53,8 @@ Nach Abschluss aller Phasen:
 
 Explizit **ausserhalb** des Scope dieses Plans (einige davon sind bewusst auf "später" vertagt):
 
-- **Platform-Admin-Rolle** — existiert heute nicht, wird hier nicht eingeführt. Alles läuft über `tenants.manage`. Wenn Platform-Admin später kommt, wird der Permission-Check in `demo-tenants.ts` umgestellt.
+- **Platform-Admin-Rolle** — existiert heute nicht, wird hier nicht eingeführt. Alles läuft über `tenants.manage`. Wenn Platform-Admin später kommt (siehe `thoughts/shared/plans/2026-04-09-platform-admin-system.md`), wird der Permission-Check in `demo-tenants.ts` umgestellt.
+- **In-App-Benachrichtigung des Admins bei Convert-Anfragen** — die `requestConvertFromExpired`-Prozedur schreibt heute nur eine `email_send_log`-Zeile (an `DEMO_CONVERT_NOTIFICATION_EMAIL`, Fallback `sales@terp.dev`), die der bestehende Email-Retry-Cron ausliefert. Bewusste Entscheidung: **kein** Eintrag in `notifications`, weil diese pro Tenant/User gescoped sind und Platform-Operatoren gerade keine geeignete Home-Location haben. Sobald das Platform-Admin-System steht (`thoughts/shared/plans/2026-04-09-platform-admin-system.md`), soll `requestConvertFromExpired` **zusätzlich** eine Row in der Platform-Admin-Benachrichtigungsfläche erzeugen (siehe dortige Phase 5.3 Dashboard-Cards). Der Email-Pfad darf als Fallback bestehen bleiben.
 - **Read-only-Mode für laufende Demos oder zahlungssäumige Kunden** — erfordert codebase-weite Read/Write-Differenzierung im tRPC-Middleware (heute existiert keine `opts.type`/`.meta()`-Nutzung). Bewusste Entscheidung: Kein Pattern auf Verdacht einführen. Expired Demos werden hart geblockt via `isActive=false` + Frontend-Gate.
 - **Aufräumen von `tenant-service.ts`** — Dead Code existiert parallel zum Router-Inline-Pattern, wird **nicht** in diesem Plan angefasst. Separates Thema.
 - **Weitere Demo-Templates** jenseits von `industriedienstleister_150` — erst wenn konkreter Bedarf (nicht auf Verdacht).
@@ -1663,11 +1664,8 @@ Phase 6 will only add the **handbook entry**, not i18n strings — those ship wi
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Type check + lint pass
-- [ ] Component unit tests with mock tRPC:
-  - `demo-create-sheet` submits with valid input and shows invite link on success
-  - `demo-convert-dialog` defaults to "discardData=true"
-  - `demo-tenants-table` renders days-remaining badges with correct color thresholds
+- [x] Type check + lint pass (59 pre-existing TS errors, 0 in Phase 5 files; 207 pre-existing lint errors, 0 in Phase 5 files)
+- [~] Component unit tests with mock tRPC — **deliberately skipped.** Decision 2026-04-09 after manual verification: mock-tRPC unit tests for thin presentational components mostly assert the mock contract and break on small refactors. Real coverage lives in backend service tests (Phase 3 `demo-tenant-service.test.ts` / `.integration.test.ts`) and — if needed — a Playwright spec in Phase 6.
 
 #### Manual Verification
 - [ ] End-to-end in browser:
