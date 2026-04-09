@@ -235,6 +235,21 @@ model Tenant {
   inboundInvoiceApprovalPolicies  InboundInvoiceApprovalPolicy[]
   inboundInvoiceApprovals         InboundInvoiceApproval[]
 
+  // Payroll master data
+  employeeChildren           EmployeeChild[]
+  employeeCompanyCars        EmployeeCompanyCar[]
+  employeeJobBikes           EmployeeJobBike[]
+  employeeMealAllowances     EmployeeMealAllowance[]
+  employeeVouchers           EmployeeVoucher[]
+  employeeJobTickets         EmployeeJobTicket[]
+  employeePensions           EmployeePension[]
+  employeeSavings            EmployeeSavings[]
+  employeeGarnishments       EmployeeGarnishment[]
+  employeeParentalLeaves     EmployeeParentalLeave[]
+  employeeMaternityLeaves    EmployeeMaternityLeave[]
+  employeeForeignAssignments EmployeeForeignAssignment[]
+  employeeOtherEmployments   EmployeeOtherEmployment[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -1501,6 +1516,74 @@ model Employee {
   // Added by migration 000091
   locationId String? @map("location_id") @db.Uuid
 
+  // Payroll master data (migration 20260416100000)
+  // --- Tax ---
+  taxId                            String?  @map("tax_id") @db.Text
+  taxClass                         Int?     @map("tax_class") @db.SmallInt
+  taxFactor                        Decimal? @map("tax_factor") @db.Decimal(5, 4)
+  childTaxAllowance                Decimal? @map("child_tax_allowance") @db.Decimal(4, 2)
+  denomination                     String?  @db.VarChar(3)
+  spouseDenomination               String?  @map("spouse_denomination") @db.VarChar(3)
+  payrollTaxAllowance              Decimal? @map("payroll_tax_allowance") @db.Decimal(10, 2)
+  payrollTaxAddition               Decimal? @map("payroll_tax_addition") @db.Decimal(10, 2)
+  isPrimaryEmployer                Boolean? @default(true) @map("is_primary_employer")
+  // --- Social security ---
+  socialSecurityNumber             String?  @map("social_security_number") @db.Text
+  healthInsuranceProviderId        String?  @map("health_insurance_provider_id") @db.Uuid
+  healthInsuranceStatus            String?  @map("health_insurance_status") @db.VarChar(20)
+  privateHealthInsuranceContribution Decimal? @map("private_health_insurance_contribution") @db.Decimal(10, 2)
+  personnelGroupCode               String?  @map("personnel_group_code") @db.VarChar(3)
+  contributionGroupCode            String?  @map("contribution_group_code") @db.VarChar(4)
+  activityCode                     String?  @map("activity_code") @db.VarChar(9)
+  midijobFlag                      Int?     @default(0) @map("midijob_flag") @db.SmallInt
+  umlageU1                         Boolean? @default(true) @map("umlage_u1")
+  umlageU2                         Boolean? @default(true) @map("umlage_u2")
+  // --- Bank ---
+  iban                             String?  @db.Text
+  bic                              String?  @db.VarChar(11)
+  accountHolder                    String?  @map("account_holder") @db.VarChar(200)
+  // --- Personal (extension) ---
+  birthName                        String?  @map("birth_name") @db.VarChar(100)
+  houseNumber                      String?  @map("house_number") @db.VarChar(20)
+  // --- Compensation ---
+  grossSalary                      Decimal? @map("gross_salary") @db.Decimal(10, 2)
+  hourlyRate                       Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  paymentType                      String?  @map("payment_type") @db.VarChar(20)
+  salaryGroup                      String?  @map("salary_group") @db.VarChar(50)
+  // --- Contract (extension) ---
+  contractType                     String?  @map("contract_type") @db.VarChar(30)
+  probationMonths                  Int?     @map("probation_months") @db.SmallInt
+  noticePeriodEmployee             String?  @map("notice_period_employee") @db.VarChar(50)
+  noticePeriodEmployer             String?  @map("notice_period_employer") @db.VarChar(50)
+  // --- Disability ---
+  disabilityDegree                 Int?     @map("disability_degree") @db.SmallInt
+  disabilityEqualStatus            Boolean? @default(false) @map("disability_equal_status")
+  disabilityMarkers                String?  @map("disability_markers") @db.VarChar(20)
+  disabilityIdValidUntil           DateTime? @map("disability_id_valid_until") @db.Date
+  // --- Berufsgenossenschaft ---
+  bgInstitution                    String?  @map("bg_institution") @db.VarChar(200)
+  bgMembershipNumber               String?  @map("bg_membership_number") @db.VarChar(30)
+  bgHazardTariff                   String?  @map("bg_hazard_tariff") @db.VarChar(10)
+  // --- Student / apprentice ---
+  university                       String?  @db.VarChar(200)
+  studentId                        String?  @map("student_id") @db.VarChar(30)
+  fieldOfStudy                     String?  @map("field_of_study") @db.VarChar(100)
+  apprenticeshipOccupation         String?  @map("apprenticeship_occupation") @db.VarChar(200)
+  apprenticeshipExternalCompany    String?  @map("apprenticeship_external_company") @db.VarChar(200)
+  vocationalSchool                 String?  @map("vocational_school") @db.VarChar(200)
+  // --- Pension status ---
+  receivesOldAgePension            Boolean? @default(false) @map("receives_old_age_pension")
+  receivesDisabilityPension        Boolean? @default(false) @map("receives_disability_pension")
+  receivesSurvivorPension          Boolean? @default(false) @map("receives_survivor_pension")
+  pensionStartDate                 DateTime? @map("pension_start_date") @db.Date
+  // --- Death ---
+  dateOfDeath                      DateTime? @map("date_of_death") @db.Date
+  heirName                         String?  @map("heir_name") @db.VarChar(200)
+  heirIban                         String?  @map("heir_iban") @db.Text
+  // --- Parental allowance ---
+  receivesParentalAllowance        Boolean? @default(false) @map("receives_parental_allowance")
+  parentalAllowanceUntil           DateTime? @map("parental_allowance_until") @db.Date
+
   // Relations to models already in Prisma
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department     Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
@@ -1518,6 +1601,22 @@ model Employee {
   tariffAssignments  EmployeeTariffAssignment[]
 
   tariff Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+
+  // Payroll relations
+  healthInsuranceProvider HealthInsuranceProvider? @relation(fields: [healthInsuranceProviderId], references: [id], onDelete: SetNull)
+  children               EmployeeChild[]
+  companyCars            EmployeeCompanyCar[]
+  jobBikes               EmployeeJobBike[]
+  mealAllowances         EmployeeMealAllowance[]
+  vouchers               EmployeeVoucher[]
+  jobTickets             EmployeeJobTicket[]
+  pensions               EmployeePension[]
+  savings                EmployeeSavings[]
+  garnishments           EmployeeGarnishment[]
+  parentalLeaves         EmployeeParentalLeave[]
+  maternityLeaves        EmployeeMaternityLeave[]
+  foreignAssignments     EmployeeForeignAssignment[]
+  otherEmployments       EmployeeOtherEmployment[]
 
   // Relations to group/order/activity models
   employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
@@ -1560,6 +1659,7 @@ model Employee {
   @@index([defaultOrderId], map: "idx_employees_default_order")
   @@index([defaultActivityId], map: "idx_employees_default_activity")
   @@index([locationId], map: "idx_employees_location")
+  @@index([healthInsuranceProviderId], map: "idx_employees_health_insurance_provider")
   @@map("employees")
 }
 
@@ -5234,4 +5334,380 @@ model InboundInvoiceApproval {
   @@index([tenantId, status, dueAt], map: "idx_approvals_pending")
   @@index([approverUserId, status], map: "idx_approvals_approver")
   @@map("inbound_invoice_approvals")
+}
+
+// -----------------------------------------------------------------------------
+// HealthInsuranceProvider (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model HealthInsuranceProvider {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @db.VarChar(200)
+  institutionCode String   @unique @map("institution_code") @db.VarChar(9)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  employees Employee[]
+
+  @@map("health_insurance_providers")
+}
+
+// -----------------------------------------------------------------------------
+// PersonnelGroupCode (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model PersonnelGroupCode {
+  code        String  @id @db.VarChar(3)
+  description String  @db.Text
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("personnel_group_codes")
+}
+
+// -----------------------------------------------------------------------------
+// ActivityCodeKldb (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model ActivityCodeKldb {
+  code     String  @id @db.VarChar(5)
+  name     String  @db.VarChar(300)
+  category String? @db.VarChar(100)
+  isActive Boolean @default(true) @map("is_active")
+
+  @@map("activity_codes_kldb")
+}
+
+// -----------------------------------------------------------------------------
+// BgInstitution (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model BgInstitution {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String  @db.VarChar(200)
+  abbreviation String  @db.VarChar(20)
+  isActive     Boolean @default(true) @map("is_active")
+
+  @@map("bg_institutions")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeChild
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeChild {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  firstName         String   @map("first_name") @db.VarChar(100)
+  lastName          String   @map("last_name") @db.VarChar(100)
+  birthDate         DateTime @map("birth_date") @db.Date
+  taxAllowanceShare Decimal  @default(0.5) @map("tax_allowance_share") @db.Decimal(3, 1)
+  livesInHousehold  Boolean  @default(true) @map("lives_in_household")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  parentalLeaves EmployeeParentalLeave[]
+
+  @@index([employeeId], map: "idx_employee_children_employee")
+  @@map("employee_children")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeCompanyCar
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeCompanyCar {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+  listPrice       Decimal   @map("list_price") @db.Decimal(10, 2)
+  propulsionType  String    @map("propulsion_type") @db.VarChar(20)
+  distanceToWorkKm Decimal  @map("distance_to_work_km") @db.Decimal(5, 1)
+  usageType       String    @map("usage_type") @db.VarChar(20)
+  licensePlate    String?   @map("license_plate") @db.VarChar(20)
+  makeModel       String?   @map("make_model") @db.VarChar(100)
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_company_cars_employee")
+  @@map("employee_company_cars")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeJobBike
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeJobBike {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  listPrice Decimal   @map("list_price") @db.Decimal(10, 2)
+  usageType String    @map("usage_type") @db.VarChar(30)
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_job_bikes_employee")
+  @@map("employee_job_bikes")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMealAllowance
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeMealAllowance {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  dailyAmount      Decimal   @map("daily_amount") @db.Decimal(6, 2)
+  workDaysPerMonth Decimal   @default(20.0) @map("work_days_per_month") @db.Decimal(3, 1)
+  startDate        DateTime  @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_meal_allowances_employee")
+  @@map("employee_meal_allowances")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeVoucher
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeVoucher {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  monthlyAmount Decimal   @map("monthly_amount") @db.Decimal(6, 2)
+  provider      String?   @db.VarChar(200)
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_vouchers_employee")
+  @@map("employee_vouchers")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeJobTicket
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeJobTicket {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  monthlyAmount Decimal   @map("monthly_amount") @db.Decimal(6, 2)
+  provider      String?   @db.VarChar(200)
+  isAdditional  Boolean   @default(true) @map("is_additional")
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_job_tickets_employee")
+  @@map("employee_job_tickets")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeePension (bAV)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeePension {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  employeeId               String    @map("employee_id") @db.Uuid
+  executionType            String    @map("execution_type") @db.VarChar(30)
+  providerName             String    @map("provider_name") @db.VarChar(200)
+  contractNumber           String?   @map("contract_number") @db.VarChar(50)
+  employeeContribution     Decimal   @default(0) @map("employee_contribution") @db.Decimal(10, 2)
+  employerContribution     Decimal   @default(0) @map("employer_contribution") @db.Decimal(10, 2)
+  mandatoryEmployerSubsidy Decimal   @default(0) @map("mandatory_employer_subsidy") @db.Decimal(10, 2)
+  startDate                DateTime  @map("start_date") @db.Date
+  endDate                  DateTime? @map("end_date") @db.Date
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_pensions_employee")
+  @@map("employee_pensions")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeSavings (VL)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeSavings {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  investmentType String    @map("investment_type") @db.VarChar(50)
+  recipient      String    @db.VarChar(200)
+  recipientIban  String?   @map("recipient_iban") @db.Text
+  contractNumber String?   @map("contract_number") @db.VarChar(20)
+  monthlyAmount  Decimal   @map("monthly_amount") @db.Decimal(10, 2)
+  employerShare  Decimal   @default(0) @map("employer_share") @db.Decimal(10, 2)
+  employeeShare  Decimal   @default(0) @map("employee_share") @db.Decimal(10, 2)
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_savings_employee")
+  @@map("employee_savings")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeGarnishment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeGarnishment {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  employeeId            String    @map("employee_id") @db.Uuid
+  creditorName          String    @map("creditor_name") @db.Text
+  creditorAddress       String?   @map("creditor_address") @db.Text
+  fileReference         String?   @map("file_reference") @db.Text
+  garnishmentAmount     Decimal   @map("garnishment_amount") @db.Decimal(10, 2)
+  calculationMethod     String    @map("calculation_method") @db.VarChar(30)
+  dependentsCount       Int       @default(0) @map("dependents_count")
+  rank                  Int       @default(1)
+  isPAccount            Boolean   @default(false) @map("is_p_account")
+  maintenanceObligation Boolean   @default(false) @map("maintenance_obligation")
+  startDate             DateTime  @map("start_date") @db.Date
+  endDate               DateTime? @map("end_date") @db.Date
+  attachmentFileId      String?   @map("attachment_file_id") @db.Uuid
+  notes                 String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_garnishments_employee")
+  @@map("employee_garnishments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeParentalLeave
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeParentalLeave {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  childId         String?   @map("child_id") @db.Uuid
+  isPartnerMonths Boolean   @default(false) @map("is_partner_months")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  child    EmployeeChild? @relation(fields: [childId], references: [id])
+
+  @@index([employeeId], map: "idx_employee_parental_leaves_employee")
+  @@map("employee_parental_leaves")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMaternityLeave
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeMaternityLeave {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  employeeId        String    @map("employee_id") @db.Uuid
+  startDate         DateTime  @map("start_date") @db.Date
+  expectedBirthDate DateTime  @map("expected_birth_date") @db.Date
+  actualBirthDate   DateTime? @map("actual_birth_date") @db.Date
+  actualEndDate     DateTime? @map("actual_end_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_maternity_leaves_employee")
+  @@map("employee_maternity_leaves")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeForeignAssignment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeForeignAssignment {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                    String    @map("tenant_id") @db.Uuid
+  employeeId                  String    @map("employee_id") @db.Uuid
+  countryCode                 String    @map("country_code") @db.VarChar(2)
+  countryName                 String    @map("country_name") @db.VarChar(100)
+  startDate                   DateTime  @map("start_date") @db.Date
+  endDate                     DateTime? @map("end_date") @db.Date
+  a1CertificateNumber         String?   @map("a1_certificate_number") @db.VarChar(50)
+  a1ValidFrom                 DateTime? @map("a1_valid_from") @db.Date
+  a1ValidUntil                DateTime? @map("a1_valid_until") @db.Date
+  foreignActivityExemption    Boolean   @default(false) @map("foreign_activity_exemption")
+  notes                       String?   @db.Text
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_foreign_assignments_employee")
+  @@map("employee_foreign_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeOtherEmployment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeOtherEmployment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  employerName  String    @map("employer_name") @db.VarChar(200)
+  monthlyIncome Decimal?  @map("monthly_income") @db.Decimal(10, 2)
+  weeklyHours   Decimal?  @map("weekly_hours") @db.Decimal(5, 2)
+  isMinijob     Boolean   @default(false) @map("is_minijob")
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_other_employments_employee")
+  @@map("employee_other_employments")
 }

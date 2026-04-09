@@ -350,6 +350,17 @@ export const ALL_PERMISSIONS: Permission[] = [
   // Email IMAP
   p("email_imap.view", "email_imap", "view", "View IMAP configuration"),
   p("email_imap.manage", "email_imap", "manage", "Manage IMAP configuration"),
+
+  // Audit Log Export
+  p("audit_log.export", "audit_log", "export", "Export audit log entries as CSV or PDF"),
+
+  // Personnel Payroll Data
+  p("personnel.payroll_data.view", "personnel", "payroll_data.view", "View employee payroll master data (tax, social security, bank details)"),
+  p("personnel.payroll_data.edit", "personnel", "payroll_data.edit", "Edit employee payroll master data"),
+  p("personnel.garnishment.view", "personnel", "garnishment.view", "View employee garnishment data"),
+  p("personnel.garnishment.edit", "personnel", "garnishment.edit", "Edit employee garnishment data"),
+  p("personnel.foreign_assignment.view", "personnel", "foreign_assignment.view", "View employee foreign assignment data"),
+  p("personnel.foreign_assignment.edit", "personnel", "foreign_assignment.edit", "Edit employee foreign assignment data"),
 ]
 
 // Lookup maps

@@ -4081,3 +4081,291 @@ VALUES
    '<broken@example.com>', 'admin@example.com', 'Corrupted attachment',
    'failed', 1, NULL, NOW() - INTERVAL '5 days')
 ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- Payroll Master Data: Lookup Tables
+-- =============================================================
+
+-- Personengruppenschlüssel (DEÜV Anlage 2)
+INSERT INTO personnel_group_codes (code, description) VALUES
+  ('101', 'Sozialversicherungspflichtig Beschäftigte ohne besondere Merkmale'),
+  ('102', 'Auszubildende'),
+  ('103', 'Beschäftigte in Altersteilzeit'),
+  ('104', 'Hausgewerbetreibende'),
+  ('105', 'Praktikanten'),
+  ('106', 'Werkstudenten'),
+  ('107', 'Behinderte in anerkannten Werkstätten'),
+  ('108', 'Bezieher von Vorruhestandsgeld'),
+  ('109', 'Geringfügig entlohnte Beschäftigte (Minijob)'),
+  ('110', 'Kurzfristig Beschäftigte'),
+  ('111', 'Personen in Einrichtungen der Jugendhilfe'),
+  ('112', 'Mitarbeitende Familienangehörige in der Landwirtschaft'),
+  ('113', 'Nebenerwerbslandwirte'),
+  ('114', 'Nebenerwerbslandwirte — saisonal'),
+  ('116', 'Ausländische Grenzgänger'),
+  ('117', 'Beschäftigte ohne Anspruch auf Krankengeld'),
+  ('118', 'Seelotsen'),
+  ('119', 'Versicherungsfreie Altersvollrentner und Versorgungsbezieher'),
+  ('120', 'Beschäftigte mit Anspruch auf Alters-/Erwerbsminderungsrente'),
+  ('190', 'Beschäftigte ohne Zuordnung zu einem anderen PGR')
+ON CONFLICT (code) DO NOTHING;
+
+-- Berufsgenossenschaften
+INSERT INTO bg_institutions (name, abbreviation) VALUES
+  ('Berufsgenossenschaft Rohstoffe und chemische Industrie', 'BG RCI'),
+  ('Berufsgenossenschaft Holz und Metall', 'BGHM'),
+  ('Berufsgenossenschaft Energie Textil Elektro Medienerzeugnisse', 'BG ETEM'),
+  ('Berufsgenossenschaft Nahrungsmittel und Gastgewerbe', 'BGN'),
+  ('Berufsgenossenschaft der Bauwirtschaft', 'BG BAU'),
+  ('Berufsgenossenschaft Handel und Warenlogistik', 'BGHW'),
+  ('Verwaltungs-Berufsgenossenschaft', 'VBG'),
+  ('Berufsgenossenschaft Verkehrswirtschaft Post-Logistik Telekommunikation', 'BG Verkehr'),
+  ('Berufsgenossenschaft für Gesundheitsdienst und Wohlfahrtspflege', 'BGW')
+ON CONFLICT DO NOTHING;
+
+-- Krankenkassen (GKV-Spitzenverband, Stand April 2026)
+INSERT INTO health_insurance_providers (name, institution_code) VALUES
+  ('AOK Baden-Württemberg', '108018007'),
+  ('AOK Bayern', '108310400'),
+  ('AOK Bremen/Bremerhaven', '108519529'),
+  ('AOK Hessen', '105830524'),
+  ('AOK Niedersachsen', '102114819'),
+  ('AOK Nordost', '100696024'),
+  ('AOK NordWest', '103411401'),
+  ('AOK PLUS', '107299005'),
+  ('AOK Rheinland/Hamburg', '104212505'),
+  ('AOK Rheinland-Pfalz/Saarland', '106613483'),
+  ('AOK Sachsen-Anhalt', '101097008'),
+  ('BARMER', '104940005'),
+  ('Techniker Krankenkasse', '101575519'),
+  ('DAK-Gesundheit', '105862407'),
+  ('KKH Kaufmännische Krankenkasse', '102111517'),
+  ('HEK - Hanseatische Krankenkasse', '101521408'),
+  ('hkk Krankenkasse', '102131418'),
+  ('IKK Brandenburg und Berlin', '100587401'),
+  ('IKK classic', '107202130'),
+  ('IKK gesund plus', '101021409'),
+  ('IKK Südwest', '106613439'),
+  ('BIG direkt gesund', '103515806'),
+  ('Audi BKK', '108310104'),
+  ('BAHN-BKK', '106313107'),
+  ('BKK Achenbach Buschhütten', '105529519'),
+  ('BKK Diakonie', '103515816'),
+  ('BKK firmus', '102130104'),
+  ('BKK Freudenberg', '105529500'),
+  ('BKK Gildemeister Seidensticker', '103417706'),
+  ('BKK Herkules', '106310134'),
+  ('BKK Linde', '108713116'),
+  ('BKK Melitta HMR', '103515208'),
+  ('BKK Mobil Oil', '102012707'),
+  ('BKK Pfalz', '106613483'),
+  ('BKK ProVita', '108310188'),
+  ('BKK Public', '105913802'),
+  ('BKK Rieker Ricosta Weisser', '108712711'),
+  ('BKK Scheufelen', '108712711'),
+  ('BKK Schwarzwald-Baar-Heuberg', '108712715'),
+  ('BKK Technoform', '102012706'),
+  ('BKK VBU', '100500621'),
+  ('BKK VerbundPlus', '108712719'),
+  ('BKK Werra-Meissner', '106310131'),
+  ('BKK Wirtschaft & Finanzen', '108310122'),
+  ('BKK ZF & Partner', '108814504'),
+  ('Bosch BKK', '108714316'),
+  ('Continentale BKK', '103515802'),
+  ('Daimler BKK', '108714305'),
+  ('Debeka BKK', '106613474'),
+  ('energie-BKK', '102012707'),
+  ('Ernst & Young BKK', '105913815'),
+  ('Heimat Krankenkasse', '103413903'),
+  ('Mercedes-Benz BKK', '108714318'),
+  ('Merck BKK', '106310116'),
+  ('mhplus BKK', '108012901'),
+  ('Novitas BKK', '104315706'),
+  ('Pronova BKK', '104212533'),
+  ('R+V BKK', '105913803'),
+  ('Salus BKK', '100500618'),
+  ('SBK Siemens-Betriebskrankenkasse', '108310149'),
+  ('SKD BKK', '108714319'),
+  ('Südzucker BKK', '108714313'),
+  ('TUI BKK', '102012715'),
+  ('Viactiv Krankenkasse', '103515813'),
+  ('vivida bkk', '108012902'),
+  ('WMF BKK', '108714320'),
+  ('Knappschaft', '980000006'),
+  ('SVLFG (Landwirtschaftliche Krankenkasse)', '099700001'),
+  ('Minijob-Zentrale', '980000009')
+ON CONFLICT (institution_code) DO NOTHING;
+
+-- KldB 2010 Tätigkeitsschlüssel (häufigste 5-Steller, repräsentative Auswahl)
+INSERT INTO activity_codes_kldb (code, name, category) VALUES
+  ('11102', 'Berufe in der Gartenbau — Fachkraft', 'Land-, Forst- und Tierwirtschaft'),
+  ('24212', 'Berufe in der Metalloberflächenbehandlung — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('24402', 'Berufe in der Metallbearbeitung — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('25102', 'Berufe in der Maschinenbau- u. Betriebstechnik — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('25212', 'Berufe in der Kraftfahrzeugtechnik — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('26112', 'Berufe in der Elektrotechnik — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('26212', 'Berufe in der Elektronik — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('26302', 'Berufe in der Elektroinstallation — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('27102', 'Berufe in der technischen Forschung u. Entwicklung — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('28202', 'Berufe in der Textilverarbeitung — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('29202', 'Berufe in der Lebensmittelherstellung — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('29302', 'Berufe im Fleischerhandwerk — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('29402', 'Berufe im Bäckereihandwerk — Fachkraft', 'Rohstoffgewinnung, Produktion und Fertigung'),
+  ('31104', 'Berufe in der Bauplanung u. -überwachung — Spezialist', 'Bau, Architektur, Vermessung und Gebäudetechnik'),
+  ('32102', 'Berufe im Hochbau — Fachkraft', 'Bau, Architektur, Vermessung und Gebäudetechnik'),
+  ('33102', 'Berufe in der Bodenverlegung — Fachkraft', 'Bau, Architektur, Vermessung und Gebäudetechnik'),
+  ('34212', 'Berufe in der Gebäudetechnik — Fachkraft', 'Bau, Architektur, Vermessung und Gebäudetechnik'),
+  ('34302', 'Berufe in der Klempnerei — Fachkraft', 'Bau, Architektur, Vermessung und Gebäudetechnik'),
+  ('41102', 'Berufe in der Mathematik — Fachkraft', 'Naturwissenschaft, Geografie und Informatik'),
+  ('43102', 'Berufe in der Informatik — Fachkraft', 'Naturwissenschaft, Geografie und Informatik'),
+  ('43114', 'Berufe in der Informatik — Spezialist', 'Naturwissenschaft, Geografie und Informatik'),
+  ('43124', 'Berufe in der Softwareentwicklung — Spezialist', 'Naturwissenschaft, Geografie und Informatik'),
+  ('43413', 'Berufe in der IT-Systemadministration — Komplexe Spezialistentätigkeiten', 'Naturwissenschaft, Geografie und Informatik'),
+  ('51102', 'Berufe im Verkauf — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('51312', 'Berufe im Vertrieb — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('51402', 'Berufe im Handel — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('51622', 'Berufe im Einkauf — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('52122', 'Berufskraftfahrer/innen (Güterverkehr) — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('53112', 'Berufe in der Lagerwirtschaft — Fachkraft', 'Verkehr, Logistik, Schutz und Sicherheit'),
+  ('61104', 'Berufe in der Buchhaltung — Spezialist', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('61204', 'Berufe im Controlling — Spezialist', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('61302', 'Berufe in der Personaldienstleistung — Fachkraft', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('61314', 'Berufe im Personalwesen — Spezialist', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('62102', 'Kaufmännische Berufe im Einzelhandel — Fachkraft', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('63302', 'Berufe im Gastronomieservice — Fachkraft', 'Kaufmännische Dienstleistungen, Warenhandel, Vertrieb, Hotel und Tourismus'),
+  ('71302', 'Berufe in der Unternehmensorganisation — Fachkraft', 'Unternehmensorganisation, Buchhaltung, Recht und Verwaltung'),
+  ('71402', 'Berufe in der Büro- u. Sekretariatsarbeit — Fachkraft', 'Unternehmensorganisation, Buchhaltung, Recht und Verwaltung'),
+  ('73104', 'Berufe in Recht u. Verwaltung — Spezialist', 'Unternehmensorganisation, Buchhaltung, Recht und Verwaltung'),
+  ('81102', 'Berufe in der Arzt- u. Praxishilfe — Fachkraft', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('81302', 'Berufe in der Gesundheits- und Krankenpflege — Fachkraft', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('81312', 'Berufe in der Altenpflege — Fachkraft', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('82102', 'Berufe in der Erziehung — Fachkraft', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('83112', 'Berufe in der Sozialarbeit — Fachkraft', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('84304', 'Berufe im Lehramt — Spezialist', 'Gesundheit, Soziales, Lehre und Erziehung'),
+  ('91302', 'Berufe in der Reinigung — Fachkraft', 'Sprach-, Literatur-, Geistes-, Gesellschafts- u. Wirtschaftswiss.'),
+  ('94102', 'Berufe im Friseurgewerbe — Fachkraft', 'Werbung, Marketing, kaufm. u. redaktionelle Medienberufe')
+ON CONFLICT (code) DO NOTHING;
+
+-- Personalakte-Kategorien (Ergänzung für Lohn-Stammdaten)
+INSERT INTO hr_personnel_file_categories (tenant_id, name, code, color, sort_order, visible_to_roles) VALUES
+  ('10000000-0000-0000-0000-000000000001', 'Sozialversicherungsausweis', 'SV_AUSWEIS', '#0891B2', 8, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Mitgliedsbescheinigung KK', 'KK_BESCHEINIGUNG', '#0D9488', 9, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Lohnsteuerbescheinigung Vorjahr', 'LOHNSTEUER_VORJAHR', '#4F46E5', 10, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Personalausweis', 'PERSONALAUSWEIS', '#7C3AED', 11, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Aufenthaltstitel', 'AUFENTHALT', '#DB2777', 12, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Schwerbehindertenausweis', 'SB_AUSWEIS', '#E11D48', 13, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Pfändungsbeschluss', 'PFAENDUNG', '#DC2626', 14, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'bAV-Vertrag', 'BAV_VERTRAG', '#EA580C', 15, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Arbeitsvertrag', 'ARBEITSVERTRAG', '#CA8A04', 16, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Nachweisgesetz-Dokument', 'NACHWEIS', '#65A30D', 17, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'A1-Bescheinigung', 'A1_BESCHEINIGUNG', '#059669', 18, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'BG-Bescheinigung', 'BG_BESCHEINIGUNG', '#2563EB', 19, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Elternzeit-Antrag', 'ELTERNZEIT_ANTRAG', '#7C3AED', 20, ARRAY['admin', 'hr']),
+  ('10000000-0000-0000-0000-000000000001', 'Mutterschutz-Bescheinigung', 'MUTTERSCHUTZ_BESCHEINIGUNG', '#DB2777', 21, ARRAY['admin', 'hr'])
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- Payroll Master Data: Seed employee payroll fields
+-- Encrypted fields use AES-256-GCM (FIELD_ENCRYPTION_KEY_V1)
+-- =============================================================
+
+-- Admin User (EMP001) — Vollzeit, Steuerklasse 1, TK
+UPDATE employees SET
+  tax_id = 'v1:UV96lAGhckDOkGQU:3swBd+66aEPad9w/QLLZ3Q==:8uorPozUkBcirIA=',
+  tax_class = 1, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:ea3uCWLLfOSZ41+y:ZxXPd+reEXAYXyj/pr4UWw==:+4lseRDngpStys+8',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '101575519'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '713024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:Iw+PcAxCoOq5aCxv:xTTcrNnUHeny/1DQG23FWQ==:ALYM/Q6YzvynW13wc0edEmQbpIjjNA==',
+  bic = 'PBNKDEFFXXX', account_holder = 'Admin User',
+  gross_salary = 5500.00, payment_type = 'monthly_salary',
+  contract_type = 'permanent', probation_months = 6,
+  notice_period_employee = '4 Wochen zum Monatsende', notice_period_employer = '3 Monate zum Quartalsende'
+WHERE id = '00000000-0000-0000-0000-000000000011';
+
+-- Regular User (EMP002) — Teilzeit, Steuerklasse 3, AOK Bayern
+UPDATE employees SET
+  tax_id = 'v1:sgjZ+PnjQ3K7fhNW:b3TThB2wjKLuhWjuqOBlZA==:p1xZvveQ9rmspyA=',
+  tax_class = 3, child_tax_allowance = 1.0, denomination = 'rk', is_primary_employer = true,
+  social_security_number = 'v1:EeLdsu3LTWjiSRi5:+wSnW3vdBSrAFoHwRdngRQ==:8O56wKbVcuwAZmBZ',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '108310400'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '251024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:+wMCuk1RxiyFd+j2:xy3bBVmWqCq/NQA7zlaVFA==:nVr3z7VgWxJq/BV+QVmS0TQxI18Xrg==',
+  bic = 'COBADEFFXXX', account_holder = 'Regular User',
+  gross_salary = 3200.00, payment_type = 'monthly_salary',
+  contract_type = 'permanent', notice_period_employee = '4 Wochen', notice_period_employer = '3 Monate'
+WHERE id = '00000000-0000-0000-0000-000000000012';
+
+-- Maria Schmidt (EMP003) — Steuerklasse 4/IV mit Faktor, BARMER, mit Kindern
+UPDATE employees SET
+  tax_id = 'v1:waHKYnCBZmBc32Bh:94GkcZnfhlIwo6yiUwZEkw==:VdeI9u0Wf8WyonA=',
+  tax_class = 4, tax_factor = 0.9450, child_tax_allowance = 1.5,
+  denomination = 'ev', spouse_denomination = 'rk', is_primary_employer = true,
+  birth_name = 'Müller',
+  social_security_number = 'v1:UHnn2xRFRRnIUglz:lBt+25zL4TgQh0mqKGo01A==:Jyjj4kgQHB+mnvoF',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '104940005'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '613144311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:qZGDORVJ2BF+2QlP:x3iK7tkBvCklbTt/WffQ0g==:d4qp+yktIZ7UB2w5NDicTea7+B4Dmg==',
+  bic = 'BARMDE2HXXX', account_holder = 'Maria Schmidt',
+  gross_salary = 4200.00, payment_type = 'monthly_salary', salary_group = 'E11',
+  contract_type = 'permanent', probation_months = 6,
+  notice_period_employee = '4 Wochen', notice_period_employer = '7 Monate',
+  bg_institution = 'VBG', bg_membership_number = '12345678', bg_hazard_tariff = '01'
+WHERE id = '00000000-0000-0000-0000-000000000013';
+
+-- Thomas Mueller (EMP004) — Stundenlöhner, Steuerklasse 1, PKV
+UPDATE employees SET
+  tax_id = 'v1:zlU2M5bx8OdNNsL9:uFF7kwoHwTmO0tJrcxNBaA==:murjz7aWg7JZ6XA=',
+  tax_class = 1, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:+FC80s9uxNEu9jrZ:U7wTUEy63APiDbdP7gx85g==:LcT4mNi8phXlW+Ud',
+  health_insurance_status = 'private', private_health_insurance_contribution = 380.00,
+  personnel_group_code = '101', contribution_group_code = '0111',
+  activity_code = '252124311', umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:5YF4FdKBMIzuJ/t9:E2uTZZtJZ2ljn0pOqrCBtg==:2fg1EZAV937ALIawnxVrQ6z5hJDyJQ==',
+  bic = 'DAAEDEDDXXX', account_holder = 'Thomas Mueller',
+  hourly_rate = 28.50, payment_type = 'hourly_wage',
+  contract_type = 'permanent', notice_period_employee = '2 Wochen', notice_period_employer = '1 Monat'
+WHERE id = '00000000-0000-0000-0000-000000000014';
+
+-- Anna Weber (EMP005) — Werkstudentin, Steuerklasse 1, TK, Minijob-Flag
+UPDATE employees SET
+  tax_id = 'v1:nUgYIdK46Aky9LAp:DYTtjVhcq4it98K5NghcRg==:6nZ3Sx3kELG0iuo=',
+  tax_class = 1, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:bJR0v1K7OMbU3JQ6:hM5KdU8s3FK2jEcVt9q+0A==:IpUXFcW2CSA4vLys',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '101575519'),
+  health_insurance_status = 'mandatory', personnel_group_code = '106',
+  contribution_group_code = '0100', activity_code = '431244311',
+  umlage_u1 = false, umlage_u2 = true,
+  iban = 'v1:EPNEHFWmTq07qOrF:/rpfZjMU+vvQN+uxPdztuw==:bI1U8JJzYs+H69uI+pHR+m6z9u47Kw==',
+  bic = 'PBNKDEFFXXX', account_holder = 'Anna Weber',
+  gross_salary = 1200.00, payment_type = 'monthly_salary',
+  contract_type = 'fixed_term_no_reason',
+  university = 'TU München', student_id = 'M-12345', field_of_study = 'Informatik'
+WHERE id = '00000000-0000-0000-0000-000000000015';
+
+-- Maria Schmidt: 2 Kinder
+INSERT INTO employee_children (tenant_id, employee_id, first_name, last_name, birth_date, tax_allowance_share, lives_in_household) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 'Max', 'Schmidt', '2018-03-15', 0.5, true),
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 'Sophie', 'Schmidt', '2021-07-22', 1.0, true)
+ON CONFLICT DO NOTHING;
+
+-- Thomas Mueller: Dienstwagen
+INSERT INTO employee_company_cars (tenant_id, employee_id, list_price, propulsion_type, distance_to_work_km, usage_type, license_plate, make_model, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', 42000.00, 'hybrid', 18.5, 'private_use', 'M-TM 1234', 'BMW 320e', '2025-06-01')
+ON CONFLICT DO NOTHING;
+
+-- Admin User: bAV (Direktversicherung)
+INSERT INTO employee_pensions (tenant_id, employee_id, execution_type, provider_name, contract_number, employee_contribution, employer_contribution, mandatory_employer_subsidy, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'direct_insurance', 'Allianz Lebensversicherung', 'AV-2024-001', 200.00, 200.00, 30.00, '2024-01-01')
+ON CONFLICT DO NOTHING;
+
+-- Regular User: VL (Bausparen)
+INSERT INTO employee_savings (tenant_id, employee_id, investment_type, recipient, contract_number, monthly_amount, employer_share, employee_share, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', 'building_savings', 'LBS Bayern', 'BS-2025-002', 40.00, 26.59, 13.41, '2025-01-01')
+ON CONFLICT DO NOTHING;

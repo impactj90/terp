@@ -3794,7 +3794,17 @@
       "loading": "Loading...",
       "allLoaded": "All entries loaded"
     },
-    "system": "System"
+    "system": "System",
+    "export": {
+      "button": "Export",
+      "csv": "Export as CSV",
+      "pdf": "Export as PDF",
+      "generating": "Generating...",
+      "success": "{count} entries exported",
+      "error": "Export failed. Please narrow your filters and try again.",
+      "limitExceeded": "Maximum {limit} entries per export. Please narrow your filters.",
+      "noData": "No data to export"
+    }
   },
   "modules": {
     "title": "Modules",
@@ -7458,6 +7468,354 @@
       "tabImap": "IMAP Configuration",
       "tabApprovalRules": "Approval Rules",
       "tabEmailLog": "Email Log"
+    }
+  },
+  "employeePayroll": {
+    "tabs": {
+      "taxSocialSecurity": "Tax & Social Security",
+      "bankDetails": "Bank Details",
+      "compensation": "Compensation",
+      "family": "Family",
+      "benefits": "Benefits",
+      "disability": "Disability",
+      "foreignAssignments": "Foreign Assignments",
+      "garnishments": "Garnishments",
+      "specialCases": "Special Cases"
+    },
+    "tax": {
+      "title": "Tax Data",
+      "taxId": "Tax ID",
+      "taxClass": "Tax Class",
+      "taxFactor": "Factor (IV/IV)",
+      "childTaxAllowance": "Child Tax Allowances",
+      "denomination": "Denomination",
+      "spouseDenomination": "Spouse Denomination",
+      "payrollTaxAllowance": "ELStAM Tax Allowance",
+      "payrollTaxAddition": "ELStAM Addition Amount",
+      "isPrimaryEmployer": "Primary Employer",
+      "birthName": "Birth Name"
+    },
+    "socialSecurity": {
+      "title": "Social Security",
+      "socialSecurityNumber": "Social Security Number",
+      "healthInsuranceProvider": "Health Insurance Provider",
+      "healthInsuranceStatus": "Insurance Status",
+      "statusMandatory": "Mandatory",
+      "statusVoluntary": "Voluntary",
+      "statusPrivate": "Private",
+      "privateContribution": "Private Insurance Contribution",
+      "personnelGroupCode": "Personnel Group Code",
+      "contributionGroupCode": "Contribution Group Code",
+      "contributionKV": "HI",
+      "contributionRV": "PI",
+      "contributionAV": "UI",
+      "contributionPV": "NI",
+      "activityCode": "Activity Code",
+      "midijobFlag": "Midijob",
+      "midijobNo": "No",
+      "midijobGleitzone": "Gliding zone",
+      "midijobMidijob": "Midijob",
+      "umlageU1": "Levy U1",
+      "umlageU2": "Levy U2"
+    },
+    "activityCode": {
+      "searchPlaceholder": "Search occupation...",
+      "schoolEducation": "School Education",
+      "schoolNone": "No school diploma",
+      "schoolHauptschule": "Secondary school (Hauptschule)",
+      "schoolMittlereReife": "Intermediate diploma",
+      "schoolAbitur": "Abitur / Advanced diploma",
+      "schoolUnknown": "Unknown",
+      "vocationalEducation": "Vocational Education",
+      "vocNone": "No vocational qualification",
+      "vocTraining": "On-the-job training",
+      "vocApprenticeship": "Recognized apprenticeship",
+      "vocMaster": "Master craftsman / Technician",
+      "vocBachelor": "Bachelor",
+      "vocMasterDiploma": "Diploma / Master / State Exam",
+      "vocUnknown": "Unknown",
+      "tempWork": "Temporary Work",
+      "tempWorkNo": "No temporary work",
+      "tempWorkYes": "Temporary work",
+      "contractForm": "Contract Form",
+      "contractFullTimePermanent": "Permanent full-time",
+      "contractFullTimeFixed": "Fixed-term full-time",
+      "contractPartTimePermanent": "Permanent part-time",
+      "contractPartTimeFixed": "Fixed-term part-time"
+    },
+    "denomination": {
+      "ev": "Protestant",
+      "rk": "Roman Catholic",
+      "la": "Lutheran (EKD)",
+      "er": "Reformed Protestant",
+      "lt": "Evangelical Lutheran",
+      "rf": "Reformed (State Church)",
+      "fg": "Free Religious Community",
+      "fr": "French Reformed",
+      "fs": "Free Religious Congregation",
+      "fa": "Free Religious Congregation (alt.)",
+      "ak": "Old Catholic",
+      "ib": "Jewish Community Baden",
+      "jd": "Jewish Communities"
+    },
+    "bank": {
+      "title": "Bank Details",
+      "iban": "IBAN",
+      "bic": "BIC",
+      "accountHolder": "Account Holder",
+      "showIban": "Show IBAN",
+      "hideIban": "Hide IBAN"
+    },
+    "compensation": {
+      "title": "Compensation",
+      "paymentType": "Payment Type",
+      "monthlySalary": "Monthly Salary",
+      "hourlyWage": "Hourly Wage",
+      "commission": "Commission",
+      "grossSalary": "Gross Salary / Month",
+      "hourlyRate": "Hourly Rate",
+      "salaryGroup": "Salary / Tariff Group",
+      "houseNumber": "House Number",
+      "contractType": "Contract Type",
+      "contractPermanent": "Permanent",
+      "contractFixedNoReason": "Fixed-term (no reason)",
+      "contractFixedWithReason": "Fixed-term (with reason)",
+      "probationMonths": "Probation Period (months)",
+      "noticePeriodEmployee": "Notice Period (Employee)",
+      "noticePeriodEmployer": "Notice Period (Employer)"
+    },
+    "children": {
+      "title": "Children",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "birthDate": "Date of Birth",
+      "taxAllowanceShare": "Tax Allowance Share",
+      "livesInHousehold": "Lives in Household",
+      "empty": "No children recorded",
+      "add": "Add Child"
+    },
+    "parentalLeave": {
+      "title": "Parental Leave",
+      "startDate": "From",
+      "endDate": "Until",
+      "child": "Child",
+      "isPartnerMonths": "Partner Months",
+      "empty": "No parental leave recorded",
+      "add": "Add Parental Leave"
+    },
+    "maternityLeave": {
+      "title": "Maternity Leave",
+      "startDate": "Start Date",
+      "expectedBirthDate": "Expected Birth Date",
+      "actualBirthDate": "Actual Birth Date",
+      "actualEndDate": "Actual End Date",
+      "empty": "No maternity leave recorded",
+      "add": "Add Maternity Leave"
+    },
+    "parentalAllowance": {
+      "title": "Parental Allowance",
+      "receivesParentalAllowance": "Receives Parental Allowance",
+      "parentalAllowanceUntil": "Parental Allowance Until"
+    },
+    "companyCar": {
+      "title": "Company Car",
+      "listPrice": "Gross List Price",
+      "propulsionType": "Propulsion Type",
+      "combustion": "Combustion",
+      "hybrid": "Hybrid",
+      "electric": "Electric",
+      "distanceToWorkKm": "Distance Home-Work (km)",
+      "usageType": "Usage Type",
+      "privateUse": "Private Use (1% Rule)",
+      "commuteOnly": "Commute Only",
+      "licensePlate": "License Plate",
+      "makeModel": "Make / Model",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No company car recorded",
+      "add": "Add Company Car"
+    },
+    "jobBike": {
+      "title": "Job Bike",
+      "listPrice": "Gross List Price",
+      "usageType": "Provision Type",
+      "salaryConversion": "Salary Conversion",
+      "additional": "Additional to Salary",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No job bike recorded",
+      "add": "Add Job Bike"
+    },
+    "mealAllowance": {
+      "title": "Meal Allowance",
+      "dailyAmount": "Daily Amount",
+      "workDaysPerMonth": "Work Days / Month",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No meal allowance recorded",
+      "add": "Add Meal Allowance"
+    },
+    "voucher": {
+      "title": "Vouchers",
+      "monthlyAmount": "Monthly Amount",
+      "provider": "Provider",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No vouchers recorded",
+      "add": "Add Voucher"
+    },
+    "jobTicket": {
+      "title": "Job Ticket",
+      "monthlyAmount": "Monthly Amount",
+      "provider": "Provider",
+      "isAdditional": "Additional to Salary (tax-free)",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No job ticket recorded",
+      "add": "Add Job Ticket"
+    },
+    "pension": {
+      "title": "Company Pension (bAV)",
+      "executionType": "Execution Type",
+      "directInsurance": "Direct Insurance",
+      "pensionFund": "Pension Fund",
+      "pensionScheme": "Pension Scheme",
+      "directCommitment": "Direct Commitment",
+      "supportFund": "Support Fund",
+      "providerName": "Provider",
+      "contractNumber": "Contract Number",
+      "employeeContribution": "Employee Contribution",
+      "employerContribution": "Employer Contribution",
+      "mandatoryEmployerSubsidy": "Mandatory Employer Subsidy (15%)",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No company pension recorded",
+      "add": "Add Pension"
+    },
+    "savings": {
+      "title": "Capital-Forming Benefits (VL)",
+      "investmentType": "Investment Type",
+      "buildingSavings": "Building Savings",
+      "fundSavings": "Fund Savings",
+      "bankSavings": "Bank Savings",
+      "recipient": "Recipient",
+      "recipientIban": "Recipient IBAN",
+      "contractNumber": "Contract Number",
+      "monthlyAmount": "Monthly Amount",
+      "employerShare": "Employer Share",
+      "employeeShare": "Employee Share",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No VL recorded",
+      "add": "Add VL"
+    },
+    "disability": {
+      "title": "Disability",
+      "disabilityDegree": "Degree of Disability (GdB)",
+      "disabilityEqualStatus": "Equal Status",
+      "disabilityMarkers": "Markers",
+      "disabilityIdValidUntil": "ID Valid Until",
+      "markers": {
+        "G": "Walking impaired",
+        "aG": "Exceptionally walking impaired",
+        "H": "Helpless",
+        "Bl": "Blind",
+        "TBl": "Deaf-blind",
+        "RF": "Broadcasting fee exemption",
+        "1Kl": "First class",
+        "B": "Companion required",
+        "GL": "Deaf"
+      }
+    },
+    "foreignAssignment": {
+      "title": "Foreign Assignments",
+      "countryCode": "Country Code",
+      "countryName": "Country",
+      "startDate": "From",
+      "endDate": "Until",
+      "a1CertificateNumber": "A1 Certificate No.",
+      "a1ValidFrom": "A1 Valid From",
+      "a1ValidUntil": "A1 Valid Until",
+      "foreignActivityExemption": "Foreign Activity Exemption",
+      "empty": "No foreign assignments recorded",
+      "add": "Add Foreign Assignment"
+    },
+    "garnishment": {
+      "title": "Garnishments",
+      "creditorName": "Creditor",
+      "creditorAddress": "Creditor Address",
+      "fileReference": "File Reference",
+      "garnishmentAmount": "Garnishment Amount",
+      "calculationMethod": "Calculation Method",
+      "fixedAmount": "Fixed Amount",
+      "tableBased": "Table-Based",
+      "dependentsCount": "Dependents",
+      "rank": "Rank",
+      "isPAccount": "P-Account",
+      "maintenanceObligation": "Maintenance Obligation",
+      "startDate": "From",
+      "endDate": "Until",
+      "empty": "No garnishments recorded",
+      "add": "Add Garnishment"
+    },
+    "specialCases": {
+      "pensionStatus": {
+        "title": "Pension Status",
+        "receivesOldAgePension": "Receives Old-Age Pension",
+        "receivesDisabilityPension": "Receives Disability Pension",
+        "receivesSurvivorPension": "Receives Survivor Pension",
+        "pensionStartDate": "Pension Start Date"
+      },
+      "bgData": {
+        "title": "Professional Association",
+        "bgInstitution": "Professional Association",
+        "bgMembershipNumber": "Membership Number",
+        "bgHazardTariff": "Hazard Tariff"
+      },
+      "otherEmployment": {
+        "title": "Other Employment",
+        "employerName": "Employer",
+        "monthlyIncome": "Monthly Income",
+        "weeklyHours": "Weekly Hours",
+        "isMinijob": "Minijob",
+        "startDate": "From",
+        "endDate": "Until",
+        "empty": "No other employment recorded",
+        "add": "Add Other Employment"
+      },
+      "studentData": {
+        "title": "Student / Apprentice Data",
+        "university": "University",
+        "studentId": "Student ID",
+        "fieldOfStudy": "Field of Study",
+        "apprenticeshipOccupation": "Apprenticeship Occupation",
+        "apprenticeshipExternalCompany": "External Training Company",
+        "vocationalSchool": "Vocational School"
+      },
+      "death": {
+        "title": "Death Benefit",
+        "dateOfDeath": "Date of Death",
+        "heirName": "Heir (Name)",
+        "heirIban": "Heir (IBAN)"
+      }
+    },
+    "validation": {
+      "invalidIban": "Invalid IBAN",
+      "invalidTaxId": "Invalid Tax ID",
+      "invalidSsn": "Invalid Social Security Number",
+      "invalidTaxClass": "Tax class must be between 1 and 6",
+      "invalidContributionGroup": "Invalid contribution group code",
+      "invalidActivityCode": "Invalid activity code",
+      "required": "Required field"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "show": "Show",
+      "hide": "Hide",
+      "confirmDelete": "Are you sure you want to delete?"
     }
   }
 }

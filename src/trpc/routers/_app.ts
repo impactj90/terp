@@ -86,6 +86,21 @@ import { warehouseRouter } from "./warehouse"
 import { hrRouter } from "./hr"
 import { emailRouter } from "./email"
 import { invoicesRouter } from "./invoices"
+import { employeeChildrenRouter } from "./employeeChildren"
+import { employeeCompanyCarsRouter } from "./employeeCompanyCars"
+import { employeeJobBikesRouter } from "./employeeJobBikes"
+import { employeeMealAllowancesRouter } from "./employeeMealAllowances"
+import { employeeVouchersRouter } from "./employeeVouchers"
+import { employeeJobTicketsRouter } from "./employeeJobTickets"
+import { employeePensionsRouter } from "./employeePensions"
+import { employeeSavingsRouter } from "./employeeSavings"
+import { employeeGarnishmentsRouter } from "./employeeGarnishments"
+import { employeeParentalLeavesRouter } from "./employeeParentalLeaves"
+import { employeeMaternityLeavesRouter } from "./employeeMaternityLeaves"
+import { employeeForeignAssignmentsRouter } from "./employeeForeignAssignments"
+import { employeeOtherEmploymentsRouter } from "./employeeOtherEmployments"
+import { healthInsuranceProvidersRouter } from "./healthInsuranceProviders"
+import { activityCodesKldbRouter } from "./activityCodesKldb"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -169,6 +184,21 @@ export const appRouter = createTRPCRouter({
   hr: hrRouter,
   email: emailRouter,
   invoices: invoicesRouter,
+  employeeChildren: employeeChildrenRouter,
+  employeeCompanyCars: employeeCompanyCarsRouter,
+  employeeJobBikes: employeeJobBikesRouter,
+  employeeMealAllowances: employeeMealAllowancesRouter,
+  employeeVouchers: employeeVouchersRouter,
+  employeeJobTickets: employeeJobTicketsRouter,
+  employeePensions: employeePensionsRouter,
+  employeeSavings: employeeSavingsRouter,
+  employeeGarnishments: employeeGarnishmentsRouter,
+  employeeParentalLeaves: employeeParentalLeavesRouter,
+  employeeMaternityLeaves: employeeMaternityLeavesRouter,
+  employeeForeignAssignments: employeeForeignAssignmentsRouter,
+  employeeOtherEmployments: employeeOtherEmploymentsRouter,
+  healthInsuranceProviders: healthInsuranceProvidersRouter,
+  activityCodesKldb: activityCodesKldbRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -31,6 +31,7 @@ import {
 } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as employeesService from "@/lib/services/employees-service"
+import { decryptField, isEncrypted } from "@/lib/services/field-encryption"
 
 // --- Permission Constants ---
 
@@ -100,6 +101,61 @@ const employeeOutputSchema = z.object({
   calculationStartDate: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  // --- Payroll master data ---
+  taxId: z.string().nullable(),
+  taxClass: z.number().nullable(),
+  taxFactor: z.number().nullable(),
+  childTaxAllowance: z.number().nullable(),
+  denomination: z.string().nullable(),
+  spouseDenomination: z.string().nullable(),
+  payrollTaxAllowance: z.number().nullable(),
+  payrollTaxAddition: z.number().nullable(),
+  isPrimaryEmployer: z.boolean().nullable(),
+  socialSecurityNumber: z.string().nullable(),
+  healthInsuranceProviderId: z.string().nullable(),
+  healthInsuranceStatus: z.string().nullable(),
+  privateHealthInsuranceContribution: z.number().nullable(),
+  personnelGroupCode: z.string().nullable(),
+  contributionGroupCode: z.string().nullable(),
+  activityCode: z.string().nullable(),
+  midijobFlag: z.number().nullable(),
+  umlageU1: z.boolean().nullable(),
+  umlageU2: z.boolean().nullable(),
+  iban: z.string().nullable(),
+  bic: z.string().nullable(),
+  accountHolder: z.string().nullable(),
+  birthName: z.string().nullable(),
+  houseNumber: z.string().nullable(),
+  grossSalary: z.number().nullable(),
+  hourlyRate: z.number().nullable(),
+  paymentType: z.string().nullable(),
+  salaryGroup: z.string().nullable(),
+  contractType: z.string().nullable(),
+  probationMonths: z.number().nullable(),
+  noticePeriodEmployee: z.string().nullable(),
+  noticePeriodEmployer: z.string().nullable(),
+  disabilityDegree: z.number().nullable(),
+  disabilityEqualStatus: z.boolean().nullable(),
+  disabilityMarkers: z.string().nullable(),
+  disabilityIdValidUntil: z.date().nullable(),
+  bgInstitution: z.string().nullable(),
+  bgMembershipNumber: z.string().nullable(),
+  bgHazardTariff: z.string().nullable(),
+  university: z.string().nullable(),
+  studentId: z.string().nullable(),
+  fieldOfStudy: z.string().nullable(),
+  apprenticeshipOccupation: z.string().nullable(),
+  apprenticeshipExternalCompany: z.string().nullable(),
+  vocationalSchool: z.string().nullable(),
+  receivesOldAgePension: z.boolean().nullable(),
+  receivesDisabilityPension: z.boolean().nullable(),
+  receivesSurvivorPension: z.boolean().nullable(),
+  pensionStartDate: z.date().nullable(),
+  dateOfDeath: z.date().nullable(),
+  heirName: z.string().nullable(),
+  heirIban: z.string().nullable(),
+  receivesParentalAllowance: z.boolean().nullable(),
+  parentalAllowanceUntil: z.date().nullable(),
 })
 
 type EmployeeOutput = z.infer<typeof employeeOutputSchema>
@@ -278,7 +334,75 @@ const updateEmployeeInputSchema = z.object({
   workDaysPerWeek: z.number().min(0).max(7).nullable().optional(),
   // System
   calculationStartDate: z.coerce.date().nullable().optional(),
+  // --- Payroll master data ---
+  // Tax
+  taxId: z.string().nullable().optional(),
+  taxClass: z.number().int().min(1).max(6).nullable().optional(),
+  taxFactor: z.number().nullable().optional(),
+  childTaxAllowance: z.number().nullable().optional(),
+  denomination: z.string().max(3).nullable().optional(),
+  spouseDenomination: z.string().max(3).nullable().optional(),
+  payrollTaxAllowance: z.number().nullable().optional(),
+  payrollTaxAddition: z.number().nullable().optional(),
+  isPrimaryEmployer: z.boolean().nullable().optional(),
+  // Social security
+  socialSecurityNumber: z.string().nullable().optional(),
+  healthInsuranceProviderId: z.string().nullable().optional(),
+  healthInsuranceStatus: z.string().nullable().optional(),
+  privateHealthInsuranceContribution: z.number().nullable().optional(),
+  personnelGroupCode: z.string().max(3).nullable().optional(),
+  contributionGroupCode: z.string().max(4).nullable().optional(),
+  activityCode: z.string().max(9).nullable().optional(),
+  midijobFlag: z.number().int().min(0).max(2).nullable().optional(),
+  umlageU1: z.boolean().nullable().optional(),
+  umlageU2: z.boolean().nullable().optional(),
+  // Bank
+  iban: z.string().nullable().optional(),
+  bic: z.string().max(11).nullable().optional(),
+  accountHolder: z.string().max(200).nullable().optional(),
+  // Personal extension
+  birthName: z.string().max(100).nullable().optional(),
+  houseNumber: z.string().max(20).nullable().optional(),
+  // Compensation
+  grossSalary: z.number().nullable().optional(),
+  hourlyRate: z.number().nullable().optional(),
+  paymentType: z.string().max(20).nullable().optional(),
+  salaryGroup: z.string().max(50).nullable().optional(),
+  // Contract extension
+  contractType: z.string().max(30).nullable().optional(),
+  probationMonths: z.number().int().nullable().optional(),
+  noticePeriodEmployee: z.string().max(50).nullable().optional(),
+  noticePeriodEmployer: z.string().max(50).nullable().optional(),
+  // Disability
+  disabilityDegree: z.number().int().min(20).max(100).nullable().optional(),
+  disabilityEqualStatus: z.boolean().nullable().optional(),
+  disabilityMarkers: z.string().max(20).nullable().optional(),
+  disabilityIdValidUntil: z.coerce.date().nullable().optional(),
+  // BG
+  bgInstitution: z.string().max(200).nullable().optional(),
+  bgMembershipNumber: z.string().max(30).nullable().optional(),
+  bgHazardTariff: z.string().max(10).nullable().optional(),
+  // Student / apprentice
+  university: z.string().max(200).nullable().optional(),
+  studentId: z.string().max(30).nullable().optional(),
+  fieldOfStudy: z.string().max(100).nullable().optional(),
+  apprenticeshipOccupation: z.string().max(200).nullable().optional(),
+  apprenticeshipExternalCompany: z.string().max(200).nullable().optional(),
+  vocationalSchool: z.string().max(200).nullable().optional(),
+  // Pension status
+  receivesOldAgePension: z.boolean().nullable().optional(),
+  receivesDisabilityPension: z.boolean().nullable().optional(),
+  receivesSurvivorPension: z.boolean().nullable().optional(),
+  pensionStartDate: z.coerce.date().nullable().optional(),
+  // Death
+  dateOfDeath: z.coerce.date().nullable().optional(),
+  heirName: z.string().max(200).nullable().optional(),
+  heirIban: z.string().nullable().optional(),
+  // Parental allowance
+  receivesParentalAllowance: z.boolean().nullable().optional(),
+  parentalAllowanceUntil: z.coerce.date().nullable().optional(),
   // Clear flags for nullable FKs
+  clearHealthInsuranceProviderId: z.boolean().optional(),
   clearDepartmentId: z.boolean().optional(),
   clearCostCenterId: z.boolean().optional(),
   clearEmploymentTypeId: z.boolean().optional(),
@@ -299,6 +423,15 @@ const updateEmployeeInputSchema = z.object({
 function decimalToNumber(val: Prisma.Decimal | number | null | undefined): number | null {
   if (val === null || val === undefined) return null
   return Number(val)
+}
+
+function safeDecrypt(val: string | null | undefined): string | null {
+  if (!val) return null
+  try {
+    return isEncrypted(val) ? decryptField(val) : val
+  } catch {
+    return "[decryption error]"
+  }
 }
 
 /**
@@ -404,6 +537,61 @@ function mapEmployeeToOutput(emp: {
     calculationStartDate: emp.calculationStartDate,
     createdAt: emp.createdAt,
     updatedAt: emp.updatedAt,
+    // --- Payroll master data ---
+    taxId: safeDecrypt((emp as Record<string, unknown>).taxId as string | null),
+    taxClass: (emp as Record<string, unknown>).taxClass as number | null ?? null,
+    taxFactor: decimalToNumber((emp as Record<string, unknown>).taxFactor as Prisma.Decimal | null),
+    childTaxAllowance: decimalToNumber((emp as Record<string, unknown>).childTaxAllowance as Prisma.Decimal | null),
+    denomination: (emp as Record<string, unknown>).denomination as string | null ?? null,
+    spouseDenomination: (emp as Record<string, unknown>).spouseDenomination as string | null ?? null,
+    payrollTaxAllowance: decimalToNumber((emp as Record<string, unknown>).payrollTaxAllowance as Prisma.Decimal | null),
+    payrollTaxAddition: decimalToNumber((emp as Record<string, unknown>).payrollTaxAddition as Prisma.Decimal | null),
+    isPrimaryEmployer: (emp as Record<string, unknown>).isPrimaryEmployer as boolean | null ?? null,
+    socialSecurityNumber: safeDecrypt((emp as Record<string, unknown>).socialSecurityNumber as string | null),
+    healthInsuranceProviderId: (emp as Record<string, unknown>).healthInsuranceProviderId as string | null ?? null,
+    healthInsuranceStatus: (emp as Record<string, unknown>).healthInsuranceStatus as string | null ?? null,
+    privateHealthInsuranceContribution: decimalToNumber((emp as Record<string, unknown>).privateHealthInsuranceContribution as Prisma.Decimal | null),
+    personnelGroupCode: (emp as Record<string, unknown>).personnelGroupCode as string | null ?? null,
+    contributionGroupCode: (emp as Record<string, unknown>).contributionGroupCode as string | null ?? null,
+    activityCode: (emp as Record<string, unknown>).activityCode as string | null ?? null,
+    midijobFlag: (emp as Record<string, unknown>).midijobFlag as number | null ?? null,
+    umlageU1: (emp as Record<string, unknown>).umlageU1 as boolean | null ?? null,
+    umlageU2: (emp as Record<string, unknown>).umlageU2 as boolean | null ?? null,
+    iban: safeDecrypt((emp as Record<string, unknown>).iban as string | null),
+    bic: (emp as Record<string, unknown>).bic as string | null ?? null,
+    accountHolder: (emp as Record<string, unknown>).accountHolder as string | null ?? null,
+    birthName: (emp as Record<string, unknown>).birthName as string | null ?? null,
+    houseNumber: (emp as Record<string, unknown>).houseNumber as string | null ?? null,
+    grossSalary: decimalToNumber((emp as Record<string, unknown>).grossSalary as Prisma.Decimal | null),
+    hourlyRate: decimalToNumber((emp as Record<string, unknown>).hourlyRate as Prisma.Decimal | null),
+    paymentType: (emp as Record<string, unknown>).paymentType as string | null ?? null,
+    salaryGroup: (emp as Record<string, unknown>).salaryGroup as string | null ?? null,
+    contractType: (emp as Record<string, unknown>).contractType as string | null ?? null,
+    probationMonths: (emp as Record<string, unknown>).probationMonths as number | null ?? null,
+    noticePeriodEmployee: (emp as Record<string, unknown>).noticePeriodEmployee as string | null ?? null,
+    noticePeriodEmployer: (emp as Record<string, unknown>).noticePeriodEmployer as string | null ?? null,
+    disabilityDegree: (emp as Record<string, unknown>).disabilityDegree as number | null ?? null,
+    disabilityEqualStatus: (emp as Record<string, unknown>).disabilityEqualStatus as boolean | null ?? null,
+    disabilityMarkers: (emp as Record<string, unknown>).disabilityMarkers as string | null ?? null,
+    disabilityIdValidUntil: (emp as Record<string, unknown>).disabilityIdValidUntil as Date | null ?? null,
+    bgInstitution: (emp as Record<string, unknown>).bgInstitution as string | null ?? null,
+    bgMembershipNumber: (emp as Record<string, unknown>).bgMembershipNumber as string | null ?? null,
+    bgHazardTariff: (emp as Record<string, unknown>).bgHazardTariff as string | null ?? null,
+    university: (emp as Record<string, unknown>).university as string | null ?? null,
+    studentId: (emp as Record<string, unknown>).studentId as string | null ?? null,
+    fieldOfStudy: (emp as Record<string, unknown>).fieldOfStudy as string | null ?? null,
+    apprenticeshipOccupation: (emp as Record<string, unknown>).apprenticeshipOccupation as string | null ?? null,
+    apprenticeshipExternalCompany: (emp as Record<string, unknown>).apprenticeshipExternalCompany as string | null ?? null,
+    vocationalSchool: (emp as Record<string, unknown>).vocationalSchool as string | null ?? null,
+    receivesOldAgePension: (emp as Record<string, unknown>).receivesOldAgePension as boolean | null ?? null,
+    receivesDisabilityPension: (emp as Record<string, unknown>).receivesDisabilityPension as boolean | null ?? null,
+    receivesSurvivorPension: (emp as Record<string, unknown>).receivesSurvivorPension as boolean | null ?? null,
+    pensionStartDate: (emp as Record<string, unknown>).pensionStartDate as Date | null ?? null,
+    dateOfDeath: (emp as Record<string, unknown>).dateOfDeath as Date | null ?? null,
+    heirName: (emp as Record<string, unknown>).heirName as string | null ?? null,
+    heirIban: safeDecrypt((emp as Record<string, unknown>).heirIban as string | null),
+    receivesParentalAllowance: (emp as Record<string, unknown>).receivesParentalAllowance as boolean | null ?? null,
+    parentalAllowanceUntil: (emp as Record<string, unknown>).parentalAllowanceUntil as Date | null ?? null,
   }
 }
 

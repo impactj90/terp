@@ -12,6 +12,8 @@ import { MonthlyCalcService } from "@/lib/services/monthly-calc";
 import * as repo from "./employees-repository";
 import * as auditLog from "./audit-logs-service";
 import type { AuditContext } from "./audit-logs-service";
+import { encryptField, decryptField, isEncrypted } from "./field-encryption";
+import { validateIban, validateTaxId, validateSocialSecurityNumber, validateContributionGroupCode, validateActivityCode, validateTaxClass } from "./payroll-validators";
 
 // --- Error Classes ---
 
@@ -407,6 +409,61 @@ export async function update(
     annualTargetHours?: number | null;
     workDaysPerWeek?: number | null;
     calculationStartDate?: Date | null;
+    // --- Payroll master data ---
+    taxId?: string | null;
+    taxClass?: number | null;
+    taxFactor?: number | null;
+    childTaxAllowance?: number | null;
+    denomination?: string | null;
+    spouseDenomination?: string | null;
+    payrollTaxAllowance?: number | null;
+    payrollTaxAddition?: number | null;
+    isPrimaryEmployer?: boolean | null;
+    socialSecurityNumber?: string | null;
+    healthInsuranceProviderId?: string | null;
+    healthInsuranceStatus?: string | null;
+    privateHealthInsuranceContribution?: number | null;
+    personnelGroupCode?: string | null;
+    contributionGroupCode?: string | null;
+    activityCode?: string | null;
+    midijobFlag?: number | null;
+    umlageU1?: boolean | null;
+    umlageU2?: boolean | null;
+    iban?: string | null;
+    bic?: string | null;
+    accountHolder?: string | null;
+    birthName?: string | null;
+    houseNumber?: string | null;
+    grossSalary?: number | null;
+    hourlyRate?: number | null;
+    paymentType?: string | null;
+    salaryGroup?: string | null;
+    contractType?: string | null;
+    probationMonths?: number | null;
+    noticePeriodEmployee?: string | null;
+    noticePeriodEmployer?: string | null;
+    disabilityDegree?: number | null;
+    disabilityEqualStatus?: boolean | null;
+    disabilityMarkers?: string | null;
+    disabilityIdValidUntil?: Date | null;
+    bgInstitution?: string | null;
+    bgMembershipNumber?: string | null;
+    bgHazardTariff?: string | null;
+    university?: string | null;
+    studentId?: string | null;
+    fieldOfStudy?: string | null;
+    apprenticeshipOccupation?: string | null;
+    apprenticeshipExternalCompany?: string | null;
+    vocationalSchool?: string | null;
+    receivesOldAgePension?: boolean | null;
+    receivesDisabilityPension?: boolean | null;
+    receivesSurvivorPension?: boolean | null;
+    pensionStartDate?: Date | null;
+    dateOfDeath?: Date | null;
+    heirName?: string | null;
+    heirIban?: string | null;
+    receivesParentalAllowance?: boolean | null;
+    parentalAllowanceUntil?: Date | null;
     // Clear flags for nullable FKs
     clearDepartmentId?: boolean;
     clearCostCenterId?: boolean;
@@ -418,6 +475,7 @@ export async function update(
     clearActivityGroupId?: boolean;
     clearDefaultOrderId?: boolean;
     clearDefaultActivityId?: boolean;
+    clearHealthInsuranceProviderId?: boolean;
   },
   audit: AuditContext,
 ) {
@@ -695,6 +753,132 @@ export async function update(
     data.calculationStartDate = input.calculationStartDate;
   }
 
+  // --- Payroll master data ---
+
+  // Encrypted fields: taxId, socialSecurityNumber, iban, heirIban
+  if (input.taxId !== undefined) {
+    if (input.taxId === null) {
+      data.taxId = null;
+    } else {
+      const v = validateTaxId(input.taxId.trim());
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+      data.taxId = encryptField(input.taxId.trim());
+    }
+  }
+  if (input.socialSecurityNumber !== undefined) {
+    if (input.socialSecurityNumber === null) {
+      data.socialSecurityNumber = null;
+    } else {
+      const v = validateSocialSecurityNumber(input.socialSecurityNumber.trim());
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+      data.socialSecurityNumber = encryptField(input.socialSecurityNumber.trim());
+    }
+  }
+  if (input.iban !== undefined) {
+    if (input.iban === null) {
+      data.iban = null;
+    } else {
+      const v = validateIban(input.iban.trim());
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+      data.iban = encryptField(input.iban.trim());
+    }
+  }
+  if (input.heirIban !== undefined) {
+    if (input.heirIban === null) {
+      data.heirIban = null;
+    } else {
+      const v = validateIban(input.heirIban.trim());
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+      data.heirIban = encryptField(input.heirIban.trim());
+    }
+  }
+
+  // Validated fields
+  if (input.taxClass !== undefined) {
+    if (input.taxClass !== null) {
+      const v = validateTaxClass(input.taxClass);
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+    }
+    data.taxClass = input.taxClass;
+  }
+  if (input.contributionGroupCode !== undefined) {
+    if (input.contributionGroupCode !== null) {
+      const v = validateContributionGroupCode(input.contributionGroupCode);
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+    }
+    data.contributionGroupCode = input.contributionGroupCode;
+  }
+  if (input.activityCode !== undefined) {
+    if (input.activityCode !== null) {
+      const v = validateActivityCode(input.activityCode);
+      if (!v.valid) throw new EmployeeValidationError(v.error!);
+    }
+    data.activityCode = input.activityCode;
+  }
+
+  // Decimal fields
+  if (input.taxFactor !== undefined) data.taxFactor = input.taxFactor === null ? null : new Prisma.Decimal(input.taxFactor);
+  if (input.childTaxAllowance !== undefined) data.childTaxAllowance = input.childTaxAllowance === null ? null : new Prisma.Decimal(input.childTaxAllowance);
+  if (input.payrollTaxAllowance !== undefined) data.payrollTaxAllowance = input.payrollTaxAllowance === null ? null : new Prisma.Decimal(input.payrollTaxAllowance);
+  if (input.payrollTaxAddition !== undefined) data.payrollTaxAddition = input.payrollTaxAddition === null ? null : new Prisma.Decimal(input.payrollTaxAddition);
+  if (input.privateHealthInsuranceContribution !== undefined) data.privateHealthInsuranceContribution = input.privateHealthInsuranceContribution === null ? null : new Prisma.Decimal(input.privateHealthInsuranceContribution);
+  if (input.grossSalary !== undefined) data.grossSalary = input.grossSalary === null ? null : new Prisma.Decimal(input.grossSalary);
+  if (input.hourlyRate !== undefined) data.hourlyRate = input.hourlyRate === null ? null : new Prisma.Decimal(input.hourlyRate);
+
+  // Simple nullable string fields
+  if (input.denomination !== undefined) data.denomination = input.denomination;
+  if (input.spouseDenomination !== undefined) data.spouseDenomination = input.spouseDenomination;
+  if (input.healthInsuranceStatus !== undefined) data.healthInsuranceStatus = input.healthInsuranceStatus;
+  if (input.personnelGroupCode !== undefined) data.personnelGroupCode = input.personnelGroupCode;
+  if (input.bic !== undefined) data.bic = input.bic;
+  if (input.accountHolder !== undefined) data.accountHolder = input.accountHolder;
+  if (input.birthName !== undefined) data.birthName = input.birthName;
+  if (input.houseNumber !== undefined) data.houseNumber = input.houseNumber;
+  if (input.paymentType !== undefined) data.paymentType = input.paymentType;
+  if (input.salaryGroup !== undefined) data.salaryGroup = input.salaryGroup;
+  if (input.contractType !== undefined) data.contractType = input.contractType;
+  if (input.noticePeriodEmployee !== undefined) data.noticePeriodEmployee = input.noticePeriodEmployee;
+  if (input.noticePeriodEmployer !== undefined) data.noticePeriodEmployer = input.noticePeriodEmployer;
+  if (input.disabilityMarkers !== undefined) data.disabilityMarkers = input.disabilityMarkers;
+  if (input.bgInstitution !== undefined) data.bgInstitution = input.bgInstitution;
+  if (input.bgMembershipNumber !== undefined) data.bgMembershipNumber = input.bgMembershipNumber;
+  if (input.bgHazardTariff !== undefined) data.bgHazardTariff = input.bgHazardTariff;
+  if (input.university !== undefined) data.university = input.university;
+  if (input.studentId !== undefined) data.studentId = input.studentId;
+  if (input.fieldOfStudy !== undefined) data.fieldOfStudy = input.fieldOfStudy;
+  if (input.apprenticeshipOccupation !== undefined) data.apprenticeshipOccupation = input.apprenticeshipOccupation;
+  if (input.apprenticeshipExternalCompany !== undefined) data.apprenticeshipExternalCompany = input.apprenticeshipExternalCompany;
+  if (input.vocationalSchool !== undefined) data.vocationalSchool = input.vocationalSchool;
+  if (input.heirName !== undefined) data.heirName = input.heirName;
+
+  // Nullable boolean fields
+  if (input.isPrimaryEmployer !== undefined) data.isPrimaryEmployer = input.isPrimaryEmployer;
+  if (input.umlageU1 !== undefined) data.umlageU1 = input.umlageU1;
+  if (input.umlageU2 !== undefined) data.umlageU2 = input.umlageU2;
+  if (input.disabilityEqualStatus !== undefined) data.disabilityEqualStatus = input.disabilityEqualStatus;
+  if (input.receivesOldAgePension !== undefined) data.receivesOldAgePension = input.receivesOldAgePension;
+  if (input.receivesDisabilityPension !== undefined) data.receivesDisabilityPension = input.receivesDisabilityPension;
+  if (input.receivesSurvivorPension !== undefined) data.receivesSurvivorPension = input.receivesSurvivorPension;
+  if (input.receivesParentalAllowance !== undefined) data.receivesParentalAllowance = input.receivesParentalAllowance;
+
+  // Nullable int fields
+  if (input.midijobFlag !== undefined) data.midijobFlag = input.midijobFlag;
+  if (input.probationMonths !== undefined) data.probationMonths = input.probationMonths;
+  if (input.disabilityDegree !== undefined) data.disabilityDegree = input.disabilityDegree;
+
+  // Nullable date fields
+  if (input.disabilityIdValidUntil !== undefined) data.disabilityIdValidUntil = input.disabilityIdValidUntil;
+  if (input.pensionStartDate !== undefined) data.pensionStartDate = input.pensionStartDate;
+  if (input.dateOfDeath !== undefined) data.dateOfDeath = input.dateOfDeath;
+  if (input.parentalAllowanceUntil !== undefined) data.parentalAllowanceUntil = input.parentalAllowanceUntil;
+
+  // FK with clear pattern
+  if (input.clearHealthInsuranceProviderId) {
+    data.healthInsuranceProviderId = null;
+  } else if (input.healthInsuranceProviderId !== undefined) {
+    data.healthInsuranceProviderId = input.healthInsuranceProviderId;
+  }
+
   const updated = (await repo.update(prisma, tenantId, input.id, data))!;
 
   // Never throws — audit failures must not block the actual operation
@@ -703,6 +887,18 @@ export async function update(
     "entryDate", "exitDate", "departmentId", "costCenterId",
     "employmentTypeId", "locationId", "tariffId", "weeklyHours",
     "vacationDaysPerYear", "isActive", "pin",
+    // Payroll fields (non-encrypted)
+    "taxClass", "taxFactor", "childTaxAllowance", "denomination", "spouseDenomination",
+    "payrollTaxAllowance", "payrollTaxAddition", "isPrimaryEmployer",
+    "healthInsuranceProviderId", "healthInsuranceStatus", "privateHealthInsuranceContribution",
+    "personnelGroupCode", "contributionGroupCode", "activityCode", "midijobFlag",
+    "umlageU1", "umlageU2", "bic", "accountHolder", "birthName", "houseNumber",
+    "grossSalary", "hourlyRate", "paymentType", "salaryGroup",
+    "contractType", "probationMonths", "noticePeriodEmployee", "noticePeriodEmployer",
+    "disabilityDegree", "disabilityEqualStatus", "disabilityMarkers", "disabilityIdValidUntil",
+    "bgInstitution", "bgMembershipNumber", "bgHazardTariff",
+    "receivesOldAgePension", "receivesDisabilityPension", "receivesSurvivorPension", "pensionStartDate",
+    "dateOfDeath", "heirName", "receivesParentalAllowance", "parentalAllowanceUntil",
   ];
   const changes = auditLog.computeChanges(
     existing as unknown as Record<string, unknown>,

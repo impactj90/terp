@@ -12,6 +12,9 @@ export const serverEnv = {
   supabaseUrl: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   // AI Assistant (Anthropic)
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  // Field-level encryption
+  fieldEncryptionKeyV1: process.env.FIELD_ENCRYPTION_KEY_V1 ?? '',
+  fieldEncryptionKeyCurrentVersion: process.env.FIELD_ENCRYPTION_KEY_CURRENT_VERSION ?? '1',
 } as const
 
 // Client-side accessible
@@ -37,6 +40,7 @@ export function validateEnv() {
     'CRON_SECRET',
     'INTERNAL_API_KEY',
     'ANTHROPIC_API_KEY',
+    'FIELD_ENCRYPTION_KEY_V1',
   ]
   const missing = required.filter((key) => !process.env[key])
 

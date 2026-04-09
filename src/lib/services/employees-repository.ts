@@ -76,6 +76,9 @@ export async function findByIdWithRelations(
         where: { isActive: true },
         orderBy: { createdAt: "desc" },
       },
+      healthInsuranceProvider: {
+        select: { id: true, name: true, institutionCode: true },
+      },
     },
   })
 }

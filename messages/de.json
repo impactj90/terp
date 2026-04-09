@@ -3794,7 +3794,17 @@
       "loading": "Laden...",
       "allLoaded": "Alle Eintraege geladen"
     },
-    "system": "System"
+    "system": "System",
+    "export": {
+      "button": "Exportieren",
+      "csv": "Als CSV exportieren",
+      "pdf": "Als PDF exportieren",
+      "generating": "Wird erstellt...",
+      "success": "{count} Eintraege exportiert",
+      "error": "Export fehlgeschlagen. Bitte Filter einschraenken und erneut versuchen.",
+      "limitExceeded": "Maximal {limit} Eintraege pro Export. Bitte Filter einschraenken.",
+      "noData": "Keine Daten zum Exportieren vorhanden"
+    }
   },
   "modules": {
     "title": "Module",
@@ -7458,6 +7468,354 @@
       "tabImap": "IMAP-Konfiguration",
       "tabApprovalRules": "Freigaberegeln",
       "tabEmailLog": "E-Mail-Log"
+    }
+  },
+  "employeePayroll": {
+    "tabs": {
+      "taxSocialSecurity": "Steuern & SV",
+      "bankDetails": "Bankverbindung",
+      "compensation": "Vergütung",
+      "family": "Familie",
+      "benefits": "Zusatzleistungen",
+      "disability": "Schwerbehinderung",
+      "foreignAssignments": "Auslandstätigkeit",
+      "garnishments": "Pfändungen",
+      "specialCases": "Spezialfälle"
+    },
+    "tax": {
+      "title": "Steuerliche Daten",
+      "taxId": "Steuer-ID",
+      "taxClass": "Steuerklasse",
+      "taxFactor": "Faktor (IV/IV)",
+      "childTaxAllowance": "Kinderfreibeträge",
+      "denomination": "Konfession",
+      "spouseDenomination": "Konfession Ehepartner",
+      "payrollTaxAllowance": "ELStAM-Freibetrag",
+      "payrollTaxAddition": "ELStAM-Hinzurechnung",
+      "isPrimaryEmployer": "Hauptarbeitgeber",
+      "birthName": "Geburtsname"
+    },
+    "socialSecurity": {
+      "title": "Sozialversicherung",
+      "socialSecurityNumber": "SV-Nummer",
+      "healthInsuranceProvider": "Krankenkasse",
+      "healthInsuranceStatus": "KV-Status",
+      "statusMandatory": "Pflichtversichert",
+      "statusVoluntary": "Freiwillig versichert",
+      "statusPrivate": "Privat versichert",
+      "privateContribution": "PKV-Beitrag",
+      "personnelGroupCode": "Personengruppenschlüssel",
+      "contributionGroupCode": "Beitragsgruppenschlüssel",
+      "contributionKV": "KV",
+      "contributionRV": "RV",
+      "contributionAV": "AV",
+      "contributionPV": "PV",
+      "activityCode": "Tätigkeitsschlüssel",
+      "midijobFlag": "Midijob",
+      "midijobNo": "Nein",
+      "midijobGleitzone": "Gleitzoner",
+      "midijobMidijob": "Midijob",
+      "umlageU1": "Umlagepflicht U1",
+      "umlageU2": "Umlagepflicht U2"
+    },
+    "activityCode": {
+      "searchPlaceholder": "Berufsbezeichnung suchen...",
+      "schoolEducation": "Schulbildung",
+      "schoolNone": "Ohne Schulabschluss",
+      "schoolHauptschule": "Hauptschulabschluss",
+      "schoolMittlereReife": "Mittlere Reife",
+      "schoolAbitur": "Abitur / Fachabitur",
+      "schoolUnknown": "Unbekannt",
+      "vocationalEducation": "Berufsbildung",
+      "vocNone": "Ohne beruflichen Ausbildungsabschluss",
+      "vocTraining": "Anlernausbildung",
+      "vocApprenticeship": "Anerkannte Berufsausbildung",
+      "vocMaster": "Meister / Techniker / gleichwertig",
+      "vocBachelor": "Bachelor",
+      "vocMasterDiploma": "Diplom / Magister / Master / Staatsexamen",
+      "vocUnknown": "Unbekannt",
+      "tempWork": "Leiharbeit",
+      "tempWorkNo": "Keine Leiharbeit",
+      "tempWorkYes": "Leiharbeit",
+      "contractForm": "Vertragsform",
+      "contractFullTimePermanent": "Unbefristet Vollzeit",
+      "contractFullTimeFixed": "Befristet Vollzeit",
+      "contractPartTimePermanent": "Unbefristet Teilzeit",
+      "contractPartTimeFixed": "Befristet Teilzeit"
+    },
+    "denomination": {
+      "ev": "Evangelisch",
+      "rk": "Römisch-Katholisch",
+      "la": "Lutherisch (EKD)",
+      "er": "Evangelisch-reformiert",
+      "lt": "Evangelisch-lutherisch (Landeskirche)",
+      "rf": "Reformiert (Landeskirche)",
+      "fg": "Freie Religionsgemeinschaft",
+      "fr": "Französisch-reformiert",
+      "fs": "Freireligiöse Gemeinde",
+      "fa": "Freireligiöse Gemeinde (alternativ)",
+      "ak": "Alt-Katholisch",
+      "ib": "Israelitische Religionsgemeinschaft Baden",
+      "jd": "Jüdische Gemeinden"
+    },
+    "bank": {
+      "title": "Bankverbindung",
+      "iban": "IBAN",
+      "bic": "BIC",
+      "accountHolder": "Kontoinhaber",
+      "showIban": "IBAN anzeigen",
+      "hideIban": "IBAN verbergen"
+    },
+    "compensation": {
+      "title": "Vergütung",
+      "paymentType": "Entgeltart",
+      "monthlySalary": "Monatliches Gehalt",
+      "hourlyWage": "Stundenlohn",
+      "commission": "Provision",
+      "grossSalary": "Bruttogehalt / Monat",
+      "hourlyRate": "Stundenlohn",
+      "salaryGroup": "Gehalts-/Tarifgruppe",
+      "houseNumber": "Hausnummer",
+      "contractType": "Vertragsart",
+      "contractPermanent": "Unbefristet",
+      "contractFixedNoReason": "Befristet ohne Sachgrund",
+      "contractFixedWithReason": "Befristet mit Sachgrund",
+      "probationMonths": "Probezeit (Monate)",
+      "noticePeriodEmployee": "Kündigungsfrist AN",
+      "noticePeriodEmployer": "Kündigungsfrist AG"
+    },
+    "children": {
+      "title": "Kinder",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "birthDate": "Geburtsdatum",
+      "taxAllowanceShare": "Freibetragsanteil",
+      "livesInHousehold": "Im Haushalt lebend",
+      "empty": "Keine Kinder erfasst",
+      "add": "Kind hinzufügen"
+    },
+    "parentalLeave": {
+      "title": "Elternzeit",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "child": "Kind",
+      "isPartnerMonths": "Partnermonate",
+      "empty": "Keine Elternzeit erfasst",
+      "add": "Elternzeit hinzufügen"
+    },
+    "maternityLeave": {
+      "title": "Mutterschutz",
+      "startDate": "Beginn",
+      "expectedBirthDate": "Voraussichtlicher Entbindungstermin",
+      "actualBirthDate": "Tatsächlicher Entbindungstermin",
+      "actualEndDate": "Tatsächliches Ende",
+      "empty": "Kein Mutterschutz erfasst",
+      "add": "Mutterschutz hinzufügen"
+    },
+    "parentalAllowance": {
+      "title": "Elterngeld",
+      "receivesParentalAllowance": "Bezieht Elterngeld",
+      "parentalAllowanceUntil": "Elterngeld bis"
+    },
+    "companyCar": {
+      "title": "Dienstwagen",
+      "listPrice": "Bruttolistenpreis",
+      "propulsionType": "Antriebsart",
+      "combustion": "Verbrenner",
+      "hybrid": "Hybrid",
+      "electric": "Elektro",
+      "distanceToWorkKm": "Entfernung Wohnung-Arbeit (km)",
+      "usageType": "Nutzungsart",
+      "privateUse": "Private Nutzung (1%-Regel)",
+      "commuteOnly": "Nur Arbeitsweg",
+      "licensePlate": "Kennzeichen",
+      "makeModel": "Marke / Modell",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Kein Dienstwagen erfasst",
+      "add": "Dienstwagen hinzufügen"
+    },
+    "jobBike": {
+      "title": "Jobrad",
+      "listPrice": "Bruttolistenpreis",
+      "usageType": "Überlassungsart",
+      "salaryConversion": "Gehaltsumwandlung",
+      "additional": "Zusätzlich zum Lohn",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Kein Jobrad erfasst",
+      "add": "Jobrad hinzufügen"
+    },
+    "mealAllowance": {
+      "title": "Essenszuschuss",
+      "dailyAmount": "Tagessatz",
+      "workDaysPerMonth": "Arbeitstage/Monat",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Kein Essenszuschuss erfasst",
+      "add": "Essenszuschuss hinzufügen"
+    },
+    "voucher": {
+      "title": "Sachgutscheine",
+      "monthlyAmount": "Monatsbetrag",
+      "provider": "Anbieter",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Keine Sachgutscheine erfasst",
+      "add": "Sachgutschein hinzufügen"
+    },
+    "jobTicket": {
+      "title": "Jobticket",
+      "monthlyAmount": "Monatsbetrag",
+      "provider": "Anbieter",
+      "isAdditional": "Zusätzlich zum Lohn (steuerfrei)",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Kein Jobticket erfasst",
+      "add": "Jobticket hinzufügen"
+    },
+    "pension": {
+      "title": "Betriebliche Altersvorsorge (bAV)",
+      "executionType": "Durchführungsweg",
+      "directInsurance": "Direktversicherung",
+      "pensionFund": "Pensionskasse",
+      "pensionScheme": "Pensionsfonds",
+      "directCommitment": "Direktzusage",
+      "supportFund": "Unterstützungskasse",
+      "providerName": "Anbieter",
+      "contractNumber": "Vertragsnummer",
+      "employeeContribution": "AN-Beitrag",
+      "employerContribution": "AG-Beitrag",
+      "mandatoryEmployerSubsidy": "Pflicht-AG-Zuschuss (15%)",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Keine bAV erfasst",
+      "add": "bAV hinzufügen"
+    },
+    "savings": {
+      "title": "Vermögenswirksame Leistungen (VL)",
+      "investmentType": "Anlageform",
+      "buildingSavings": "Bausparen",
+      "fundSavings": "Fondssparen",
+      "bankSavings": "Banksparen",
+      "recipient": "Empfänger",
+      "recipientIban": "Empfänger-IBAN",
+      "contractNumber": "Vertragsnummer",
+      "monthlyAmount": "Monatsbetrag",
+      "employerShare": "AG-Anteil",
+      "employeeShare": "AN-Anteil",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Keine VL erfasst",
+      "add": "VL hinzufügen"
+    },
+    "disability": {
+      "title": "Schwerbehinderung",
+      "disabilityDegree": "Grad der Behinderung (GdB)",
+      "disabilityEqualStatus": "Gleichstellung",
+      "disabilityMarkers": "Merkzeichen",
+      "disabilityIdValidUntil": "Ausweis gültig bis",
+      "markers": {
+        "G": "Gehbehindert",
+        "aG": "Außergewöhnlich gehbehindert",
+        "H": "Hilflos",
+        "Bl": "Blind",
+        "TBl": "Taubblind",
+        "RF": "Rundfunkgebührenbefreiung",
+        "1Kl": "1. Klasse",
+        "B": "Begleitperson",
+        "GL": "Gehörlos"
+      }
+    },
+    "foreignAssignment": {
+      "title": "Auslandstätigkeit",
+      "countryCode": "Länderkürzel",
+      "countryName": "Land",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "a1CertificateNumber": "A1-Bescheinigungs-Nr.",
+      "a1ValidFrom": "A1 gültig von",
+      "a1ValidUntil": "A1 gültig bis",
+      "foreignActivityExemption": "Auslandstätigkeitserlass",
+      "empty": "Keine Auslandstätigkeit erfasst",
+      "add": "Auslandstätigkeit hinzufügen"
+    },
+    "garnishment": {
+      "title": "Pfändungen",
+      "creditorName": "Gläubiger",
+      "creditorAddress": "Gläubiger-Adresse",
+      "fileReference": "Aktenzeichen",
+      "garnishmentAmount": "Pfändungsbetrag",
+      "calculationMethod": "Berechnungsart",
+      "fixedAmount": "Fester Betrag",
+      "tableBased": "Tabellenbasiert",
+      "dependentsCount": "Unterhaltsberechtigte",
+      "rank": "Rangfolge",
+      "isPAccount": "P-Konto",
+      "maintenanceObligation": "Unterhaltspfändung",
+      "startDate": "Von",
+      "endDate": "Bis",
+      "empty": "Keine Pfändungen erfasst",
+      "add": "Pfändung hinzufügen"
+    },
+    "specialCases": {
+      "pensionStatus": {
+        "title": "Renten-Status",
+        "receivesOldAgePension": "Bezieht Altersrente",
+        "receivesDisabilityPension": "Bezieht Erwerbsminderungsrente",
+        "receivesSurvivorPension": "Bezieht Hinterbliebenenrente",
+        "pensionStartDate": "Rentenbeginn"
+      },
+      "bgData": {
+        "title": "Berufsgenossenschaft",
+        "bgInstitution": "Berufsgenossenschaft",
+        "bgMembershipNumber": "Mitgliedsnummer",
+        "bgHazardTariff": "Gefahrtarifstelle"
+      },
+      "otherEmployment": {
+        "title": "Mehrfachbeschäftigung",
+        "employerName": "Arbeitgeber",
+        "monthlyIncome": "Monatseinkommen",
+        "weeklyHours": "Wochenstunden",
+        "isMinijob": "Minijob",
+        "startDate": "Von",
+        "endDate": "Bis",
+        "empty": "Keine Mehrfachbeschäftigung erfasst",
+        "add": "Nebenbeschäftigung hinzufügen"
+      },
+      "studentData": {
+        "title": "Studenten-/Azubi-Daten",
+        "university": "Hochschule",
+        "studentId": "Matrikelnummer",
+        "fieldOfStudy": "Studienfach",
+        "apprenticeshipOccupation": "Ausbildungsberuf",
+        "apprenticeshipExternalCompany": "Ausbildungsbetrieb (extern)",
+        "vocationalSchool": "Berufsschule"
+      },
+      "death": {
+        "title": "Sterbegeld / Todesfall",
+        "dateOfDeath": "Sterbedatum",
+        "heirName": "Erbe (Name)",
+        "heirIban": "Erbe (IBAN)"
+      }
+    },
+    "validation": {
+      "invalidIban": "Ungültige IBAN",
+      "invalidTaxId": "Ungültige Steuer-ID",
+      "invalidSsn": "Ungültige SV-Nummer",
+      "invalidTaxClass": "Steuerklasse muss zwischen 1 und 6 liegen",
+      "invalidContributionGroup": "Ungültiger Beitragsgruppenschlüssel",
+      "invalidActivityCode": "Ungültiger Tätigkeitsschlüssel",
+      "required": "Pflichtfeld"
+    },
+    "actions": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "show": "Anzeigen",
+      "hide": "Verbergen",
+      "confirmDelete": "Wirklich löschen?"
     }
   }
 }
