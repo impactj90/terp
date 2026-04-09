@@ -546,12 +546,28 @@ export const navConfig: NavSection[] = [
         icon: FileOutput,
         permissions: ['payroll.view'],
       },
-      {
-        titleKey: 'exportInterfaces',
-        href: '/admin/export-interfaces',
-        icon: Settings2,
-        permissions: ['payroll.manage'],
-      },
+      // ─────────────────────────────────────────────────────────────
+      // TODO(ExportInterface-Abbau): Sidebar-Eintrag "exportInterfaces"
+      // wurde am 2026-04-09 aus der Navigation entfernt, weil die
+      // Tabelle `export_interfaces` eine ZMI-Legacy-Konstruktion ist,
+      // die durch die Template-Engine grösstenteils überflüssig wurde.
+      //
+      // Noch offen (bewusste Nicht-Entscheidung, später angehen):
+      //   1. beraterNr + mandantenNr + defaultTemplateId auf den
+      //      Tenant verschieben
+      //   2. Legacy-CSV-Export (`payroll-export-service.ts`) stilllegen
+      //   3. ExportInterfaceAccount-Junction entfernen
+      //   4. Tabellen `export_interfaces` + `export_interface_accounts`
+      //      und die zugehörigen Services/Router/UI/Tests löschen
+      //   5. Route `/admin/export-interfaces` entfernen
+      //   6. i18n-Key `nav.exportInterfaces` + `adminExportInterfaces`
+      //      aufräumen
+      //
+      // Hintergrund: siehe Diskussion Phase 3 Abschluss 2026-04-09 und
+      // `thoughts/shared/research/2026-04-08-export-script-konzept-lohnschnittstelle.md`.
+      // Die Route existiert weiterhin (kein Breaking Change), nur der
+      // Nav-Eintrag fehlt. Direktaufruf via URL funktioniert noch.
+      // ─────────────────────────────────────────────────────────────
       {
         titleKey: 'exportTemplates',
         href: '/admin/export-templates',
