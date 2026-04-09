@@ -136,6 +136,24 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [20d.9 Status-Workflow](#20d9-status-workflow)
     - [20d.10 Berechtigungen](#20d10-berechtigungen)
     - [20d.11 Praxisbeispiel: Jahresinventur durchführen](#20d11-praxisbeispiel-jahresinventur-durchfuehren)
+20e. [Lohn-Stammdaten (DATEV-Vorbereitung)](#20e-lohn-stammdaten-datev-vorbereitung)
+    - [20e.1 Verschlüsselung sensibler Daten](#20e1-verschlüsselung-sensibler-daten)
+    - [20e.2 Berechtigungen](#20e2-berechtigungen)
+    - [20e.3 Tab "Steuern & SV"](#20e3-tab-steuern--sv)
+    - [20e.4 Tab "Bankverbindung"](#20e4-tab-bankverbindung)
+    - [20e.5 Tab "Vergütung"](#20e5-tab-vergütung)
+    - [20e.6 Tab "Familie"](#20e6-tab-familie)
+    - [20e.7 Tab "Zusatzleistungen"](#20e7-tab-zusatzleistungen)
+    - [20e.8 Tab "Schwerbehinderung"](#20e8-tab-schwerbehinderung)
+    - [20e.9 Tab "Auslandstätigkeit"](#20e9-tab-auslandstätigkeit)
+    - [20e.10 Tab "Pfändungen"](#20e10-tab-pfändungen)
+    - [20e.11 Tab "Spezialfälle"](#20e11-tab-spezialfälle)
+    - [20e.12 Stammdaten-Lookups](#20e12-stammdaten-lookups)
+    - [20e.13 Validierungen](#20e13-validierungen)
+    - [20e.14 Praxisbeispiel: Neue Lohn-Stammdaten pflegen](#20e14-praxisbeispiel-neue-lohn-stammdaten-pflegen)
+    - [20e.15 Praxisbeispiel: Kind erfassen und Elternzeit zuordnen](#20e15-praxisbeispiel-kind-erfassen-und-elternzeit-zuordnen)
+    - [20e.16 Praxisbeispiel: Dienstwagen erfassen](#20e16-praxisbeispiel-dienstwagen-erfassen)
+    - [20e.17 Was Terp NICHT tut](#20e17-was-terp-nicht-tut)
 21. [DSGVO-Datenlöschung](#21-dsgvo-datenlöschung)
     - [21.1 Aufbewahrungsregeln konfigurieren](#211-aufbewahrungsregeln-konfigurieren)
     - [21.2 Vorschau und manuelle Ausführung](#212-vorschau-und-manuelle-ausführung)
@@ -174,6 +192,7 @@ Terp ist ein digitales Zeiterfassungs- und Personalverwaltungssystem für deutsc
 - **Abwesenheiten verwalten**: Urlaub, Krankheit und andere Abwesenheiten werden digital beantragt, genehmigt und verbucht — inklusive automatischer Urlaubskontoführung.
 - **Schichten planen**: Schichtpläne können für einzelne Mitarbeiter oder ganze Teams erstellt werden, auch mit rollierenden Rhythmen.
 - **Lohnabrechnung vorbereiten**: Am Monatsende werden alle Daten aggregiert und als CSV-Export (z. B. für DATEV) bereitgestellt.
+- **Lohn-Stammdaten pflegen**: Steuerklasse, SV-Nummer, Krankenkasse, Bankverbindung, Freibeträge, Dienstwagen, bAV, Schwerbehinderung, Pfändungen, Auslandstätigkeit — alle für die deutsche Lohnabrechnung relevanten Felder werden direkt am Mitarbeiter verschlüsselt gepflegt (siehe Abschnitt 20e). Terp berechnet keine Löhne, liefert aber sämtliche Daten für externe Lohnsysteme.
 - **Aufträge und Projekte erfassen**: Mitarbeiter können ihre Arbeitszeit auf Aufträge und Aktivitäten buchen.
 - **Kunden und Lieferanten verwalten**: Adressen, Kontaktpersonen und Bankverbindungen zentral pflegen — als Grundlage für Korrespondenz, Anfragen und Rechnungsstellung (CRM-Modul).
 - **Zutritt steuern**: RFID-Karten und PINs ermöglichen die Zutrittskontrolle zu bestimmten Bereichen.
@@ -476,6 +495,9 @@ Es gibt genau zwei Rollen:
 | | Benutzer, Gruppen, Mandanten | Zugänge und Mandanten verwalten |
 | **Berichte & Lohn** | Berichte ansehen / verwalten | Auswertungen erstellen und herunterladen |
 | | Lohnexport ansehen / verwalten | Lohnexporte erstellen und herunterladen |
+| **Lohn-Stammdaten** | Lohn-Stammdaten ansehen / bearbeiten | Steuern, SV, Bank, Vergütung, Familie, Zusatzleistungen, Schwerbehinderung, Spezialfälle (siehe 20e) |
+| | Pfändungen ansehen / bearbeiten | Separat geschützter Bereich — nur ADMIN |
+| | Auslandstätigkeit ansehen / bearbeiten | Separat geschützter Bereich — nur ADMIN |
 | **Sonstiges** | Schichtplanung, Zutrittskontrolle, Korrekturen, Makros usw. | Spezialfunktionen |
 
 ### Datensichtbarkeit
@@ -1537,9 +1559,19 @@ Szenario: Ein Standard-Büromitarbeiter soll Montag bis Freitag, 08:00–16:30 U
 #### Mitarbeiterdetails ansehen
 
 1. 📍 Tabelle → ⋯-Menü → **Details anzeigen** (oder Zeile anklicken)
-2. ✅ Detailseite mit Kopfbereich (Name, Status-Badge, Personalnummer) und zwei Tabs:
+2. ✅ Detailseite mit Kopfbereich (Name, Status-Badge, Personalnummer) und folgenden Tabs (Sichtbarkeit abhängig von Berechtigungen):
    - **Übersicht**: Kontaktdaten, Beschäftigungsdetails, Vertragsdaten, Zutrittskarten
    - **Tarifzuweisungen**: Liste der zeitgebundenen Tarifzuweisungen mit Vorschau des aktuell geltenden Tarifs
+   - **Steuern & SV**: Steuerklasse, Freibeträge, Krankenkasse, PGR, BGS, Tätigkeitsschlüssel (siehe **20e.3**) ⚠️ `personnel.payroll_data.view`
+   - **Bankverbindung**: IBAN, BIC, Kontoinhaber (siehe **20e.4**) ⚠️ `personnel.payroll_data.view`
+   - **Vergütung**: Gehalt, Vertragsart, Kündigungsfristen (siehe **20e.5**) ⚠️ `personnel.payroll_data.view`
+   - **Familie**: Kinder, Elternzeit, Mutterschutz, Elterngeld (siehe **20e.6**) ⚠️ `personnel.payroll_data.view`
+   - **Zusatzleistungen**: Dienstwagen, Jobrad, Essenszuschuss, bAV, VL etc. (siehe **20e.7**) ⚠️ `personnel.payroll_data.view`
+   - **Schwerbehinderung**: GdB, Merkzeichen, Ausweis (siehe **20e.8**) ⚠️ `personnel.payroll_data.view`
+   - **Auslandstätigkeit**: A1-Entsendungen (siehe **20e.9**) ⚠️ `personnel.foreign_assignment.view`
+   - **Pfändungen**: Pfändungsdaten verschlüsselt (siehe **20e.10**) ⚠️ `personnel.garnishment.view`
+   - **Spezialfälle**: Rentenstatus, BG, Mehrfachbeschäftigung, Azubi/Student, Sterbegeld (siehe **20e.11**) ⚠️ `personnel.payroll_data.view`
+   - **Personalakte**: Dokumente und Zertifikate (siehe **20c**)
 3. Kopfbereich-Buttons: ← Zurück, Zeitnachweis anzeigen, Bearbeiten, Deaktivieren
 
 #### Individuelle Tarifzuweisung anlegen (zeitgebunden)
@@ -8718,6 +8750,304 @@ Siehe Abschnitt 20b.7. Der QR-Scanner bietet denselben Erfassungsvorgang auf dem
 
 ---
 
+## 20e. Lohn-Stammdaten (DATEV-Vorbereitung)
+
+Das Lohn-Stammdaten-Modul erfasst alle für die deutsche Lohnabrechnung relevanten Daten direkt am Mitarbeiter. Terp **berechnet keine Lohnabrechnung** — es dient als vollständiger Datenlieferant für externe Lohnsysteme wie DATEV LODAS, DATEV Lohn und Gehalt, Lexware oder SAGE. Die Datenpflege erfolgt in neun eigenen Tabs auf der Mitarbeiter-Detailseite.
+
+📍 Seitenleiste → **Verwaltung** → **Mitarbeiter** → Mitarbeiter öffnen → Tabs am oberen Seitenrand
+
+### 20e.1 Verschlüsselung sensibler Daten
+
+Folgende Felder werden vor dem Schreiben in die Datenbank **verschlüsselt** (AES-256-GCM mit versionierten Schlüsseln):
+
+| Feld | Ort |
+|------|-----|
+| Steuer-Identifikationsnummer | Mitarbeiter → Steuern & SV |
+| Sozialversicherungsnummer | Mitarbeiter → Steuern & SV |
+| IBAN | Mitarbeiter → Bankverbindung |
+| IBAN des Erben | Mitarbeiter → Spezialfälle (Todesfall) |
+| IBAN des VL-Empfängers | Mitarbeiter → Zusatzleistungen (VL) |
+| Gläubigername Pfändung | Mitarbeiter → Pfändungen |
+| Aktenzeichen Pfändung | Mitarbeiter → Pfändungen |
+
+Im UI werden die Felder maskiert dargestellt (z.B. `*****3000` für IBAN). In der Datenbank liegen sie als `v1:iv:authTag:ciphertext` vor — niemals im Klartext. Die Entschlüsselung erfolgt serverseitig beim Lesen, niemals direkt über den Client.
+
+### 20e.2 Berechtigungen
+
+Die Lohn-Stammdaten haben sechs Berechtigungen:
+
+| Berechtigung | Sichtbar für | Beschreibung |
+|-------------|-------------|-------------|
+| `personnel.payroll_data.view` | ADMIN, HR | Tabs Steuern & SV, Bankverbindung, Vergütung, Familie, Zusatzleistungen, Schwerbehinderung, Spezialfälle ansehen |
+| `personnel.payroll_data.edit` | ADMIN, HR | Dieselben Tabs bearbeiten |
+| `personnel.garnishment.view` | ADMIN | Tab Pfändungen ansehen |
+| `personnel.garnishment.edit` | ADMIN | Pfändungen anlegen/bearbeiten/löschen |
+| `personnel.foreign_assignment.view` | ADMIN | Tab Auslandstätigkeit ansehen |
+| `personnel.foreign_assignment.edit` | ADMIN | Auslandstätigkeit anlegen/bearbeiten/löschen |
+
+⚠️ **Wichtig**: Pfändungen und Auslandstätigkeit sind bewusst von den allgemeinen Payroll-Rechten getrennt, da sie besonders sensibel sind. Die HR-Gruppe hat standardmäßig **keinen Zugriff** darauf.
+
+Ohne die jeweilige `view`-Berechtigung sind die Tabs unsichtbar. Zusätzlich prüft der tRPC-API jeden Request: direkte API-Aufrufe ohne Berechtigung werden mit `FORBIDDEN` abgelehnt.
+
+### 20e.3 Tab "Steuern & SV"
+
+📍 Mitarbeiter öffnen → Tab **"Steuern & SV"**
+
+Zwei Karten: **Steuerliche Daten** und **Sozialversicherung**. Über den "Bearbeiten"-Button oben rechts wird der Edit-Modus aktiviert.
+
+**Steuerliche Daten:**
+
+| Feld | Typ | Bemerkung |
+|------|-----|-----------|
+| Steuer-ID | Text (maskiert) | 11-stellig, Prüfziffer validiert (ELSTER-Spezifikation) |
+| Steuerklasse | Select 1-6 | Pflichtfeld für die Lohnabrechnung |
+| Faktor (IV/IV) | Dezimal | Nur sichtbar bei Steuerklasse 4 |
+| Kinderfreibeträge | Dezimal (0,5 / 1,0 / 1,5 / ...) | Wird zusätzlich in Tab "Familie" über eingetragene Kinder berechnet |
+| Konfession | Select (13 Werte) | ev, rk, la, er, lt, rf, fg, fr, fs, fa, ak, ib, jd |
+| Konfession Ehepartner | Select (13 Werte) | Für konfessionsverschiedene Ehe (KiSt-Splitting) |
+| ELStAM-Freibetrag | Dezimal | Jahresbetrag |
+| ELStAM-Hinzurechnung | Dezimal | Jahresbetrag |
+| Hauptarbeitgeber | Switch | Wichtig für Zweit-/Nebenarbeitsverhältnisse |
+| Geburtsname | Text | Basis für den Buchstaben in der RVNR |
+
+**Sozialversicherung:**
+
+| Feld | Typ | Bemerkung |
+|------|-----|-----------|
+| SV-Nummer | Text (maskiert) | 12-stellig, Prüfziffer validiert |
+| Krankenkasse | Combobox | Auswahl aus 69 GKV-Kassen (TK, BARMER, AOK, DAK, etc.) |
+| KV-Status | Select | Pflicht / Freiwillig / Privat |
+| PKV-Beitrag | Dezimal | Nur sichtbar bei KV-Status „Privat" |
+| Personengruppenschlüssel (PGR) | Text | z.B. 101 (Standard), 102 (Azubi), 106 (Werkstudent), 109 (Minijob), 103 (Altersteilzeit) |
+| Beitragsgruppenschlüssel (BGS) | Text | 4-stellig, Pos.1 KV (0,1,3,4,5,6,9), Pos.2 RV (0,1,3,5), Pos.3 AV (0,1,2), Pos.4 PV (0,1,2) |
+| Tätigkeitsschlüssel | Text | 9-stellig (KldB 2010 + Schulbildung + Berufsbildung + Leiharbeit + Vertragsform) |
+| Midijob | Select 0/1/2 | 0 = Nein, 1 = Gleitzone, 2 = Midijob |
+| Umlagepflicht U1 | Checkbox | U1 = Lohnfortzahlung bei Krankheit |
+| Umlagepflicht U2 | Checkbox | U2 = Mutterschutz-Umlage |
+
+Der Tätigkeitsschlüssel wird in der Datenbank als 9-stelliger Code gespeichert. Die ersten 5 Stellen bilden den [KldB-2010](https://statistik.arbeitsagentur.de/DE/Navigation/Grundlagen/Klassifikationen/Klassifikation-der-Berufe/KldB2010-Fassung2020/Arbeitsmittel/Arbeitsmittel-Nav.html) Code ab. Die Volltextsuche über den Feldwert ist serverseitig implementiert (PostgreSQL `tsvector` mit GIN-Index) und liefert Treffer unter 50 ms.
+
+### 20e.4 Tab "Bankverbindung"
+
+📍 Mitarbeiter öffnen → Tab **"Bankverbindung"**
+
+Drei Felder: IBAN (maskiert), BIC, Kontoinhaber. Die IBAN wird bei der Eingabe mit Mod-97 (ISO 13616) validiert — ungültige IBANs werden sofort abgelehnt. Über das Auge-Icon wird die maskierte IBAN temporär im Klartext angezeigt.
+
+### 20e.5 Tab "Vergütung"
+
+📍 Mitarbeiter öffnen → Tab **"Vergütung"**
+
+| Feld | Typ |
+|------|-----|
+| Entgeltart | Select (Monatsgehalt / Stundenlohn / Provision) |
+| Bruttogehalt | Dezimal (€) |
+| Stundenlohn | Dezimal (€) |
+| Tarifgruppe | Text |
+| Hausnummer | Text |
+| Vertragsart | Select (unbefristet / befristet ohne Sachgrund / befristet mit Sachgrund) |
+| Probezeit (Monate) | Zahl |
+| Kündigungsfrist (Arbeitnehmer) | Text |
+| Kündigungsfrist (Arbeitgeber) | Text |
+
+### 20e.6 Tab "Familie"
+
+📍 Mitarbeiter öffnen → Tab **"Familie"**
+
+Drei Unterbereiche:
+
+**Kinder** — CRUD-Tabelle. Pro Kind:
+- Vorname, Nachname, Geburtsdatum (Pflichtfelder)
+- Freibetragsanteil (0,5 oder 1,0 — je nachdem ob beide Elternteile anteilig oder nur ein Elternteil voll)
+- „Im Haushalt lebend" (Checkbox) — relevant für Elternentlastung
+
+**Elternzeit** — CRUD-Tabelle. Pro Eintrag:
+- Von / Bis
+- Zugeordnetes Kind (optional — Dropdown der erfassten Kinder)
+- Partnermonate (Checkbox)
+
+**Mutterschutz** — CRUD-Tabelle. Pro Eintrag:
+- Beginn
+- Voraussichtlicher Entbindungstermin
+- Tatsächlicher Entbindungstermin
+- Tatsächliches Ende
+
+**Elterngeld-Status** — zwei Felder am Mitarbeiter:
+- „Bezieht Elterngeld" (Switch)
+- „Elterngeld bis" (Datum)
+
+### 20e.7 Tab "Zusatzleistungen"
+
+📍 Mitarbeiter öffnen → Tab **"Zusatzleistungen"**
+
+Sieben Unterbereiche — jeder mit eigener CRUD-Tabelle und Sheet-Formular:
+
+**Dienstwagen**: Bruttolistenpreis, Antriebsart (Verbrenner/Hybrid/Elektro), Entfernung Wohnung-Arbeit (km), Nutzungsart (Private Nutzung / Nur Arbeitsweg), Kennzeichen, Marke/Modell, Von-/Bis-Datum. Terp berechnet **keine** geldwerten Vorteile (1%-Regel etc.) — das übernimmt das Lohnsystem.
+
+**Jobrad**: Bruttolistenpreis, Überlassungsart (Gehaltsumwandlung / zusätzlich zum Lohn), Von-/Bis-Datum.
+
+**Essenszuschuss**: Tagessatz (€), Arbeitstage pro Monat, Von-/Bis-Datum. Der Monatsbetrag wird im Export als `Tagessatz × Arbeitstage` berechnet.
+
+**Sachgutscheine**: Monatsbetrag, Anbieter (z.B. Sodexo, Ticket Plus), Von-/Bis-Datum.
+
+**Jobticket**: Monatsbetrag, Anbieter (z.B. BVG, MVV, HVV), „Zusätzlich zum Lohn (steuerfrei)" (Checkbox), Von-/Bis-Datum.
+
+**Betriebliche Altersvorsorge (bAV)**: Durchführungsweg (Direktversicherung / Pensionskasse / Pensionsfonds / Direktzusage / Unterstützungskasse), Anbieter, Vertragsnummer, AN-Beitrag, AG-Beitrag, Pflicht-AG-Zuschuss (15%), Von-/Bis-Datum.
+
+**Vermögenswirksame Leistungen (VL)**: Anlageform (Bausparen / Fondssparen / Banksparen), Empfänger, Empfänger-IBAN (verschlüsselt), Vertragsnummer, Monatsbetrag, AG-Anteil, AN-Anteil, Von-/Bis-Datum.
+
+### 20e.8 Tab "Schwerbehinderung"
+
+📍 Mitarbeiter öffnen → Tab **"Schwerbehinderung"**
+
+- **Grad der Behinderung (GdB)**: Zahl 20-100
+- **Gleichstellung**: Switch — für Gleichgestellte nach § 2 Abs. 3 SGB IX (GdB 30-49, gleichgestellt durch die Arbeitsagentur)
+- **Merkzeichen**: Komma-separierte Liste — G, aG, H, Bl, TBl, RF, 1.Kl., B, GL
+- **Ausweis gültig bis**: Datum
+
+### 20e.9 Tab "Auslandstätigkeit"
+
+📍 Mitarbeiter öffnen → Tab **"Auslandstätigkeit"**
+⚠️ Berechtigung `personnel.foreign_assignment.view/edit` erforderlich
+
+CRUD-Tabelle für A1-Entsendungen. Pro Eintrag:
+- Länderkürzel (ISO 3166-1 alpha-2, z.B. AT, CH, FR, TR)
+- Land (Klartext)
+- Von / Bis
+- A1-Bescheinigungsnummer
+- A1 gültig von / gültig bis
+- Auslandstätigkeitserlass (Checkbox)
+- Notizen
+
+### 20e.10 Tab "Pfändungen"
+
+📍 Mitarbeiter öffnen → Tab **"Pfändungen"**
+⚠️ Berechtigung `personnel.garnishment.view/edit` erforderlich
+
+CRUD-Tabelle. Pro Pfändung:
+- Gläubiger (verschlüsselt)
+- Gläubiger-Adresse
+- Aktenzeichen (verschlüsselt)
+- Pfändungsbetrag
+- Berechnungsart (Fester Betrag / Tabellenbasiert)
+- Unterhaltsberechtigte (Zahl) — wichtig für den pfändungsfreien Betrag
+- Rangfolge — bei mehreren Pfändungen
+- P-Konto (Checkbox)
+- Unterhaltspfändung (Checkbox) — Sonderregeln bei Unterhaltsansprüchen
+- Von / Bis
+- Notizen
+
+### 20e.11 Tab "Spezialfälle"
+
+📍 Mitarbeiter öffnen → Tab **"Spezialfälle"**
+
+Mehrere Karten für seltenere Datenbereiche:
+
+**Rentenstatus**:
+- Bezieht Altersrente (Switch)
+- Bezieht Erwerbsminderungsrente (Switch)
+- Bezieht Hinterbliebenenrente (Switch)
+- Rentenbeginn (Datum)
+
+**Berufsgenossenschaft (BG)**:
+- Berufsgenossenschaft (Text, z.B. VBG, BGHW, BG BAU — 9 BGs im System)
+- Mitgliedsnummer
+- Gefahrtarifstelle
+
+**Mehrfachbeschäftigung** — CRUD-Tabelle:
+- Arbeitgeber, Monatseinkommen, Wochenstunden, Minijob-Flag, Von-/Bis-Datum
+
+**Studenten-/Azubi-Daten** (nur sichtbar bei PGR 102/105/106):
+- Hochschule, Matrikelnummer, Studienfach
+- Ausbildungsberuf, externer Ausbildungsbetrieb, Berufsschule
+
+**Sterbegeld/Todesfall**:
+- Sterbedatum
+- Erbe (Name)
+- Erbe-IBAN (verschlüsselt)
+
+### 20e.12 Stammdaten-Lookups
+
+Folgende Lookup-Tabellen werden beim Setup geseedet und können vom Admin **nicht** verändert werden:
+
+| Tabelle | Einträge | Beispiele |
+|---------|---------|-----------|
+| Krankenkassen | 69 | Techniker Krankenkasse, BARMER, AOK Bayern, DAK, IKK classic, BKK Mobil Oil, Minijob-Zentrale |
+| Personengruppenschlüssel | 20 | 101 (SV-pflichtig), 102 (Azubi), 106 (Werkstudent), 109 (Minijob), 119 (Altersvollrentner) |
+| KldB 2010 Tätigkeitscodes | 45 repräsentative | 25102 (Maschinenbau-Fachkraft), 26112 (Elektrotechnik-Fachkraft), 43102 (Informatik-Fachkraft), 81302 (Gesundheits- und Krankenpflege) |
+| Berufsgenossenschaften | 9 | VBG, BGHW, BG BAU, BG Verkehr, BG ETEM, BGHM, BG RCI, BGN, BGW |
+
+### 20e.13 Validierungen
+
+Serverseitige Validierungen beim Speichern:
+
+| Feld | Regel |
+|------|-------|
+| IBAN | MOD-97 Prüfsumme nach ISO 13616, Länge 22 bei DE |
+| Steuer-ID | 11 Stellen, Prüfziffer nach ELSTER-Spezifikation, genau eine doppelte + eine fehlende Ziffer in den ersten 10 |
+| SV-Nummer | 12 Stellen, Prüfziffer nach GKV-Spezifikation, Letter an Position 9 |
+| Beitragsgruppenschlüssel | 4 Stellen mit erlaubten Ziffern pro Position |
+| Tätigkeitsschlüssel | 9 Stellen mit gültigen Werten für Pos.6-9 |
+| Steuerklasse | 1-6 |
+
+Ungültige Werte werden mit einer klaren Fehlermeldung abgelehnt — sowohl im UI-Formular als auch bei direkten API-Aufrufen.
+
+### 20e.14 Praxisbeispiel: Neue Lohn-Stammdaten pflegen
+
+1. 📍 Seitenleiste → **Verwaltung** → **Mitarbeiter**
+2. Mitarbeiter öffnen (z.B. „Maria Schmidt")
+3. Tab **"Steuern & SV"** klicken
+4. Oben rechts auf **"Bearbeiten"** klicken — die Felder werden editierbar
+5. Steuer-ID eingeben (z.B. `71459832601`)
+6. Steuerklasse auf **4** setzen — der Faktor-Einstellungs-Dropdown erscheint
+7. Faktor `0.9450` eintragen
+8. Konfession → `Evangelisch`
+9. Konfession Ehepartner → `Römisch-Katholisch`
+10. SV-Nummer eingeben (z.B. `34110292L008`)
+11. Krankenkasse → `BARMER` wählen
+12. PGR → `101`, BGS → `1111`
+13. **"Speichern"** klicken
+14. ✅ Tabs wechseln in den Lesemodus zurück, Werte sind gespeichert
+15. Tab **"Bankverbindung"** → Bearbeiten → IBAN eingeben (`DE68210501700012345678`) → Speichern
+16. ✅ IBAN wird maskiert angezeigt (`DE68 **** **** **** **** 5678`)
+
+### 20e.15 Praxisbeispiel: Kind erfassen und Elternzeit zuordnen
+
+1. Mitarbeiter öffnen → Tab **"Familie"**
+2. Bereich **"Kinder"** → **"Kind hinzufügen"** klicken
+3. Vorname `Sophie`, Nachname `Schmidt`, Geburtsdatum `22.07.2021`
+4. Freibetragsanteil `1.0`, „Im Haushalt lebend" aktiviert
+5. **"Speichern"** → Kind erscheint in der Tabelle
+6. Bereich **"Elternzeit"** → **"Elternzeit hinzufügen"**
+7. Von `01.10.2021`, Bis `31.07.2022`
+8. Kind → `Sophie Schmidt` wählen
+9. **"Speichern"**
+10. ✅ Elternzeit erscheint in der Tabelle mit Verweis auf Sophie
+
+### 20e.16 Praxisbeispiel: Dienstwagen erfassen
+
+1. Mitarbeiter öffnen → Tab **"Zusatzleistungen"**
+2. Bereich **"Dienstwagen"** → **"Dienstwagen hinzufügen"**
+3. Marke/Modell `BMW 320e`, Kennzeichen `M-TM 1234`
+4. Bruttolistenpreis `42000`, Antriebsart `Hybrid`
+5. Entfernung Wohnung-Arbeit `18.5`
+6. Nutzungsart `Private Nutzung (1%-Regel)`
+7. Von `01.06.2025`
+8. **"Speichern"** → Dienstwagen erscheint in der Tabelle
+9. ✅ Beim Export stehen alle Rohwerte zur Verfügung — die Berechnung des geldwerten Vorteils übernimmt das Lohnsystem
+
+### 20e.17 Was Terp NICHT tut
+
+- **Keine Brutto-Netto-Berechnung** — weder Lohnsteuer noch SV-Beiträge
+- **Keine Sachbezugsberechnung** — nur Erfassung der Rohwerte (Dienstwagen-Listenpreis, Jobrad, etc.)
+- **Keine ELStAM-Anbindung** — die Steuerklasse/Faktor/Freibeträge müssen manuell gepflegt werden
+- **Keine DEÜV-Meldungen** — das übernimmt das Lohnsystem
+- **Keine A1-Bescheinigungs-Erstellung** — nur Erfassung einer bestehenden Bescheinigung
+- **Keine Pfändungsberechnung** — nur Erfassung; die Abrechnung macht das Lohnsystem
+
+Terp bleibt konsequent ein Datenvorbereitungs- und Exportsystem.
+
+---
+
 ## 21. DSGVO-Datenlöschung
 
 Die DSGVO (Datenschutz-Grundverordnung) verpflichtet Unternehmen, personenbezogene Daten nach Ablauf des Verarbeitungszwecks zu löschen oder zu anonymisieren. Terp bietet ein konfigurierbares System zur automatischen und manuellen Datenlöschung.
@@ -9530,6 +9860,29 @@ Das E-Mail-Log zeigt alle vom IMAP-Poller verarbeiteten E-Mails. Nützlich zur F
 | **Sammelentnahme** | Entnahme mehrerer Artikel in einem Vorgang, gebündelt unter einer gemeinsamen Referenz | 📍 Lager → Lagerentnahmen → Neue Entnahme |
 | **Korrekturassistent (Lager)** | Diagnose-Werkzeug, das automatisch Unstimmigkeiten im Lagerbestand erkennt: negative Bestände, doppelte Wareneingänge, überfällige Bestellungen, Bestandsdifferenzen | 📍 Lager → Korrekturassistent |
 | **Prüflauf (Lager)** | Automatischer oder manueller Durchlauf aller Korrekturprüfungen mit Protokollierung der Ergebnisse | 📍 Lager → Korrekturassistent → Prüfläufe |
+| **Steuer-ID** | 11-stellige Steueridentifikationsnummer eines Mitarbeiters, wird verschlüsselt gespeichert | 📍 Mitarbeiter → Steuern & SV |
+| **SV-Nummer (RVNR)** | 12-stellige Rentenversicherungsnummer, Format BBTTMMJJAXXXP | 📍 Mitarbeiter → Steuern & SV |
+| **Steuerklasse** | 1-6 nach Lohnsteuergesetz: 1 = ledig, 2 = alleinerziehend, 3 = verheiratet (höherer Verdiener), 4 = verheiratet (beide), 5 = verheiratet (geringerer Verdiener), 6 = Zweitjob | 📍 Mitarbeiter → Steuern & SV |
+| **Faktor (IV/IV)** | Optionaler Faktor bei Steuerklasse 4/4 (Faktorverfahren) zur gerechteren Lohnsteuerverteilung zwischen Ehepartnern | 📍 Mitarbeiter → Steuern & SV |
+| **ELStAM** | Elektronische Lohnsteuerabzugsmerkmale (Steuerklasse, Freibeträge, Hinzurechnungen) — werden manuell gepflegt | 📍 Mitarbeiter → Steuern & SV |
+| **PGR (Personengruppenschlüssel)** | 3-stelliger Code nach DEÜV Anlage 2 der die SV-rechtliche Gruppe kennzeichnet (101 Standard, 102 Azubi, 106 Werkstudent, 109 Minijob, 119 Rentner, 103 Altersteilzeit) | 📍 Mitarbeiter → Steuern & SV |
+| **BGS (Beitragsgruppenschlüssel)** | 4-stelliger Code: Pos.1 KV, Pos.2 RV, Pos.3 AV, Pos.4 PV — beschreibt die Versicherungspflicht | 📍 Mitarbeiter → Steuern & SV |
+| **Tätigkeitsschlüssel** | 9-stelliger Code: 5-stelliger KldB-2010-Berufscode + 4 Stellen für Schulbildung, Berufsbildung, Leiharbeit, Vertragsform | 📍 Mitarbeiter → Steuern & SV |
+| **KldB 2010** | Klassifikation der Berufe (Bundesagentur für Arbeit), 5-stelliger Berufscode mit Volltext-Suche in Terp | 📍 Mitarbeiter → Steuern & SV |
+| **Midijob** | Beschäftigung mit monatlichem Entgelt im Übergangsbereich (Gleitzone) — reduzierte SV-Beiträge | 📍 Mitarbeiter → Steuern & SV |
+| **Umlage U1** | Lohnfortzahlungs-Umlage bei Krankheit — für Kleinbetriebe bis 30 Mitarbeiter | 📍 Mitarbeiter → Steuern & SV |
+| **Umlage U2** | Mutterschutz-Umlage — gilt für alle Arbeitgeber unabhängig von der Größe | 📍 Mitarbeiter → Steuern & SV |
+| **IK-Nummer** | 9-stellige Institutionskennzeichen einer Krankenkasse (z.B. 101575519 = TK) | 📍 Mitarbeiter → Steuern & SV (Krankenkasse) |
+| **bAV** | Betriebliche Altersvorsorge — 5 Durchführungswege: Direktversicherung, Pensionskasse, Pensionsfonds, Direktzusage, Unterstützungskasse | 📍 Mitarbeiter → Zusatzleistungen |
+| **VL (Vermögenswirksame Leistungen)** | Steuerlich begünstigte Sparanlage vom Arbeitgeber — Bausparen, Fondssparen, Banksparen | 📍 Mitarbeiter → Zusatzleistungen |
+| **Dienstwagen (1%-Regel)** | Geldwerter Vorteil bei privater Nutzung eines Firmenwagens — Terp erfasst Rohwerte, das Lohnsystem berechnet | 📍 Mitarbeiter → Zusatzleistungen |
+| **Jobrad** | Leasingfahrrad vom Arbeitgeber, meist über Gehaltsumwandlung | 📍 Mitarbeiter → Zusatzleistungen |
+| **GdB (Grad der Behinderung)** | Zahl 20-100, amtlich festgestellt durch das Versorgungsamt. Ab 50 = schwerbehindert | 📍 Mitarbeiter → Schwerbehinderung |
+| **Merkzeichen** | Kennzeichen im Schwerbehindertenausweis: G (gehbehindert), aG (außergewöhnlich gehbehindert), H (hilflos), Bl (blind), TBl (taubblind), RF (Rundfunk), 1.Kl., B (Begleitperson), GL (gehörlos) | 📍 Mitarbeiter → Schwerbehinderung |
+| **A1-Bescheinigung** | EU-weite Bescheinigung über die anwendbaren SV-Rechtsvorschriften bei Entsendungen ins Ausland | 📍 Mitarbeiter → Auslandstätigkeit |
+| **Pfändung** | Gerichtlicher Zugriff eines Gläubigers auf das Gehalt — Rangfolge, Unterhaltspriorität, pfändungsfreier Betrag | 📍 Mitarbeiter → Pfändungen |
+| **P-Konto** | Pfändungsschutzkonto — sichert dem Schuldner einen Grundfreibetrag | 📍 Mitarbeiter → Pfändungen |
+| **Feldverschlüsselung** | AES-256-GCM Verschlüsselung sensibler Mitarbeiterdaten (Steuer-ID, SV-Nr, IBAN, Pfändungs-Gläubiger) mit versionierten Schlüsseln, Format `v1:iv:authTag:ciphertext` | 📍 Datenbank (serverseitig) |
 
 ---
 
@@ -9551,7 +9904,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/notifications` | Glocke (🔔) in der Kopfzeile | — |
 | `/admin/approvals` | Verwaltung → Genehmigungen | absences.approve |
 | `/admin/employees` | Verwaltung → Mitarbeiter | employees.view |
-| `/admin/employees/[id]` | Mitarbeiterliste → Zeile anklicken | employees.view |
+| `/admin/employees/[id]` | Mitarbeiterliste → Zeile anklicken | employees.view (+ personnel.payroll_data.view / personnel.garnishment.view / personnel.foreign_assignment.view für die Payroll-Tabs) |
 | `/admin/teams` | Verwaltung → Teams | teams.manage |
 | `/admin/departments` | Verwaltung → Abteilungen | departments.manage |
 | `/admin/cost-centers` | Verwaltung → Kostenstellen | departments.manage |
