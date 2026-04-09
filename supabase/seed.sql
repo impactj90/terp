@@ -4369,3 +4369,193 @@ ON CONFLICT DO NOTHING;
 INSERT INTO employee_savings (tenant_id, employee_id, investment_type, recipient, contract_number, monthly_amount, employer_share, employee_share, start_date) VALUES
   ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', 'building_savings', 'LBS Bayern', 'BS-2025-002', 40.00, 26.59, 13.41, '2025-01-01')
 ON CONFLICT DO NOTHING;
+
+-- Sabine Fischer (EMP006) — Steuerklasse 5, DAK, Minijob
+UPDATE employees SET
+  tax_id = 'v1:AC/id944tR0ZhjST:RrOO6f6sno4APdoc+rzteA==:CojGgMLct0mIi8g=',
+  tax_class = 5, denomination = 'rk', is_primary_employer = false,
+  social_security_number = 'v1:VDlxkrcRzADGM1hp:hpd8IFCN+8MpK4f4oZVZOg==:9aP71rcHZHMWVU7Z',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '105862407'),
+  health_insurance_status = 'mandatory', personnel_group_code = '109',
+  contribution_group_code = '6500', activity_code = '633044311', midijob_flag = 0,
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:NWH9QTNd0Z20dUy+:v+5m3fc5gqI3VtssefomTA==:Pn+zEG4SuYvu+Cr0E7ZFOfgJO8pu1Q==',
+  bic = 'DAAEDEDDXXX', account_holder = 'Sabine Fischer',
+  gross_salary = 520.00, payment_type = 'monthly_salary',
+  contract_type = 'permanent', notice_period_employee = '4 Wochen', notice_period_employer = '4 Wochen'
+WHERE id = '00000000-0000-0000-0000-000000000016';
+
+-- Markus Braun (EMP007) — Steuerklasse 3, IKK classic, Gleitzone
+UPDATE employees SET
+  tax_id = 'v1:JP5taaPIfvEREZL4:CR7RsBpJcKA2vw4UBwbsxQ==:dj3QCLjS+oR/4eU=',
+  tax_class = 3, child_tax_allowance = 2.0, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:h/Z13Ymp2elYJzt0:5G+/fGovyC+HCT3iApAQkg==:1WiDu68PLRz90sjV',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '107202130'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '261124311', midijob_flag = 1,
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:CTOPQlm4wnVI3ylm:dm49OAfjZ4eLOj/cwrjZ1Q==:LomFMs3i2P2ukQ7pUb4O3XvLI/O3dA==',
+  bic = 'IKKFDE99XXX', account_holder = 'Markus Braun',
+  gross_salary = 1800.00, payment_type = 'monthly_salary', salary_group = 'E8',
+  contract_type = 'permanent', probation_months = 3,
+  notice_period_employee = '4 Wochen', notice_period_employer = '2 Monate'
+WHERE id = '00000000-0000-0000-0000-000000000017';
+
+-- Julia Hoffmann (EMP008) — Steuerklasse 2 (alleinerziehend), hkk, 1 Kind
+UPDATE employees SET
+  tax_id = 'v1:Bq9bulS8olEioQ1g:DP3ujFbw5TfRt/CGcccj3A==:yiNET+R+8leQ2Eo=',
+  tax_class = 2, child_tax_allowance = 1.0, denomination = 'rk', is_primary_employer = true,
+  birth_name = 'Schulz',
+  social_security_number = 'v1:5+ubt2BpUQPAJC96:zBR7k4yPeJQcqQFid8EGbg==:BusQcYvF/yopeL80',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '102131418'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '714024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:WjjZuhCeHMjk7fhD:oRP4X5EK7DsvJfhCuWxNIw==:2tTOYm4rGLYgicMf7OSQF1ihVUUaJA==',
+  bic = 'HKKRDE80XXX', account_holder = 'Julia Hoffmann',
+  gross_salary = 3600.00, payment_type = 'monthly_salary', salary_group = 'E9',
+  contract_type = 'permanent', notice_period_employee = '4 Wochen', notice_period_employer = '3 Monate'
+WHERE id = '00000000-0000-0000-0000-000000000018';
+
+-- Stefan Lang (EMP009) — Auszubildender, PGR 102
+UPDATE employees SET
+  tax_id = 'v1:nbRZ5rDB8MTZRbLx:geaoOKdV3AUJFI+wYSHZyQ==:il5eXApblFq9cuQ=',
+  tax_class = 1, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:HDivy7qpDbcT0EIk:hPfj19Gx1bD3dd33BgOKBw==:ECVBjqoJwuFwoCpi',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '101575519'),
+  health_insurance_status = 'mandatory', personnel_group_code = '102',
+  contribution_group_code = '1111', activity_code = '251024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:UNVI4SCUH7gDcsm4:47G0HoZooqBBUFuetnUwEQ==:EJYvjjXdjidrCXGDzkY26cdS1h9LrQ==',
+  bic = 'PBNKDEFFXXX', account_holder = 'Stefan Lang',
+  gross_salary = 1100.00, payment_type = 'monthly_salary',
+  contract_type = 'fixed_term_with_reason', probation_months = 4,
+  apprenticeship_occupation = 'Industriemechaniker',
+  vocational_school = 'Berufsschule Mitte'
+WHERE id = '00000000-0000-0000-0000-000000000019';
+
+-- Petra Neumann (EMP010) — Steuerklasse 4, Schwerbehinderung
+UPDATE employees SET
+  tax_id = 'v1:LFW2hPFCltE7MVBt:LOSdg92KNdVF6zBVgsHcCQ==:+IcCQIdMeu2v2pw=',
+  tax_class = 4, denomination = 'rk', is_primary_employer = true,
+  social_security_number = 'v1:qQJFHwSmIvHYDNr6:yhGCiBCdKE3wazafGf6eSQ==:ZUHEySb5mmo052P6',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '108310400'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '813024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:J8PFl5O2c+F8K1Ea:g4D+SVFc9zam9acbz6f2zw==:xYGD5lMMfh9pY6JhbJht58GQN89jxA==',
+  bic = 'BYLADEM1001', account_holder = 'Petra Neumann',
+  gross_salary = 3400.00, payment_type = 'monthly_salary', salary_group = 'E9',
+  contract_type = 'permanent',
+  disability_flag = true, disability_degree = 50, disability_markers = 'G',
+  disability_id_valid_until = '2028-06-30'
+WHERE id = '00000000-0000-0000-0000-00000000001a';
+
+-- Klaus Weber (EMP011) — Altersteilzeit, Steuerklasse 3
+UPDATE employees SET
+  tax_id = 'v1:NAEzpbepxXBhnFB+:OGU+++CYkQBTHNZxqpAsKg==:xpHZf8qd+bodER8=',
+  tax_class = 3, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:Ot0rOCrZ/7QWH8nG:LYp1dubP2x1FF3C1lQmqOg==:om7CndHPx/mUvLSx',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '104940005'),
+  health_insurance_status = 'mandatory', personnel_group_code = '103',
+  contribution_group_code = '1111', activity_code = '251124311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:pzql8X1/kL0CJpRN:Sm7/ju9Q4DBdyHuj0JT2Aw==:EMKkvarIVsMmLT9BY38OGh0BO+hhnA==',
+  bic = 'BARMDE2HXXX', account_holder = 'Klaus Weber',
+  gross_salary = 2800.00, payment_type = 'monthly_salary',
+  contract_type = 'permanent'
+WHERE id = '00000000-0000-0000-0000-00000000001b';
+
+-- Andrea Mueller (EMP012) — Mutterschutz-Kandidatin, Steuerklasse 4
+UPDATE employees SET
+  tax_id = 'v1:EsIg4NXxvz7cVeRC:uQBlOifGIuf4Fq/hSWA27w==:px8UhR1iWOD3jLo=',
+  tax_class = 4, denomination = 'rk', is_primary_employer = true,
+  social_security_number = 'v1:AeMdy+BFNoVPP0CY:laJ8g3yISVgDdZ0cFkZCqA==:lfY6uQZ9tzRTj8E3',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '102131418'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '811024311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:8j6gfr0/kbAB7XiI:2+lGbZedgfsBW35VRDr/TA==:lOligfS6XShuWUFefVT6oHZv365OmQ==',
+  bic = 'HKKRDE80XXX', account_holder = 'Andrea Mueller',
+  gross_salary = 3800.00, payment_type = 'monthly_salary', salary_group = 'E10',
+  contract_type = 'permanent'
+WHERE id = '00000000-0000-0000-0000-00000000001c';
+
+-- Mehmet Yilmaz (EMP013) — Ausländische Nationalität, Steuerklasse 1
+UPDATE employees SET
+  tax_id = 'v1:y2KQo1dDEl5atCwA:mNSP20tXojVG4zJEQXP4Wg==:h/ns5oLSUAK26A4=',
+  tax_class = 1, denomination = 'ib', is_primary_employer = true,
+  social_security_number = 'v1:qnk7qCaBzISTMpK3:wGJwzKzk3uf9AkVWubteZQ==:VqMFxJBNCXYS8y9S',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '101575519'),
+  health_insurance_status = 'mandatory', personnel_group_code = '101',
+  contribution_group_code = '1111', activity_code = '532134311',
+  umlage_u1 = true, umlage_u2 = true,
+  iban = 'v1:x+qzU1VwL/lA8wmK:2xvUBezZqQJR3oYh1E3/fw==:3zIw95ANcxT6r5f+Kolugshxp960OA==',
+  bic = 'PBNKDEFFXXX', account_holder = 'Mehmet Yilmaz',
+  gross_salary = 2900.00, payment_type = 'monthly_salary',
+  contract_type = 'permanent'
+WHERE id = '00000000-0000-0000-0000-00000000001d';
+
+-- Sandra Koch (EMP014) — Werkstudentin, PGR 106, Teilzeit
+UPDATE employees SET
+  tax_id = 'v1:RmBlVTLgJZ/cLejc:0sXb+GNoE70GzO9NhM1wJA==:Ryt/MdAVKsbm16w=',
+  tax_class = 1, denomination = 'ev', is_primary_employer = true,
+  social_security_number = 'v1:OZTuhTEzORTtNvxy:EOpubCxKtbNVij0ziedsQg==:LDgvG1we9IL+0Wav',
+  health_insurance_provider_id = (SELECT id FROM health_insurance_providers WHERE institution_code = '101575519'),
+  health_insurance_status = 'mandatory', personnel_group_code = '106',
+  contribution_group_code = '0100', activity_code = '431144311',
+  umlage_u1 = false, umlage_u2 = true,
+  iban = 'v1:sXfT2x+Y5x7/85Nm:ndyJlsbJDbvPIxlVRPM61g==:tw8ybBwl0vZfRxI3zaeWzAT8vyjIvA==',
+  bic = 'PBNKDEFFXXX', account_holder = 'Sandra Koch',
+  gross_salary = 1000.00, payment_type = 'monthly_salary',
+  contract_type = 'fixed_term_no_reason',
+  university = 'Hochschule München', student_id = 'HM-98765', field_of_study = 'Wirtschaftsinformatik'
+WHERE id = '00000000-0000-0000-0000-00000000001e';
+
+-- Julia Hoffmann: 1 Kind
+INSERT INTO employee_children (tenant_id, employee_id, first_name, last_name, birth_date, tax_allowance_share, lives_in_household) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', 'Lina', 'Hoffmann', '2019-09-12', 1.0, true)
+ON CONFLICT DO NOTHING;
+
+-- Markus Braun: 2 Kinder
+INSERT INTO employee_children (tenant_id, employee_id, first_name, last_name, birth_date, tax_allowance_share, lives_in_household) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 'Tim', 'Braun', '2016-04-08', 0.5, true),
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 'Emma', 'Braun', '2019-11-25', 0.5, true)
+ON CONFLICT DO NOTHING;
+
+-- Julia Hoffmann: Elternzeit (abgeschlossen)
+INSERT INTO employee_parental_leaves (tenant_id, employee_id, start_date, end_date, is_partner_months) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', '2019-09-12', '2021-09-11', false)
+ON CONFLICT DO NOTHING;
+
+-- Maria Schmidt: Jobrad
+INSERT INTO employee_job_bikes (tenant_id, employee_id, list_price, usage_type, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 3200.00, 'salary_conversion', '2025-04-01')
+ON CONFLICT DO NOTHING;
+
+-- Admin User: Essenszuschuss
+INSERT INTO employee_meal_allowances (tenant_id, employee_id, daily_amount, work_days_per_month, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 6.50, 20.0, '2024-01-01')
+ON CONFLICT DO NOTHING;
+
+-- Markus Braun: Jobticket
+INSERT INTO employee_job_tickets (tenant_id, employee_id, monthly_amount, provider, is_additional, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 49.00, 'BVG', true, '2025-01-01')
+ON CONFLICT DO NOTHING;
+
+-- Klaus Weber: bAV (Pensionskasse)
+INSERT INTO employee_pensions (tenant_id, employee_id, execution_type, provider_name, contract_number, employee_contribution, employer_contribution, mandatory_employer_subsidy, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 'pension_fund', 'R+V Pensionskasse', 'PK-2020-011', 150.00, 150.00, 22.50, '2020-01-01')
+ON CONFLICT DO NOTHING;
+
+-- Petra Neumann: Pfändung (Unterhalt)
+INSERT INTO employee_garnishments (tenant_id, employee_id, creditor_name, creditor_address, file_reference, garnishment_amount, calculation_method, dependents_count, rank, is_p_account, maintenance_obligation, start_date) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a',
+   'v1:Czm46x0MbM+NQksn:L6KmOcA+znkwsm3RdKpXyA==:1G4bNQI2AqhwJZQD6s6azPGBqTKDYrQ=',
+   'Musterstr. 12, 80333 München', NULL, 450.00, 'table_based', 1, 1, true, true, '2025-03-01')
+ON CONFLICT DO NOTHING;
+
+-- Mehmet Yilmaz: Auslandstätigkeit (Istanbul)
+INSERT INTO employee_foreign_assignments (tenant_id, employee_id, country_code, country_name, start_date, end_date, a1_certificate_number, a1_valid_from, a1_valid_until, foreign_activity_exemption) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 'TR', 'Türkei', '2025-06-01', '2025-09-30', 'A1-2025-TR-042', '2025-06-01', '2025-09-30', false)
+ON CONFLICT DO NOTHING;
