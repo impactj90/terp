@@ -35,10 +35,6 @@
     {
       "path": "/api/cron/inbound-invoice-escalations",
       "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/export-template-schedules",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
