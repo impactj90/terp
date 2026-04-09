@@ -1482,15 +1482,15 @@ export async function GET(request: Request) {
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Type check + lint pass
-- [ ] Integration test `src/app/api/cron/expire-demo-tenants/__tests__/integration.test.ts`:
+- [x] Type check + lint pass
+- [x] Integration test `src/app/api/cron/expire-demo-tenants/__tests__/integration.test.ts`:
   - Seed: create 3 tenants — (a) active demo expiring in 1 day, (b) active demo expired 1 day ago, (c) normal non-demo tenant that is expired via an unrelated flag
   - Call `executeExpireDemoTenants(now)`
   - Assert: tenant (b) is now `isActive=false`; (a) and (c) are unchanged
   - Assert: one `audit_logs` row with `action='demo_expired'` for tenant (b)
   - Assert: one `cron_checkpoints` row with `cronName='expire_demo_tenants'`
   - Re-run: asserts idempotency (no duplicate audit log, checkpoint hit)
-- [ ] Auth header test: GET without `Bearer CRON_SECRET` returns 401
+- [x] Auth header test: GET without `Bearer CRON_SECRET` returns 401
 
 #### Manual Verification
 - [ ] Deploy to staging, trigger cron manually via `curl -H "Authorization: Bearer $CRON_SECRET" https://staging.terp.dev/api/cron/expire-demo-tenants`
