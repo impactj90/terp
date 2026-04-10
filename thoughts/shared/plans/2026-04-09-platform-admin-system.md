@@ -1397,18 +1397,18 @@ Platform-Users · Profile. **Does not** import
 
 #### Automated verification
 
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm build` succeeds
+- [x] `pnpm typecheck` passes (no new errors introduced in platform files; pre-existing baseline unchanged)
+- [x] `pnpm lint` passes (no new errors in platform files)
+- [x] `pnpm build` succeeds
 
 #### Manual verification
 
-- [ ] Dev mode login flow works: password → QR code (first time) → scan with authenticator → 6-digit → recovery codes → dashboard
-- [ ] Second login: password → 6-digit → dashboard
-- [ ] Using a recovery code once works; same code fails the second time
-- [ ] 30 min browser idle → next click redirects to login with `reason=idle_timeout`
+- [x] Dev mode login flow works: password → QR code (first time) → scan with authenticator → 6-digit → recovery codes → dashboard
+- [x] Second login: password → 6-digit → dashboard
+- [x] Using a recovery code once works; same code fails the second time
+- [x] 30 min browser idle → next click redirects to login with `reason=idle_timeout`
 
-**Pause for manual confirmation before proceeding to Phase 6.**
+**Phase 5 complete — confirmed by Tolga 2026-04-10.**
 
 ---
 

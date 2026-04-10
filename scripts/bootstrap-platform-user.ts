@@ -19,6 +19,7 @@
 import { config as loadDotenv } from "dotenv"
 import { resolve } from "node:path"
 import { stdin, stdout } from "node:process"
+import * as os from "node:os"
 
 // Load env files BEFORE importing the Prisma client so DATABASE_URL is set.
 loadDotenv({ path: resolve(process.cwd(), ".env") })
@@ -29,6 +30,39 @@ loadDotenv({ path: resolve(process.cwd(), ".env.local"), override: true })
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { hashPassword } from "@/lib/platform/password"
+import * as platformAudit from "@/lib/platform/audit-service"
+
+/**
+ * Identify who ran the CLI so the audit trail is not anonymous.
+ *
+ * Platform audit entries written from the CLI have `platform_user_id = NULL`
+ * (no operator context — the script runs outside the Platform UI auth flow).
+ * We compensate by stuffing the OS user + hostname into the `metadata` JSON
+ * so forensic review can still answer "who and where". `SUDO_USER` takes
+ * precedence because operators sometimes `sudo` into a shared service user.
+ */
+function cliInvoker(): {
+  source: "bootstrap-cli"
+  invokedBy: string
+  hostname: string
+} {
+  const user =
+    process.env.SUDO_USER ??
+    process.env.USER ??
+    process.env.LOGNAME ??
+    (() => {
+      try {
+        return os.userInfo().username
+      } catch {
+        return "unknown"
+      }
+    })()
+  return {
+    source: "bootstrap-cli",
+    invokedBy: user,
+    hostname: os.hostname(),
+  }
+}
 
 function createPrisma(): PrismaClient {
   const connectionString = process.env.DATABASE_URL
@@ -111,6 +145,13 @@ async function main() {
           recoveryCodes: Prisma.DbNull,
         },
       })
+      await platformAudit.log(prisma, {
+        platformUserId: null,
+        action: "platform_user.mfa_reset",
+        entityType: "platform_user",
+        entityId: updated.id,
+        metadata: { ...cliInvoker(), targetEmail: updated.email },
+      })
       console.log(`MFA reset for ${updated.email}`)
       return
     }
@@ -137,10 +178,19 @@ async function main() {
     const created = await prisma.platformUser.create({
       data: { email, displayName, passwordHash: hash },
     })
+    await platformAudit.log(prisma, {
+      platformUserId: null,
+      action: "platform_user.created",
+      entityType: "platform_user",
+      entityId: created.id,
+      metadata: {
+        ...cliInvoker(),
+        email: created.email,
+        displayName: created.displayName,
+      },
+    })
     console.log(`\nCreated ${created.email} (${created.id})`)
-    console.log(
-      "Note: /platform/login and MFA enrollment are delivered in Phases 2–5."
-    )
+    console.log("Next: visit /platform/login and enroll MFA on first sign-in.")
   } finally {
     await prisma.$disconnect()
   }

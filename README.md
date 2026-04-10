@@ -255,12 +255,12 @@ A **separate security/identity domain above the tenant world** — its own `Plat
 - **Plan**: `thoughts/shared/plans/2026-04-09-platform-admin-system.md` — the authoritative spec. Read this file before touching anything in `src/lib/platform/` or `src/trpc/platform/`.
 - **Research**: `thoughts/shared/research/2026-04-09-platform-admin-system.md` — the initial codebase analysis that led to the plan.
 - **Obsoleted**: the earlier `thoughts/shared/tickets/misc/platform-admin-tenant-access.md` (a simple `platform_admins` flag-table) is superseded and should be renamed `_OBSOLETE.md` in Phase 8.
-- **Current phase**: **Phase 2 complete** (data model + auth primitives). Phases 3–8 pending — see the plan for the full breakdown:
+- **Current phase**: **Phase 5 complete** (platform UI fully shipped). Phases 6–8 pending — see the plan for the full breakdown:
   - Phase 1 ✅ Data model + bootstrap (tables, argon2, CLI)
   - Phase 2 ✅ Auth core (JWT, TOTP, rate limit, login service)
-  - Phase 3 ⏳ Platform tRPC layer (separate context, separate root router, `/api/trpc-platform`)
-  - Phase 4 ⏳ Routing & middleware (subdomain OR `/platform/*` fallback)
-  - Phase 5 ⏳ Platform UI (login, dashboard, support-sessions, audit logs)
+  - Phase 3 ✅ Platform tRPC layer (separate context, separate root router, `/api/trpc-platform`)
+  - Phase 4 ✅ Routing & middleware (subdomain OR `/platform/*` fallback)
+  - Phase 5 ✅ Platform UI (login, dashboard, tenants, support-sessions, audit logs, platform-users)
   - Phase 6 ⏳ Consent flow (tenant-side `SupportSession` creation, settings page, yellow banner)
   - Phase 7 ⏳ Impersonation (extend `createTRPCContext` + `AsyncLocalStorage` for the audit double-write)
   - Phase 8 ⏳ Cleanup cron, docs, E2E spec
@@ -335,3 +335,133 @@ Do this **only from a trusted machine** — the script opens a direct DB connect
 **Rotating `PLATFORM_JWT_SECRET`**: the secret is only used by `src/lib/platform/jwt.ts` — no other code path reads it. To rotate, set the new value in Vercel, redeploy, and every existing platform session is immediately invalidated (existing JWTs fail the HMAC check and trip the `invalid` branch in `verify()`). Operators just log in again. Zero tenant-side impact — the tenant app uses Supabase Auth, which has a separate JWT secret.
 
 **Relationship to field encryption**: the platform code deliberately reuses `src/lib/services/field-encryption.ts` (`encryptField`/`decryptField`) for storing the TOTP secret at rest. No separate crypto module. This means `FIELD_ENCRYPTION_KEY_V1` rotation affects platform operators' stored TOTP secrets the same way it affects tenant-side encrypted fields — decrypt-re-encrypt is handled by the same key-versioning mechanism.
+
+#### Production Requirements
+
+Everything you need to stand up the platform-admin console on a real deployment (Vercel + hosted Supabase). Read this end-to-end before your first prod deploy — most of these are one-time setup, but skipping any of them will either break login, leak secrets, or permanently lock you out.
+
+**1. Environment variables** (set in Vercel → Project → Settings → Environment Variables):
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `PLATFORM_JWT_SECRET` | ✅ | 32+ bytes of random data, base64. Generate with `openssl rand -base64 48`. Rotation invalidates all active platform sessions (see rotation note above). **Must NOT match any Supabase or tenant JWT secret** — that's the whole point of the separate identity domain. |
+| `FIELD_ENCRYPTION_KEY_V1` | ✅ | Already required for tenant-side field encryption. The platform TOTP secrets are stored with the same key. If this isn't set, `mfaEnrollStep` throws at enrollment time. |
+| `FIELD_ENCRYPTION_KEY_CURRENT_VERSION` | optional | Defaults to `1`. Only set when rotating to V2+. |
+| `PLATFORM_COOKIE_DOMAIN` | recommended | E.g. `admin.terp.de`. When set, `src/proxy.ts` rewrites `/` → `/platform` on that host, and the `platform-session` cookie is scoped to that domain only. Leave empty to fall back to same-host `/platform/*` routing (fine for staging, not recommended for prod — see "Host separation" below). |
+| `DATABASE_URL` | ✅ | Already required for the tenant app. Platform tables live in the same database (`platform_users`, `support_sessions`, `platform_audit_logs`, `platform_login_attempts`). |
+
+**2. Database migrations**: the platform tables are in `supabase/migrations/20260421000000_create_platform_admin_tables.sql`. They ship with every `pnpm db:push:staging` / normal migration apply — no separate step. Verify post-deploy with `\dt platform_*` in psql.
+
+**3. First operator bootstrap** (one-time, from a trusted machine — never CI):
+
+```bash
+# Decrypt the prod env file locally
+scripts/decrypt-env.sh
+
+# Verify the URL the script will hit (password-redacted) before continuing
+pnpm tsx --env-file=.env.production scripts/bootstrap-platform-user.ts \
+  you@terp.de "Your Name"
+```
+
+The script prompts twice for the password (≥12 chars, argon2id-hashed before write). On first login the platform-auth flow forces MFA enrollment — have a TOTP app ready (1Password, Authy, Google Authenticator). After enrollment you'll see 10 recovery codes **once** — store them in your password manager immediately; they're argon2-hashed server-side and not retrievable.
+
+Every subsequent operator is created through the Platform UI (`/platform/platform-users`), not the CLI. Only use the CLI for (a) the very first operator and (b) `--reset-mfa <email>` when someone loses their TOTP device.
+
+**4. Host separation** (strongly recommended, mandatory for anything customer-facing):
+
+Deploy the platform console on a **dedicated subdomain** (`admin.terp.de`) rather than `/platform/*` on the tenant app domain. Reasons:
+
+- Cookie isolation — the `platform-session` cookie scopes to its host, so a compromised tenant XSS cannot read the platform cookie (and vice versa).
+- Reduced attack surface — your WAF/CDN can apply stricter rules (IP allowlist, geo-block, rate limits) to the admin host without affecting customer traffic.
+- Clear audit boundaries — access logs for `admin.terp.de` contain exactly the platform-operator traffic, no noise.
+- TLS + HSTS scoping — the admin subdomain can opt in to preload HSTS independently.
+
+In Vercel: add `admin.terp.de` as a domain on the same project, then set `PLATFORM_COOKIE_DOMAIN=admin.terp.de`. The middleware at `src/proxy.ts:10-25` handles the rest — requests hitting `admin.terp.de/` get rewritten to `/platform`, and requests to the tenant domain never see the `/platform` tree.
+
+DNS: standard `A`/`CNAME` to Vercel's edge. No wildcard needed.
+
+**5. Operational hygiene**:
+
+- **Rotate `PLATFORM_JWT_SECRET` every 90 days** or immediately if an operator's laptop is compromised. Rotation just means setting a new value in Vercel and redeploying — no migration, no data touch. Every active platform session is killed, operators just log in again.
+- **Minimum 2 active platform users in prod at all times**. The router at `src/trpc/platform/routers/platformUsers.ts` enforces this as a hard invariant (you cannot delete or deactivate the last active operator via the UI), but bootstrap a second account *immediately* after the first so you have a peer operator who can reset your MFA if you lose your TOTP device. A single-operator setup is a wedge that turns a lost phone into a full DB restore.
+- **Never run bootstrap from CI or a shared box**. The script opens a direct, unthrottled DB connection with full write permissions — it is explicitly a trusted-laptop tool. If prod needs a new operator and no trusted laptop is available, temporarily restore access via an existing operator's UI instead.
+- **Do not expose `admin.terp.de` to search engines**. The platform layout already sets `robots: { index: false, follow: false }` metadata, but also consider an IP allowlist at the edge if your operator team is <10 people.
+- **Monitor `platform_audit_logs`**. Every login, every support session activation, every platform-user mutation writes a row. Wire a Grafana/Supabase alert on unusual patterns — bursts of `login.failure`, off-hours `support_session.activated`, unexpected `platform_user.created`. The Phase 8 cleanup cron will also age out old `platform_login_attempts` rows; until then the table grows monotonically, so either run Phase 8 or schedule your own monthly truncate.
+- **Do not copy the TOTP secret between environments**. Each operator enrolls MFA separately on staging and on prod — don't try to "sync" them. The recovery-code flow exists exactly so that losing access on one environment doesn't compromise another.
+
+**6. Testing before shipping operator access**: after bootstrap, manually verify in staging:
+
+- Password → QR enrollment → 6-digit → recovery codes → dashboard
+- Log out, log back in: password → 6-digit → dashboard (no re-enrollment)
+- Try a recovery code — it should work once, then fail on replay
+- Walk away for 30 min, come back, click anything — you should be redirected to `/platform/login?reason=idle_timeout`
+- From a peer account, reset your own MFA, then log in again and re-enroll
+
+If all five pass on staging, you're ready for prod. If any fails, **do not** bootstrap a prod operator until it's fixed — you'd be locking in a broken flow.
+
+#### Recovery & Lockout Procedures
+
+An operator lost their TOTP device / phone / laptop. They cannot log in. You have three ways to get them back, in order of preference:
+
+**Option A — Peer operator via the Platform UI (preferred).** Any other active operator opens `/platform/platform-users`, finds the locked-out user, and clicks the "MFA Reset" button (`src/app/platform/(authed)/platform-users/page.tsx`). This calls `platformUsers.resetMfa`, which clears `mfaSecret` + `mfaEnrolledAt`. On the locked-out operator's next login, the password step returns `mfa_enrollment_required` and they walk through fresh QR enrollment. Zero CLI, zero DB access, fully audited in `platform_audit_logs` (`action = 'platform_user.mfa_reset'`).
+
+> This is **why every prod install needs at least 2 active operators**. If you're alone and lose your TOTP, you fall back to Option B or C — both of which require trusted-machine access to prod secrets.
+
+**Option B — Bootstrap CLI (when there's no peer operator).** From a trusted laptop with `.env.production` decrypted:
+
+```bash
+scripts/decrypt-env.sh
+pnpm tsx --env-file=.env.production scripts/bootstrap-platform-user.ts \
+  --reset-mfa you@terp.de
+```
+
+This directly connects to the prod DB with full write permissions, clears `mfa_secret`, `mfa_enrolled_at`, AND `recovery_codes` (the CLI uses `Prisma.DbNull` which actually writes, unlike the router's current `undefined` — see the known issue below). Same outcome: next login forces re-enrollment.
+
+The CLI writes its own `platform_audit_logs` entry (`action = 'platform_user.mfa_reset'`, `platform_user_id = NULL`, `metadata = { source: 'bootstrap-cli', invokedBy, hostname, targetEmail }`) so the forensic trail records **who ran the CLI from which machine** even though no Platform-UI session exists. Same applies to `scripts/bootstrap-platform-user.ts <email> <displayName>` — the initial-create path emits a `platform_user.created` audit entry with the same metadata shape.
+
+**Option C — Direct SQL (emergency only, no CLI available).** Connect via `psql` to the prod Supabase DB (get the connection string from Supabase Dashboard → Database → Connection → URI, or from `.env.production`). Then:
+
+```sql
+-- Reset MFA for a specific operator. Next login forces re-enrollment.
+UPDATE platform_users
+SET mfa_secret      = NULL,
+    mfa_enrolled_at = NULL,
+    recovery_codes  = NULL
+WHERE email = 'you@terp.de'
+RETURNING id, email, display_name, is_active;
+```
+
+Verify the row count is `1` before committing (if you're in a transaction). Double-check the email spelling — there is no undo.
+
+**What NOT to do from the DB:**
+
+- **Never touch `password_hash` directly.** argon2id hashes are not something you type by hand; generating a replacement hash outside the service risks parameter mismatches. If a password reset is needed, use the Platform UI (`platformUsers.updatePassword`) from a peer operator, or delete the row and re-bootstrap with the CLI.
+- **Never clear just `mfa_secret` and leave `mfa_enrolled_at` set.** That puts the row in an inconsistent state where `mfaVerifyStep` throws `InvalidCredentialsError` on every login (the service treats "enrolled but no secret" as a tampered challenge). Always clear both.
+- **Never delete rows from `platform_audit_logs` to "clean up".** It's an immutable forensic trail. If you need to prune for disk space, run the Phase 8 cleanup cron when it ships, or a dated `DELETE WHERE performed_at < now() - interval '1 year'` — never target specific operators or actions.
+- **Never reset MFA on the last active operator without a plan to re-enroll immediately.** If the re-enrollment login fails for any reason (network, bad TOTP clock, bug), you've just locked the platform.
+
+**After a direct-SQL reset (Option C only), write an audit entry manually** — the UI path (Option A) and the CLI path (Option B) both emit `platform_audit_logs` entries on their own. Raw SQL does not. Insert a row like this in the same psql session, right after the `UPDATE`:
+
+```sql
+INSERT INTO platform_audit_logs (
+  platform_user_id, action, entity_type, entity_id, metadata, ip_address, user_agent
+) VALUES (
+  NULL,
+  'platform_user.mfa_reset',
+  'platform_user',
+  (SELECT id FROM platform_users WHERE email = 'you@terp.de'),
+  jsonb_build_object(
+    'source', 'direct-sql',
+    'invokedBy', current_user,
+    'reason', 'lost TOTP device'
+  ),
+  NULL,
+  NULL
+);
+```
+
+The forensic review later only trusts what's in the table — if Option C is used without this manual insert, there is a silent gap in the trail.
+
+**Lost password (not MFA)**: same decision tree. Peer operator via UI (`platformUsers.updatePassword`) is preferred. Bootstrap CLI doesn't currently have a `--reset-password` flag, so the fallback is to `DELETE FROM platform_users WHERE email = '…'` and re-bootstrap from scratch — the operator will need to re-enroll MFA on next login regardless.
+
+**Known issue — `resetMfa` recovery codes**: the router's `resetMfa` mutation (`src/trpc/platform/routers/platformUsers.ts:143`) currently passes `recoveryCodes: undefined`, which is a Prisma no-op — the old hashed recovery codes stay in the DB after a UI reset. Functionally harmless (the next enrollment overwrites them, and `mfaVerifyStep` throws as soon as `!mfaEnrolledAt`), but defense-in-depth-wise the codes should be cleared. The CLI path (`--reset-mfa`) uses `Prisma.DbNull` and does clear them. Fix pending — tracked as a follow-up to Phase 5.
