@@ -7,16 +7,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { TRPCError } from "@trpc/server"
+import type * as LoginService from "@/lib/platform/login-service"
 
 const passwordStepMock = vi.fn()
 const mfaEnrollStepMock = vi.fn()
 const mfaVerifyStepMock = vi.fn()
 
 vi.mock("@/lib/platform/login-service", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/platform/login-service")>(
-      "@/lib/platform/login-service"
-    )
+  const actual = await vi.importActual<typeof LoginService>(
+    "@/lib/platform/login-service"
+  )
   return {
     ...actual,
     passwordStep: (...args: unknown[]) => passwordStepMock(...args),

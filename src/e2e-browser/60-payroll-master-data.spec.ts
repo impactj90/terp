@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { Page, Locator } from "@playwright/test";
 import { clickTab } from "./helpers/forms";
 
 /**
@@ -13,40 +14,40 @@ test.describe.serial("Payroll Master Data (Lohn-Stammdaten)", () => {
 
   // ── Helper: Navigate to employee page ──────────────────────────
 
-  async function goToPage(page: import("@playwright/test").Page) {
+  async function goToPage(page: Page) {
     await page.goto(EMP_PAGE);
     await page.locator("#main-content").waitFor({ state: "visible" });
     await expect(page.getByText("Maria Schmidt")).toBeVisible({ timeout: 10_000 });
   }
 
-  async function goToTab(page: import("@playwright/test").Page, tabName: string | RegExp) {
+  async function goToTab(page: Page, tabName: string | RegExp) {
     await goToPage(page);
     await clickTab(page, tabName);
   }
 
   // ── Helper: Edit mode buttons ──────────────────────────────────
 
-  async function clickEditButton(page: import("@playwright/test").Page) {
+  async function clickEditButton(page: Page) {
     const tabContent = page.locator('[role="tabpanel"]');
     const editBtn = tabContent.getByRole("button", { name: /bearbeiten/i }).first();
     await editBtn.click();
   }
 
-  async function clickSaveButton(page: import("@playwright/test").Page) {
+  async function clickSaveButton(page: Page) {
     const tabContent = page.locator('[role="tabpanel"]');
     const saveBtn = tabContent.getByRole("button", { name: /speichern/i }).first();
     await saveBtn.click();
     await expect(saveBtn).not.toBeVisible({ timeout: 10_000 });
   }
 
-  async function clickCancelButton(page: import("@playwright/test").Page) {
+  async function clickCancelButton(page: Page) {
     const tabContent = page.locator('[role="tabpanel"]');
     await tabContent.getByRole("button", { name: /abbrechen/i }).first().click();
   }
 
   // ── Helper: Sheet form submit + close ──────────────────────────
 
-  async function submitSheetAndWait(page: import("@playwright/test").Page) {
+  async function submitSheetAndWait(page: Page) {
     const sheet = page.locator('[data-slot="sheet-content"][data-state="open"]');
     const footer = sheet.locator('[data-slot="sheet-footer"]');
     await footer.getByRole("button").last().evaluate((el) => (el as HTMLElement).click());
@@ -55,7 +56,7 @@ test.describe.serial("Payroll Master Data (Lohn-Stammdaten)", () => {
 
   // ── Helper: Delete a row by unique text ────────────────────────
 
-  async function deleteRowByText(page: import("@playwright/test").Page, text: string) {
+  async function deleteRowByText(page: Page, text: string) {
     const row = page.locator("table tbody tr").filter({ hasText: text });
     await row.getByRole("button").filter({ has: page.locator("svg") }).last().click();
     // ConfirmDialog is a bottom sheet with "Confirm" button
@@ -69,8 +70,8 @@ test.describe.serial("Payroll Master Data (Lohn-Stammdaten)", () => {
   // ── Helper: Select a Radix value near a label ──────────────────
 
   async function selectNearLabel(
-    page: import("@playwright/test").Page,
-    container: import("@playwright/test").Locator,
+    page: Page,
+    container: Locator,
     labelText: string | RegExp,
     optionText: string | RegExp,
   ) {
@@ -1046,7 +1047,7 @@ test.describe.serial("Payroll Master Data (Lohn-Stammdaten)", () => {
   // 24. IBAN ENCRYPTED IN DB
   // ═══════════════════════════════════════════════════════════════
 
-  test("IBAN is stored encrypted in DB", async ({ page }) => {
+  test("IBAN is stored encrypted in DB", async ({ page: _page }) => {
     // We set the IBAN earlier in the bank details test.
     // Now verify the raw DB value is encrypted (starts with v1:)
     const { execSync } = await import("child_process");

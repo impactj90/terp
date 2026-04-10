@@ -205,7 +205,7 @@ describe("email-imap-config-service", () => {
         mailbox: "INBOX",
       })
 
-      const upsertCall = (prisma.tenantImapConfig.upsert as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      const upsertCall = (prisma.tenantImapConfig.upsert as ReturnType<typeof vi.fn>).mock.calls[0]![0]
       expect(upsertCall.update).not.toHaveProperty("password")
     })
   })

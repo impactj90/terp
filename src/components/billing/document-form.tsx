@@ -141,7 +141,7 @@ export function BillingDocumentForm() {
                   <SelectContent>
                     {DOCUMENT_TYPES.map((val) => (
                       <SelectItem key={val} value={val}>
-                        {t(DOC_TYPE_KEYS[val] as any)}
+                        {t(DOC_TYPE_KEYS[val] as Parameters<typeof t>[0])}
                       </SelectItem>
                     ))}
                   </SelectContent>

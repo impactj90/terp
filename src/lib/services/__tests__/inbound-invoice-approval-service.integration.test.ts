@@ -367,7 +367,7 @@ describe.sequential("inbound-invoice-approval-service integration", () => {
       prisma, TEST_TENANT_ID, invoice.id, SUBMITTER_ID
     )
 
-    let current = await invoiceService.getById(prisma, TEST_TENANT_ID, invoice.id)
+    const current = await invoiceService.getById(prisma, TEST_TENANT_ID, invoice.id)
     expect(current.status).toBe("PENDING_APPROVAL")
 
     // Material change: update totalGross while PENDING_APPROVAL

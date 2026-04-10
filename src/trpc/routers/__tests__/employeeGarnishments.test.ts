@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { employeeGarnishmentsRouter } from "../employeeGarnishments"
@@ -118,7 +119,7 @@ function createTestContext(
 describe("employeeGarnishments.list", () => {
   it("returns garnishments for employee", async () => {
     const garnishments = [makeGarnishment()]
-    vi.mocked(garnishmentService.list).mockResolvedValue(garnishments)
+    vi.mocked(garnishmentService.list).mockResolvedValue(garnishments as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({ employeeId: EMP_ID })
@@ -137,7 +138,7 @@ describe("employeeGarnishments.list", () => {
 describe("employeeGarnishments.create", () => {
   it("creates garnishment with encrypted fields (verifies call args)", async () => {
     const created = makeGarnishment()
-    vi.mocked(garnishmentService.create).mockResolvedValue(created)
+    vi.mocked(garnishmentService.create).mockResolvedValue(created as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.create({
@@ -175,7 +176,7 @@ describe("employeeGarnishments.create", () => {
 describe("employeeGarnishments.update", () => {
   it("performs partial update", async () => {
     const updated = makeGarnishment({ garnishmentAmount: 500 })
-    vi.mocked(garnishmentService.update).mockResolvedValue(updated)
+    vi.mocked(garnishmentService.update).mockResolvedValue(updated as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({
@@ -233,7 +234,7 @@ describe("employeeGarnishments permissions", () => {
 
   it("accepts with garnishment.view", async () => {
     const garnishments = [makeGarnishment()]
-    vi.mocked(garnishmentService.list).mockResolvedValue(garnishments)
+    vi.mocked(garnishmentService.list).mockResolvedValue(garnishments as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma, [GARNISHMENT_VIEW]))
     const result = await caller.list({ employeeId: EMP_ID })

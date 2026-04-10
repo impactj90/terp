@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
@@ -202,7 +203,7 @@ describe("employeeCompanyCars", () => {
         updatedAt: new Date("2025-01-01"),
       },
     ]
-    vi.mocked(companyCarsService.list).mockResolvedValue(items)
+    vi.mocked(companyCarsService.list).mockResolvedValue(items as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.list({ employeeId: EMP_ID })
     expect(result).toHaveLength(1)
@@ -231,7 +232,7 @@ describe("employeeCompanyCars", () => {
       createdAt: new Date("2025-01-01"),
       updatedAt: new Date("2025-01-01"),
     }
-    vi.mocked(companyCarsService.create).mockResolvedValue(created)
+    vi.mocked(companyCarsService.create).mockResolvedValue(created as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,
@@ -272,7 +273,7 @@ describe("employeeJobBikes", () => {
         updatedAt: new Date("2025-03-01"),
       },
     ]
-    vi.mocked(jobBikesService.list).mockResolvedValue(items)
+    vi.mocked(jobBikesService.list).mockResolvedValue(items as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.list({ employeeId: EMP_ID })
     expect(result).toHaveLength(1)
@@ -296,7 +297,7 @@ describe("employeeJobBikes", () => {
       createdAt: new Date("2025-03-01"),
       updatedAt: new Date("2025-03-01"),
     }
-    vi.mocked(jobBikesService.create).mockResolvedValue(created)
+    vi.mocked(jobBikesService.create).mockResolvedValue(created as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,
@@ -335,7 +336,7 @@ describe("employeeMealAllowances", () => {
         updatedAt: new Date("2025-01-01"),
       },
     ]
-    vi.mocked(mealAllowancesService.list).mockResolvedValue(items)
+    vi.mocked(mealAllowancesService.list).mockResolvedValue(items as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.list({ employeeId: EMP_ID })
     expect(result).toHaveLength(1)
@@ -359,7 +360,7 @@ describe("employeeMealAllowances", () => {
       createdAt: new Date("2025-01-01"),
       updatedAt: new Date("2025-01-01"),
     }
-    vi.mocked(mealAllowancesService.create).mockResolvedValue(created)
+    vi.mocked(mealAllowancesService.create).mockResolvedValue(created as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,
@@ -397,7 +398,7 @@ describe("employeeVouchers", () => {
         updatedAt: new Date("2025-01-01"),
       },
     ]
-    vi.mocked(vouchersService.list).mockResolvedValue(items)
+    vi.mocked(vouchersService.list).mockResolvedValue(items as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.list({ employeeId: EMP_ID })
     expect(result).toHaveLength(1)
@@ -421,7 +422,7 @@ describe("employeeVouchers", () => {
       createdAt: new Date("2025-01-01"),
       updatedAt: new Date("2025-01-01"),
     }
-    vi.mocked(vouchersService.create).mockResolvedValue(created)
+    vi.mocked(vouchersService.create).mockResolvedValue(created as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,
@@ -461,7 +462,7 @@ describe("employeeJobTickets", () => {
         updatedAt: new Date("2025-01-01"),
       },
     ]
-    vi.mocked(jobTicketsService.list).mockResolvedValue(items)
+    vi.mocked(jobTicketsService.list).mockResolvedValue(items as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.list({ employeeId: EMP_ID })
     expect(result).toHaveLength(1)
@@ -486,7 +487,7 @@ describe("employeeJobTickets", () => {
       createdAt: new Date("2025-01-01"),
       updatedAt: new Date("2025-01-01"),
     }
-    vi.mocked(jobTicketsService.create).mockResolvedValue(created)
+    vi.mocked(jobTicketsService.create).mockResolvedValue(created as any)
     const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,

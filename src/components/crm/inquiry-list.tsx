@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { MoreHorizontal, Edit, Trash2, Plus, Eye, Search, XCircle } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Plus, Eye, Search } from 'lucide-react'
 import {
   useCrmInquiries,
   useDeleteCrmInquiry,

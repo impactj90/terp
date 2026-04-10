@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { PrismaClient } from "@/generated/prisma/client"
+import type * as BookingsRepository from "../bookings-repository"
 
 // --- Constants ---
 
@@ -18,7 +19,7 @@ const EMPLOYEE_ID = "e0000000-0000-4000-a000-000000000001"
 
 // Spy on bookings-repository to capture findEmployeeDayPlan calls
 vi.mock("../bookings-repository", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../bookings-repository")>()
+  const original = await importOriginal<typeof BookingsRepository>()
   return {
     ...original,
     findEmployeeDayPlan: vi.fn().mockResolvedValue({

@@ -242,7 +242,7 @@ test.describe.serial("Absence → team overview hydration", () => {
 
     // Check if we need to navigate forward (the calendar starts on current month)
     const now = new Date();
-    let monthDiff = (targetYear - now.getFullYear()) * 12 + (targetMonth - now.getMonth());
+    const monthDiff = (targetYear - now.getFullYear()) * 12 + (targetMonth - now.getMonth());
     for (let i = 0; i < monthDiff; i++) {
       await popover.getByRole("button").filter({ has: page.locator("svg.lucide-chevron-right") }).click();
       await page.waitForTimeout(200);

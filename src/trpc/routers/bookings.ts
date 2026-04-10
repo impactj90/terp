@@ -22,6 +22,7 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
@@ -40,7 +41,7 @@ import * as bookingsService from "@/lib/services/bookings-service"
  * team overview auto-refreshes (dayView cache invalidation via SSE).
  */
 async function notifyTeamOfBookingChange(
-  prisma: import("@/generated/prisma/client").PrismaClient,
+  prisma: PrismaClient,
   tenantId: string,
   employeeId: string,
 ) {

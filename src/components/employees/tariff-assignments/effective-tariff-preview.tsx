@@ -89,7 +89,7 @@ export function EffectiveTariffPreview({ employeeId }: EffectiveTariffPreviewPro
             <span className="text-sm text-muted-foreground">{t('previewTariffLabel')}:</span>
             {data.tariffId ? (
               <span className="text-sm font-medium">
-                {(data as any).tariffLabel || data.tariffId}
+                {(data as { tariffLabel?: string }).tariffLabel || data.tariffId}
               </span>
             ) : (
               <span className="text-sm text-muted-foreground italic">

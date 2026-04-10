@@ -132,7 +132,7 @@ export function RecurringList() {
                     {item.isActive ? t('active') : t('inactive')}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    {INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}
+                    {INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as Parameters<typeof t>[0]) : item.interval}
                   </span>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export function RecurringList() {
                   <TableCell>
                     {item.address?.company ?? '-'}
                   </TableCell>
-                  <TableCell>{INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as any) : item.interval}</TableCell>
+                  <TableCell>{INTERVAL_KEYS[item.interval] ? t(INTERVAL_KEYS[item.interval] as Parameters<typeof t>[0]) : item.interval}</TableCell>
                   <TableCell>{formatDate(item.nextDueDate)}</TableCell>
                   <TableCell>{formatDate(item.lastGeneratedAt)}</TableCell>
                   <TableCell>

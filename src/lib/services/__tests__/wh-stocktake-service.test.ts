@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { PrismaClient } from "@/generated/prisma/client"
 
@@ -193,7 +194,7 @@ describe("wh-stocktake-service", () => {
     it("returns paginated results", async () => {
       const prisma = createMockPrisma()
       const mockResult = { items: [mockStocktake], total: 1 }
-      vi.mocked(repo.findMany).mockResolvedValue(mockResult)
+      vi.mocked(repo.findMany).mockResolvedValue(mockResult as any)
 
       const result = await service.list(prisma, TENANT_ID, { page: 1, pageSize: 25 })
 
@@ -284,7 +285,7 @@ describe("wh-stocktake-service", () => {
       vi.mocked(repo.findPositions).mockResolvedValue({
         items: [mockPosition, mockPosition2],
         total: 2,
-      })
+      } as any)
 
       const result = await service.getPositions(prisma, TENANT_ID, STOCKTAKE_ID)
 

@@ -501,7 +501,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               {/* Beleg-Info Block */}
               <div className="mb-6">
                 <h1 className="text-lg font-bold mb-2">
-                  {DOC_TYPE_KEYS[doc.type] ? t(DOC_TYPE_KEYS[doc.type] as any) : doc.type}
+                  {DOC_TYPE_KEYS[doc.type] ? t(DOC_TYPE_KEYS[doc.type] as Parameters<typeof t>[0]) : doc.type}
                 </h1>
                 <div className="text-sm space-y-0.5">
                   <div>{t('numberLabel')}{doc.number}</div>

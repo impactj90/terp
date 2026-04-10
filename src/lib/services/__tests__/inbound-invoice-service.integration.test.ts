@@ -317,9 +317,9 @@ describe.sequential("inbound-invoice-service integration", () => {
       prisma, TEST_TENANT_ID, invoice.id, TEST_USER_ID
     )
     // Without approval policies, auto-approves
-    expect(submitted.status).toBe("APPROVED")
-    expect(submitted.submittedBy).toBe(TEST_USER_ID)
-    expect(submitted.submittedAt).toBeTruthy()
+    expect(submitted!.status).toBe("APPROVED")
+    expect(submitted!.submittedBy).toBe(TEST_USER_ID)
+    expect(submitted!.submittedAt).toBeTruthy()
   })
 
   // ---------------------------------------------------------------

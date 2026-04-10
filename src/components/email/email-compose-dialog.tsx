@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Loader2, Paperclip, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -107,12 +108,12 @@ export function EmailComposeDialog({
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {t('smtpNotConfigured')}{' '}
-              <a
+              <Link
                 href="/admin/email-settings"
                 className="underline font-medium"
               >
                 {t('smtpConfigureLink')}
-              </a>
+              </Link>
             </AlertDescription>
           </Alert>
         ) : (

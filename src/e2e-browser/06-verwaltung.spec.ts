@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { navigateTo, waitForTableLoad, expectPageTitle } from "./helpers/nav";
-import { clickTab, expectTableContains } from "./helpers/forms";
+import { clickTab } from "./helpers/forms";
 
 // ---------------------------------------------------------------------------
 // UC-039: Approve/Reject Absence (/admin/approvals)

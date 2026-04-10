@@ -56,7 +56,6 @@ test.describe.serial("UC-INV-01: Eingangsrechnungen", () => {
     await page.waitForLoadState("networkidle");
 
     // Invoice number from EN16931_Einfach.pdf
-    const invoiceNumberInput = page.locator("input").filter({ hasText: "" }).first();
     // Look for "471102" somewhere on the page (the ZUGFeRD invoice number)
     await expect(page.getByText("471102")).toBeVisible({ timeout: 10_000 });
 

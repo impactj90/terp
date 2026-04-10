@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { exportInterfacesRouter } from "../exportInterfaces"
@@ -221,7 +222,7 @@ describe("exportInterfaces.create", () => {
 describe("exportInterfaces.update", () => {
   it("updates with partial data", async () => {
     const updated = makeExportInterface({ name: "Updated Name", accounts: [] })
-    vi.mocked(exportInterfaceService.update).mockResolvedValue(updated as ReturnType<typeof makeExportInterface>)
+    vi.mocked(exportInterfaceService.update).mockResolvedValue(updated as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: INTERFACE_ID, name: "Updated Name" })

@@ -26,7 +26,6 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import * as demoService from "../demo-tenant-service"
 import {
   DemoTenantForbiddenError,
-  DemoTenantNotFoundError,
 } from "../demo-tenant-service"
 import * as repo from "../demo-tenant-repository"
 

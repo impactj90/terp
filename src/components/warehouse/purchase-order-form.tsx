@@ -3,11 +3,11 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Loader2, ShoppingCart, Building2, User, CalendarDays, FileText } from 'lucide-react'
+import { ArrowLeft, Loader2, ShoppingCart, Building2, CalendarDays, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -91,11 +91,6 @@ export function PurchaseOrderForm({ purchaseOrder, onSuccess }: PurchaseOrderFor
   // Load contacts for selected supplier
   const { data: contacts } = useCrmContacts(form.supplierId, !!form.supplierId)
 
-  // Selected supplier display
-  const selectedSupplier = React.useMemo(() => {
-    if (!form.supplierId) return null
-    return suppliers.find((s: { id: string }) => s.id === form.supplierId)
-  }, [form.supplierId, suppliers])
 
   // Populate form on edit
   React.useEffect(() => {

@@ -293,12 +293,12 @@ export function CorrespondenceFormSheet({
             </div>
 
             {/* Attachments -- only in edit mode */}
-            {isEdit && editItem?.id && (
+            {isEdit && editItem?.id ? (
               <CorrespondenceAttachmentSection
                 correspondenceId={editItem.id as string}
                 disabled={isSubmitting}
               />
-            )}
+            ) : null}
 
             {/* Hint in create mode */}
             {!isEdit && (

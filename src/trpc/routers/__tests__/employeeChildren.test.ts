@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { employeeChildrenRouter } from "../employeeChildren"
@@ -101,7 +102,7 @@ function createTestContext(
 describe("employeeChildren.list", () => {
   it("returns children for employee", async () => {
     const children = [makeChild()]
-    vi.mocked(employeeChildrenService.list).mockResolvedValue(children)
+    vi.mocked(employeeChildrenService.list).mockResolvedValue(children as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({ employeeId: EMP_ID })
@@ -128,7 +129,7 @@ describe("employeeChildren.list", () => {
 describe("employeeChildren.create", () => {
   it("creates child successfully", async () => {
     const created = makeChild()
-    vi.mocked(employeeChildrenService.create).mockResolvedValue(created)
+    vi.mocked(employeeChildrenService.create).mockResolvedValue(created as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.create({
@@ -185,7 +186,7 @@ describe("employeeChildren.create", () => {
 describe("employeeChildren.update", () => {
   it("updates child successfully", async () => {
     const updated = makeChild({ firstName: "Moritz" })
-    vi.mocked(employeeChildrenService.update).mockResolvedValue(updated)
+    vi.mocked(employeeChildrenService.update).mockResolvedValue(updated as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({

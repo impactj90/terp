@@ -6,7 +6,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const GROUP_ID = "g1000000-0000-4000-a000-000000000001"
 const GROUP_ID_2 = "g1000000-0000-4000-a000-000000000002"
-const GROUP_ID_3 = "g1000000-0000-4000-a000-000000000003"
+const _GROUP_ID_3 = "g1000000-0000-4000-a000-000000000003"
 
 const mockGroup = {
   id: GROUP_ID,

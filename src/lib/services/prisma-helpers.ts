@@ -29,7 +29,7 @@ type PrismaDelegate = { updateMany: any; findFirst: any }
  * @returns         The refetched record after update
  * @throws          TenantScopedNotFoundError if count === 0
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function tenantScopedUpdate(
   delegate: PrismaDelegate,
   where: { id: string; tenantId: string } & Record<string, unknown>,
@@ -62,7 +62,7 @@ export async function tenantScopedUpdate(
  * @param opts      Optional: include, select, entity name
  * @returns         The refetched record or throws
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function relationScopedUpdate(
   delegate: PrismaDelegate,
   where: Record<string, unknown>,

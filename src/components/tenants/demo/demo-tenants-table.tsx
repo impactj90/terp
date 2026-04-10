@@ -31,11 +31,15 @@ import {
   useExpireDemoTenantNow,
   useDeleteDemoTenant,
 } from '@/hooks'
-import type { AppRouter } from '@/trpc/routers/_app'
-import type { inferRouterOutputs } from '@trpc/server'
-
-type RouterOutput = inferRouterOutputs<AppRouter>
-export type DemoTenantRow = NonNullable<RouterOutput['demoTenants']['list']>[number]
+export interface DemoTenantRow {
+  id: string
+  name: string
+  slug: string
+  createdAt: string | Date
+  daysRemaining?: number | null
+  demoTemplate?: string | null
+  demoCreatedBy?: { displayName?: string | null; email?: string | null } | null
+}
 
 interface DemoTenantsTableProps {
   items: DemoTenantRow[]

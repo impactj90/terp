@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { employeeOtherEmploymentsRouter } from "../employeeOtherEmployments"
@@ -103,7 +104,7 @@ function createTestContext(
 describe("employeeOtherEmployments.list", () => {
   it("returns other employments for employee", async () => {
     const employments = [makeEmployment()]
-    vi.mocked(otherEmploymentService.list).mockResolvedValue(employments)
+    vi.mocked(otherEmploymentService.list).mockResolvedValue(employments as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({ employeeId: EMP_ID })
@@ -123,7 +124,7 @@ describe("employeeOtherEmployments.list", () => {
 describe("employeeOtherEmployments.create", () => {
   it("creates employment successfully", async () => {
     const created = makeEmployment()
-    vi.mocked(otherEmploymentService.create).mockResolvedValue(created)
+    vi.mocked(otherEmploymentService.create).mockResolvedValue(created as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.create({
@@ -161,7 +162,7 @@ describe("employeeOtherEmployments.create", () => {
 describe("employeeOtherEmployments.update", () => {
   it("performs partial update", async () => {
     const updated = makeEmployment({ employerName: "Schmidt AG", isMinijob: true })
-    vi.mocked(otherEmploymentService.update).mockResolvedValue(updated)
+    vi.mocked(otherEmploymentService.update).mockResolvedValue(updated as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({

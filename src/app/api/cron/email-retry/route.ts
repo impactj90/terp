@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
     let succeeded = 0
     let failed = 0
-    let skipped = 0
+    const skipped = 0
 
     // 3. Process each record
     for (const record of records) {

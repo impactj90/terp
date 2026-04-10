@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Phase 1: Grundeinrichtung (Basic Setup)
  *

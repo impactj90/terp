@@ -27,7 +27,7 @@ const mockPriceList = {
   createdById: null,
 }
 
-const mockPriceList2 = {
+const _mockPriceList2 = {
   ...mockPriceList,
   id: PRICE_LIST_ID_2,
   name: "VIP Price List",

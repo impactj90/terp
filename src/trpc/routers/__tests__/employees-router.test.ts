@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { Prisma } from "@/generated/prisma/client"
 import { createCallerFactory } from "@/trpc/init"
@@ -462,11 +463,10 @@ describe("employees.create", () => {
     await expect(
       caller.create({
         personnelNumber: "EMP002",
-        pin: "1",
         firstName: "Jane",
         lastName: "Doe",
         entryDate: new Date("2025-01-01"),
-      })
+      } as any)
     ).rejects.toThrow("PIN already exists")
   })
 

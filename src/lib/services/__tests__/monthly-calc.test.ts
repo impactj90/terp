@@ -1472,13 +1472,13 @@ describe("Integration Scenarios", () => {
 // ==========================================================================
 
 describe("AUDIT-002: tenantId is required and propagated to all queries", () => {
-  const OTHER_TENANT = "t-other"
+  const _OTHER_TENANT = "t-other"
 
   it("AUDIT-002: constructor requires tenantId (not optional)", () => {
     // TypeScript enforces this at compile time. At runtime we verify that
     // the tenantId is stored and used — construct with a known value and
     // call a method that hits Prisma, then inspect the where clause.
-    const { prisma, mocks } = createMockPrisma()
+    const { prisma } = createMockPrisma()
     const svc = new MonthlyCalcService(prisma, TENANT_ID)
 
     // Verify service was created successfully with tenantId

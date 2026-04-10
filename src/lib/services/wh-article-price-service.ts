@@ -132,7 +132,7 @@ export async function updatePriceList(
   input: { name?: string; isDefault?: boolean; isActive?: boolean },
   audit?: AuditContext
 ) {
-  const existing = await verifyPriceList(prisma, tenantId, id)
+  await verifyPriceList(prisma, tenantId, id)
 
   if (input.name !== undefined && !input.name.trim()) {
     throw new WhArticlePriceValidationError("Name is required")

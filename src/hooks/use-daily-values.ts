@@ -1,5 +1,5 @@
 import { useTRPC } from "@/trpc"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // Keep the existing DailyValue interface (snake_case) for backward compatibility

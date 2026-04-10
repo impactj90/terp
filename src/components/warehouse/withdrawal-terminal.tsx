@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  Check, ChevronRight, ClipboardList, FileText, Wrench, PackageMinus,
+  Check, ClipboardList, FileText, Wrench, PackageMinus,
   PackageOpen, ArrowRight, RotateCcw, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

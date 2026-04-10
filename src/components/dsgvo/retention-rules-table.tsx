@@ -41,7 +41,7 @@ const ANONYMIZABLE_TYPES = new Set(['ABSENCES', 'STOCK_MOVEMENTS'])
 interface EditingState {
   dataType: string
   retentionMonths: number
-  action: string
+  action: 'DELETE' | 'ANONYMIZE'
   isActive: boolean
   description: string | null
 }
@@ -75,7 +75,7 @@ export function RetentionRulesTable() {
     setEditing({
       dataType: rule.dataType,
       retentionMonths: rule.retentionMonths,
-      action: rule.action,
+      action: rule.action as 'DELETE' | 'ANONYMIZE',
       isActive: rule.isActive,
       description: rule.description,
     })
@@ -174,7 +174,7 @@ export function RetentionRulesTable() {
                     <Select
                       value={editing.action}
                       onValueChange={(val) =>
-                        setEditing({ ...editing, action: val })
+                        setEditing({ ...editing, action: val as 'DELETE' | 'ANONYMIZE' })
                       }
                       disabled={!ANONYMIZABLE_TYPES.has(rule.dataType)}
                     >

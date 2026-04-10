@@ -6,13 +6,9 @@ import {
 } from "./helpers/nav";
 import {
   fillInput,
-  selectOption,
   submitAndWaitForClose,
   expectTableContains,
-  openRowActions,
-  clickMenuItem,
   clickTab,
-  openCreateDialog,
   waitForSheet,
 } from "./helpers/forms";
 
@@ -25,7 +21,7 @@ import {
 test.describe.serial("Mitarbeiter (Employee Management)", () => {
   const EMPLOYEE_FIRST = "E2E";
   const EMPLOYEE_LAST = "Testmitarbeiter";
-  const EMPLOYEE_FULL = `${EMPLOYEE_FIRST} ${EMPLOYEE_LAST}`;
+  const _EMPLOYEE_FULL = `${EMPLOYEE_FIRST} ${EMPLOYEE_LAST}`;
   const EMPLOYEE_EMAIL = "e2e-employee@test.local";
   const EMPLOYEE_PERSONNEL_NR = "E2E-001";
   const EMPLOYEE_PIN = "1234";

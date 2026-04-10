@@ -20,14 +20,15 @@ import { createCallerFactory } from "../../init"
 import { platformAuditLogsRouter } from "../auditLogs"
 import { createMockPlatformContext } from "../../__tests__/helpers"
 import { PlatformAuditLogNotFoundError } from "@/lib/platform/audit-service"
+import type * as PlatformAuditService from "@/lib/platform/audit-service"
 
 const listMock = vi.fn()
 const getByIdMock = vi.fn()
 
 vi.mock("@/lib/platform/audit-service", async () => {
-  const actual = await vi.importActual<
-    typeof import("@/lib/platform/audit-service")
-  >("@/lib/platform/audit-service")
+  const actual = await vi.importActual<typeof PlatformAuditService>(
+    "@/lib/platform/audit-service"
+  )
   return {
     ...actual,
     list: (...args: unknown[]) => listMock(...args),

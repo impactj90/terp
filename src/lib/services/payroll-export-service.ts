@@ -168,7 +168,7 @@ function generateDatevLodas(
     }
 
     // Account-based wage types (dynamic)
-    for (const [accountId, info] of Object.entries(accountInfoMap)) {
+    for (const [_accountId, info] of Object.entries(accountInfoMap)) {
       const hours = line.accountValues[info.code] ?? 0
       if (hours > 0) {
         const lohnart = info.payrollCode || info.code

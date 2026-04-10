@@ -119,9 +119,9 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const positions = Array.isArray((rec as any).positionTemplate)
-    ? ((rec as any).positionTemplate as Array<{
+  const recWithPositions = rec as { positionTemplate?: unknown }
+  const positions = Array.isArray(recWithPositions.positionTemplate)
+    ? (recWithPositions.positionTemplate as Array<{
         type?: string
         description?: string
         quantity?: number
@@ -152,7 +152,7 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
                 {rec.isActive ? t('active') : t('inactive')}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                {INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as any) : rec.interval}
+                {INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as Parameters<typeof t>[0]) : rec.interval}
               </span>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function RecurringDetail({ id }: RecurringDetailProps) {
             <div>
               <DetailRow label={t('customer')} value={(rec.address as { company?: string })?.company ?? '-'} />
               <DetailRow label={t('contact')} value={rec.contact ? `${(rec.contact as { firstName?: string }).firstName ?? ''} ${(rec.contact as { lastName?: string }).lastName ?? ''}`.trim() : '-'} />
-              <DetailRow label={t('interval')} value={INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as any) : rec.interval} />
+              <DetailRow label={t('interval')} value={INTERVAL_KEYS[rec.interval] ? t(INTERVAL_KEYS[rec.interval] as Parameters<typeof t>[0]) : rec.interval} />
               <DetailRow label={t('startDate')} value={formatDate(rec.startDate)} />
               <DetailRow label={t('endDate')} value={formatDate(rec.endDate)} />
             </div>

@@ -25,7 +25,7 @@ const mockAddress = {
   company: "Test GmbH",
 }
 
-const mockContact = {
+const _mockContact = {
   id: CONTACT_ID,
   tenantId: TENANT_ID,
   addressId: ADDRESS_ID,
@@ -33,7 +33,7 @@ const mockContact = {
   lastName: "Mustermann",
 }
 
-const mockInquiry = {
+const _mockInquiry = {
   id: INQUIRY_ID,
   tenantId: TENANT_ID,
   number: "V-1",
@@ -376,7 +376,7 @@ describe("billing-service-case-service", () => {
       ;(prisma.billingDocumentPosition.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
       ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
-      const result = await service.createInvoice(
+      const _result = await service.createInvoice(
         prisma,
         TENANT_ID,
         CASE_ID,

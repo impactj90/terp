@@ -292,7 +292,7 @@ export async function createPayment(
   )
   const effectiveTotalGross = document.totalGross - creditNoteReduction
   const paidAmount = document.payments.reduce((sum, p) => sum + p.amount, 0)
-  const openAmount = effectiveTotalGross - paidAmount
+  const _openAmount = effectiveTotalGross - paidAmount
 
   // 5. Handle discount payments
   if (input.isDiscount) {

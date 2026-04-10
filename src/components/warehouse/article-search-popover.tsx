@@ -34,7 +34,7 @@ interface ArticleSearchPopoverProps {
  * - Typing text and pressing Enter/blurring calls `onFreeTextCommit` (FREETEXT mode)
  */
 export function ArticleSearchPopover({
-  value,
+  value: _value,
   onSelect,
   onFreeTextCommit,
   placeholder,

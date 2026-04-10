@@ -14,11 +14,12 @@
  *   → TeamStatsCards + TeamAttendanceList re-render
  */
 import { test, expect } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { ADMIN_STORAGE, USER_STORAGE } from "./helpers/auth"
 
 /** Helper: get the numeric value from a StatsCard by its title text */
 async function getStatsCardValue(
-  page: import("@playwright/test").Page,
+  page: Page,
   titleText: string | RegExp
 ): Promise<number> {
   // StatsCard structure: <div class="...border bg-card p-6">

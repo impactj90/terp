@@ -27,6 +27,7 @@ import { decimalToNumber, mapBalanceToOutput } from "./vacation-balance-output"
 import * as repo from "./vacation-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext, AuditLogCreateInput } from "./audit-logs-service"
+import type { VacationBasis } from "./vacation-calculation"
 
 // --- Audit Constants ---
 
@@ -827,7 +828,7 @@ export async function initializeBatch(
       }
 
       // Resolve vacation basis from pre-fetched tenant + tariff + calcGroup
-      let basis: import("./vacation-calculation").VacationBasis = "calendar_year"
+      let basis: VacationBasis = "calendar_year"
       if (tenantVacationBasis) {
         basis = tenantVacationBasis as typeof basis
       }

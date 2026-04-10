@@ -5,6 +5,7 @@
  * use tenant-scoped repository methods instead of direct Prisma writes.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Constants ---
 
@@ -157,7 +158,7 @@ describe("AUDIT-004: billing-document-einvoice-service tenant isolation", () => 
           leitwegId: null,
         }),
       },
-    } as unknown as import("@/generated/prisma/client").PrismaClient
+    } as unknown as PrismaClient
 
     const { generateAndStoreEInvoice } = await import(
       "../billing-document-einvoice-service"
@@ -170,7 +171,7 @@ describe("AUDIT-004: billing-document-einvoice-service tenant isolation", () => 
 
     // Verify tenantId is passed as second argument
     const [calledPrisma, calledTenantId, calledDocId, calledData] =
-      (billingDocRepo.update as ReturnType<typeof vi.fn>).mock.calls[0]
+      (billingDocRepo.update as ReturnType<typeof vi.fn>).mock.calls[0]!
 
     expect(calledPrisma).toBe(prisma)
     expect(calledTenantId).toBe(TENANT_ID)
@@ -202,7 +203,7 @@ describe("AUDIT-004: billing-document-einvoice-service tenant isolation", () => 
       billingDocument: {
         update: vi.fn(),
       },
-    } as unknown as import("@/generated/prisma/client").PrismaClient
+    } as unknown as PrismaClient
 
     const { generateAndStoreEInvoice } = await import(
       "../billing-document-einvoice-service"
@@ -265,7 +266,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
       macroAssignment: {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-    } as unknown as import("@/generated/prisma/client").PrismaClient
+    } as unknown as PrismaClient
   }
 
   beforeEach(() => {
@@ -311,7 +312,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     )
 
     // Verify the data shape includes all 4 required fields
-    const updateCall = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0]
+    const updateCall = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0]!
     const data = updateCall[3]
     expect(data).toHaveProperty("completedAt")
     expect(data).toHaveProperty("status")
@@ -393,7 +394,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     // The error is caught in executeDueMacros and counted as failed
     expect(result.failed).toBe(1)
     expect(result.errors).toHaveLength(1)
-    expect(result.errors[0].error).toBe("Unexpected runtime crash")
+    expect(result.errors[0]!.error).toBe("Unexpected runtime crash")
 
     // Verify updateExecution was called in catch block with "failed" + error message
     expect(macrosRepo.updateExecution).toHaveBeenCalledTimes(1)
@@ -410,7 +411,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     )
 
     // Verify it was the catch block path -- status "failed" with empty result object
-    const data = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0][3]
+    const data = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0]![3]
     expect(data.status).toBe("failed")
     expect(data.result).toEqual({})
 
@@ -442,7 +443,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     // Verify macroAssignment.updateMany includes tenantId in where clause
     const updateManyMock = (prisma.macroAssignment as unknown as { updateMany: ReturnType<typeof vi.fn> }).updateMany
     expect(updateManyMock).toHaveBeenCalledTimes(1)
-    const updateManyCall = updateManyMock.mock.calls[0][0]
+    const updateManyCall = updateManyMock.mock.calls[0]![0]
     expect(updateManyCall.where).toHaveProperty("tenantId", TENANT_ID)
     expect(updateManyCall.where).toHaveProperty("id")
   })
@@ -481,7 +482,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     // Verify macroAssignment.updateMany includes tenantId in where clause
     const updateManyMock = (prisma.macroAssignment as unknown as { updateMany: ReturnType<typeof vi.fn> }).updateMany
     expect(updateManyMock).toHaveBeenCalledTimes(1)
-    const updateManyCall = updateManyMock.mock.calls[0][0]
+    const updateManyCall = updateManyMock.mock.calls[0]![0]
     expect(updateManyCall.where).toHaveProperty("tenantId", TENANT_ID)
     expect(updateManyCall.where).toHaveProperty("id")
   })
@@ -507,7 +508,7 @@ describe("AUDIT-004: macro-executor tenant isolation", () => {
     await executor.executeDueMacros(TENANT_ID, monday)
 
     // Get the data argument (4th arg) passed to updateExecution
-    const data = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0][3]
+    const data = (macrosRepo.updateExecution as ReturnType<typeof vi.fn>).mock.calls[0]![3]
 
     // Verify each field type matches the repo's expected signature:
     // { completedAt: Date, status: string, result: object, errorMessage: string | null }

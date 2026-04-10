@@ -68,7 +68,6 @@ export function DayView({
   }))
 
   // Compute timeline segments from booking pairs
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const timelineSegments = useMemo(() => {
     if (transformedBookings.length === 0) return []
 
@@ -123,7 +122,6 @@ export function DayView({
   }, [transformedBookings, t])
 
   // Current time in minutes for "now" marker (only for today)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const currentTimeMinutes = useMemo(() => {
     if (!today) return null
     const now = new Date()

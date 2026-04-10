@@ -18,6 +18,7 @@
  */
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import type { PrismaClient } from "@/generated/prisma/client"
 import {
   platformAuthedProcedure,
   createTRPCRouter,
@@ -28,7 +29,7 @@ import * as platformAudit from "@/lib/platform/audit-service"
 const uuid = z.string().uuid()
 
 async function assertNotLastActive(
-  prisma: import("@/generated/prisma/client").PrismaClient
+  prisma: PrismaClient
 ): Promise<void> {
   const activeCount = await prisma.platformUser.count({
     where: { isActive: true },

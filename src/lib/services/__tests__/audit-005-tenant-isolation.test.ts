@@ -56,7 +56,7 @@ describe("AUDIT-005: resolveTariff tenant scoping", () => {
     expect(findFirstMock).toHaveBeenCalledTimes(1)
 
     // Extract the where clause from the call
-    const callArgs = findFirstMock.mock.calls[0][0]
+    const callArgs = findFirstMock.mock.calls[0]![0]
     const where = callArgs.where
 
     // tenantId MUST be present in the where clause
@@ -85,7 +85,7 @@ describe("AUDIT-005: resolveTariff tenant scoping", () => {
       TENANT_B
     )
 
-    const where = findFirstMock.mock.calls[0][0].where
+    const where = findFirstMock.mock.calls[0]![0].where
     expect(where.tenantId).toBe(TENANT_B)
     // Ensure it is NOT some other tenant
     expect(where.tenantId).not.toBe(TENANT_A)
@@ -132,7 +132,7 @@ describe("AUDIT-005: resolveTariff tenant scoping", () => {
     expect(result).toBeNull()
 
     // Verify tenantId was indeed in the where clause
-    const where = findFirstMock.mock.calls[0][0].where
+    const where = findFirstMock.mock.calls[0]![0].where
     expect(where).toHaveProperty("tenantId", TENANT_A)
   })
 })
@@ -166,7 +166,7 @@ describe("AUDIT-005: findEmployeeDayPlan tenant scoping", () => {
 
     expect(findFirstMock).toHaveBeenCalledTimes(1)
 
-    const callArgs = findFirstMock.mock.calls[0][0]
+    const callArgs = findFirstMock.mock.calls[0]![0]
     const where = callArgs.where
 
     // tenantId MUST be present in the where clause
@@ -188,7 +188,7 @@ describe("AUDIT-005: findEmployeeDayPlan tenant scoping", () => {
     const planDate = new Date("2026-03-23")
     await findEmployeeDayPlan(prisma, TENANT_B, EMPLOYEE_ID, planDate)
 
-    const where = findFirstMock.mock.calls[0][0].where
+    const where = findFirstMock.mock.calls[0]![0].where
     expect(where.tenantId).toBe(TENANT_B)
     expect(where.tenantId).not.toBe(TENANT_A)
   })

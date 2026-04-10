@@ -12,7 +12,7 @@ import { MonthlyCalcService } from "@/lib/services/monthly-calc";
 import * as repo from "./employees-repository";
 import * as auditLog from "./audit-logs-service";
 import type { AuditContext } from "./audit-logs-service";
-import { encryptField, decryptField, isEncrypted } from "./field-encryption";
+import { encryptField } from "./field-encryption";
 import { validateIban, validateTaxId, validateSocialSecurityNumber, validateContributionGroupCode, validateActivityCode, validateTaxClass } from "./payroll-validators";
 
 // --- Error Classes ---

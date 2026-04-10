@@ -16,8 +16,8 @@ const ARTICLE_NAME = "E2E Testschraube M8x40";
 const ARTICLE_NAME_2 = "E2E Unterlegscheibe M8";
 const ARTICLE_SELL_PRICE = "4.50";
 const GROUP_NAME = "E2E Befestigungsmaterial";
-const GROUP_CHILD_NAME = "E2E Schrauben";
-const SUPPLIER_COMPANY = "E2E Lieferant AG";
+const _GROUP_CHILD_NAME = "E2E Schrauben";
+const _SUPPLIER_COMPANY = "E2E Lieferant AG";
 
 test.describe.serial("UC-WH-01: Article Management", () => {
   // ─── Pre-condition: Enable warehouse module ────────────────────

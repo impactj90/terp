@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Phase 6: Verwaltung & Genehmigungen (Admin View)
  *
@@ -32,7 +33,7 @@ const ABSENCE_THOMAS_PENDING_VAC = "00000000-0000-0000-0000-000000015008"
 
 // Seed daily value IDs with errors
 const DV_ADMIN_MISSING_BREAK = "00000000-0000-0000-0000-000000003013" // has_error=true, NO_BREAK_RECORDED
-const DV_USER_MISSING_CLOCK_OUT = "00000000-0000-0000-0000-000000004007" // has_error=true, MISSING_GO
+const _DV_USER_MISSING_CLOCK_OUT = "00000000-0000-0000-0000-000000004007" // has_error=true, MISSING_GO
 
 // Seed monthly value IDs (January 2026, open)
 const MV_ADMIN_JAN = "00000000-0000-0000-0000-000000005001"

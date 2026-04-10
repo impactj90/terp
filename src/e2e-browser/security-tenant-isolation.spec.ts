@@ -108,9 +108,9 @@ type BatchResult = Array<{
 function expectNotFound(body: unknown): void {
   const arr = body as BatchResult;
   expect(arr).toHaveLength(1);
-  expect(arr[0].error).toBeDefined();
-  expect(arr[0].result).toBeUndefined();
-  expect(arr[0].error!.data!.code).toBe("NOT_FOUND");
+  expect(arr[0]!.error).toBeDefined();
+  expect(arr[0]!.result).toBeUndefined();
+  expect(arr[0]!.error!.data!.code).toBe("NOT_FOUND");
 }
 
 /**
@@ -120,9 +120,9 @@ function expectNotFound(body: unknown): void {
 function expectDenied(body: unknown): void {
   const arr = body as BatchResult;
   expect(arr).toHaveLength(1);
-  expect(arr[0].error).toBeDefined();
-  expect(arr[0].result).toBeUndefined();
-  const code = arr[0].error!.data!.code;
+  expect(arr[0]!.error).toBeDefined();
+  expect(arr[0]!.result).toBeUndefined();
+  const code = arr[0]!.error!.data!.code;
   expect(["NOT_FOUND", "FORBIDDEN"]).toContain(code);
 }
 

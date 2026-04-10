@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { employeeSavingsRouter } from "../employeeSavings"
@@ -109,7 +110,7 @@ function createTestContext(
 describe("employeeSavings.list", () => {
   it("returns savings for employee", async () => {
     const savings = [makeSavings()]
-    vi.mocked(savingsService.list).mockResolvedValue(savings)
+    vi.mocked(savingsService.list).mockResolvedValue(savings as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.list({ employeeId: EMP_ID })
@@ -128,7 +129,7 @@ describe("employeeSavings.list", () => {
 describe("employeeSavings.create", () => {
   it("creates saving with encrypted IBAN (verifies call args)", async () => {
     const created = makeSavings()
-    vi.mocked(savingsService.create).mockResolvedValue(created)
+    vi.mocked(savingsService.create).mockResolvedValue(created as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.create({
@@ -167,7 +168,7 @@ describe("employeeSavings.create", () => {
 describe("employeeSavings.update", () => {
   it("performs partial update", async () => {
     const updated = makeSavings({ recipient: "LBS Bayern" })
-    vi.mocked(savingsService.update).mockResolvedValue(updated)
+    vi.mocked(savingsService.update).mockResolvedValue(updated as any)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({

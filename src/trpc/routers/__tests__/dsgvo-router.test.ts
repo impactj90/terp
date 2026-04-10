@@ -107,7 +107,7 @@ describe("dsgvo router", () => {
       const caller = createCaller(ctx)
       const result = await caller.rules.list({})
       expect(result).toHaveLength(1)
-      expect(result[0].dataType).toBe("BOOKINGS")
+      expect(result[0]!.dataType).toBe("BOOKINGS")
       expect(dsgvoService.listRules).toHaveBeenCalledWith(
         expect.anything(),
         TENANT_ID
@@ -193,7 +193,7 @@ describe("dsgvo router", () => {
       const caller = createCaller(ctx)
       const result = await caller.preview({})
       expect(result).toHaveLength(1)
-      expect(result[0].count).toBe(42)
+      expect(result[0]!.count).toBe(42)
       expect(dsgvoService.previewRetention).toHaveBeenCalledWith(
         expect.anything(),
         TENANT_ID,
@@ -219,7 +219,7 @@ describe("dsgvo router", () => {
       const caller = createCaller(ctx)
       const result = await caller.execute({ dryRun: false })
       expect(result).toHaveLength(1)
-      expect(result[0].recordCount).toBe(42)
+      expect(result[0]!.recordCount).toBe(42)
     })
 
     it("throws FORBIDDEN without dsgvo.execute permission", async () => {

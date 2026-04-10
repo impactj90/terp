@@ -35,7 +35,6 @@ export function WithdrawalArticleRow({
   const tc = useTranslations('common')
   const isOverStock = quantity > article.currentStock
   const isBelowMin = article.minStock != null && article.currentStock - quantity < article.minStock
-  const isActive = quantity > 0 && !isOverStock
 
   return (
     <TableRow className={cn(

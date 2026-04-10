@@ -84,7 +84,7 @@ export function DocumentForwardDialog({
             {allowedTargets.map((target) => (
               <div key={target.type} className="flex items-center space-x-2">
                 <RadioGroupItem value={target.type} id={target.type} />
-                <Label htmlFor={target.type}>{t(target.key as any)}</Label>
+                <Label htmlFor={target.type}>{t(target.key as Parameters<typeof t>[0])}</Label>
               </div>
             ))}
           </RadioGroup>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Phase 8: Schichtplanung & Automatisierung
  *

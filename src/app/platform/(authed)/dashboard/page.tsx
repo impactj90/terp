@@ -209,7 +209,7 @@ export default function PlatformDashboardPage() {
               </p>
             ) : (
               <ul className="divide-y">
-                {auditQuery.data!.items.slice(0, 10).map((entry) => (
+                {(auditQuery.data!.items as unknown as Array<{ id: string; action: string; targetTenantId: string | null; platformUserId: string | null; performedAt: Date }>).slice(0, 10).map((entry) => (
                   <li
                     key={entry.id}
                     className="flex items-center justify-between gap-3 py-2 text-sm"

@@ -91,7 +91,6 @@ export function RecurringForm({ editId }: RecurringFormProps) {
         setPositions(d.positionTemplate as PositionTemplate[])
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId, !!existingData])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -211,7 +210,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                   <SelectContent>
                     {INTERVALS.map((i) => (
                       <SelectItem key={i.value} value={i.value}>
-                        {t(i.key as any)}
+                        {t(i.key as Parameters<typeof t>[0])}
                       </SelectItem>
                     ))}
                   </SelectContent>

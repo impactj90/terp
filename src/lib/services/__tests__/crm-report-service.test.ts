@@ -244,7 +244,7 @@ describe("crm-report-service", () => {
     })
 
     it("calculates average days to close for closed inquiries", async () => {
-      const now = new Date("2026-03-17")
+      const _now = new Date("2026-03-17")
       const created = new Date("2026-03-10")
       const closed = new Date("2026-03-17")
 

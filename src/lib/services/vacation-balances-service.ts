@@ -148,7 +148,7 @@ async function carryoverFromPreviousYearBatch(
   employeeId: string,
   year: number,
   prevBalanceMap: Map<string, { entitlement: unknown; carryover: unknown; adjustments: unknown; taken: unknown }>,
-  currentBalanceMap: Map<string, { id: string }>
+  _currentBalanceMap: Map<string, { id: string }>
 ) {
   const prevBalance = prevBalanceMap.get(employeeId)
   if (!prevBalance) return

@@ -10,6 +10,7 @@
  * @see apps/api/internal/middleware/authorization.go
  */
 import { TRPCError } from "@trpc/server"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { createMiddleware } from "@/trpc/init"
 import type { ContextUser } from "@/trpc/init"
 import {
@@ -165,7 +166,7 @@ export function requireEmployeePermission(
       // Team-based read access: if user has ownPermission and shares a team
       // with the target employee, allow read access (e.g. team overview).
       if (user.employeeId && hasPermission(user, ownPermission)) {
-        const prisma = (ctx as { prisma: import("@/generated/prisma/client").PrismaClient }).prisma
+        const prisma = (ctx as { prisma: PrismaClient }).prisma
         const sharedTeam = await prisma.teamMember.findFirst({
           where: {
             employeeId: targetEmployeeId,

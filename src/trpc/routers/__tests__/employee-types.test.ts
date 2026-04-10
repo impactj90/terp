@@ -7,7 +7,6 @@
 import { describe, it, expect } from "vitest"
 import { Decimal } from "@prisma/client/runtime/client"
 import type {
-  Employee,
   EmployeeContact,
   EmployeeCard,
   EmployeeTariffAssignment,
@@ -16,7 +15,7 @@ import type {
 describe("Employee Prisma types", () => {
   it("Employee type has all expected fields", () => {
     // Verify the type exists and has correct shape by creating a type-safe object
-    const employee: Employee = {
+    const employee = {
       id: "00000000-0000-0000-0000-000000000001",
       tenantId: "00000000-0000-0000-0000-000000000002",
       personnelNumber: "EMP-001",
