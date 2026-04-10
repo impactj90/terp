@@ -9915,6 +9915,84 @@ Das System zeigt eine Warnung an, wenn eine konfigurierte Frist unter dem gesetz
 22. ✅ Abschnitt „Löschprotokoll" zeigt neuen Eintrag mit Datum, Datentyp „Buchungen", Aktion „Löschen", Anzahl und Dauer
 23. ✅ Spalte „Ausgeführt von" zeigt den aktuellen Benutzer
 
+### 21.8 Support-Zugriff durch den Betreiber
+
+Der Betreiber (Plattform-Admin) kann bei Bedarf auf den Mandanten
+zugreifen, um Fehler nachzuvollziehen oder Support zu leisten. Dieser
+Zugriff ist **nicht** dauerhaft möglich, sondern ausschließlich nach
+ausdrücklicher Freigabe durch einen Mandanten-Administrator und streng
+zeitlich begrenzt.
+
+📍 Seitenleiste → **Verwaltung** → **Support-Zugriff**
+⚠️ Berechtigung `tenant.manage_support_access` erforderlich
+(standardmäßig ADMIN)
+
+**Antrag und Freigabe eines Support-Zugriffs**
+
+1. Mandanten-Administrator öffnet die Support-Zugriff-Seite
+2. Klick auf **„Neuer Support-Zugriff"**
+3. Eingabe eines **Grunds** (mindestens 10 Zeichen, z. B. Ticket-Nr.
+   oder Fehlerbeschreibung)
+4. Festlegung der **Gültigkeitsdauer** (TTL, maximal 240 Minuten)
+5. Speichern → Antrag erscheint in der Tabelle mit Status „pending"
+6. Der Betreiber kann den Antrag innerhalb von 30 Minuten annehmen;
+   ungenutzte Anträge laufen automatisch ab
+7. Solange eine Support-Session aktiv ist, wird im Mandanten ein
+   **gelber Banner** am oberen Bildschirmrand angezeigt
+8. Der Mandant kann die Freigabe jederzeit widerrufen — Klick auf
+   **„Widerrufen"** in der Zeile des Antrags
+
+**Rechtsgrundlage**
+
+Die Verarbeitung personenbezogener Daten während einer
+Support-Session stützt sich auf:
+
+- **Art. 6 Abs. 1 lit. b DSGVO** — Erforderlichkeit zur Erfüllung des
+  SaaS-Vertrags (Störungsbeseitigung, Mängelgewährleistung)
+- **Art. 6 Abs. 1 lit. f DSGVO** — berechtigtes Interesse des
+  Verantwortlichen und des Betreibers an stabilen, fehlerfreien
+  Diensten
+
+**Dokumentationspflicht**
+
+Jeder Support-Zugriff wird doppelt protokolliert:
+
+- **Mandanten-Audit-Log** (`/admin/audit-logs`): sichtbar für den
+  Mandanten. Einträge: `support_session.requested`,
+  `support_session.revoked`, `support_session.expired`
+- **Plattform-Audit-Log** (nur für den Betreiber sichtbar): zusätzlich
+  Einträge `support_session.activated` und `impersonation.mutation`
+  für jede schreibende Aktion
+
+Der angegebene **Grund** und die **Consent-Referenz** (Support-Session-ID)
+werden in beiden Logs festgehalten und sind nachträglich nicht
+änderbar.
+
+**AVV-Ergänzung (Auftragsverarbeitungsvertrag)**
+
+- **Audit-Trail** — Sämtliche Zugriffe sind in `platform_audit_logs`
+  lückenlos nachvollziehbar (Login, Aktivierung, jede Schreibaktion,
+  Widerruf, Ablauf)
+- **Zweckbindung** — Zugriff ausschließlich zur Bearbeitung des im
+  Antrag angegebenen Grunds
+- **Time-To-Live (TTL)** — Sessions laufen nach spätestens der vom
+  Mandanten festgelegten Zeitspanne automatisch ab; ein Cron-Job
+  (`/api/cron/platform-cleanup`, alle 5 Minuten) flippt abgelaufene
+  und unbeantwortete Sessions auf `expired`
+- **Widerrufsrecht** — Der Mandant kann jede Session jederzeit ohne
+  Angabe von Gründen beenden
+
+**Hinweis zur UI**
+
+Während einer aktiven Support-Session ist der gelbe Banner oben im
+Mandanten für alle Benutzer sichtbar. Der Banner zeigt:
+- Name des Betreibers
+- Ablaufzeit der Session
+- Schnell-Link zum Widerrufen
+
+Dies stellt sicher, dass der Mandant jederzeit weiß, dass gerade ein
+externer Operator Einsicht hat.
+
 ---
 
 ## 21b. E-Mail-Versand

@@ -238,6 +238,12 @@ DELETE FROM bookings WHERE notes LIKE 'E2E%';
 DELETE FROM user_tenants WHERE user_id IN (SELECT id FROM users WHERE email = 'e2e-test@dev.local');
 DELETE FROM users WHERE email = 'e2e-test@dev.local';
 DELETE FROM user_groups WHERE code = 'E2E-GRP';
+
+-- Support session records (spec 99-platform-support-consent.spec.ts)
+DELETE FROM platform_audit_logs WHERE support_session_id IN (
+  SELECT id FROM support_sessions WHERE reason LIKE 'E2E%'
+);
+DELETE FROM support_sessions WHERE reason LIKE 'E2E%';
 DELETE FROM holidays WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND holiday_date >= '2027-01-01' AND holiday_date < '2028-01-01';
 
 -- ═══════════════════════════════════════════════════════════════════════════
