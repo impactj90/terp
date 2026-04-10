@@ -12,8 +12,12 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { LogIn, Ban } from "lucide-react"
+import { LogIn, Ban, ExternalLink } from "lucide-react"
 import { usePlatformTRPC } from "@/trpc/platform/context"
+import {
+  platformImpersonationStorage,
+  tenantIdStorage,
+} from "@/lib/storage"
 import {
   Card,
   CardContent,
@@ -175,15 +179,43 @@ export default function PlatformSupportSessionsPage() {
                     Beitreten
                   </Button>
                 ) : r.status === "active" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={revoke.isPending}
-                    onClick={() => revoke.mutate({ id: r.id })}
-                  >
-                    <Ban className="mr-1 size-3" />
-                    Widerrufen
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Seed both storage slots so the tenant tRPC
+                        // client (src/trpc/client.tsx) picks up the
+                        // impersonation on its very first request and
+                        // the TenantProvider auto-selects without racing
+                        // tenants.list.
+                        platformImpersonationStorage.set({
+                          supportSessionId: r.id,
+                          tenantId: r.tenant.id,
+                          expiresAt:
+                            typeof r.expiresAt === "string"
+                              ? r.expiresAt
+                              : r.expiresAt.toISOString(),
+                        })
+                        tenantIdStorage.setTenantId(r.tenant.id)
+                        // Hard navigation — not router.push — so the
+                        // tenant app's provider tree re-initializes and
+                        // reads the new impersonation state on mount.
+                        window.location.href = "/de/dashboard"
+                      }}
+                    >
+                      <ExternalLink className="mr-1 size-3" />
+                      Tenant öffnen
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={revoke.isPending}
+                      onClick={() => revoke.mutate({ id: r.id })}
+                    >
+                      <Ban className="mr-1 size-3" />
+                      Widerrufen
+                    </Button>
+                  </div>
                 ) : null}
               </TableCell>
             </TableRow>

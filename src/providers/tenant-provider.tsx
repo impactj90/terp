@@ -69,7 +69,14 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const tenants = (tenantsData ?? []) as Tenant[]
   const currentTenant = tenants.find((t) => t.id === currentTenantId) ?? null
 
-  // Clear stale tenant ID if it's not in the available tenants list
+  // Clear stale tenant ID if it's not in the available tenants list.
+  //
+  // The `tenants.length === 0` guard is load-bearing for the platform
+  // impersonation flow (see thoughts/shared/plans/2026-04-10-platform-impersonation-ui-bridge.md):
+  // during the brief window before `tenants.list` responds, the empty
+  // array must not wipe tenantIdStorage — otherwise the tenant the
+  // operator just seeded from "Tenant öffnen" would be cleared and the
+  // dashboard would have no tenant selected. Do NOT remove this guard.
   useEffect(() => {
     if (!isInitialized || isLoadingTenants) return
     if (!currentTenantId || tenants.length === 0) return

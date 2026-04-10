@@ -155,7 +155,7 @@ export async function createTRPCContext(
   // permission checks succeed without modification.
   let impersonation: ImpersonationContext | null = null
 
-  if (!user) {
+  if (!user && serverEnv.platformImpersonationEnabled) {
     const cookieHeader = opts.req.headers.get("cookie") ?? ""
     const platformJwt =
       cookieHeader.match(/platform-session=([^;]+)/)?.[1] ?? null

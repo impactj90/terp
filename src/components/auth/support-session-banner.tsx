@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { LifeBuoy, X } from 'lucide-react'
+import { LifeBuoy, LogOut, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { platformImpersonationStorage } from '@/lib/storage'
 import {
   useActiveSupportSession,
   useHasPermission,
@@ -35,6 +36,17 @@ export function SupportSessionBanner() {
   ])
   const revokeMutation = useRevokeSupportAccess()
 
+  // Detect whether THIS browser holds an active impersonation slot.
+  // If yes, the viewer is the platform operator → show "Session verlassen".
+  // If no, they are a regular tenant user → show the permission-gated
+  // "Widerrufen" action. Read once on mount; the slot does not change
+  // during a session for the same viewer (cross-tab updates propagate
+  // via AuthProvider's storage listener — that suffices).
+  const [isOperatorView, setIsOperatorView] = React.useState(false)
+  React.useEffect(() => {
+    setIsOperatorView(!!platformImpersonationStorage.get())
+  }, [])
+
   const session = data as unknown as ActiveSession | null | undefined
 
   if (!session) return null
@@ -59,6 +71,17 @@ export function SupportSessionBanner() {
     revokeMutation.mutate({ id: session.id })
   }
 
+  const handleExit = () => {
+    // Clear local impersonation state and hard-navigate back to the
+    // Platform UI. The tenant app's AuthProvider will re-initialize on
+    // next mount and see null impersonation + null Supabase session,
+    // so ProtectedRoute will redirect any regular navigation to /login.
+    platformImpersonationStorage.clear()
+    if (typeof window !== 'undefined') {
+      window.location.href = '/platform/support-sessions'
+    }
+  }
+
   return (
     <div
       role="status"
@@ -73,7 +96,18 @@ export function SupportSessionBanner() {
             reason: session.reason,
           })}
         </span>
-        {canGrant && (
+        {isOperatorView ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 border-yellow-400 bg-yellow-50 text-yellow-900 hover:bg-yellow-200 dark:border-yellow-700 dark:bg-transparent dark:text-yellow-100 dark:hover:bg-yellow-900/40"
+            onClick={handleExit}
+          >
+            <LogOut className="mr-1 h-3 w-3" />
+            {t('bannerExit')}
+          </Button>
+        ) : canGrant ? (
           <Button
             type="button"
             size="sm"
@@ -85,7 +119,7 @@ export function SupportSessionBanner() {
             <X className="mr-1 h-3 w-3" />
             {t('bannerRevoke')}
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   )

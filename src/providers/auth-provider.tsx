@@ -12,7 +12,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useTRPC } from '@/trpc'
-import { authStorage } from '@/lib/storage'
+import {
+  authStorage,
+  platformImpersonationStorage,
+  type PlatformImpersonationRef,
+} from '@/lib/storage'
 import type { Session } from '@supabase/supabase-js'
 
 /**
@@ -75,6 +79,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const trpc = useTRPC()
   const [session, setSession] = useState<Session | null>(null)
   const [isSessionLoading, setIsSessionLoading] = useState(true)
+  // Platform operator impersonation state. Populated when the operator
+  // clicks "Tenant öffnen" in /platform/support-sessions (Phase 4). This
+  // acts as a second auth source alongside the normal Supabase session —
+  // either one being present makes the user "authenticated" for the
+  // purposes of ProtectedRoute, and both drive auth.me resolution.
+  const [impersonation, setImpersonation] =
+    useState<PlatformImpersonationRef | null>(null)
 
   // Listen for Supabase auth state changes
   useEffect(() => {
@@ -104,19 +115,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Load platform impersonation state from localStorage on mount
+    // (no-ops on SSR). Also listen for cross-tab storage events so that
+    // exiting the session in one operator tab propagates to any other.
+    setImpersonation(platformImpersonationStorage.get())
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'terp_platform_impersonation') {
+        setImpersonation(platformImpersonationStorage.get())
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage)
+    }
+
+    return () => {
+      subscription.unsubscribe()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage)
+      }
+    }
   }, [supabase])
 
-  // Fetch user data from tRPC when session is available
+  // Fetch user data from tRPC when EITHER auth source is available.
+  // During impersonation, the tRPC client (src/trpc/client.tsx) injects
+  // x-support-session-id and the backend (src/trpc/init.ts) synthesizes
+  // the Platform System sentinel as ctx.user — so auth.me resolves cleanly.
   const meQuery = useQuery(
     trpc.auth.me.queryOptions(undefined, {
-      enabled: !!session,
+      enabled: !!session || !!impersonation,
       retry: false,
       staleTime: 5 * 60 * 1000,
     })
   )
 
   const logout = useCallback(async () => {
+    // If an operator clicks the normal tenant-header Logout button while
+    // impersonating, surface a warning and recover cleanly. The intended
+    // exit path is the banner's "Session verlassen" action (Phase 4).
+    if (platformImpersonationStorage.get()) {
+      console.warn(
+        "[Auth] logout() called while platform impersonation is active. " +
+          "Use the 'Session verlassen' banner action instead — this also " +
+          'clears the impersonation state.',
+      )
+      platformImpersonationStorage.clear()
+      setImpersonation(null)
+    }
     await supabase.auth.signOut()
     authStorage.clearToken()
     queryClient.clear()
@@ -131,14 +175,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       user: meQuery.data?.user ?? null,
       session,
-      isLoading: isSessionLoading || (!!session && meQuery.isLoading),
-      isAuthenticated: !!session && !!meQuery.data?.user,
+      isLoading:
+        isSessionLoading ||
+        ((!!session || !!impersonation) && meQuery.isLoading),
+      isAuthenticated:
+        (!!session || !!impersonation) && !!meQuery.data?.user,
       error: meQuery.error as Error | null,
       logout,
       refetch,
     }),
     [
       session,
+      impersonation,
       isSessionLoading,
       meQuery.data,
       meQuery.isLoading,

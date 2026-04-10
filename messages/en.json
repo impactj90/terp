@@ -5135,7 +5135,8 @@
     "operatorUnassigned": "Not yet assigned",
     "bannerTitle": "Support access active",
     "bannerMessage": "Support access active until {time} — Operator: {operator}, Reason: {reason}",
-    "bannerRevoke": "Revoke access now"
+    "bannerRevoke": "Revoke access now",
+    "bannerExit": "Leave session"
   },
   "adminAccessControl": {
     "title": "Access Control",

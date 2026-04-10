@@ -209,13 +209,22 @@ export const tenantsRouter = createTRPCRouter({
     .output(z.array(tenantOutputSchema))
     .query(async ({ ctx, input }) => {
       try {
-        // Get user's authorized tenants via userTenants join table
-        const userTenants = await ctx.prisma.userTenant.findMany({
-          where: { userId: ctx.user.id },
-          include: { tenant: true },
-        })
+        let tenants: Array<Parameters<typeof toTenantOutput>[0]>
 
-        let tenants = userTenants.map((ut) => ut.tenant)
+        if (ctx.impersonation) {
+          // Impersonation: ctx.user.userTenants is synthesized in
+          // createTRPCContext (src/trpc/init.ts) with exactly one entry
+          // — the single active target tenant. The sentinel user has no
+          // user_tenants rows in the DB, so a findMany() would return [].
+          tenants = ctx.user.userTenants.map((ut) => ut.tenant)
+        } else {
+          // Normal path: user's authorized tenants via userTenants join
+          const userTenants = await ctx.prisma.userTenant.findMany({
+            where: { userId: ctx.user.id },
+            include: { tenant: true },
+          })
+          tenants = userTenants.map((ut) => ut.tenant)
+        }
 
         // Apply optional name filter (case-insensitive contains)
         if (input?.name) {

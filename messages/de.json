@@ -5135,7 +5135,8 @@
     "operatorUnassigned": "Noch nicht zugewiesen",
     "bannerTitle": "Support-Zugriff aktiv",
     "bannerMessage": "Support-Zugriff aktiv bis {time} — Operator: {operator}, Grund: {reason}",
-    "bannerRevoke": "Zugriff sofort entziehen"
+    "bannerRevoke": "Zugriff sofort entziehen",
+    "bannerExit": "Session verlassen"
   },
   "adminAccessControl": {
     "title": "Zutrittskontrolle",

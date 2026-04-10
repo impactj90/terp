@@ -4,12 +4,19 @@ import { useState } from "react"
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { TRPCClientError } from "@trpc/client"
-import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink } from "@trpc/client"
+import {
+  createTRPCClient,
+  httpBatchLink,
+  httpSubscriptionLink,
+  splitLink,
+  type TRPCLink,
+} from "@trpc/client"
+import { observable } from "@trpc/server/observable"
 import { toast } from "sonner"
 import type { AppRouter } from "@/trpc/routers/_app"
 import { TRPCProvider } from "./context"
 import { createClient } from "@/lib/supabase/client"
-import { tenantIdStorage } from "@/lib/storage"
+import { tenantIdStorage, platformImpersonationStorage } from "@/lib/storage"
 
 /**
  * Creates a QueryClient with sensible defaults for tRPC queries.
@@ -80,7 +87,21 @@ export function TRPCReactProvider({
     async function getHeaders() {
       const headers: Record<string, string> = {}
 
-      // Get the current Supabase session token
+      // Platform impersonation takes full precedence over normal tenant
+      // auth. We intentionally do NOT attach the Authorization header
+      // when impersonation is active — otherwise a concurrent Supabase
+      // tenant session on the same browser would hijack the request
+      // away from the impersonation branch in src/trpc/init.ts and the
+      // platform_audit_logs dual-write would be skipped silently (S2
+      // in the plan at thoughts/shared/plans/2026-04-10-platform-impersonation-ui-bridge.md).
+      const impersonation = platformImpersonationStorage.get()
+      if (impersonation) {
+        headers["x-support-session-id"] = impersonation.supportSessionId
+        headers["x-tenant-id"] = impersonation.tenantId
+        return headers
+      }
+
+      // Normal path: forward Supabase auth + selected tenant id
       const supabase = createClient()
       const {
         data: { session },
@@ -89,7 +110,6 @@ export function TRPCReactProvider({
         headers["authorization"] = `Bearer ${session.access_token}`
       }
 
-      // Forward tenant ID to tRPC server
       const tenantId = tenantIdStorage.getTenantId()
       if (tenantId) {
         headers["x-tenant-id"] = tenantId
@@ -98,8 +118,43 @@ export function TRPCReactProvider({
       return headers
     }
 
+    // S3 mitigation: if the backend rejects an impersonated request
+    // (support session revoked, expired, or otherwise invalid) we must
+    // flush local impersonation state and bounce the operator back to
+    // the Platform UI, otherwise every subsequent request also fails
+    // and the tenant tab sits in a silent broken state.
+    const impersonationErrorLink: TRPCLink<AppRouter> = () => {
+      return ({ next, op }) => {
+        return observable((observer) => {
+          const sub = next(op).subscribe({
+            next: (value) => observer.next(value),
+            error: (err) => {
+              const code =
+                (err as { data?: { code?: string; httpStatus?: number } })
+                  .data?.code
+              const httpStatus =
+                (err as { data?: { code?: string; httpStatus?: number } })
+                  .data?.httpStatus
+              const isUnauthorized =
+                code === "UNAUTHORIZED" || httpStatus === 401
+              if (isUnauthorized && platformImpersonationStorage.get()) {
+                platformImpersonationStorage.clear()
+                if (typeof window !== "undefined") {
+                  window.location.href = "/platform/support-sessions"
+                }
+              }
+              observer.error(err)
+            },
+            complete: () => observer.complete(),
+          })
+          return () => sub.unsubscribe()
+        })
+      }
+    }
+
     return createTRPCClient<AppRouter>({
       links: [
+        impersonationErrorLink,
         splitLink({
           condition: (op) => op.type === "subscription",
           true: httpSubscriptionLink({
@@ -109,6 +164,17 @@ export function TRPCReactProvider({
             // and read by createTRPCContext on the server.
             connectionParams: async () => {
               const params: Record<string, string> = {}
+
+              // Mirror getHeaders() — impersonation takes precedence
+              // and intentionally omits the Supabase Authorization token.
+              const impersonation = platformImpersonationStorage.get()
+              if (impersonation) {
+                params["x-support-session-id"] =
+                  impersonation.supportSessionId
+                params["x-tenant-id"] = impersonation.tenantId
+                return params
+              }
+
               const supabase = createClient()
               const {
                 data: { session },

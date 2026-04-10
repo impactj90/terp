@@ -24,6 +24,23 @@ export const serverEnv = {
    * /platform/* on the same host as the tenant app with a host-only cookie.
    */
   platformCookieDomain: process.env.PLATFORM_COOKIE_DOMAIN ?? '',
+  /**
+   * Dev-only kill switch for the platform-operator → tenant impersonation
+   * branch in src/trpc/init.ts. The primary safety is that the
+   * platform-session cookie is scoped to the platform host in prod and
+   * therefore never delivered to tenant /api/trpc/* requests. This flag is
+   * defense-in-depth: even if someone sets PLATFORM_COOKIE_DOMAIN=.terp.de
+   * (parent-domain) to prepare for cross-domain UX, the impersonation
+   * branch remains dead code until this flag is explicitly flipped.
+   * Default: false. Set PLATFORM_IMPERSONATION_ENABLED=true in .env.local.
+   *
+   * Implemented as a getter so `vi.stubEnv` works in tests — the rest of
+   * `serverEnv` is evaluated once at module load, but this value must
+   * re-read `process.env` on every access.
+   */
+  get platformImpersonationEnabled() {
+    return process.env.PLATFORM_IMPERSONATION_ENABLED === 'true'
+  },
 } as const
 
 // Client-side accessible

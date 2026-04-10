@@ -17,7 +17,7 @@
  * via `vi.mock('@/lib/platform/jwt')` so the test stays fast and does not
  * touch Supabase.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest"
 
 const supportSessionFindFirstMock = vi.fn()
 const tenantFindUniqueMock = vi.fn()
@@ -100,6 +100,17 @@ function mockHappyPath() {
     userTenants: [],
   })
 }
+
+beforeAll(() => {
+  // Phase 1 kill-switch: the impersonation branch only runs when
+  // PLATFORM_IMPERSONATION_ENABLED=true. `serverEnv.platformImpersonationEnabled`
+  // is a getter that re-reads process.env, so vi.stubEnv flips it live.
+  vi.stubEnv("PLATFORM_IMPERSONATION_ENABLED", "true")
+})
+
+afterAll(() => {
+  vi.unstubAllEnvs()
+})
 
 beforeEach(() => {
   supportSessionFindFirstMock.mockReset()
@@ -256,5 +267,28 @@ describe("createTRPCContext — platform impersonation", () => {
     )
     expect(ctx.user).toBeNull()
     expect(ctx.impersonation).toBeNull()
+  })
+
+  it("PLATFORM_IMPERSONATION_ENABLED unset → branch is dead code even with valid cookie + session + headers", async () => {
+    mockHappyPath()
+    // Temporarily flip the kill-switch off for this test.
+    vi.stubEnv("PLATFORM_IMPERSONATION_ENABLED", "false")
+    try {
+      const ctx = await createTRPCContext(
+        buildFetchOpts({
+          cookie: "platform-session=any.jwt.here",
+          "x-support-session-id": SUPPORT_SESSION_ID,
+          "x-tenant-id": TENANT_ID,
+        })
+      )
+      expect(ctx.user).toBeNull()
+      expect(ctx.impersonation).toBeNull()
+      // Critical: even the JWT verifier is never reached when the flag
+      // is off — the entire branch is skipped at the `if` guard.
+      expect(verifyMock).not.toHaveBeenCalled()
+      expect(supportSessionFindFirstMock).not.toHaveBeenCalled()
+    } finally {
+      vi.stubEnv("PLATFORM_IMPERSONATION_ENABLED", "true")
+    }
   })
 })
