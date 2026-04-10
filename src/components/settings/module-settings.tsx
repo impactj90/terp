@@ -7,33 +7,25 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useModules, useEnableModule, useDisableModule } from '@/hooks'
+import { useModules } from '@/hooks'
 import { AVAILABLE_MODULES } from '@/lib/modules/constants'
 
 /**
  * Module settings card for the admin settings page.
- * Shows all available modules with toggle switches.
- * "core" is always on and cannot be toggled.
+ *
+ * Phase 9: read-only for tenants. Module booking is an operator-hoheit
+ * action driven from /platform/tenants/[id]/modules — the tenant-side
+ * endpoints were removed, so any caller attempting to toggle these
+ * switches would fail at compile time.
  */
 export function ModuleSettings() {
   const t = useTranslations('modules')
   const { data, isLoading, error } = useModules()
-  const enableMutation = useEnableModule()
-  const disableMutation = useDisableModule()
 
   const enabledSet = React.useMemo(() => {
     if (!data?.modules) return new Set<string>(['core'])
     return new Set(data.modules.map((m) => m.module))
   }, [data])
-
-  const handleToggle = async (module: string, enabled: boolean) => {
-    if (module === 'core') return
-    if (enabled) {
-      await enableMutation.mutateAsync({ module })
-    } else {
-      await disableMutation.mutateAsync({ module })
-    }
-  }
 
   if (isLoading) {
     return (
@@ -56,8 +48,6 @@ export function ModuleSettings() {
     )
   }
 
-  const isMutating = enableMutation.isPending || disableMutation.isPending
-
   return (
     <Card>
       <CardHeader>
@@ -66,7 +56,6 @@ export function ModuleSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         {AVAILABLE_MODULES.map((module) => {
-          const isCore = module === 'core'
           const isEnabled = enabledSet.has(module)
 
           return (
@@ -85,12 +74,14 @@ export function ModuleSettings() {
               <Switch
                 id={`module-${module}`}
                 checked={isEnabled}
-                onCheckedChange={(checked) => handleToggle(module, checked)}
-                disabled={isCore || isMutating}
+                disabled
               />
             </div>
           )
         })}
+        <p className="pt-2 text-xs text-muted-foreground">
+          {t('readOnlyHint')}
+        </p>
       </CardContent>
     </Card>
   )

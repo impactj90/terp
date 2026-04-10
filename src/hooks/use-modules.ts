@@ -1,8 +1,11 @@
 import { useTRPC } from '@/trpc'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
 /**
  * Hook to fetch the list of enabled modules for the current tenant.
+ *
+ * Phase 9: the companion mutation hooks were removed. Module booking is an
+ * operator-hoheit action on `/platform/tenants/[id]/modules`.
  */
 export function useModules(enabled = true) {
   const trpc = useTRPC()
@@ -10,36 +13,6 @@ export function useModules(enabled = true) {
     trpc.tenantModules.list.queryOptions(undefined, {
       enabled,
       staleTime: 5 * 60 * 1000,
-    })
-  )
-}
-
-/**
- * Hook to enable a module for the current tenant.
- */
-export function useEnableModule() {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  return useMutation(
-    trpc.tenantModules.enable.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.tenantModules.list.queryKey() })
-      },
-    })
-  )
-}
-
-/**
- * Hook to disable a module for the current tenant.
- */
-export function useDisableModule() {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  return useMutation(
-    trpc.tenantModules.disable.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.tenantModules.list.queryKey() })
-      },
     })
   )
 }

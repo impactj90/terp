@@ -3859,8 +3859,9 @@
   },
   "modules": {
     "title": "Module",
-    "subtitle": "Aktivieren oder deaktivieren Sie Funktionsmodule fuer diesen Mandanten",
+    "subtitle": "Uebersicht der fuer diesen Mandanten gebuchten Module",
     "loadFailed": "Module konnten nicht geladen werden",
+    "readOnlyHint": "Module werden vom Betreiber gebucht. Zum Aktivieren oder Kuendigen von Modulen wende dich bitte an den Support.",
     "name_core": "Kern",
     "desc_core": "Kernfunktionen — immer aktiviert",
     "name_crm": "CRM",
@@ -3868,7 +3869,9 @@
     "name_billing": "Fakturierung",
     "desc_billing": "Dokumente, Rechnungen, Zahlungen",
     "name_warehouse": "Lager",
-    "desc_warehouse": "Artikel, Bestand, Einkauf"
+    "desc_warehouse": "Artikel, Bestand, Einkauf",
+    "name_inbound_invoices": "Eingangsrechnungen",
+    "desc_inbound_invoices": "Erfassung und Freigabe eingehender Rechnungen"
   },
   "adminSettings": {
     "title": "Systemeinstellungen",

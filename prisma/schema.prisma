@@ -289,11 +289,13 @@ model Tenant {
 // Available modules: "core", "crm", "orders", "warehouse"
 // "core" is always enabled and cannot be disabled.
 model TenantModule {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  module      String   @db.VarChar(50)
-  enabledAt   DateTime @default(now()) @map("enabled_at") @db.Timestamptz(6)
-  enabledById String?  @map("enabled_by_id") @db.Uuid
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  module                  String   @db.VarChar(50)
+  enabledAt               DateTime @default(now()) @map("enabled_at") @db.Timestamptz(6)
+  enabledById             String?  @map("enabled_by_id") @db.Uuid
+  enabledByPlatformUserId String?  @map("enabled_by_platform_user_id") @db.Uuid
+  operatorNote            String?  @map("operator_note") @db.VarChar(255)
 
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   enabledBy   User?    @relation("moduleEnabledBy", fields: [enabledById], references: [id], onDelete: SetNull)

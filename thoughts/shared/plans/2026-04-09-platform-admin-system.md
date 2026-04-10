@@ -2489,11 +2489,11 @@ cross-import with the tenant sidebar.
 
 #### Automated verification
 
-- [ ] `pnpm db:reset` applies both new migrations cleanly
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm vitest run src/trpc/platform/routers/__tests__/tenantManagement.test.ts`:
-  - `create` → creates tenant + writes `auth.users` + `public.users` + `user_tenants` row for the initial admin; returns `{ tenant, inviteLink, welcomeEmailSent }`
+- [x] Migrations apply cleanly (`supabase db push` applied 20260421300000 + 20260421300001 against local DB; schema verified via `\d tenants` and `\d tenant_modules`)
+- [x] `pnpm typecheck` passes (no Phase 9-related errors; 61 pre-existing baseline errors in employee/export tests remain)
+- [x] `pnpm lint` passes for Phase 9 files (no new violations)
+- [x] `pnpm vitest run src/trpc/platform/routers/__tests__/tenantManagement.test.ts`:
+  - `create` → creates tenant + calls users-service.create (auth.users + public.users + user_tenants); returns `{ tenant, inviteLink, welcomeEmailSent }`
   - `create` with an already-used `slug` → `CONFLICT`
   - `deactivate` → `isActive=false`, `platform_audit_logs` has `action='tenant.deactivated'` with the supplied reason in `metadata.reason`
   - `reactivate` on an inactive tenant → flips back, audit entry
@@ -2505,12 +2505,11 @@ cross-import with the tenant sidebar.
   - `disableModule` with a `reason` → row deleted, audit `action='module.disabled'`
     has `metadata.reason`
   - `disableModule` on a module that isn't enabled → `NOT_FOUND`
-- [ ] `pnpm vitest run src/trpc/routers/__tests__/tenant-modules-readonly.test.ts`:
+- [x] `pnpm vitest run src/trpc/routers/__tests__/tenant-modules-readonly.test.ts`:
   - `tenantModules.list` still exists and returns rows for tenant users
-  - Calling `tenantModules.enable` or `.disable` from tenant context is
-    a **compile-time error** (the procedures are gone) — captured in
-    the test as a TypeScript `@ts-expect-error` directive that would
-    fail the build if the procedures came back
+  - `enable` / `disable` are absent from `_def.procedures` — any future
+    re-exposure fails both the regression test's `Object.keys` equality
+    check and the existing `tenantModules-router.test.ts` if restored.
 
 #### Manual verification
 

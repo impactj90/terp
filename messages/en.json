@@ -3859,8 +3859,9 @@
   },
   "modules": {
     "title": "Modules",
-    "subtitle": "Enable or disable feature modules for this tenant",
+    "subtitle": "Overview of modules booked for this tenant",
     "loadFailed": "Failed to load modules",
+    "readOnlyHint": "Modules are booked by the operator. Please contact support to enable or cancel modules.",
     "name_core": "Core",
     "desc_core": "Core functionality — always enabled",
     "name_crm": "CRM",
@@ -3868,7 +3869,9 @@
     "name_billing": "Billing",
     "desc_billing": "Documents, invoices, payments",
     "name_warehouse": "Warehouse",
-    "desc_warehouse": "Articles, stock, purchasing"
+    "desc_warehouse": "Articles, stock, purchasing",
+    "name_inbound_invoices": "Inbound invoices",
+    "desc_inbound_invoices": "Capture and approval of incoming invoices"
   },
   "adminSettings": {
     "title": "System Settings",

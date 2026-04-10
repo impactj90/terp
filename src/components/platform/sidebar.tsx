@@ -21,6 +21,7 @@ import {
   ScrollText,
   UsersRound,
   UserCog,
+  Plus,
 } from "lucide-react"
 import {
   Sidebar as ShadcnSidebar,
@@ -31,6 +32,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarRail,
 } from "@/components/ui/sidebar"
 
@@ -91,6 +95,7 @@ export function PlatformSidebar() {
                   pathname === item.href ||
                   pathname.startsWith(`${item.href}/`)
                 const Icon = item.icon
+                const isTenants = item.href === "/platform/tenants"
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -103,6 +108,21 @@ export function PlatformSidebar() {
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {isTenants ? (
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/platform/tenants/new"}
+                          >
+                            <Link href="/platform/tenants/new" prefetch={false}>
+                              <Plus className="size-3" />
+                              <span>Neuer Tenant</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    ) : null}
                   </SidebarMenuItem>
                 )
               })}

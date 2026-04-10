@@ -29,19 +29,6 @@ const createCaller = createCallerFactory(tenantModulesRouter)
 
 // --- Helpers ---
 
-function createTestContext(prisma: Record<string, unknown>) {
-  return createMockContext({
-    prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
-    authToken: "test-token",
-    user: createUserWithPermissions([SETTINGS_MANAGE], {
-      id: USER_ID,
-      userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
-    }),
-    session: createMockSession(),
-    tenantId: TENANT_ID,
-  })
-}
-
 function createNoPermContext(prisma: Record<string, unknown>) {
   return createMockContext({
     prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
@@ -55,7 +42,16 @@ function createNoPermContext(prisma: Record<string, unknown>) {
   })
 }
 
+// Silence unused-import lint — `SETTINGS_MANAGE` stays imported so the
+// compile-time permission-id lookup still runs at test boot (catches a
+// catalog typo at load, not at call time).
+void SETTINGS_MANAGE
+
 // --- tenantModules.list tests ---
+//
+// Phase 9: enable/disable procedures were removed from the tenant router;
+// module booking happens through the platform-admin tenantManagement router
+// now. See `tenant-modules-readonly.test.ts` for the contract lock.
 
 describe("tenantModules.list", () => {
   it("returns enabled modules", async () => {
@@ -90,92 +86,5 @@ describe("tenantModules.list", () => {
     const result = await caller.list()
 
     expect(result.modules.some((m) => m.module === "core")).toBe(true)
-  })
-})
-
-// --- tenantModules.enable tests ---
-
-describe("tenantModules.enable", () => {
-  it("enables a module successfully", async () => {
-    const prisma = {
-      tenantModule: {
-        upsert: vi.fn().mockResolvedValue({
-          module: "crm",
-          enabledAt: new Date("2026-03-16"),
-        }),
-      },
-    }
-
-    const caller = createCaller(createTestContext(prisma))
-    const result = await caller.enable({ module: "crm" })
-
-    expect(result.module).toBe("crm")
-    expect(prisma.tenantModule.upsert).toHaveBeenCalledWith({
-      where: {
-        tenantId_module: { tenantId: TENANT_ID, module: "crm" },
-      },
-      update: {},
-      create: {
-        tenantId: TENANT_ID,
-        module: "crm",
-        enabledById: USER_ID,
-      },
-    })
-  })
-
-  it("rejects unknown module", async () => {
-    const prisma = { tenantModule: {} }
-    const caller = createCaller(createTestContext(prisma))
-
-    await expect(caller.enable({ module: "invalid" })).rejects.toThrow(
-      'Unknown module: "invalid"'
-    )
-  })
-
-  it("non-admin cannot enable", async () => {
-    const prisma = { tenantModule: {} }
-    const caller = createCaller(createNoPermContext(prisma))
-
-    await expect(caller.enable({ module: "crm" })).rejects.toThrow(
-      "Insufficient permissions"
-    )
-  })
-})
-
-// --- tenantModules.disable tests ---
-
-describe("tenantModules.disable", () => {
-  it("disables a module successfully", async () => {
-    const prisma = {
-      tenantModule: {
-        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
-      },
-    }
-
-    const caller = createCaller(createTestContext(prisma))
-    const result = await caller.disable({ module: "crm" })
-
-    expect(result.success).toBe(true)
-    expect(prisma.tenantModule.deleteMany).toHaveBeenCalledWith({
-      where: { tenantId: TENANT_ID, module: "crm" },
-    })
-  })
-
-  it("cannot disable 'core'", async () => {
-    const prisma = { tenantModule: {} }
-    const caller = createCaller(createTestContext(prisma))
-
-    await expect(caller.disable({ module: "core" })).rejects.toThrow(
-      '"core" module cannot be disabled'
-    )
-  })
-
-  it("non-admin cannot disable", async () => {
-    const prisma = { tenantModule: {} }
-    const caller = createCaller(createNoPermContext(prisma))
-
-    await expect(caller.disable({ module: "billing" })).rejects.toThrow(
-      "Insufficient permissions"
-    )
   })
 })
