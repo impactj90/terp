@@ -87,6 +87,7 @@ export async function createAuthenticatedCaller(
     tenantId,
     ipAddress: "127.0.0.1",
     userAgent: "e2e-test",
+    impersonation: null,
   }
   return createCaller(context)
 }

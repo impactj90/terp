@@ -31,6 +31,7 @@ export async function getServerTrpc() {
     tenantId: null,
     ipAddress: null,
     userAgent: null,
+    impersonation: null,
   })
   return caller
 }

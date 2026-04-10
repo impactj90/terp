@@ -7,6 +7,7 @@
 import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import * as repo from "./audit-logs-repository"
 import type { AuditLogListParams, AuditLogCreateInput } from "./audit-logs-repository"
+import { getImpersonation } from "@/lib/platform/impersonation-context"
 
 // Re-export for convenience
 export type { AuditLogCreateInput }
@@ -173,8 +174,35 @@ export async function log(
   prisma: Tx,
   data: AuditLogCreateInput
 ): Promise<void> {
+  const impersonation = getImpersonation()
   try {
     await repo.create(prisma, data)
+
+    // Dual-write: when this request is running inside a platform
+    // impersonation, also write a platform_audit_logs row so operators
+    // can trace exactly what they touched across tenants. This runs in
+    // the same try/catch — an error in either write is logged and
+    // swallowed (audit logging must never break the business operation).
+    // Plan: Phase 7.5.
+    if (impersonation) {
+      await (prisma as PrismaClient).platformAuditLog.create({
+        data: {
+          platformUserId: impersonation.platformUserId,
+          action: `impersonation.${data.action}`,
+          entityType: data.entityType,
+          entityId: data.entityId,
+          targetTenantId: data.tenantId,
+          supportSessionId: impersonation.supportSessionId,
+          changes: (data.changes as Prisma.InputJsonValue) ?? undefined,
+          metadata: {
+            entityName: data.entityName ?? null,
+            originalUserId: data.userId,
+          } as Prisma.InputJsonValue,
+          ipAddress: data.ipAddress ?? null,
+          userAgent: data.userAgent ?? null,
+        },
+      })
+    }
   } catch (err) {
     // Never throw — audit failures must not block the actual operation
     console.error("[AuditLog] Failed to write audit log:", err, {
@@ -196,8 +224,30 @@ export async function logBulk(
   data: AuditLogCreateInput[]
 ): Promise<void> {
   if (data.length === 0) return
+  const impersonation = getImpersonation()
   try {
     await repo.createBulk(prisma, data)
+
+    // Mirror the single-write impersonation dual-write. Plan: Phase 7.5.
+    if (impersonation) {
+      await (prisma as PrismaClient).platformAuditLog.createMany({
+        data: data.map((d) => ({
+          platformUserId: impersonation.platformUserId,
+          action: `impersonation.${d.action}`,
+          entityType: d.entityType,
+          entityId: d.entityId,
+          targetTenantId: d.tenantId,
+          supportSessionId: impersonation.supportSessionId,
+          changes: (d.changes as Prisma.InputJsonValue) ?? undefined,
+          metadata: {
+            entityName: d.entityName ?? null,
+            originalUserId: d.userId,
+          } as Prisma.InputJsonValue,
+          ipAddress: d.ipAddress ?? null,
+          userAgent: d.userAgent ?? null,
+        })),
+      })
+    }
   } catch (err) {
     console.error("[AuditLog] Failed to write bulk audit logs:", err, {
       count: data.length,

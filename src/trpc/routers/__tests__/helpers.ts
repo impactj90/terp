@@ -152,6 +152,7 @@ export function createMockContext(
     tenantId: null,
     ipAddress: null,
     userAgent: null,
+    impersonation: null,
     ...overrides,
   }
   // Auto-wrap prisma mock so undefined methods get auto-stubbed

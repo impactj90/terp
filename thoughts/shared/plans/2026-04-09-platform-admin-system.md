@@ -1961,19 +1961,19 @@ same row.
 
 #### Automated verification
 
-- [ ] `pnpm db:reset` applies the sentinel-user migration cleanly; `SELECT id, is_locked, is_active FROM users WHERE id = '00000000-0000-0000-0000-00000000beef'` returns one row
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm vitest run src/trpc/__tests__/init-impersonation.test.ts`:
+- [x] `pnpm db:reset` applies the sentinel-user migration cleanly; `SELECT id, is_locked, is_active FROM users WHERE id = '00000000-0000-0000-0000-00000000beef'` returns one row
+- [x] `pnpm typecheck` passes (no new impersonation-related errors; pre-existing baseline unchanged)
+- [x] `pnpm vitest run src/trpc/__tests__/init-impersonation.test.ts`:
   - Platform cookie + no `x-support-session-id` → `ctx.user === null`, `ctx.impersonation === null`
   - Platform cookie + valid session id + correct tenant → `ctx.user.id === '…beef'`, `ctx.user.userGroup.isAdmin === true`, `ctx.impersonation` populated
   - Platform cookie + session for a different tenant → `ctx.user === null`
   - Platform cookie + session for a different platform user → `ctx.user === null`
   - Platform cookie + expired session → `ctx.user === null`
-- [ ] `pnpm vitest run src/lib/services/__tests__/audit-logs-impersonation.test.ts`:
+- [x] `pnpm vitest run src/lib/services/__tests__/audit-logs-impersonation.test.ts`:
   - Impersonation context active during `log()` → writes both tenant row AND platform row with matching entity fields
   - No impersonation context → writes tenant row only, platform row untouched
   - Error in platform write does not propagate (try/catch holds)
-- [ ] `pnpm vitest run src/trpc/__tests__/async-storage-propagation.test.ts`:
+- [x] `pnpm vitest run src/trpc/__tests__/async-storage-propagation.test.ts`:
   - `impersonationStorage.getStore()` is readable from inside a service call invoked from a tRPC procedure when `ctx.impersonation` is set
   - Returns `null` when `ctx.impersonation` is absent
 
