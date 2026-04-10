@@ -14,15 +14,23 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  tenantProcedure,
+} from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as auditLog from "@/lib/services/audit-logs-service"
+import * as platformAudit from "@/lib/platform/audit-service"
 
 // --- Permission Constants ---
 
 const TENANTS_MANAGE = permissionIdByKey("tenants.manage")!
+const SUPPORT_ACCESS_GRANT = permissionIdByKey(
+  "platform.support_access.grant"
+)!
 
 // --- Enums ---
 
@@ -574,4 +582,196 @@ export const tenantsRouter = createTRPCRouter({
         handleServiceError(err)
       }
     }),
+
+  // -------------------------------------------------------------------------
+  // Support access (Phase 6 — platform-admin-system)
+  //
+  // Tenant admins grant time-boxed support sessions to platform operators.
+  // Every state transition writes a double audit entry (tenant AuditLog +
+  // platform PlatformAuditLog) so both domains can trace what happened.
+  // -------------------------------------------------------------------------
+
+  /**
+   * tenants.requestSupportAccess -- Tenant admin grants a time-limited
+   * support session to the platform operator pool. Creates a pending row
+   * in support_sessions that any operator can claim via the Platform UI.
+   */
+  requestSupportAccess: tenantProcedure
+    .use(requirePermission(SUPPORT_ACCESS_GRANT))
+    .input(
+      z.object({
+        reason: z.string().min(10).max(1000),
+        ttlMinutes: z.number().int().min(15).max(240),
+        consentReference: z.string().max(255).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const tenantId = ctx.tenantId!
+        const userId = ctx.user!.id
+        const expiresAt = new Date(Date.now() + input.ttlMinutes * 60 * 1000)
+
+        const session = await ctx.prisma.supportSession.create({
+          data: {
+            tenantId,
+            requestedByUserId: userId,
+            reason: input.reason,
+            consentReference: input.consentReference ?? null,
+            status: "pending",
+            expiresAt,
+          },
+        })
+
+        await auditLog
+          .log(ctx.prisma, {
+            tenantId,
+            userId,
+            action: "create",
+            entityType: "support_session",
+            entityId: session.id,
+            entityName: input.reason.slice(0, 80),
+            metadata: {
+              expiresAt: expiresAt.toISOString(),
+              ttlMinutes: input.ttlMinutes,
+              consentReference: input.consentReference ?? null,
+            },
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          })
+          .catch((err) =>
+            console.error("[AuditLog] Failed:", err)
+          )
+
+        await platformAudit.log(ctx.prisma, {
+          platformUserId: null,
+          action: "support_session.requested",
+          entityType: "support_session",
+          entityId: session.id,
+          targetTenantId: tenantId,
+          supportSessionId: session.id,
+          metadata: {
+            requestedBy: userId,
+            ttlMinutes: input.ttlMinutes,
+          },
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        })
+
+        return session
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * tenants.revokeSupportAccess -- Tenant admin revokes an existing pending
+   * or active session. Writes a double audit entry.
+   */
+  revokeSupportAccess: tenantProcedure
+    .use(requirePermission(SUPPORT_ACCESS_GRANT))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const tenantId = ctx.tenantId!
+        const userId = ctx.user!.id
+
+        const session = await ctx.prisma.supportSession.findFirst({
+          where: { id: input.id, tenantId },
+        })
+        if (!session) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Support session not found",
+          })
+        }
+        if (session.status === "expired" || session.status === "revoked") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Session already closed",
+          })
+        }
+
+        const updated = await ctx.prisma.supportSession.update({
+          where: { id: session.id },
+          data: { status: "revoked", revokedAt: new Date() },
+        })
+
+        await auditLog
+          .log(ctx.prisma, {
+            tenantId,
+            userId,
+            action: "update",
+            entityType: "support_session",
+            entityId: updated.id,
+            entityName: session.reason.slice(0, 80),
+            changes: {
+              status: { old: session.status, new: "revoked" },
+            },
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          })
+          .catch((err) =>
+            console.error("[AuditLog] Failed:", err)
+          )
+
+        await platformAudit.log(ctx.prisma, {
+          platformUserId: updated.platformUserId ?? null,
+          action: "support_session.revoked",
+          entityType: "support_session",
+          entityId: updated.id,
+          targetTenantId: tenantId,
+          supportSessionId: updated.id,
+          metadata: {
+            revokedByTenantUserId: userId,
+            previousStatus: session.status,
+          },
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        })
+
+        return updated
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * tenants.listSupportSessions -- Returns recent support sessions for the
+   * current tenant (pending / active / expired / revoked). Limited to 50
+   * newest rows — the table is tenant-facing history, not a full audit.
+   */
+  listSupportSessions: tenantProcedure
+    .use(requirePermission(SUPPORT_ACCESS_GRANT))
+    .query(async ({ ctx }) => {
+      return ctx.prisma.supportSession.findMany({
+        where: { tenantId: ctx.tenantId! },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+          platformUser: {
+            select: { displayName: true, email: true },
+          },
+        },
+      })
+    }),
+
+  /**
+   * tenants.activeSupportSession -- Returns the currently-active session (if
+   * any) for the banner. Open to every tenant user since the banner is
+   * shown tenant-wide; no permission check required.
+   */
+  activeSupportSession: tenantProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.supportSession.findFirst({
+      where: {
+        tenantId: ctx.tenantId!,
+        status: "active",
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        platformUser: {
+          select: { displayName: true, email: true },
+        },
+      },
+    })
+  }),
 })

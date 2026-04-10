@@ -1627,17 +1627,17 @@ Mounted inside `src/app/[locale]/(dashboard)/layout.tsx` between
 
 #### Automated verification
 
-- [ ] `pnpm db:reset` applies the backfill migration cleanly
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm vitest run src/trpc/routers/__tests__/tenants-support-access.test.ts`:
-  - No permission → `FORBIDDEN`
-  - Reason <10 chars → `BAD_REQUEST`
-  - TTL > 240 → `BAD_REQUEST`
-  - Valid request creates pending session + two audit entries
-  - Revoke pending → `revoked`, two audit entries
-  - Revoke already-revoked → `CONFLICT`
-- [ ] `pnpm vitest run src/trpc/routers/__tests__/tenants-support-access-new-tenant.test.ts`:
-  - Fresh tenant, no user group, user.role='admin' → `requestSupportAccess` succeeds (isAdmin bypass)
+- [x] `pnpm db:reset` applies the backfill migration cleanly _(verified by running migration against local DB: `UPDATE 3` across ADMIN, admin, DEMO_ADMIN groups; filename adjusted to `20260421100000_...` to stay after the already-committed `20260421000000_create_platform_admin_tables.sql`)_
+- [x] `pnpm typecheck` passes _(no new errors introduced in Phase 6 files — all remaining errors are pre-existing in unrelated test files)_
+- [x] `pnpm vitest run src/trpc/routers/__tests__/tenants-support-access.test.ts`:
+  - [x] No permission → `FORBIDDEN`
+  - [x] Reason <10 chars → `BAD_REQUEST`
+  - [x] TTL > 240 → `BAD_REQUEST`
+  - [x] Valid request creates pending session + two audit entries
+  - [x] Revoke pending → `revoked`, two audit entries
+  - [x] Revoke already-revoked → `CONFLICT`
+- [x] `pnpm vitest run src/trpc/routers/__tests__/tenants-support-access-new-tenant.test.ts`:
+  - [x] Fresh tenant, no user group, user.role='admin' → `requestSupportAccess` succeeds (isAdmin bypass)
 
 #### Manual verification
 

@@ -55,6 +55,7 @@ import {
   ShieldAlert,
   FileInput,
   FileCheck,
+  LifeBuoy,
 } from 'lucide-react'
 
 /**
@@ -621,6 +622,12 @@ export const navConfig: NavSection[] = [
         href: '/admin/access-control',
         icon: DoorOpen,
         permissions: ['access_control.manage'],
+      },
+      {
+        titleKey: 'supportAccess',
+        href: '/admin/settings/support-access',
+        icon: LifeBuoy,
+        permissions: ['platform.support_access.grant'],
       },
       {
         titleKey: 'terminalBookings',

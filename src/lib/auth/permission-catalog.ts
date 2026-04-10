@@ -374,6 +374,14 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("export_template.snapshot", "export_template", "snapshot", "Manage export template snapshot tests"),
   p("export_template.share", "export_template", "share", "Share export templates across tenants"),
   p("export_template.schedule", "export_template", "schedule", "Manage scheduled export template runs"),
+
+  // Platform support access (Phase 6 — platform-admin-system plan)
+  p(
+    "platform.support_access.grant",
+    "platform",
+    "support_access.grant",
+    "Grant platform operators time-limited support access to this tenant"
+  ),
 ]
 
 // Lookup maps

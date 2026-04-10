@@ -404,6 +404,10 @@ export {
   useCreateTenant,
   useUpdateTenant,
   useDeactivateTenant,
+  useSupportSessions,
+  useActiveSupportSession,
+  useRequestSupportAccess,
+  useRevokeSupportAccess,
 } from './use-tenants'
 
 // Demo Tenants
