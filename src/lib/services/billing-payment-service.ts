@@ -2,6 +2,9 @@ import type { PrismaClient, BillingPaymentType } from "@/generated/prisma/client
 import * as repo from "./billing-payment-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import { getApplicableDiscount } from "@/lib/billing/payment-discount"
+
+export { getApplicableDiscount }
 
 // --- Error Classes ---
 
@@ -56,44 +59,6 @@ export function isOverdue(
   if (!dueDate) return false
   if (paymentStatus === "PAID" || paymentStatus === "OVERPAID") return false
   return dueDate < new Date()
-}
-
-export function getApplicableDiscount(
-  document: {
-    documentDate: Date
-    discountDays?: number | null
-    discountPercent?: number | null
-    discountDays2?: number | null
-    discountPercent2?: number | null
-  },
-  paymentDate: Date
-): { percent: number; tier: 1 | 2 } | null {
-  const docDate = new Date(document.documentDate)
-  const daysDiff = Math.floor(
-    (paymentDate.getTime() - docDate.getTime()) / (1000 * 60 * 60 * 24)
-  )
-
-  // Check tier 1 first (usually shorter period, higher discount)
-  if (
-    document.discountDays != null &&
-    document.discountPercent != null &&
-    document.discountPercent > 0 &&
-    daysDiff <= document.discountDays
-  ) {
-    return { percent: document.discountPercent, tier: 1 }
-  }
-
-  // Check tier 2 (longer period, lower discount)
-  if (
-    document.discountDays2 != null &&
-    document.discountPercent2 != null &&
-    document.discountPercent2 > 0 &&
-    daysDiff <= document.discountDays2
-  ) {
-    return { percent: document.discountPercent2, tier: 2 }
-  }
-
-  return null
 }
 
 // --- Enrichment helpers ---

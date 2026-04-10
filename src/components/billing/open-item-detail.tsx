@@ -18,7 +18,7 @@ import { useBillingOpenItem } from '@/hooks'
 import { PaymentStatusBadge } from './payment-status-badge'
 import { PaymentFormDialog } from './payment-form-dialog'
 import { PaymentCancelDialog } from './payment-cancel-dialog'
-import { getApplicableDiscount } from '@/lib/services/billing-payment-service'
+import { getApplicableDiscount } from '@/lib/billing/payment-discount'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
