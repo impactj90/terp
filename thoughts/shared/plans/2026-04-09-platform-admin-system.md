@@ -1056,13 +1056,20 @@ Two operating modes, selected via the `PLATFORM_COOKIE_DOMAIN` env var:
   `/platform/*` path is served from the same host as the tenant app. No
   rewrite; no host check. Platform cookies are host-only on the current host.
 
-Also migrates `src/proxy.ts` to the canonical `src/middleware.ts` filename.
+Extends the existing `src/proxy.ts` with the dual-mode logic in place.
+
+> **Implementation note (2026-04-09):** The original draft of this plan
+> said to rename `src/proxy.ts` to `src/middleware.ts`. That premise is
+> inverted for Next.js 16+: `proxy.ts` with `export function proxy(...)`
+> **is** the current canonical filename; `middleware.ts` is the legacy
+> name. Phase 4 therefore updates `src/proxy.ts` in place and keeps the
+> `proxy` export — no rename, no delete.
 
 ### Changes required
 
 #### 4.1 — Middleware with dual mode
 
-**File**: `src/middleware.ts` (new, absorbs `src/proxy.ts`)
+**File**: `src/proxy.ts` (edit in place)
 
 ```ts
 import { NextResponse, type NextRequest } from "next/server"
@@ -1073,7 +1080,7 @@ import { serverEnv } from "@/lib/config"
 
 const intlMiddleware = createIntlMiddleware(routing)
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? ""
   const platformDomain = serverEnv.platformCookieDomain
   const path = request.nextUrl.pathname
@@ -1109,9 +1116,8 @@ export const config = {
 }
 ```
 
-Delete `src/proxy.ts` after `src/middleware.ts` is confirmed to be picked
-up by Next.js (it is the canonical filename). The matcher already excludes
-`/api/*`, so `/api/trpc-platform/*` lands on its handler directly.
+The matcher already excludes `/api/*`, so `/api/trpc-platform/*` lands
+on its handler directly.
 
 #### 4.2 — Platform route tree
 
@@ -1214,9 +1220,9 @@ Phase 8.
 
 #### Automated verification
 
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm build` succeeds — **explicit smoke test**: next-intl does not throw about missing/invalid locale segments for `/platform/*`. If it does, apply the Phase 4.2 fallback (move `[locale]` into `(tenant)` route group) and re-run `pnpm build`.
+- [x] `pnpm typecheck` passes (no new errors from Phase 4 files — pre-existing ~1463 baseline unchanged)
+- [x] `pnpm lint` passes (no new errors from Phase 4 files — pre-existing baseline unchanged)
+- [x] `pnpm build` succeeds — next-intl did **not** throw about `/platform/*`; all 9 platform routes registered (`/platform`, `/platform/login`, `/platform/dashboard`, `/platform/tenants`, `/platform/tenants/[id]`, `/platform/support-sessions`, `/platform/audit-logs`, `/platform/platform-users`, `/platform/profile/mfa`). Phase 4.2 fallback not needed.
 
 #### Manual verification
 
