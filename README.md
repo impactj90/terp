@@ -255,14 +255,15 @@ A **separate security/identity domain above the tenant world** — its own `Plat
 - **Plan**: `thoughts/shared/plans/2026-04-09-platform-admin-system.md` — the authoritative spec. Read this file before touching anything in `src/lib/platform/` or `src/trpc/platform/`.
 - **Research**: `thoughts/shared/research/2026-04-09-platform-admin-system.md` — the initial codebase analysis that led to the plan.
 - **Obsoleted**: the earlier `thoughts/shared/tickets/misc/platform-admin-tenant-access.md` (a simple `platform_admins` flag-table) is superseded and should be renamed `_OBSOLETE.md` in Phase 8.
-- **Current phase**: **Phase 5 complete** (platform UI fully shipped). Phases 6–8 pending — see the plan for the full breakdown:
+- **Current phase**: **Phase 7 complete** (backend impersonation mechanic shipped) **+ UI bridge follow-up shipped** (operators have a clickable path end-to-end in dev). Phase 8 still pending — see the plan for the full breakdown:
   - Phase 1 ✅ Data model + bootstrap (tables, argon2, CLI)
   - Phase 2 ✅ Auth core (JWT, TOTP, rate limit, login service)
   - Phase 3 ✅ Platform tRPC layer (separate context, separate root router, `/api/trpc-platform`)
   - Phase 4 ✅ Routing & middleware (subdomain OR `/platform/*` fallback)
   - Phase 5 ✅ Platform UI (login, dashboard, tenants, support-sessions, audit logs, platform-users)
-  - Phase 6 ⏳ Consent flow (tenant-side `SupportSession` creation, settings page, yellow banner)
-  - Phase 7 ⏳ Impersonation (extend `createTRPCContext` + `AsyncLocalStorage` for the audit double-write)
+  - Phase 6 ✅ Consent flow (tenant-side `SupportSession` creation, settings page, yellow banner)
+  - Phase 7 ✅ Impersonation (`createTRPCContext` branch + `AsyncLocalStorage` + audit dual-write)
+  - **UI Bridge ✅** Dev-only wiring: "Tenant öffnen" button, client header injection, `AuthProvider` second auth source, `platform_audit_logs` end-to-end — see the dedicated subsection below
   - Phase 8 ⏳ Cleanup cron, docs, E2E spec
 
 **Data model** (all four tables created by `supabase/migrations/20260421000000_create_platform_admin_tables.sql`):
@@ -335,6 +336,85 @@ Do this **only from a trusted machine** — the script opens a direct DB connect
 **Rotating `PLATFORM_JWT_SECRET`**: the secret is only used by `src/lib/platform/jwt.ts` — no other code path reads it. To rotate, set the new value in Vercel, redeploy, and every existing platform session is immediately invalidated (existing JWTs fail the HMAC check and trip the `invalid` branch in `verify()`). Operators just log in again. Zero tenant-side impact — the tenant app uses Supabase Auth, which has a separate JWT secret.
 
 **Relationship to field encryption**: the platform code deliberately reuses `src/lib/services/field-encryption.ts` (`encryptField`/`decryptField`) for storing the TOTP secret at rest. No separate crypto module. This means `FIELD_ENCRYPTION_KEY_V1` rotation affects platform operators' stored TOTP secrets the same way it affects tenant-side encrypted fields — decrypt-re-encrypt is handled by the same key-versioning mechanism.
+
+#### Platform Impersonation UI Bridge (dev-only)
+
+Phase 7 landed the backend impersonation mechanic (sentinel user, `createTRPCContext` branch, `AsyncLocalStorage` + audit dual-write), but left the operator UX as "curl/devtools only" — no clickable path from the platform admin UI into the tenant dashboard. The UI Bridge plan (`thoughts/shared/plans/2026-04-10-platform-impersonation-ui-bridge.md`) closes that gap **for dev only** (same-host `localhost:3001`). Prod cross-host support (`admin.terp.de` ↔ `app.terp.de`) is explicitly deferred — see "What we're NOT doing" in the plan.
+
+**What it enables end-to-end (dev):**
+
+1. Tenant admin creates a pending `SupportSession` from `/de/admin/settings/support-access` (Phase 6)
+2. Operator logs in at `/platform/login`, navigates to `/platform/support-sessions`, clicks "Beitreten" on the pending row — status flips to `active`
+3. Operator switches to the "Aktiv" tab and clicks **"Tenant öffnen"** — browser hard-navigates to `/de/dashboard` with the target tenant auto-selected and the yellow support banner up top
+4. Every mutation the operator makes writes a pair of rows: tenant `audit_logs` (author = Platform System sentinel) + `platform_audit_logs` (`action=impersonation.<original>`, `platform_user_id = real operator`, `support_session_id = session`)
+5. Operator clicks **"Session verlassen"** in the banner — localStorage is cleared and the browser navigates back to `/platform/support-sessions`
+
+**Env flag (must be set in dev, must be UNSET in prod):**
+
+```bash
+# .env.local
+PLATFORM_IMPERSONATION_ENABLED=true
+```
+
+This is a kill-switch in `src/lib/config.ts` (implemented as a getter so `vi.stubEnv` works in tests). When unset, the entire impersonation branch in `src/trpc/init.ts:158` is dead code — the `if (!user && serverEnv.platformImpersonationEnabled)` guard short-circuits before the JWT verifier is even called. The primary prod safety is still cookie scoping (`PLATFORM_COOKIE_DOMAIN` keeps the `platform-session` cookie off the tenant host), but this flag is defense-in-depth: if someone sets a parent-domain cookie scope to prepare for cross-host UX, this flag must still be flipped before the branch becomes reachable.
+
+**Client-side storage slot** (`src/lib/storage.ts` → `platformImpersonationStorage`):
+
+```ts
+interface PlatformImpersonationRef {
+  supportSessionId: string
+  tenantId: string
+  expiresAt: string  // ISO 8601 — past-expiry entries auto-clear on read
+}
+```
+
+localStorage key: `terp_platform_impersonation`. Non-HttpOnly by design — the actual auth token lives in the HttpOnly `platform-session` cookie; this slot only carries routing hints. An XSS-set slot is useless without the cookie because the backend validates the cookie's JWT, the MFA flag, AND the SupportSession row independently.
+
+**Key files changed by the UI bridge** (additive to Phase 7):
+
+| File | What it does |
+|---|---|
+| `src/lib/config.ts` | `serverEnv.platformImpersonationEnabled` getter |
+| `src/lib/storage.ts` | `platformImpersonationStorage` helper with auto-expire |
+| `src/trpc/init.ts` | Kill-switch wrap around the impersonation branch |
+| `src/trpc/client.tsx` | Header injection (`getHeaders`, `httpSubscriptionLink.connectionParams`) + `impersonationErrorLink` for S3 |
+| `src/trpc/routers/tenants.ts` | `tenants.list` reads `ctx.user.userTenants` under impersonation (DB has zero rows for the sentinel) |
+| `src/providers/auth-provider.tsx` | Second auth source alongside Supabase; storage-event listener; logout-while-impersonating warning |
+| `src/providers/tenant-provider.tsx` | `tenants.length === 0` guard is now load-bearing — comment-flagged, **do not remove** |
+| `src/app/platform/(authed)/support-sessions/page.tsx` | "Tenant öffnen" button on active rows |
+| `src/components/auth/support-session-banner.tsx` | "Session verlassen" variant when viewer is the operator |
+| `messages/{de,en}.json` | `adminSupportAccess.bannerExit` i18n key |
+
+**Three security mitigations that must stay in place** (each labeled in the plan for traceability):
+
+- **S1 — Dev-only kill-switch**: `PLATFORM_IMPERSONATION_ENABLED` must remain unset in prod env. The impersonation branch in `src/trpc/init.ts` is dead code otherwise. If you prepare a cross-host cookie scheme, audit this flag's callers first.
+
+- **S2 — No auth mixing**: `src/trpc/client.tsx` `getHeaders()` returns early when the storage slot is populated and **intentionally omits the `Authorization` header**. Without this, a concurrent Supabase tenant session in the same browser would hijack the request into the normal tenant-auth path — the mutation would succeed but `platform_audit_logs` would get no entry, creating a silent forensic gap. Do not add Supabase header fallback to this branch.
+
+- **S3 — Auto-clear on UNAUTHORIZED**: The `impersonationErrorLink` in `src/trpc/client.tsx` watches for `UNAUTHORIZED` responses on requests carrying `x-support-session-id`. When it sees one, it clears the localStorage slot and hard-navigates to `/platform/support-sessions`. Without this, a tenant-admin revoke (during an active operator session) would leave the operator tab in a silent broken state — every subsequent request failing, banner still showing "aktiv bis HH:MM".
+
+**Impersonation is super-admin by design.** The synthesized `ContextUser` carries `userGroup.isAdmin = true` (see `src/trpc/init.ts:217`), which bypasses every `requirePermission(…)` check in the tenant codebase. An active support session is effectively full write access for its lifetime — scoping to specific modules would require a parallel permission catalogue that Phase 7 did not build. The mitigating controls are (a) tenant-admin consent required to activate, (b) every mutation dual-logged with the real operator's ID, and (c) 4h hard expiry. If you need read-only or module-scoped support sessions, that's a new plan.
+
+**Tenant isolation during impersonation**: `ctx.user.userTenants` is synthesized with exactly one entry (the target tenant). `tenantProcedure` at `src/trpc/init.ts:354-382` scans that array, so the operator cannot pivot to other tenants within one session — they'd need a separate SupportSession row, which requires separate tenant-admin consent.
+
+**Audit trail reconciliation** — every impersonated mutation creates two audit entries that reconcile on timestamp + entity ID:
+
+- **Tenant side** (`audit_logs`): `user_id = 00000000-0000-0000-0000-00000000beef` (sentinel), `entity_type`, `entity_id`, `changes` as usual. The tenant sees "Platform System did X" without needing platform access.
+- **Platform side** (`platform_audit_logs`): `action = 'impersonation.<original_action>'` (e.g. `impersonation.update`), `platform_user_id = real operator`, `support_session_id`, same `entity_type` / `entity_id`, `metadata.originalUserId = sentinel`. Compliance can bridge "Platform System" → real human via this side.
+
+**Testing the bridge end-to-end in dev**:
+
+1. Start the dev server (`pnpm dev`) — confirm `.env.local` contains `PLATFORM_IMPERSONATION_ENABLED=true`
+2. Log in as a tenant admin, navigate to `/de/admin/settings/support-access`, create a request (reason ≥10 chars, ttl 15-240 min)
+3. Log out
+4. Log in at `/platform/login` as your platform operator, complete MFA, land on `/platform/dashboard`
+5. `/platform/support-sessions` → "Offen" tab → click "Beitreten" → switch to "Aktiv" tab → click "Tenant öffnen"
+6. You should land on `/de/dashboard` with the tenant sidebar populated and the yellow banner up top. Dashboard will say "no employee for this user" — expected, the sentinel has no linked employee
+7. Edit anything (an employee, a booking) → check `platform_audit_logs` for an `impersonation.update` row and `audit_logs` for a "Platform System" row
+8. Click "Session verlassen" → back to `/platform/support-sessions`
+9. Try navigating to `/de/dashboard` directly → you should be redirected to `/login` (impersonation cleared, no Supabase session)
+
+**Prod cross-host follow-up** (NOT implemented): when prod cross-domain support lands, the localStorage slot may need to be replaced by a parent-domain cookie (`.terp.de`) or a signed one-time redirect token from `admin.terp.de` → `app.terp.de`. Phases 1, 3, and 4 of the UI bridge plan should not need changes — they're agnostic about where the impersonation state comes from. Phase 2 (transport layer) is the boundary that would need rethinking.
 
 #### Production Requirements
 
