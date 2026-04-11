@@ -114,6 +114,7 @@ pnpm seed:staging       # re-seed if needed
 | `NEXT_PUBLIC_APP_URL` | Base URL the app is served from. Used as the `redirectTo` target for Supabase recovery / welcome-email links. Must match `supabase/config.toml [auth] site_url` in local dev. Default: `http://127.0.0.1:3001`. |
 | `PLATFORM_JWT_SECRET` | **Required.** Secret used to sign platform-admin session JWTs (HS256). Generate with `openssl rand -base64 48`. See [Platform Admin System](#platform-admin-system) below. Must be rotated independently from Supabase secrets. |
 | `PLATFORM_COOKIE_DOMAIN` | Optional. Subdomain the platform-admin UI is served from (e.g. `admin.terp.de`) in prod. When set, the middleware rewrites `/` → `/platform` on that host and scopes the `platform-session` cookie to it. Leave empty in dev — platform is then served at `/platform/*` on the same host as the tenant app with a host-only cookie. |
+| `PLATFORM_OPERATOR_TENANT_ID` | Optional. UUID of the "house" tenant that acts as the billing backend for all subscription invoices (Phase 10a). When set, platform module bookings on other tenants automatically create `BillingRecurringInvoice` rows inside this tenant. Leave empty to disable subscription-billing features entirely — module toggles still work, they just don't produce contracts. See [Platform Subscription Billing](#platform-subscription-billing-phase-10a) below. |
 
 **Note:** When using the Supabase connection pooler (`pooler.supabase.com:6543`), the Prisma pg adapter is configured to accept Supabase's certificate chain (`ssl: { rejectUnauthorized: false }` in production). No special `DATABASE_URL` params are needed beyond `?sslmode=require&pgbouncer=true`.
 
@@ -545,3 +546,185 @@ The forensic review later only trusts what's in the table — if Option C is use
 **Lost password (not MFA)**: same decision tree. Peer operator via UI (`platformUsers.updatePassword`) is preferred. Bootstrap CLI doesn't currently have a `--reset-password` flag, so the fallback is to `DELETE FROM platform_users WHERE email = '…'` and re-bootstrap from scratch — the operator will need to re-enroll MFA on next login regardless.
 
 **Known issue — `resetMfa` recovery codes**: the router's `resetMfa` mutation (`src/trpc/platform/routers/platformUsers.ts:143`) currently passes `recoveryCodes: undefined`, which is a Prisma no-op — the old hashed recovery codes stay in the DB after a UI reset. Functionally harmless (the next enrollment overwrites them, and `mfaVerifyStep` throws as soon as `!mfaEnrolledAt`), but defense-in-depth-wise the codes should be cleared. The CLI path (`--reset-mfa`) uses `Prisma.DbNull` and does clear them. Fix pending — tracked as a follow-up to Phase 5.
+
+### Platform Subscription Billing (Phase 10a)
+
+The dogfood billing bridge: every time an operator books a module for a customer tenant through the platform admin UI, the platform also creates a `BillingRecurringInvoice` inside a designated "house" tenant, which then produces finalized monthly/annual invoices through the tenant app's own billing module — the exact same PDF + XRechnung pipeline customers already use for their own recurring billing. The platform operator becomes a first-class customer of their own billing product.
+
+**Why dogfood**: no parallel billing engine, no Stripe integration, no second PDF stack. Everything reuses `BillingRecurringInvoice`, `BillingDocument.finalize()`, `billing-document-pdf-service`, and `billing-document-einvoice-service`. Every bug in the billing flow is a bug the operator feels personally, which is the strongest possible QA against drift between "platform billing" and "tenant billing" — they cannot diverge by construction.
+
+**Plan & status**:
+
+- **Plan**: `thoughts/shared/plans/2026-04-10-platform-subscription-billing.md` — authoritative spec with the full phase breakdown, decision log, and flag tracker. Read before modifying `src/lib/platform/subscription-*.ts` or the autofinalize cron.
+- **Research**: `thoughts/shared/research/2026-04-10-platform-subscription-billing.md` — codebase analysis that led to the plan.
+- **Current status**: Phase 10a complete. Phases 10b (auto-email delivery) and 10c (SEPA Lastschrift) are explicitly deferred — see "Out of scope" below.
+
+#### The "House" tenant concept
+
+The platform binds to **one Terp tenant per environment** that plays two roles simultaneously:
+
+1. **Your own working tenant** — you log in to it like any other tenant (normal Supabase auth, not platform auth) and use Terp for your own company's day-to-day operations.
+2. **The billing backend for every customer subscription** — recurring invoices, `CrmAddress` rows for each customer, generated `BillingDocument` rows, payments, Mahnwesen all live inside this tenant.
+
+The house tenant is identified by `PLATFORM_OPERATOR_TENANT_ID` — a single env var per environment. Dev, staging, prod each have their own value. Setting it is the entire bootstrap — there is no DB flag, no platform UI field, no separate setup script. The value is read from `serverEnv.platformOperatorTenantId` (a getter in `src/lib/config.ts` so `vi.stubEnv` works in tests) and compared at request time via `subscriptionService.isOperatorTenant(tenantId)`.
+
+**Setup in three steps**:
+
+1. Find the UUID of your house tenant: `SELECT id, name FROM tenants WHERE slug = '<your-slug>'`.
+2. Set `PLATFORM_OPERATOR_TENANT_ID=<uuid>` in `.env.local` (dev), Vercel env (staging/prod).
+3. Restart the app. On startup you should see:
+   ```
+   [platform-subscriptions] Operator tenant "<name>" active. This tenant is
+   the "house" — modules booked on it will NOT generate self-issued invoices.
+   All other tenants will be billed normally.
+   ```
+   If the env var points at a non-existent UUID you get a warning but the app still boots — subscription features throw at request time, everything else works.
+
+**Changing the house tenant later is deliberately unsupported**. There's no migration, no UI switch. If your company restructures, it's a manual SQL job with data migration — the plan calls this out explicitly because for 0–5 customers with a single operator, a switch-feature isn't worth building.
+
+#### The "no self-billing" guard
+
+A hard rule enforced at two layers: **the house tenant is never billed for modules booked on itself**. When you enable a module on your own house tenant (e.g. you want to use CRM internally), the feature toggle works normally but no subscription is created.
+
+- **Router layer**: `enableModule` and `disableModule` in `src/trpc/platform/routers/tenantManagement.ts` check `subscriptionService.isOperatorTenant(input.tenantId)` and skip the subscription block entirely — `tenant_modules` upsert/delete still runs, but `createSubscription` / `cancelSubscription` are never called. The audit log still records the action with `subscriptionId: null`, `billingRecurringInvoiceId: null` so the absence is traceable.
+- **Service layer (defense-in-depth)**: `subscriptionService.createSubscription` throws `PlatformSubscriptionSelfBillError` if `customerTenantId === operatorTenantId`. A direct service call bypassing the router still cannot create a self-billing subscription.
+
+This prevents the footgun where an operator clicks "enable CRM for our own company" and unintentionally starts generating monthly self-invoices that have no legal or bookkeeping meaning.
+
+#### Business workflow (step by step)
+
+The actual lifecycle of a customer, from prospect to long-term billing:
+
+1. **Customer agrees to use Terp** — sales/contract step, happens outside Terp.
+2. **Create the tenant via `/platform/tenants → Tenant erstellen`** — fills name, slug, address, initial admin email. A `tenants` row, an initial admin user, and a welcome email are created. **No `CrmAddress`, no `platform_subscription`, no recurring invoice yet** — lazy creation is intentional (see "CrmAddress lazy creation" below).
+3. **Agree on module package + cycle** — which modules (Core/CRM/Billing/Warehouse/Inbound Invoices), which billing cycle (MONTHLY / ANNUALLY). Prices are hardcoded in `src/lib/platform/module-pricing.ts` (`MODULE_PRICES`).
+4. **Enable modules via `/platform/tenants/<id>/modules`** — for each module: click **Aktivieren**, fill the optional operator note, select the billing cycle, submit. Under the hood:
+   - First module for this customer: creates a new `CrmAddress` inside the house tenant from the tenant's address fields, creates a new `BillingRecurringInvoice`, creates a `platform_subscription` row, links everything.
+   - Second module on the **same cycle**: joins the existing recurring invoice — adds a position to `positionTemplate` and a marker to `internalNotes`, creates a new `platform_subscription` row pointing at the same `billingRecurringInvoiceId`.
+   - Second module on a **different cycle**: creates a second recurring invoice (monthly and annual cannot share, by design).
+5. **Hand off login** — welcome email gives the customer's admin a one-shot recovery link. They log in at the tenant URL, land in their own Terp, see only the modules you enabled. They never see the platform layer.
+6. **Nightly crons generate + finalize invoices**:
+   - **04:00 UTC** — `/api/cron/recurring-invoices` (existing Terp cron, **unchanged by Phase 10a**) generates DRAFT `BillingDocument` rows for every recurring template whose `nextDueDate` has arrived. Cross-tenant — picks up both tenant-internal recurring invoices and platform-subscription-driven ones.
+   - **04:15 UTC** — `/api/cron/platform-subscription-autofinalize` (new platform cron) finds the DRAFTs generated today for platform subscriptions (matched via the `[platform_subscription:<id>]` marker in `internalNotes`), calls `billingDocService.finalize()` on each, which transitions DRAFT → PRINTED and triggers PDF + XRechnung generation as a side effect. Also sweeps cancelled subscriptions whose recurring template has deactivated into status `ended`.
+7. **Send the invoices** (manual, ~2 clicks per invoice) — you log in to your **own house tenant** (tenant auth, not platform), open Fakturierung → Rechnungen, see the newly PRINTED invoices, click the send-email button on each. For 5 customers with monthly billing that's ~10 clicks per month. Auto-email is deferred to Phase 10b.
+8. **Customer pays** — you log their bank transfer as a Payment against the invoice in the house tenant's normal billing UI. Invoice status flips from "open" to "paid", and the Überfällig badge on the platform modules page clears automatically.
+9. **Customer cancels modules** — click **Deaktivieren** on each module in the platform admin:
+   - **Path A — last active subscription on this recurring invoice**: sets the recurring invoice's `endDate = nextDueDate - 1ms`, which trips the upfront gate in `billing-recurring-invoice-service.generate()` on the next cron run. Zero more invoices generated. The `sweepEndedSubscriptions` step promotes the subscription from `cancelled` to `ended` once the recurring deactivates.
+   - **Path B — other subscriptions still share this recurring invoice**: removes this module's position from `positionTemplate` (matched by `description === MODULE_PRICES[module].description`) and removes this subscription's marker from `internalNotes`. The recurring invoice keeps running for the remaining modules. The cancelled subscription row records `end_date = cancelledAt`, `status = cancelled`, the reason, and the platform user who cancelled.
+10. **Customer leaves permanently** — you deactivate the tenant itself via `/platform/tenants/<id>` → Deaktivieren. The tenant's data stays in the DB for audit/legal reasons (no hard delete in Phase 10a).
+
+**CrmAddress lazy creation**: step 2 does NOT create a `CrmAddress` in the house tenant. The `CrmAddress` is created on the **first `enableModule` call** for that customer (step 4), and reused for subsequent module bookings of the same customer. This is deliberate — test/demo tenants you throw away never pollute the house tenant's CRM. The downside is that a tenant without any modules enabled has no CRM presence in the house tenant, which means no ad-hoc invoicing is possible before the first module booking. For the intended business model (SaaS monthly subscriptions, no ad-hoc charges before contract signature), this is the right trade-off.
+
+#### Mental model: three levels you log into
+
+Phase 10a introduces a second login context you actively work in. In total there are three:
+
+1. **Platform admin** (`/platform/login`, eventually `admin.terp.de`) — the god view. Only used to create/deactivate tenants and toggle modules. You manage *customers* here.
+2. **Your own tenant (the house tenant)** — normal tenant login at the tenant URL. This is where you run your own business AND where all customer invoices physically live. You send invoices, track payments, and manage your own CRM here. You log in daily.
+3. **Customer tenants** — you almost never log in. The customer does. The only path for you to enter a customer tenant is via the Phase 6/7 consent-based impersonation flow — an explicit, time-boxed, dual-audited `SupportSession` the customer's admin must create first.
+
+The subscription bridge connects level 1 (where bookings happen) to level 2 (where invoices live). Level 3 is orthogonal — Phase 10a does not touch it.
+
+#### What Phase 10a adds on top of Phase 9
+
+Phase 9 gave the operator the ability to create/deactivate customer tenants and toggle modules on/off — but those toggles were pure feature gates with no billing linkage. Phase 10a turns the module toggle into a real monetized contract:
+
+| Concern | Phase 9 | Phase 10a |
+|---|---|---|
+| Create a tenant | ✅ | ✅ (unchanged) |
+| Enable a module | Feature toggle only | Feature toggle + subscription + recurring invoice in house tenant |
+| Track "who's paying what" | No — `operator_note` was a free-text breadcrumb | Yes — `platform_subscriptions` table with status lifecycle |
+| Monthly invoicing | Manual outside Terp | Automated via crons, invoice lives in house tenant |
+| Finalize invoices | Manual | Automated (04:15 UTC autofinalize cron) |
+| Email delivery | — | Manual (~2 clicks per invoice, ~10 clicks/month for 5 customers) |
+| Cancel a subscription mid-cycle | Delete the `tenant_modules` row | Same, PLUS subscription lifecycle (Path A sets `endDate`, Path B removes position + marker) |
+
+#### Minimal monthly operational effort
+
+Target for 0–5 customers:
+
+- **Per new customer onboarding**: ~5 minutes in the platform UI (create tenant + enable modules).
+- **Per month, recurring**: ~5 minutes to send the finalized invoices from the house tenant's billing UI. Crons do everything else automatically at 04:00 + 04:15 UTC.
+- **Per incoming payment**: the normal billing workflow you already use for any other invoice — record the bank transfer, the overdue badge clears automatically.
+
+Total operator overhead for subscription billing at 5 customers: well under 30 minutes per month.
+
+#### How the bridge works under the hood
+
+**Shared-invoice model**: Multiple active subscriptions for the same customer share **one** `BillingRecurringInvoice` per `(customerTenantId, billingCycle)` combination. A customer with 3 monthly modules gets ONE monthly recurring invoice with 3 positions — not 3 separate recurring invoices. Maximum 2 recurring invoices per customer: one MONTHLY, one ANNUALLY. The `platform_subscriptions` table still has one row per module (1-to-1 with module bookings); multiple rows can point at the same `billing_recurring_invoice_id`.
+
+**Marker convention**: The subscription-service writes `[platform_subscription:<uuid>]` to `BillingRecurringInvoice.internalNotes` at creation time. Under the shared-invoice model a recurring invoice's `internalNotes` contains a space-separated list of markers, one per active subscription. The existing `billing-recurring-invoice-service.generate()` at line 357 copies `internalNotes` verbatim onto every generated `BillingDocument`, so every generated invoice carries markers for all subscriptions that contributed a position. The autofinalize cron uses a `contains` match on a single subscription's marker to find the DRAFT invoice — this matches correctly even when the invoice carries multiple markers.
+
+**Autofinalize shared-doc deduplication**: When two subscriptions share the same DRAFT document, the first one's `finalize()` call flips it to PRINTED. The autofinalize loop finds the document by marker regardless of status and branches:
+- Status is DRAFT → finalize + track in `finalizedThisRun` set
+- Status is not DRAFT but id is in `finalizedThisRun` → sibling already finalized this run, just update the pointer + audit with `sharedDoc: 'already-finalized-this-run'`
+- Status is not DRAFT and id is not in `finalizedThisRun` → prior-run partial failure, recover by updating the pointer only
+
+This was a real bug the integration tests caught: the original code filtered by `status = 'DRAFT'` in the query, which returned null for siblings after the first finalize flipped the state. Mocks in unit tests didn't simulate the status change so the bug slipped through. The fix shows exactly why integration tests against the real DB are worth the extra cost.
+
+**Two separate crons, not one extended cron** — the existing `/api/cron/recurring-invoices` is treated as Terp infrastructure and is **not modified** by Phase 10a. The new autofinalize cron runs 15 minutes later and reconstructs "what did the 04:00 cron generate today for platform subscriptions" via DB queries (`BillingRecurringInvoice.lastGeneratedAt >= today 00:00 UTC` + marker match). Order matters — running autofinalize first produces a zeroed summary, no state pollution. In production they're scheduled 15 minutes apart so ordering is automatic.
+
+#### Hard constraint: Terp code stays unchanged
+
+Operator-declared rule for Phase 10a: **Terp-side services (`src/lib/services/billing-*`, `src/lib/services/crm-*`, `src/lib/services/email-*`, `src/trpc/routers/*`) are not modified by platform features.** Platform code may READ Terp models directly via Prisma, but all WRITES go through the existing Terp services with `(prisma, tenantId, …)` as plain parameters.
+
+Two design consequences:
+
+1. **No Prisma `@relation` fields on Terp models.** The `PlatformSubscription` model has plain `String? @db.Uuid` columns for `operatorCrmAddressId`, `billingRecurringInvoiceId`, `lastGeneratedInvoiceId` — no `@relation` declarations, no inverse relations added to `CrmAddress` / `BillingRecurringInvoice` / `BillingDocument`. The SQL-level foreign keys (via `REFERENCES` clauses in the migration) enforce referential integrity at the DB level with `ON DELETE SET NULL`, but Prisma's generated TypeScript types for those Terp models remain byte-identical — they don't gain a `platformSubscriptions` array field. Platform code reads related Terp rows via explicit two-query patterns (e.g. `listForCustomer` batch-fetches recurring invoices and last-generated docs in separate queries instead of using `include`).
+
+2. **A new cron route instead of extending the existing one.** `/api/cron/recurring-invoices/route.ts` is not touched. The new `/api/cron/platform-subscription-autofinalize/route.ts` is a pure platform route that reads Terp models directly via Prisma (read-only, via defense-in-depth `tenantId` filters) and writes Terp rows exclusively through `billing-document-service.finalize()`.
+
+#### Key files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/platform/module-pricing.ts` | Hardcoded `MODULE_PRICES` catalog. Description field is a stable identifier used by cancellation Path B — **do not change descriptions on shipped modules** without a migration plan (see FLAG 9 in the plan). |
+| `src/lib/platform/subscription-service.ts` | Core bridge logic: `createSubscription`, `cancelSubscription` (Path A/B), `findOrCreateOperatorCrmAddress`, `listForCustomer`, `sweepEndedSubscriptions`, `isOperatorTenant`, marker helpers. Errors: `PlatformSubscriptionConfigError`, `PlatformSubscriptionNotFoundError`, `PlatformSubscriptionSelfBillError`. |
+| `src/lib/platform/subscription-autofinalize-service.ts` | `autofinalizePending` — scans active subscriptions, finds today's DRAFTs, finalizes them with shared-doc dedup. Returns a summary with `scanned`, `finalized`, `subscriptionPointersUpdated`, `skippedSharedDocAlreadyFinalizedThisRun`, `endedSubscriptions`, `errors`. |
+| `src/app/api/cron/platform-subscription-autofinalize/route.ts` | Cron entry point. Validates `CRON_SECRET`, calls `autofinalizePending`, returns JSON summary. |
+| `src/trpc/platform/routers/tenantManagement.ts` | `listSubscriptions` query + subscription wiring in `enableModule` / `disableModule` (house-tenant guard applied here). |
+| `src/app/platform/(authed)/tenants/[id]/modules/page.tsx` | Modules page with the billing cycle selector in the Aktivieren dialog and the Abo column showing cycle, price, next-due date, last invoice number, and overdue badge. |
+| `prisma/schema.prisma` — `PlatformSubscription` | Subscription state table. No `@relation` fields on purpose. |
+| `supabase/migrations/20260422000000_create_platform_subscriptions.sql` | Schema + CHECK constraints (status ∈ {active, cancelled, ended}, cycle ∈ {MONTHLY, ANNUALLY}, module ∈ {core, crm, billing, warehouse, inbound_invoices}, cancelled/ended-state field consistency) + 4 indexes + SQL-level FKs. |
+| `src/lib/platform/__tests__/subscription-service.integration.test.ts` | 6 integration tests against the real dev DB: createSubscription, shared-invoice join, end-to-end cron flow, self-bill guard, isOperatorTenant, Path B cancellation. Caught the shared-doc autofinalize bug. |
+| `thoughts/shared/plans/2026-04-10-platform-subscription-billing.md` | The full plan with flag tracker (10 flags documenting accepted trade-offs), manual verification checklist, and out-of-scope breakdown. |
+
+#### Cron schedule and failure modes
+
+`vercel.json`:
+
+```json
+{ "path": "/api/cron/recurring-invoices", "schedule": "0 4 * * *" },
+{ "path": "/api/cron/platform-subscription-autofinalize", "schedule": "15 4 * * *" }
+```
+
+**Failure modes**:
+
+- **Main cron succeeds, autofinalize fails**: DRAFT invoices exist but not finalized. You manually finalize them from the house tenant's billing UI. The next day's autofinalize run picks them up automatically if they're still DRAFT (marker + `lastGeneratedAt` checks still pass).
+- **Main cron fails, autofinalize runs anyway**: autofinalize finds no new DRAFTs (nothing was generated), returns a zeroed summary. No state pollution.
+- **Both succeed**: normal flow, all invoices PRINTED.
+- **Reversed order** (autofinalize before generate — only possible via manual curl, not in prod): autofinalize returns zeroed summary (`skippedNotDueToday` for every sub), the next generate run creates the DRAFTs, the next autofinalize picks them up.
+
+#### Operator tenant bootstrap in staging / prod
+
+**FLAG 1 from the plan — `NumberSequence` row must exist**: The house tenant in staging/prod must have a `number_sequences` row for the `invoice` key before the first subscription billing run, otherwise the first generated invoice number will literally be `"1"` with an empty prefix. The dev seed handles this automatically (`RE-` prefix), but staging/prod need a one-time SQL:
+
+```sql
+INSERT INTO number_sequences (tenant_id, key, prefix, next_value)
+VALUES ('<prod-house-tenant-id>', 'invoice', 'RE-', 1);
+```
+
+Do this **before** enabling any modules on customer tenants in prod.
+
+#### Out of scope (deferred to later phases)
+
+- **Phase 10b — Auto-email delivery**: the autofinalize step currently stops at PRINTED + PDF + XRechnung. Email delivery is manual. Deferred because email has the most edge cases (SMTP down, bounces, wrong recipient) and the per-operator click cost is ~10 clicks/month for 5 customers.
+- **Phase 10c — SEPA Lastschrift**: no `pain.008.xml` generation, no mandate management, no Creditor-ID registration, no return-debit handling. Large standalone project.
+- **Automated Mahnwesen / dunning**: operator checks overdue status via the tenant-side `listOpenItems` UI and nudges customers manually. The platform modules page shows a small "überfällig" badge as a hint, nothing more.
+- **Pro-rated cancellation / mid-cycle refunds**: customer is billed through end of current period. No pro-rata, no partial refunds. If you want to refund, issue a credit note manually in the house tenant's billing UI.
+- **Tiered pricing, volume discounts, promo codes**: `unit_price` is a single flat Float per subscription.
+- **Multi-currency**: EUR only.
+- **Payment-provider webhooks** (Stripe, PayPal, sevDesk).
+- **Price catalog UI**: `MODULE_PRICES` is a hardcoded TypeScript constant. If price changes become frequent (est. 18+ months away), migrate to a DB-backed price list.
+- **Platform-wide subscription dashboard**: `/platform/subscriptions` page listing all contracts across tenants with MRR, churn, upcoming renewals. The per-tenant modules page is enough for 0–5 customers.
+- **Multiple operator tenants**: `PLATFORM_OPERATOR_TENANT_ID` is a single pinned tenant per environment. There is no concept of "which operator tenant bills which subscription" — single source of truth by design.
