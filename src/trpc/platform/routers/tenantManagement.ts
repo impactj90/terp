@@ -16,6 +16,8 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, platformAuthedProcedure } from "../init"
 import * as platformAudit from "@/lib/platform/audit-service"
+import * as subscriptionService from "@/lib/platform/subscription-service"
+import * as billingPaymentService from "@/lib/services/billing-payment-service"
 import { create as createUserService } from "@/lib/services/users-service"
 import { AVAILABLE_MODULES } from "@/lib/modules/constants"
 import { PLATFORM_SYSTEM_USER_ID } from "@/trpc/init"
@@ -469,12 +471,46 @@ export const platformTenantManagementRouter = createTRPCRouter({
       })
     }),
 
+  listSubscriptions: platformAuthedProcedure
+    .input(z.object({ tenantId: tenantIdSchema }))
+    .query(async ({ ctx, input }) => {
+      const subs = await subscriptionService.listForCustomer(
+        ctx.prisma,
+        input.tenantId,
+      )
+
+      if (!subscriptionService.isSubscriptionBillingEnabled()) {
+        return subs.map((s) => ({ ...s, isOverdue: false }))
+      }
+      const operatorTenantId = subscriptionService.requireOperatorTenantId()
+      const result: Array<(typeof subs)[number] & { isOverdue: boolean }> = []
+      for (const sub of subs) {
+        let isOverdue = false
+        if (sub.lastGeneratedInvoiceId) {
+          try {
+            const openItem = await billingPaymentService.getOpenItemById(
+              ctx.prisma,
+              operatorTenantId,
+              sub.lastGeneratedInvoiceId,
+            )
+            isOverdue = openItem?.isOverdue ?? false
+          } catch {
+            // invoice might not be in open-items (already paid or not
+            // matching type filters) — leave isOverdue=false
+          }
+        }
+        result.push({ ...sub, isOverdue })
+      }
+      return result
+    }),
+
   enableModule: platformAuthedProcedure
     .input(
       z.object({
         tenantId: tenantIdSchema,
         moduleKey: moduleEnum,
         operatorNote: z.string().trim().max(255).optional(),
+        billingCycle: z.enum(["MONTHLY", "ANNUALLY"]).default("MONTHLY"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -509,6 +545,39 @@ export const platformTenantManagementRouter = createTRPCRouter({
         },
       })
 
+      // Phase 10a: also create a platform_subscription if billing is enabled.
+      // Two skip conditions:
+      //   1. Operator tenant booking modules on itself — the "house" is
+      //      not billed (see subscription-service.isOperatorTenant +
+      //      PlatformSubscriptionSelfBillError).
+      //   2. An active subscription already exists for (tenantId, module) —
+      //      that happens on a re-enable.
+      let subscriptionResult:
+        | Awaited<ReturnType<typeof subscriptionService.createSubscription>>
+        | null = null
+      const isHouseTenant = subscriptionService.isOperatorTenant(input.tenantId)
+      if (subscriptionService.isSubscriptionBillingEnabled() && !isHouseTenant) {
+        const existing = await ctx.prisma.platformSubscription.findFirst({
+          where: {
+            tenantId: input.tenantId,
+            module: input.moduleKey,
+            status: "active",
+          },
+          select: { id: true },
+        })
+        if (!existing) {
+          subscriptionResult = await subscriptionService.createSubscription(
+            ctx.prisma,
+            {
+              customerTenantId: input.tenantId,
+              module: input.moduleKey,
+              billingCycle: input.billingCycle,
+            },
+            ctx.platformUser.id,
+          )
+        }
+      }
+
       await platformAudit.log(ctx.prisma, {
         platformUserId: ctx.platformUser.id,
         action: "module.enabled",
@@ -518,6 +587,10 @@ export const platformTenantManagementRouter = createTRPCRouter({
         metadata: {
           moduleKey: input.moduleKey,
           operatorNote: input.operatorNote ?? null,
+          billingCycle: input.billingCycle,
+          subscriptionId: subscriptionResult?.subscriptionId ?? null,
+          billingRecurringInvoiceId:
+            subscriptionResult?.billingRecurringInvoiceId ?? null,
         },
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
@@ -561,6 +634,33 @@ export const platformTenantManagementRouter = createTRPCRouter({
         where: { id: row.id },
       })
 
+      // Phase 10a: cancel the active subscription if billing is enabled.
+      // Skip for the operator tenant itself — the house never has
+      // subscriptions to cancel (mirrors the enableModule guard).
+      let cancelledSubscriptionId: string | null = null
+      const isHouseTenant = subscriptionService.isOperatorTenant(input.tenantId)
+      if (subscriptionService.isSubscriptionBillingEnabled() && !isHouseTenant) {
+        const activeSub = await ctx.prisma.platformSubscription.findFirst({
+          where: {
+            tenantId: input.tenantId,
+            module: input.moduleKey,
+            status: "active",
+          },
+          select: { id: true },
+        })
+        if (activeSub) {
+          await subscriptionService.cancelSubscription(
+            ctx.prisma,
+            {
+              subscriptionId: activeSub.id,
+              reason: input.reason ?? "Platform module disabled",
+            },
+            ctx.platformUser.id,
+          )
+          cancelledSubscriptionId = activeSub.id
+        }
+      }
+
       await platformAudit.log(ctx.prisma, {
         platformUserId: ctx.platformUser.id,
         action: "module.disabled",
@@ -571,6 +671,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
           moduleKey: input.moduleKey,
           reason: input.reason ?? null,
           operatorNote: row.operatorNote,
+          cancelledSubscriptionId,
         },
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,

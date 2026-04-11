@@ -21,6 +21,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/platform-subscription-autofinalize",
+      "schedule": "15 4 * * *"
+    },
+    {
       "path": "/api/cron/wh-corrections",
       "schedule": "0 6 * * *"
     },

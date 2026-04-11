@@ -41,6 +41,17 @@ export const serverEnv = {
   get platformImpersonationEnabled() {
     return process.env.PLATFORM_IMPERSONATION_ENABLED === 'true'
   },
+  /**
+   * Phase 10a: Operator tenant for platform subscription billing. When set,
+   * platform module bookings also create BillingRecurringInvoice rows inside
+   * this tenant. Leave empty to disable subscription features entirely.
+   *
+   * Implemented as a getter so `vi.stubEnv` works in tests — see
+   * platformImpersonationEnabled for the same rationale.
+   */
+  get platformOperatorTenantId() {
+    return process.env.PLATFORM_OPERATOR_TENANT_ID ?? ''
+  },
 } as const
 
 // Client-side accessible

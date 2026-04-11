@@ -44,6 +44,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const MODULE_LABELS: Record<string, string> = {
   core: "Kern",
@@ -78,10 +85,14 @@ export default function PlatformTenantModulesPage({
   const modulesQuery = useQuery(
     trpc.tenantManagement.listModules.queryOptions({ tenantId }),
   )
+  const subscriptionsQuery = useQuery(
+    trpc.tenantManagement.listSubscriptions.queryOptions({ tenantId }),
+  )
 
   const [search, setSearch] = useState("")
   const [enableDialog, setEnableDialog] = useState<EnableDialogState>(null)
   const [operatorNote, setOperatorNote] = useState("")
+  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "ANNUALLY">("MONTHLY")
   const [disableDialog, setDisableDialog] = useState<DisableDialogState>(null)
   const [disableReason, setDisableReason] = useState("")
 
@@ -90,9 +101,20 @@ export default function PlatformTenantModulesPage({
       queryKey: trpc.tenantManagement.listModules.queryKey({ tenantId }),
     })
     queryClient.invalidateQueries({
+      queryKey: trpc.tenantManagement.listSubscriptions.queryKey({ tenantId }),
+    })
+    queryClient.invalidateQueries({
       queryKey: trpc.tenantManagement.getById.queryKey({ id: tenantId }),
     })
   }
+
+  const activeSubByModule = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof subscriptionsQuery.data>[number]>()
+    for (const sub of subscriptionsQuery.data ?? []) {
+      if (sub.status === "active") map.set(sub.module, sub)
+    }
+    return map
+  }, [subscriptionsQuery.data])
 
   const enableMutation = useMutation({
     ...trpc.tenantManagement.enableModule.mutationOptions(),
@@ -101,6 +123,7 @@ export default function PlatformTenantModulesPage({
       invalidate()
       setEnableDialog(null)
       setOperatorNote("")
+      setBillingCycle("MONTHLY")
     },
     onError: (err) => toast.error(err.message ?? "Aktivierung fehlgeschlagen"),
   })
@@ -153,7 +176,7 @@ export default function PlatformTenantModulesPage({
         <CardHeader>
           <CardTitle>Modul-Buchungen</CardTitle>
           <CardDescription>
-            Aktivierte und verfügbare Module mit Notizen.
+            Gebuchte Module und laufende Abonnements für diesen Tenant.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -182,6 +205,7 @@ export default function PlatformTenantModulesPage({
                   <TableHead>Aktiviert am</TableHead>
                   <TableHead>Notiz</TableHead>
                   <TableHead>Operator</TableHead>
+                  <TableHead>Abo</TableHead>
                   <TableHead className="text-right">Aktion</TableHead>
                 </TableRow>
               </TableHeader>
@@ -225,6 +249,39 @@ export default function PlatformTenantModulesPage({
                           "—"
                         )}
                       </TableCell>
+                      <TableCell className="text-xs">
+                        {(() => {
+                          const sub = activeSubByModule.get(row.module)
+                          if (!sub) return <span className="text-muted-foreground">—</span>
+                          return (
+                            <div className="space-y-0.5">
+                              <div>
+                                <Badge variant="outline">
+                                  {sub.billingCycle === "MONTHLY" ? "Monatl." : "Jährl."}
+                                </Badge>{" "}
+                                {sub.unitPrice.toFixed(2)} {sub.currency}
+                              </div>
+                              {sub.billingRecurringInvoice?.nextDueDate ? (
+                                <div className="text-muted-foreground">
+                                  Nächste: {formatDate(sub.billingRecurringInvoice.nextDueDate)}
+                                </div>
+                              ) : null}
+                              {sub.lastGeneratedInvoice ? (
+                                <div>
+                                  <span className="font-mono">
+                                    {sub.lastGeneratedInvoice.number}
+                                  </span>
+                                  {sub.isOverdue ? (
+                                    <Badge variant="destructive" className="ml-1">
+                                      überfällig
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          )
+                        })()}
+                      </TableCell>
                       <TableCell className="text-right">
                         {row.enabled ? (
                           <Button
@@ -255,7 +312,7 @@ export default function PlatformTenantModulesPage({
                 })}
                 {filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
                       Keine Module gefunden.
                     </TableCell>
                   </TableRow>
@@ -272,6 +329,7 @@ export default function PlatformTenantModulesPage({
           if (!open) {
             setEnableDialog(null)
             setOperatorNote("")
+            setBillingCycle("MONTHLY")
           }
         }}
       >
@@ -298,6 +356,21 @@ export default function PlatformTenantModulesPage({
               placeholder="z.B. #INV-2026-042 oder 'Testaccount, nicht fakturieren'"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="billingCycle">Abrechnungszyklus</Label>
+            <Select
+              value={billingCycle}
+              onValueChange={(v) => setBillingCycle(v as "MONTHLY" | "ANNUALLY")}
+            >
+              <SelectTrigger id="billingCycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MONTHLY">Monatlich</SelectItem>
+                <SelectItem value="ANNUALLY">Jährlich</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
             <Button
               variant="ghost"
@@ -320,6 +393,7 @@ export default function PlatformTenantModulesPage({
                     | "warehouse"
                     | "inbound_invoices",
                   operatorNote: operatorNote.trim() || undefined,
+                  billingCycle,
                 })
               }}
               disabled={enableMutation.isPending}

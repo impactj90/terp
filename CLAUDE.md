@@ -74,6 +74,52 @@ prisma/schema.prisma  -> Database schema (Prisma)
 
 **Database**: Prisma ORM with PostgreSQL (Supabase). Migrations via `supabase migration new`.
 
+## Platform Subscription Billing (Phase 10a)
+
+When `PLATFORM_OPERATOR_TENANT_ID` is set, the platform admin's module
+bookings also create `BillingRecurringInvoice` rows inside the designated
+operator tenant, wrapped in `platform_subscriptions` lifecycle records. Two
+daily crons run in sequence:
+
+1. `/api/cron/recurring-invoices` at 04:00 UTC — Terp cron, generates
+   DRAFT invoices from all due recurring templates (cross-tenant).
+2. `/api/cron/platform-subscription-autofinalize` at 04:15 UTC — new
+   platform cron, finalizes DRAFT invoices belonging to platform
+   subscriptions (matched via a `[platform_subscription:<id>]` marker in
+   `BillingRecurringInvoice.internalNotes`). Finalize triggers PDF +
+   XRechnung generation as a side effect of the existing Terp service.
+
+Email delivery is manual in Phase 10a — operator sends from the tenant-
+side billing UI.
+
+**House-tenant rule**: The operator tenant is NEVER billed for modules
+booked on itself. `enableModule` / `disableModule` skip the subscription
+block entirely when `tenantId === PLATFORM_OPERATOR_TENANT_ID`, and
+`createSubscription` throws `PlatformSubscriptionSelfBillError` as
+defense-in-depth. Use `subscriptionService.isOperatorTenant(tenantId)`
+to check this from any caller. The "house" rule prevents the operator
+from accidentally generating self-issued invoices for internal module
+usage — modules toggle on/off normally, just without a subscription
+side-effect.
+
+**Hard constraint**: Terp-side code (`src/lib/services/billing-*`,
+`crm-*`, `email-*`, `src/trpc/routers/`) must not be modified by platform
+features. Platform code may READ Terp models directly via Prisma, but all
+WRITES to Terp tables go through the existing Terp services with
+`(prisma, tenantId, ...)`. Prisma relations from platform models to Terp
+models are defined at the SQL level only (via migration `REFERENCES`
+clauses) — no `@relation` declarations in `schema.prisma`.
+
+Key files:
+- `src/lib/platform/module-pricing.ts` — hardcoded module price catalog
+- `src/lib/platform/subscription-service.ts` — bridge logic (create, cancel, list)
+- `src/lib/platform/subscription-autofinalize-service.ts` — autofinalize logic
+- `src/app/api/cron/platform-subscription-autofinalize/route.ts` — cron route
+- `prisma/schema.prisma` `PlatformSubscription` model — subscription state
+
+See `thoughts/shared/plans/2026-04-10-platform-subscription-billing.md`
+for the full plan.
+
 ## Important
 
 - All new backend logic uses service + repository pattern in `src/lib/services/`

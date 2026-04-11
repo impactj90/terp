@@ -4559,3 +4559,131 @@ ON CONFLICT DO NOTHING;
 INSERT INTO employee_foreign_assignments (tenant_id, employee_id, country_code, country_name, start_date, end_date, a1_certificate_number, a1_valid_from, a1_valid_until, foreign_activity_exemption) VALUES
   ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 'TR', 'Türkei', '2025-06-01', '2025-09-30', 'A1-2025-TR-042', '2025-06-01', '2025-09-30', false)
 ON CONFLICT DO NOTHING;
+
+-- =============================================================
+-- Phase 10a: Platform Subscription Billing seed
+-- =============================================================
+-- Creates a second tenant "Test Customer GmbH" and wires up a sample
+-- subscription billed by the dev tenant (which acts as the operator
+-- tenant when PLATFORM_OPERATOR_TENANT_ID=10000000-0000-0000-0000-000000000001).
+
+-- 1. Second tenant — the first "paying customer"
+INSERT INTO tenants (id, name, slug, is_active, address_street, address_zip, address_city, address_country, email, created_at, updated_at)
+VALUES (
+  '20000000-0000-0000-0000-000000000001',
+  'Test Customer GmbH', 'test-customer', true,
+  'Kundenstraße 42', '12345', 'Berlin', 'Deutschland',
+  'buchhaltung@test-customer.local',
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- 2. CrmAddress for Test Customer inside the Dev Company (operator) tenant
+INSERT INTO crm_addresses (
+  id, tenant_id, number, type, company, street, zip, city, country, email,
+  match_code, is_active, created_at, updated_at
+)
+VALUES (
+  '30000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  'K-999',
+  'CUSTOMER',
+  'Test Customer GmbH',
+  'Kundenstraße 42',
+  '12345',
+  'Berlin',
+  'DE',
+  'buchhaltung@test-customer.local',
+  'TEST CUSTOMER GMBH',
+  true,
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- 3. platform_subscriptions rows — two subscriptions (core + crm) for
+--    Test Customer. Under the shared-invoice model, BOTH subscriptions
+--    end up pointing at the SAME recurring invoice in step 5.
+INSERT INTO platform_subscriptions (
+  id, tenant_id, module, status, billing_cycle, unit_price, currency,
+  start_date, operator_crm_address_id, billing_recurring_invoice_id,
+  created_at, created_by_platform_user_id
+)
+VALUES
+  (
+    '50000000-0000-0000-0000-000000000001',
+    '20000000-0000-0000-0000-000000000001',
+    'core',
+    'active',
+    'MONTHLY',
+    8,
+    'EUR',
+    date_trunc('month', NOW()),
+    '30000000-0000-0000-0000-000000000001',
+    NULL,
+    NOW(),
+    '00000000-0000-0000-0000-000000000001'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000002',
+    '20000000-0000-0000-0000-000000000001',
+    'crm',
+    'active',
+    'MONTHLY',
+    4,
+    'EUR',
+    date_trunc('month', NOW()),
+    '30000000-0000-0000-0000-000000000001',
+    NULL,
+    NOW(),
+    '00000000-0000-0000-0000-000000000001'
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. ONE BillingRecurringInvoice in the operator tenant covering BOTH
+--    subscriptions — shared-invoice model. next_due_date = NOW() so the
+--    first cron run generates the DRAFT immediately.
+--
+--    created_by_id MUST be a valid UUID — billing-recurring-invoice-service
+--    .generateDue() uses `template.createdById || "system"` as the
+--    createdById of the generated BillingDocument, and the string literal
+--    "system" is not a valid UUID, so NULL here makes the cron choke.
+--    PLATFORM_SYSTEM_USER_ID is the canonical sentinel for platform-
+--    initiated writes (see src/trpc/init.ts).
+INSERT INTO billing_recurring_invoices (
+  id, tenant_id, name, address_id, interval, start_date, next_due_date,
+  auto_generate, is_active, payment_term_days, internal_notes,
+  position_template, created_at, updated_at, created_by_id
+)
+VALUES (
+  '40000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  'Abo monthly — Test Customer GmbH',
+  '30000000-0000-0000-0000-000000000001',
+  'MONTHLY',
+  date_trunc('month', NOW()),
+  NOW(),
+  true,
+  true,
+  14,
+  '[platform_subscription:50000000-0000-0000-0000-000000000001] [platform_subscription:50000000-0000-0000-0000-000000000002]',
+  '[
+    {"type":"FREE","description":"Terp Core — Benutzer, Mitarbeiter, Stammdaten","quantity":1,"unit":"Monat","unitPrice":8,"vatRate":19},
+    {"type":"FREE","description":"Terp CRM — Adressen, Kontakte, Korrespondenz, Anfragen","quantity":1,"unit":"Monat","unitPrice":4,"vatRate":19}
+  ]'::jsonb,
+  NOW(), NOW(), '00000000-0000-0000-0000-00000000beef'
+) ON CONFLICT (id) DO NOTHING;
+
+-- 5. Link BOTH subscriptions to the SAME recurring invoice.
+UPDATE platform_subscriptions
+  SET billing_recurring_invoice_id = '40000000-0000-0000-0000-000000000001'
+  WHERE id IN (
+    '50000000-0000-0000-0000-000000000001',
+    '50000000-0000-0000-0000-000000000002'
+  )
+  AND billing_recurring_invoice_id IS NULL;
+
+-- 6. Pre-enable the core + crm tenant_modules on Test Customer so the
+--    feature gate matches the subscription state on first login.
+INSERT INTO tenant_modules (tenant_id, module, enabled_at, enabled_by_platform_user_id)
+VALUES
+  ('20000000-0000-0000-0000-000000000001', 'core', NOW(), '00000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000001', 'crm',  NOW(), '00000000-0000-0000-0000-000000000001')
+ON CONFLICT DO NOTHING;

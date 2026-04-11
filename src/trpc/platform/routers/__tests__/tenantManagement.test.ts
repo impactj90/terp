@@ -9,7 +9,7 @@
  * on the router orchestration (transaction wiring, audit writes, error
  * paths) rather than the already-tested user-creation flow.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
 vi.mock("@/lib/services/users-service", () => ({
   create: vi.fn().mockResolvedValue({
@@ -22,10 +22,20 @@ vi.mock("@/lib/services/users-service", () => ({
   }),
 }))
 
+vi.mock("@/lib/platform/subscription-service", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>()
+  return {
+    ...actual,
+    createSubscription: vi.fn(),
+    cancelSubscription: vi.fn(),
+  }
+})
+
 import { createCallerFactory } from "../../init"
 import { platformTenantManagementRouter } from "../tenantManagement"
 import { createMockPlatformContext } from "../../__tests__/helpers"
 import { create as createUserService } from "@/lib/services/users-service"
+import * as subscriptionService from "@/lib/platform/subscription-service"
 
 const createCaller = createCallerFactory(platformTenantManagementRouter)
 
@@ -284,6 +294,204 @@ describe("tenantManagement.enableModule", () => {
   })
 })
 
+describe("tenantManagement.enableModule — subscription wiring (Phase 10a)", () => {
+  const OPERATOR_TENANT_ID = "10000000-0000-0000-0000-000000000001"
+
+  beforeEach(() => {
+    vi.stubEnv("PLATFORM_OPERATOR_TENANT_ID", OPERATOR_TENANT_ID)
+    vi.mocked(subscriptionService.createSubscription).mockReset()
+    vi.mocked(subscriptionService.cancelSubscription).mockReset()
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("creates platform_subscription and records ids in audit metadata", async () => {
+    const tenantFindUnique = vi.fn().mockResolvedValue({ id: TENANT_ID })
+    const upsert = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      enabledAt: new Date(),
+      enabledByPlatformUserId: OPERATOR_ID,
+      operatorNote: null,
+    })
+    const platformSubscriptionFindFirst = vi.fn().mockResolvedValue(null)
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+    vi.mocked(subscriptionService.createSubscription).mockResolvedValue({
+      subscriptionId: "sub-1",
+      operatorCrmAddressId: "crm-1",
+      billingRecurringInvoiceId: "ri-1",
+      joinedExistingRecurring: false,
+    })
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: { upsert },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.enableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+      billingCycle: "MONTHLY",
+    })
+
+    expect(subscriptionService.createSubscription).toHaveBeenCalledTimes(1)
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            subscriptionId: "sub-1",
+            billingRecurringInvoiceId: "ri-1",
+            billingCycle: "MONTHLY",
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("skips creation when an active subscription already exists (re-enable)", async () => {
+    const tenantFindUnique = vi.fn().mockResolvedValue({ id: TENANT_ID })
+    const upsert = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      enabledAt: new Date(),
+      enabledByPlatformUserId: OPERATOR_ID,
+      operatorNote: null,
+    })
+    const platformSubscriptionFindFirst = vi
+      .fn()
+      .mockResolvedValue({ id: "existing-sub" })
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: { upsert },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.enableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+      billingCycle: "MONTHLY",
+    })
+
+    expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            subscriptionId: null,
+            billingRecurringInvoiceId: null,
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("operator tenant booking modules on itself: tenant_modules upserted, NO subscription created", async () => {
+    // The "house" tenant id matches the env var.
+    const HOUSE_ID = OPERATOR_TENANT_ID
+    const tenantFindUnique = vi.fn().mockResolvedValue({ id: HOUSE_ID })
+    const upsert = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: HOUSE_ID,
+      module: "crm",
+      enabledAt: new Date(),
+      enabledByPlatformUserId: OPERATOR_ID,
+      operatorNote: null,
+    })
+    const platformSubscriptionFindFirst = vi.fn()
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: { upsert },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.enableModule({
+      tenantId: HOUSE_ID,
+      moduleKey: "crm",
+      billingCycle: "MONTHLY",
+    })
+
+    // Module toggle still happened.
+    expect(upsert).toHaveBeenCalled()
+    // Subscription block was completely skipped: no findFirst, no create.
+    expect(platformSubscriptionFindFirst).not.toHaveBeenCalled()
+    expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            subscriptionId: null,
+            billingRecurringInvoiceId: null,
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("does not touch subscription logic when env var unset", async () => {
+    vi.stubEnv("PLATFORM_OPERATOR_TENANT_ID", "")
+    const tenantFindUnique = vi.fn().mockResolvedValue({ id: TENANT_ID })
+    const upsert = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      enabledAt: new Date(),
+      enabledByPlatformUserId: OPERATOR_ID,
+      operatorNote: null,
+    })
+    const platformSubscriptionFindFirst = vi.fn()
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: { upsert },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.enableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+      billingCycle: "MONTHLY",
+    })
+
+    expect(platformSubscriptionFindFirst).not.toHaveBeenCalled()
+    expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            subscriptionId: null,
+            billingRecurringInvoiceId: null,
+          }),
+        }),
+      }),
+    )
+  })
+})
+
 describe("tenantManagement.disableModule", () => {
   it("deletes the row and records the reason in the audit metadata", async () => {
     const tenantModuleFindUnique = vi.fn().mockResolvedValue({
@@ -351,5 +559,144 @@ describe("tenantManagement.disableModule", () => {
     await expect(
       caller.disableModule({ tenantId: TENANT_ID, moduleKey: "core" }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  })
+})
+
+describe("tenantManagement.disableModule — subscription wiring (Phase 10a)", () => {
+  const OPERATOR_TENANT_ID = "10000000-0000-0000-0000-000000000001"
+
+  beforeEach(() => {
+    vi.stubEnv("PLATFORM_OPERATOR_TENANT_ID", OPERATOR_TENANT_ID)
+    vi.mocked(subscriptionService.cancelSubscription).mockReset()
+    vi.mocked(subscriptionService.cancelSubscription).mockResolvedValue()
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("cancels the active subscription when one exists", async () => {
+    const tenantModuleFindUnique = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      operatorNote: null,
+    })
+    const tenantModuleDelete = vi.fn().mockResolvedValue({ id: MODULE_ROW_ID })
+    const platformSubscriptionFindFirst = vi
+      .fn()
+      .mockResolvedValue({ id: "sub-1" })
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenantModule: {
+          findUnique: tenantModuleFindUnique,
+          delete: tenantModuleDelete,
+        },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.disableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+      reason: "Kündigung",
+    })
+
+    expect(subscriptionService.cancelSubscription).toHaveBeenCalledTimes(1)
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            cancelledSubscriptionId: "sub-1",
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("operator tenant disabling its own module: tenant_modules deleted, NO cancel call", async () => {
+    const HOUSE_ID = OPERATOR_TENANT_ID
+    const tenantModuleFindUnique = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: HOUSE_ID,
+      module: "crm",
+      operatorNote: null,
+    })
+    const tenantModuleDelete = vi.fn().mockResolvedValue({ id: MODULE_ROW_ID })
+    const platformSubscriptionFindFirst = vi.fn()
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenantModule: {
+          findUnique: tenantModuleFindUnique,
+          delete: tenantModuleDelete,
+        },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.disableModule({
+      tenantId: HOUSE_ID,
+      moduleKey: "crm",
+    })
+
+    expect(tenantModuleDelete).toHaveBeenCalled()
+    expect(platformSubscriptionFindFirst).not.toHaveBeenCalled()
+    expect(subscriptionService.cancelSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            cancelledSubscriptionId: null,
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("still succeeds when no active subscription exists", async () => {
+    const tenantModuleFindUnique = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      operatorNote: null,
+    })
+    const tenantModuleDelete = vi.fn().mockResolvedValue({ id: MODULE_ROW_ID })
+    const platformSubscriptionFindFirst = vi.fn().mockResolvedValue(null)
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenantModule: {
+          findUnique: tenantModuleFindUnique,
+          delete: tenantModuleDelete,
+        },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.disableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+    })
+
+    expect(subscriptionService.cancelSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            cancelledSubscriptionId: null,
+          }),
+        }),
+      }),
+    )
   })
 })

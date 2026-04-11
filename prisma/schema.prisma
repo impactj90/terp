@@ -306,6 +306,64 @@ model TenantModule {
 }
 
 // -----------------------------------------------------------------------------
+// Platform Subscriptions (Phase 10a — dogfood billing bridge)
+// -----------------------------------------------------------------------------
+// Each row represents ONE contract between the platform operator and a
+// customer tenant for ONE module. Multiple rows per (tenant_id, module) are
+// expected — one per contract instance (active + historical).
+//
+// The bridge to the operator tenant's billing module lives in three ID
+// columns:
+//   - operator_crm_address_id → CrmAddress row inside the operator tenant
+//     that represents this customer. Set once on first subscription, reused
+//     for all subsequent subscriptions of the same customer.
+//   - billing_recurring_invoice_id → BillingRecurringInvoice inside the
+//     operator tenant. Set on subscription create. When the subscription is
+//     cancelled, the recurring invoice's endDate is set; the cron will stop
+//     generating at the next natural period boundary.
+//   - last_generated_invoice_id → most recently finalized BillingDocument
+//     generated from this subscription. Updated by the auto-finalize cron.
+//
+// IMPORTANT: These columns are plain UUID fields in Prisma — NO @relation
+// declarations. The foreign keys are defined at the SQL level only (via
+// REFERENCES in the migration). This keeps Terp-domain Prisma types
+// (CrmAddress, BillingRecurringInvoice, BillingDocument) untouched — they
+// do not gain a `platformSubscriptions` array field in their generated
+// TypeScript types. Platform code reads related rows via explicit
+// follow-up queries (two-query pattern).
+//
+// Referential integrity is still enforced by Postgres. ON DELETE SET NULL
+// on all three FKs means deleting a CrmAddress / recurring invoice / billing
+// document leaves the platform_subscription row intact as a historical
+// record with nulled-out pointers.
+model PlatformSubscription {
+  id                             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                       String    @map("tenant_id") @db.Uuid
+  module                         String    @db.VarChar(50)
+  status                         String    @db.VarChar(20)
+  billingCycle                   String    @map("billing_cycle") @db.VarChar(20)
+  unitPrice                      Float     @map("unit_price")
+  currency                       String    @default("EUR") @db.VarChar(3)
+  startDate                      DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate                        DateTime? @map("end_date") @db.Timestamptz(6)
+  actualEndDate                  DateTime? @map("actual_end_date") @db.Timestamptz(6)
+  operatorCrmAddressId           String?   @map("operator_crm_address_id") @db.Uuid
+  billingRecurringInvoiceId      String?   @map("billing_recurring_invoice_id") @db.Uuid
+  lastGeneratedInvoiceId         String?   @map("last_generated_invoice_id") @db.Uuid
+  createdAt                      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByPlatformUserId        String    @map("created_by_platform_user_id") @db.Uuid
+  cancelledAt                    DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByPlatformUserId      String?   @map("cancelled_by_platform_user_id") @db.Uuid
+  cancellationReason             String?   @map("cancellation_reason") @db.VarChar(500)
+
+  @@index([tenantId, status], map: "idx_platform_subscriptions_tenant_status")
+  @@index([status, endDate], map: "idx_platform_subscriptions_status_end_date")
+  @@index([billingRecurringInvoiceId], map: "idx_platform_subscriptions_billing_ri")
+  @@index([operatorCrmAddressId], map: "idx_platform_subscriptions_operator_crm_address")
+  @@map("platform_subscriptions")
+}
+
+// -----------------------------------------------------------------------------
 // CrmAddressType enum
 // -----------------------------------------------------------------------------
 enum CrmAddressType {
