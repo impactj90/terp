@@ -24,11 +24,21 @@ export interface CreateDemoTenantData {
   notes: string | null
   demoExpiresAt: Date
   demoTemplate: string
-  demoCreatedById: string
+  /**
+   * Parallel column — platform operator who created the demo. All new
+   * platform-initiated creates set this; the legacy `demoCreatedById`
+   * (tenant-user FK) is always left at its default NULL.
+   */
+  demoCreatedByPlatformUserId: string | null
   demoNotes: string | null
 }
 
 export async function createDemoTenant(tx: Tx, data: CreateDemoTenantData) {
+  // Note: legacy `demoCreatedById` is omitted entirely. Prisma's relation-
+  // aware input for `@relation(fields: [demoCreatedById])` rejects the
+  // scalar as an unknown argument — the relation `demoCreatedBy` is the
+  // only settable surface. Since platform-initiated creates always leave
+  // the legacy column NULL, we skip it and rely on the column default.
   return tx.tenant.create({
     data: {
       name: data.name,
@@ -42,22 +52,71 @@ export async function createDemoTenant(tx: Tx, data: CreateDemoTenantData) {
       isDemo: true,
       demoExpiresAt: data.demoExpiresAt,
       demoTemplate: data.demoTemplate,
-      demoCreatedById: data.demoCreatedById,
+      demoCreatedByPlatformUserId: data.demoCreatedByPlatformUserId,
       demoNotes: data.demoNotes,
     },
   })
 }
 
-export async function findActiveDemos(prisma: PrismaClient) {
+export type PlatformCreatorMini = {
+  id: string
+  displayName: string
+  email: string
+}
+
+export type DemoWithCreators = Awaited<
+  ReturnType<typeof findDemosRaw>
+>[number] & {
+  demoCreatedByPlatformUser: PlatformCreatorMini | null
+}
+
+async function findDemosRaw(prisma: PrismaClient) {
   return prisma.tenant.findMany({
-    where: { isDemo: true, isActive: true },
-    orderBy: { demoExpiresAt: "asc" },
+    where: { isDemo: true },
+    orderBy: { createdAt: "desc" },
     include: {
       demoCreatedBy: {
         select: { id: true, email: true, displayName: true },
       },
     },
   })
+}
+
+/**
+ * Returns ALL demo tenants (active + expired) with creator info merged from
+ * both the legacy `demoCreatedBy` (tenant user) relation AND a batched
+ * lookup of platform users for the `demoCreatedByPlatformUserId` column.
+ *
+ * Mirrors the manual-join pattern used in
+ * `platform/routers/tenantManagement.listModules` at lines 410–425.
+ */
+export async function findDemos(
+  prisma: PrismaClient,
+): Promise<DemoWithCreators[]> {
+  const demos = await findDemosRaw(prisma)
+
+  const platformIds = Array.from(
+    new Set(
+      demos
+        .map((d) => d.demoCreatedByPlatformUserId)
+        .filter((id): id is string => id !== null),
+    ),
+  )
+  const platformUsers =
+    platformIds.length > 0
+      ? await prisma.platformUser.findMany({
+          where: { id: { in: platformIds } },
+          select: { id: true, displayName: true, email: true },
+        })
+      : []
+  const byPlatformId = new Map(platformUsers.map((u) => [u.id, u]))
+
+  return demos.map((d) => ({
+    ...d,
+    demoCreatedByPlatformUser: d.demoCreatedByPlatformUserId
+      ? byPlatformId.get(d.demoCreatedByPlatformUserId) ?? null
+      : null,
+  }))
 }
 
 export async function findExpiredActiveDemos(
@@ -105,13 +164,18 @@ export async function markDemoExpired(
 
 /** Convert: keep data — strip demo flags only. */
 export async function convertDemoKeepData(tx: Tx, tenantId: string) {
+  // For the legacy `demoCreatedBy` relation, use `disconnect` instead of
+  // `demoCreatedById: null` — Prisma's relation-aware input rejects the
+  // scalar directly. For `demoCreatedByPlatformUserId` (no @relation), the
+  // plain scalar-null assignment works.
   return tx.tenant.update({
     where: { id: tenantId },
     data: {
       isDemo: false,
       demoExpiresAt: null,
       demoTemplate: null,
-      demoCreatedById: null,
+      demoCreatedBy: { disconnect: true },
+      demoCreatedByPlatformUserId: null,
       demoNotes: null,
     },
   })

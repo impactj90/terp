@@ -11,6 +11,8 @@ import { platformAuthRouter } from "./routers/auth"
 import { platformUsersRouter } from "./routers/platformUsers"
 import { platformTenantsRouter } from "./routers/tenants"
 import { platformTenantManagementRouter } from "./routers/tenantManagement"
+import { platformDemoTenantManagementRouter } from "./routers/demoTenantManagement"
+import { platformDemoConvertRequestsRouter } from "./routers/demoConvertRequests"
 import { platformSupportSessionsRouter } from "./routers/supportSessions"
 import { platformAuditLogsRouter } from "./routers/auditLogs"
 
@@ -19,6 +21,8 @@ export const platformAppRouter = createTRPCRouter({
   platformUsers: platformUsersRouter,
   tenants: platformTenantsRouter,
   tenantManagement: platformTenantManagementRouter,
+  demoTenantManagement: platformDemoTenantManagementRouter,
+  demoConvertRequests: platformDemoConvertRequestsRouter,
   supportSessions: platformSupportSessionsRouter,
   auditLogs: platformAuditLogsRouter,
 })

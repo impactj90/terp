@@ -4,13 +4,10 @@
  * Platform dashboard — at-a-glance view for an operator.
  *
  * Cards:
- *   • Pending support sessions   (server gives all operators visibility)
- *   • Active support sessions    (scoped to this operator)
- *   • Recent audit events        (latest 10 platform audit entries)
- *
- * The demo-convert-request card referenced in the Phase 5 plan is deferred
- * until `demoTenants.requestConvertFromExpired` has a corresponding
- * platform-side materialization (see the "Follow-up" note in the plan).
+ *   • Pending support sessions       (server gives all operators visibility)
+ *   • Active support sessions        (scoped to this operator)
+ *   • Pending demo convert-requests  (self-service inbox from /demo-expired)
+ *   • Recent audit events            (latest 10 platform audit entries)
  */
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
@@ -19,6 +16,7 @@ import {
   CheckCircle2,
   ScrollText,
   ExternalLink,
+  Inbox,
 } from "lucide-react"
 import { usePlatformTRPC } from "@/trpc/platform/context"
 import {
@@ -53,9 +51,13 @@ export default function PlatformDashboardPage() {
   const auditQuery = useQuery(
     trpc.auditLogs.list.queryOptions({ page: 1, pageSize: 10 })
   )
+  const pendingConvertRequestsQuery = useQuery(
+    trpc.demoConvertRequests.countPending.queryOptions()
+  )
 
   const pendingCount = pendingQuery.data?.length ?? 0
   const activeCount = activeQuery.data?.length ?? 0
+  const pendingConvertCount = pendingConvertRequestsQuery.data ?? 0
 
   return (
     <div className="space-y-6">
@@ -105,6 +107,27 @@ export default function PlatformDashboardPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Link href="/platform/tenants/convert-requests" className="group">
+          <Card className="h-full transition-colors group-hover:bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                Convert-Anfragen
+              </CardTitle>
+              <Inbox className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {pendingConvertRequestsQuery.isLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{pendingConvertCount}</div>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Offene Demo-Convert-Anfragen
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

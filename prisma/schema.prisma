@@ -111,11 +111,12 @@ model Tenant {
   vacationBasis         String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
   // Demo-Tenant fields (see plan 2026-04-09-demo-tenant-system.md)
-  isDemo          Boolean   @default(false) @map("is_demo")
-  demoExpiresAt   DateTime? @map("demo_expires_at") @db.Timestamptz(6)
-  demoTemplate    String?   @map("demo_template") @db.VarChar(100)
-  demoCreatedById String?   @map("demo_created_by") @db.Uuid
-  demoNotes       String?   @map("demo_notes") @db.Text
+  isDemo                      Boolean   @default(false) @map("is_demo")
+  demoExpiresAt               DateTime? @map("demo_expires_at") @db.Timestamptz(6)
+  demoTemplate                String?   @map("demo_template") @db.VarChar(100)
+  demoCreatedById             String?   @map("demo_created_by") @db.Uuid
+  demoNotes                   String?   @map("demo_notes") @db.Text
+  demoCreatedByPlatformUserId String?   @map("demo_created_by_platform_user_id") @db.Uuid
 
   // Relations
   demoCreatedBy               User?                    @relation("DemoTenantCreatedBy", fields: [demoCreatedById], references: [id], onDelete: SetNull)
@@ -361,6 +362,25 @@ model PlatformSubscription {
   @@index([billingRecurringInvoiceId], map: "idx_platform_subscriptions_billing_ri")
   @@index([operatorCrmAddressId], map: "idx_platform_subscriptions_operator_crm_address")
   @@map("platform_subscriptions")
+}
+
+// -----------------------------------------------------------------------------
+// DemoConvertRequest — platform-admin inbox for self-service convert requests.
+// See thoughts/shared/plans/2026-04-11-demo-tenant-platform-migration.md.
+// -----------------------------------------------------------------------------
+model DemoConvertRequest {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  requestedByUserId        String    @map("requested_by_user_id") @db.Uuid
+  requestedAt              DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  status                   String    @default("pending") @db.VarChar(20)
+  resolvedByPlatformUserId String?   @map("resolved_by_platform_user_id") @db.Uuid
+  resolvedAt               DateTime? @map("resolved_at") @db.Timestamptz(6)
+  resolutionNote           String?   @map("resolution_note") @db.Text
+
+  @@index([status, requestedAt(sort: Desc)], map: "idx_demo_convert_requests_status")
+  @@index([tenantId], map: "idx_demo_convert_requests_tenant")
+  @@map("demo_convert_requests")
 }
 
 // -----------------------------------------------------------------------------

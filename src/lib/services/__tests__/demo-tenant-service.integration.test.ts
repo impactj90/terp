@@ -6,15 +6,17 @@
  *   - DATABASE_URL + NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in
  *     .env.local so the service can hit the local auth server
  *
- * Each test creates its own demo with unique slug/email and cleans up via
- * deleteDemo + the Supabase admin API at the end. Auth users created for
- * demos are removed by tracking their ids and calling `auth.admin.deleteUser`
- * in an afterAll.
+ * Phase 2 migration (2026-04-11): `createDemo` now takes a platform user id
+ * as the acting actor, not a tenant user id. This test suite creates its
+ * own ephemeral `platform_users` fixture row in beforeAll and deletes it
+ * in afterAll. The seed admin user is no longer used for platform-initiated
+ * demo creates (but is still used by the self-service test).
  */
 
 import {
   afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -31,12 +33,17 @@ import * as repo from "../demo-tenant-repository"
 
 const HAS_DB = Boolean(process.env.DATABASE_URL)
 
-// Use the seed admin user from supabase/seed.sql as the "creator" for demo
-// tenant tests. The demoCreatedById FK is non-deferrable and references a
-// real public.users row.
+// Seed admin user (from supabase/seed.sql) — used only as the `requestingUserId`
+// fallback in the self-service test, since that test creates its own demo
+// admin user via createDemo and uses that id.
 const SEED_ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001"
 
-const AUDIT = {
+const PLATFORM_AUDIT = {
+  ipAddress: "127.0.0.1",
+  userAgent: "vitest",
+}
+
+const SELF_SERVICE_AUDIT = {
   userId: SEED_ADMIN_USER_ID,
   ipAddress: "127.0.0.1",
   userAgent: "vitest",
@@ -45,6 +52,9 @@ const AUDIT = {
 // Track ids we create so we can clean up even if individual tests fail.
 const createdAuthUserIds = new Set<string>()
 const createdTenantIds = new Set<string>()
+
+// Populated in beforeAll — the platform-user fixture id used by createDemo.
+let platformUserId: string = ""
 
 function uniqueSuffix(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`
@@ -81,15 +91,48 @@ async function cleanupTenant(tenantId: string) {
     })
     if (!tenant) return
     if (tenant.isActive !== false) {
-      await demoService.expireDemoNow(prisma, tenantId, AUDIT)
+      await demoService.expireDemoNow(prisma, tenantId)
     }
-    await demoService.deleteDemo(prisma, tenantId, AUDIT)
+    await demoService.deleteDemo(prisma, tenantId)
   } catch (err) {
     console.warn(`[cleanup] deleteDemo failed for ${tenantId}:`, err)
   }
 }
 
 describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
+  beforeAll(async () => {
+    // Platform-user fixture. passwordHash is a dummy bcrypt placeholder — the
+    // test never logs this user in, only uses its id for FK attribution.
+    const platformUser = await prisma.platformUser.create({
+      data: {
+        email: `demo-test-${uniqueSuffix()}@platform.local`,
+        passwordHash:
+          "$2b$10$test.fixture.hash.test.fixture.hash.test.fixture.hash.tes",
+        displayName: "Demo Test Platform Fixture",
+        isActive: true,
+      },
+      select: { id: true },
+    })
+    platformUserId = platformUser.id
+  })
+
+  afterAll(async () => {
+    for (const uId of Array.from(createdAuthUserIds)) {
+      await cleanupAuthUser(uId)
+    }
+    createdAuthUserIds.clear()
+    if (platformUserId) {
+      try {
+        await prisma.platformUser.delete({ where: { id: platformUserId } })
+      } catch (err) {
+        console.warn(
+          `[cleanup] failed to delete platform user fixture ${platformUserId}:`,
+          err,
+        )
+      }
+    }
+  })
+
   beforeEach(() => {
     // Nothing — each test scopes its own ids.
   })
@@ -102,13 +145,6 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
     }
   })
 
-  afterAll(async () => {
-    for (const uId of Array.from(createdAuthUserIds)) {
-      await cleanupAuthUser(uId)
-    }
-    createdAuthUserIds.clear()
-  })
-
   // -------------------------------------------------------------------------
   // Happy path: create, assert all side effects
   // -------------------------------------------------------------------------
@@ -118,9 +154,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const result = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(result.tenantId)
       createdAuthUserIds.add(result.adminUserId)
@@ -133,6 +169,10 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       expect(tenant?.isDemo).toBe(true)
       expect(tenant?.isActive).toBe(true)
       expect(tenant?.demoTemplate).toBe(result.demoTemplate)
+      // Creator attribution: NEW column populated with the platform fixture,
+      // legacy column explicitly NULL.
+      expect(tenant?.demoCreatedByPlatformUserId).toBe(platformUserId)
+      expect(tenant?.demoCreatedById).toBeNull()
       expect(tenant?.demoExpiresAt).toBeInstanceOf(Date)
       // ~14 days from now (default)
       const diffDays =
@@ -141,7 +181,7 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       expect(diffDays).toBeGreaterThan(13)
       expect(diffDays).toBeLessThan(15)
 
-      // 4 tenant_modules
+      // 4 tenant_modules attributed to the platform fixture
       const modules = await prisma.tenantModule.findMany({
         where: { tenantId: result.tenantId },
       })
@@ -151,6 +191,10 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         "crm",
         "warehouse",
       ])
+      for (const m of modules) {
+        expect(m.enabledByPlatformUserId).toBe(platformUserId)
+        expect(m.enabledById).toBeNull()
+      }
 
       // Admin user exists and is linked via user_tenants
       const adminUser = await prisma.user.findUnique({
@@ -176,14 +220,41 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       })
       expect(empCount).toBe(150)
 
-      // Audit log entry
+      // NO tenant-side audit_logs entry for demo_create — the platform
+      // router writes platform_audit_logs instead.
       const auditEntry = await prisma.auditLog.findFirst({
         where: {
           tenantId: result.tenantId,
           action: "demo_create",
         },
       })
-      expect(auditEntry).not.toBeNull()
+      expect(auditEntry).toBeNull()
+    },
+    180_000,
+  )
+
+  // -------------------------------------------------------------------------
+  // listDemos — returns both active and expired, with creator DTO
+  // -------------------------------------------------------------------------
+  test(
+    "listDemos returns platform-created demo with creator.source='platform'",
+    async () => {
+      const s = uniqueSuffix()
+      const created = await demoService.createDemo(
+        prisma,
+        baseCreateInput(s),
+        platformUserId,
+        PLATFORM_AUDIT,
+      )
+      createdTenantIds.add(created.tenantId)
+      createdAuthUserIds.add(created.adminUserId)
+
+      const all = await demoService.listDemos(prisma)
+      const row = all.find((d) => d.id === created.tenantId)
+      expect(row).toBeDefined()
+      expect(row!.creator.source).toBe("platform")
+      expect(row!.creator.id).toBe(platformUserId)
+      expect(row!.status).toBe("active")
     },
     180_000,
   )
@@ -197,9 +268,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
@@ -209,7 +280,6 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         prisma,
         created.tenantId,
         7,
-        AUDIT,
       )
       const delta =
         (updated.demoExpiresAt!.getTime() - beforeExp.getTime()) /
@@ -225,14 +295,14 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
 
-      await demoService.expireDemoNow(prisma, created.tenantId, AUDIT)
+      await demoService.expireDemoNow(prisma, created.tenantId)
 
       const beforeExpire = await prisma.tenant.findUnique({
         where: { id: created.tenantId },
@@ -243,19 +313,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         prisma,
         created.tenantId,
         14,
-        AUDIT,
       )
       expect(updated.isActive).toBe(true)
       expect(updated.demoExpiresAt!.getTime()).toBeGreaterThan(Date.now())
-
-      const audit = await prisma.auditLog.findFirst({
-        where: { tenantId: created.tenantId, action: "demo_extend" },
-      })
-      expect(audit).not.toBeNull()
-      // changes.isActive must appear because we reactivated
-      expect(audit?.changes).toMatchObject({
-        isActive: { new: true },
-      })
     },
     180_000,
   )
@@ -264,24 +324,31 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
   // convertDemo — keep data path
   // -------------------------------------------------------------------------
   test(
-    "convertDemo with discardData=false keeps all content",
+    "convertDemo with discardData=false keeps all content and snapshots modules",
     async () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
 
-      await demoService.convertDemo(
+      const result = await demoService.convertDemo(
         prisma,
         created.tenantId,
         { discardData: false },
-        AUDIT,
       )
+      expect(result.snapshottedModules.sort()).toEqual([
+        "billing",
+        "core",
+        "crm",
+        "warehouse",
+      ])
+      expect(result.originalTemplate).toBe(created.demoTemplate)
+      expect(result.tenantName).toContain("Demo Service Test")
 
       const tenant = await prisma.tenant.findUnique({
         where: { id: created.tenantId },
@@ -289,6 +356,7 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       expect(tenant?.isDemo).toBe(false)
       expect(tenant?.demoExpiresAt).toBeNull()
       expect(tenant?.demoTemplate).toBeNull()
+      expect(tenant?.demoCreatedByPlatformUserId).toBeNull()
 
       const empCount = await prisma.employee.count({
         where: { tenantId: created.tenantId },
@@ -307,19 +375,19 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
 
-      await demoService.convertDemo(
+      const result = await demoService.convertDemo(
         prisma,
         created.tenantId,
         { discardData: true },
-        AUDIT,
       )
+      expect(result.snapshottedModules.length).toBe(4)
 
       // Tenant stays, is no longer a demo
       const tenant = await prisma.tenant.findUnique({
@@ -337,6 +405,13 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         where: { tenantId: created.tenantId },
       })
       expect(articles).toBe(0)
+
+      // tenant_modules also wiped — the platform router re-inserts them
+      // after the service call. This test asserts the SERVICE behavior only.
+      const modulesPost = await prisma.tenantModule.count({
+        where: { tenantId: created.tenantId },
+      })
+      expect(modulesPost).toBe(0)
 
       // Auth preserved
       const admin = await prisma.user.findUnique({
@@ -366,15 +441,15 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
 
       const before = Date.now()
-      await demoService.expireDemoNow(prisma, created.tenantId, AUDIT)
+      await demoService.expireDemoNow(prisma, created.tenantId)
 
       const tenant = await prisma.tenant.findUnique({
         where: { id: created.tenantId },
@@ -395,50 +470,41 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
 
       await expect(
-        demoService.deleteDemo(prisma, created.tenantId, AUDIT),
+        demoService.deleteDemo(prisma, created.tenantId),
       ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
     },
     180_000,
   )
 
   test(
-    "deleteDemo removes an expired demo and writes a demo_delete audit entry",
+    "deleteDemo removes an expired demo",
     async () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdAuthUserIds.add(created.adminUserId)
       // We intentionally do NOT add to createdTenantIds because we delete it
       // here — afterEach would try to delete it again and warn.
 
-      await demoService.expireDemoNow(prisma, created.tenantId, AUDIT)
-      await demoService.deleteDemo(prisma, created.tenantId, AUDIT)
+      await demoService.expireDemoNow(prisma, created.tenantId)
+      await demoService.deleteDemo(prisma, created.tenantId)
 
       const tenant = await prisma.tenant.findUnique({
         where: { id: created.tenantId },
       })
       expect(tenant).toBeNull()
-
-      // audit_logs has no FK to tenants, so the demo_delete entry survives
-      const audit = await prisma.auditLog.findFirst({
-        where: {
-          tenantId: created.tenantId,
-          action: "demo_delete",
-        },
-      })
-      expect(audit).not.toBeNull()
     },
     240_000,
   )
@@ -452,9 +518,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
@@ -465,19 +531,19 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
           prisma,
           created.adminUserId,
           created.tenantId,
-          AUDIT,
+          { ...SELF_SERVICE_AUDIT, userId: created.adminUserId },
         ),
       ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
 
       // Expire the demo (sets demoExpiresAt=now, isActive=false)
-      await demoService.expireDemoNow(prisma, created.tenantId, AUDIT)
+      await demoService.expireDemoNow(prisma, created.tenantId)
 
       // Now it should succeed
       const result = await demoService.requestConvertFromExpired(
         prisma,
         created.adminUserId,
         created.tenantId,
-        AUDIT,
+        { ...SELF_SERVICE_AUDIT, userId: created.adminUserId },
       )
       expect(result).toEqual({ ok: true })
 
@@ -490,7 +556,7 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       })
       expect(emailLog).not.toBeNull()
 
-      // Audit entry
+      // Tenant-side audit entry — self-service action unchanged from Phase 1
       const audit = await prisma.auditLog.findFirst({
         where: {
           tenantId: created.tenantId,
@@ -508,9 +574,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       const s = uniqueSuffix()
       const created = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(created.tenantId)
       createdAuthUserIds.add(created.adminUserId)
@@ -521,7 +587,7 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
           prisma,
           randomUserId,
           created.tenantId,
-          AUDIT,
+          { ...SELF_SERVICE_AUDIT, userId: randomUserId },
         ),
       ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
     },
@@ -529,28 +595,17 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
   )
 
   // -------------------------------------------------------------------------
-  // Rollback compensation: slug conflict on second insert → auth user removed
+  // Rollback compensation: slug conflict on second insert
   // -------------------------------------------------------------------------
-  //
-  // Forcing the template to throw would require monkey-patching the frozen
-  // ES-module export of `getDemoTemplate`, which is not permitted. Instead we
-  // exploit the unique-slug constraint: we first create a demo (success), then
-  // attempt a second create that reuses the same slug but a NEW admin email.
-  // The second attempt fails at `tx.tenant.create` because the slug collides.
-  // At that point no auth user was created yet (createUser is called AFTER
-  // tenant.create) so this test actually validates the *first half* of the
-  // rollback path: the transaction rollback. The createdAuthUserId remains
-  // null, so the catch-block compensation is a no-op — but the overall flow
-  // still leaves the DB clean, which is what matters for production safety.
   test(
     "createDemo rolls back prisma tx on slug collision",
     async () => {
       const s = uniqueSuffix()
       const first = await demoService.createDemo(
         prisma,
-        AUDIT.userId,
         baseCreateInput(s),
-        AUDIT,
+        platformUserId,
+        PLATFORM_AUDIT,
       )
       createdTenantIds.add(first.tenantId)
       createdAuthUserIds.add(first.adminUserId)
@@ -561,12 +616,12 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       await expect(
         demoService.createDemo(
           prisma,
-          AUDIT.userId,
           {
             ...baseCreateInput(s2),
             tenantSlug: `demo-svc-${s}`, // collision
           },
-          AUDIT,
+          platformUserId,
+          PLATFORM_AUDIT,
         ),
       ).rejects.toThrow()
 

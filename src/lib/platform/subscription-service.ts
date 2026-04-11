@@ -92,6 +92,90 @@ export function isOperatorTenant(tenantId: string): boolean {
 }
 
 /**
+ * Map common country names (German + English) to ISO-3166 alpha-2 codes.
+ *
+ * `tenants.address_country` is `varchar(100)` (free-form user input) while
+ * `crm_addresses.country` is `varchar(10)` (expected to hold an ISO code).
+ * A tenant entered as "Deutschland" (11 chars) cannot be copied 1:1 into
+ * the CrmAddress or the insert fails with "value too long for column".
+ *
+ * Lookup is lowercase + trimmed. Unknown input longer than 10 chars is
+ * truncated as a last resort so the insert succeeds; known short input
+ * passes through upper-cased.
+ */
+const COUNTRY_NAME_TO_ISO: Record<string, string> = {
+  deutschland: "DE",
+  germany: "DE",
+  österreich: "AT",
+  oesterreich: "AT",
+  austria: "AT",
+  schweiz: "CH",
+  switzerland: "CH",
+  liechtenstein: "LI",
+  frankreich: "FR",
+  france: "FR",
+  italien: "IT",
+  italy: "IT",
+  niederlande: "NL",
+  netherlands: "NL",
+  belgien: "BE",
+  belgium: "BE",
+  luxemburg: "LU",
+  luxembourg: "LU",
+  spanien: "ES",
+  spain: "ES",
+  portugal: "PT",
+  polen: "PL",
+  poland: "PL",
+  tschechien: "CZ",
+  czechia: "CZ",
+  "czech republic": "CZ",
+  ungarn: "HU",
+  hungary: "HU",
+  vereinigtes_königreich: "GB",
+  "vereinigtes königreich": "GB",
+  grossbritannien: "GB",
+  großbritannien: "GB",
+  "united kingdom": "GB",
+  uk: "GB",
+  england: "GB",
+  irland: "IE",
+  ireland: "IE",
+  dänemark: "DK",
+  daenemark: "DK",
+  denmark: "DK",
+  schweden: "SE",
+  sweden: "SE",
+  norwegen: "NO",
+  norway: "NO",
+  finnland: "FI",
+  finland: "FI",
+  usa: "US",
+  "united states": "US",
+  "united states of america": "US",
+  kanada: "CA",
+  canada: "CA",
+  türkei: "TR",
+  tuerkei: "TR",
+  turkey: "TR",
+}
+
+export function normalizeCountryToIso(
+  input: string | null | undefined,
+): string {
+  if (!input) return "DE"
+  const trimmed = input.trim()
+  if (!trimmed) return "DE"
+  const mapped = COUNTRY_NAME_TO_ISO[trimmed.toLowerCase()]
+  if (mapped) return mapped
+  // Already a short form (ISO code, e.g. "DE", "AT") — just normalize case.
+  if (trimmed.length <= 10) return trimmed.toUpperCase()
+  // Unknown long-form name — hard-truncate so the insert succeeds. The
+  // operator can fix it manually in the CrmAddress row if needed.
+  return trimmed.slice(0, 10).toUpperCase()
+}
+
+/**
  * Find-or-create the CrmAddress inside the operator tenant representing
  * a customer tenant. If any existing platform_subscription for this customer
  * already points at a CrmAddress, reuse it. Otherwise create a new one from
@@ -146,7 +230,7 @@ export async function findOrCreateOperatorCrmAddress(
       street: customerTenant.addressStreet ?? undefined,
       zip: customerTenant.addressZip ?? undefined,
       city: customerTenant.addressCity ?? undefined,
-      country: customerTenant.addressCountry ?? "DE",
+      country: normalizeCountryToIso(customerTenant.addressCountry),
       email: customerTenant.email ?? undefined,
     },
     PLATFORM_SYSTEM_USER_ID,

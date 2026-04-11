@@ -22,6 +22,8 @@ import {
   UsersRound,
   UserCog,
   Plus,
+  FlaskConical,
+  Inbox,
 } from "lucide-react"
 import {
   Sidebar as ShadcnSidebar,
@@ -118,6 +120,36 @@ export function PlatformSidebar() {
                             <Link href="/platform/tenants/new" prefetch={false}>
                               <Plus className="size-3" />
                               <span>Neuer Tenant</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/platform/tenants/demo"}
+                          >
+                            <Link
+                              href="/platform/tenants/demo"
+                              prefetch={false}
+                            >
+                              <FlaskConical className="size-3" />
+                              <span>Demos</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={
+                              pathname === "/platform/tenants/convert-requests"
+                            }
+                          >
+                            <Link
+                              href="/platform/tenants/convert-requests"
+                              prefetch={false}
+                            >
+                              <Inbox className="size-3" />
+                              <span>Convert-Anfragen</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

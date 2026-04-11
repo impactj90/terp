@@ -4,6 +4,11 @@
  * The happy-path tests live in the integration-test file alongside real DB
  * assertions. This file covers only the branches that can be tested with a
  * mocked Prisma client — mostly validation and authorization errors.
+ *
+ * Phase 2 migration (2026-04-11): `createDemo` now takes
+ * `(prisma, input, platformUserId, audit)` and the other four admin actions
+ * drop their AuditContext parameter entirely. `requestConvertFromExpired`
+ * still takes an AuditContext because it is a tenant-side self-service action.
  */
 import { describe, expect, test, vi } from "vitest"
 
@@ -15,7 +20,14 @@ import {
   DemoTenantValidationError,
 } from "../demo-tenant-service"
 
-const AUDIT = { userId: "u-1", ipAddress: null, userAgent: null }
+const PLATFORM_USER_ID = "p-1"
+const PLATFORM_AUDIT = { ipAddress: null, userAgent: null }
+
+const SELF_SERVICE_AUDIT = {
+  userId: "u-1",
+  ipAddress: null,
+  userAgent: null,
+}
 
 function makeFakePrisma(overrides: Record<string, unknown> = {}): PrismaClient {
   return overrides as unknown as PrismaClient
@@ -27,7 +39,6 @@ describe("demo-tenant-service validation", () => {
     await expect(
       demoService.createDemo(
         prisma,
-        "u-1",
         {
           tenantName: "X",
           tenantSlug: "x-slug",
@@ -39,7 +50,8 @@ describe("demo-tenant-service validation", () => {
           adminDisplayName: "Admin",
           demoDurationDays: 0,
         },
-        AUDIT,
+        PLATFORM_USER_ID,
+        PLATFORM_AUDIT,
       ),
     ).rejects.toBeInstanceOf(DemoTenantValidationError)
   })
@@ -49,7 +61,6 @@ describe("demo-tenant-service validation", () => {
     await expect(
       demoService.createDemo(
         prisma,
-        "u-1",
         {
           tenantName: "X",
           tenantSlug: "x-slug",
@@ -61,7 +72,8 @@ describe("demo-tenant-service validation", () => {
           adminDisplayName: "Admin",
           demoDurationDays: 91,
         },
-        AUDIT,
+        PLATFORM_USER_ID,
+        PLATFORM_AUDIT,
       ),
     ).rejects.toBeInstanceOf(DemoTenantValidationError)
   })
@@ -71,7 +83,6 @@ describe("demo-tenant-service validation", () => {
     await expect(
       demoService.createDemo(
         prisma,
-        "u-1",
         {
           tenantName: "X",
           tenantSlug: "x-slug",
@@ -83,7 +94,8 @@ describe("demo-tenant-service validation", () => {
           adminDisplayName: "Admin",
           demoTemplate: "does-not-exist",
         },
-        AUDIT,
+        PLATFORM_USER_ID,
+        PLATFORM_AUDIT,
       ),
     ).rejects.toThrow(/Unknown demo template/)
   })
@@ -95,7 +107,7 @@ describe("demo-tenant-service not-found paths", () => {
       tenant: { findUnique: vi.fn().mockResolvedValue(null) },
     })
     await expect(
-      demoService.extendDemo(prisma, "t-missing", 7, AUDIT),
+      demoService.extendDemo(prisma, "t-missing", 7),
     ).rejects.toBeInstanceOf(DemoTenantNotFoundError)
   })
 
@@ -108,7 +120,7 @@ describe("demo-tenant-service not-found paths", () => {
       },
     })
     await expect(
-      demoService.extendDemo(prisma, "t-1", 7, AUDIT),
+      demoService.extendDemo(prisma, "t-1", 7),
     ).rejects.toBeInstanceOf(DemoTenantNotFoundError)
   })
 
@@ -121,7 +133,7 @@ describe("demo-tenant-service not-found paths", () => {
       },
     })
     await expect(
-      demoService.convertDemo(prisma, "t-1", { discardData: false }, AUDIT),
+      demoService.convertDemo(prisma, "t-1", { discardData: false }),
     ).rejects.toBeInstanceOf(DemoTenantNotFoundError)
   })
 
@@ -130,7 +142,7 @@ describe("demo-tenant-service not-found paths", () => {
       tenant: { findUnique: vi.fn().mockResolvedValue(null) },
     })
     await expect(
-      demoService.expireDemoNow(prisma, "t-missing", AUDIT),
+      demoService.expireDemoNow(prisma, "t-missing"),
     ).rejects.toBeInstanceOf(DemoTenantNotFoundError)
   })
 
@@ -139,7 +151,7 @@ describe("demo-tenant-service not-found paths", () => {
       tenant: { findUnique: vi.fn().mockResolvedValue(null) },
     })
     await expect(
-      demoService.deleteDemo(prisma, "t-missing", AUDIT),
+      demoService.deleteDemo(prisma, "t-missing"),
     ).rejects.toBeInstanceOf(DemoTenantNotFoundError)
   })
 })
@@ -160,7 +172,7 @@ describe("demo-tenant-service forbidden paths", () => {
       },
     })
     await expect(
-      demoService.deleteDemo(prisma, "t-1", AUDIT),
+      demoService.deleteDemo(prisma, "t-1"),
     ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
   })
 
@@ -170,7 +182,12 @@ describe("demo-tenant-service forbidden paths", () => {
       tenant: { findUnique: vi.fn() },
     })
     await expect(
-      demoService.requestConvertFromExpired(prisma, "u-1", "t-1", AUDIT),
+      demoService.requestConvertFromExpired(
+        prisma,
+        "u-1",
+        "t-1",
+        SELF_SERVICE_AUDIT,
+      ),
     ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
   })
 
@@ -193,7 +210,12 @@ describe("demo-tenant-service forbidden paths", () => {
       },
     })
     await expect(
-      demoService.requestConvertFromExpired(prisma, "u-1", "t-1", AUDIT),
+      demoService.requestConvertFromExpired(
+        prisma,
+        "u-1",
+        "t-1",
+        SELF_SERVICE_AUDIT,
+      ),
     ).rejects.toBeInstanceOf(DemoTenantForbiddenError)
   })
 })

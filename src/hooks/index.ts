@@ -410,17 +410,10 @@ export {
   useRevokeSupportAccess,
 } from './use-tenants'
 
-// Demo Tenants
-export {
-  useDemoTenants,
-  useDemoTemplates,
-  useCreateDemoTenant,
-  useExtendDemoTenant,
-  useConvertDemoTenant,
-  useExpireDemoTenantNow,
-  useDeleteDemoTenant,
-  useRequestConvertFromExpired,
-} from './use-demo-tenants'
+// Demo Self-Service (tenant-side /demo-expired page)
+// Admin-side demo lifecycle moved to platform-admin; see
+// /platform/tenants/demo.
+export { useRequestConvertFromExpired } from './use-demo-self-service'
 
 // Booking Type Groups
 export {

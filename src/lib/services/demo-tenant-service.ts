@@ -5,7 +5,14 @@
  * list, extend, convert, expire-now, delete, and the self-service
  * "request convert from expired" flow.
  *
- * See thoughts/shared/plans/2026-04-09-demo-tenant-system.md (Phase 3).
+ * Platform-side migration (Phase 2): createDemo/extendDemo/convertDemo/
+ * expireDemoNow/deleteDemo no longer write tenant-side `audit_logs` rows —
+ * the platform router writes one `platform_audit_logs` row per action
+ * instead. `requestConvertFromExpired` is unchanged — it still writes
+ * tenant-side audit + email_send_log because it is a self-service action
+ * from a tenant user.
+ *
+ * See thoughts/shared/plans/2026-04-11-demo-tenant-platform-migration.md.
  */
 import type { Prisma, PrismaClient } from "@/generated/prisma/client"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -13,11 +20,13 @@ import {
   DEFAULT_DEMO_TEMPLATE,
   getDemoTemplate,
 } from "@/lib/demo/registry"
+import { PLATFORM_SYSTEM_USER_ID } from "@/trpc/init"
 import * as repo from "./demo-tenant-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 import { create as createUser } from "./users-service"
 import * as emailSendLogRepo from "./email-send-log-repository"
+import * as demoConvertRequestService from "./demo-convert-request-service"
 
 const DEMO_DEFAULT_DURATION_DAYS = 14
 const DEMO_MODULES = ["core", "crm", "billing", "warehouse"] as const
@@ -79,6 +88,27 @@ export interface CreateDemoResult {
   demoTemplate: string
 }
 
+/**
+ * Discriminated creator DTO exposed by `listDemos()` so UI can render the
+ * creator with the correct badge regardless of whether the demo was created
+ * by a platform operator (new path) or by a tenant-side user (legacy path).
+ */
+export type DemoCreatorDTO = {
+  source: "platform" | "tenant" | "unknown"
+  id: string | null
+  displayName: string | null
+  email: string | null
+}
+
+export interface ConvertDemoResult {
+  /** Module keys enabled on the demo at the time of convert, in any order. */
+  snapshottedModules: string[]
+  /** Template key the demo was created from (may be null on legacy rows). */
+  originalTemplate: string | null
+  /** Tenant name at time of convert — used for the audit metadata. */
+  tenantName: string
+}
+
 // --- Helpers ---------------------------------------------------------------
 
 function addDays(base: Date, days: number): Date {
@@ -91,21 +121,29 @@ function addDays(base: Date, days: number): Date {
  * Orchestrates the full demo-tenant creation flow atomically.
  *
  * Steps inside one prisma.$transaction:
- *   1. Insert tenant row (`is_demo=true`, `demo_expires_at=now+14d`)
- *   2. Enable all demo modules (core/crm/billing/warehouse)
+ *   1. Insert tenant row (`is_demo=true`, `demo_expires_at=now+14d`,
+ *      `demo_created_by_platform_user_id=<operator>`, `demo_created_by=null`)
+ *   2. Enable all demo modules (core/crm/billing/warehouse),
+ *      attributed to the platform operator via `enabledByPlatformUserId`
  *   3. Resolve the system-wide "Demo Admin" group
- *   4. Create the admin user via users-service.create (Phase 0 flow) —
- *      this triggers Supabase Auth user creation + welcome email
+ *   4. Create the admin user via users-service.create — the users-service
+ *      writes its internal `audit_logs.create` row attributed to the
+ *      `PLATFORM_SYSTEM_USER_ID` sentinel (not to `platformUserId`, which
+ *      is not a valid tenant-side `users.id`)
  *   5. Apply the selected demo template
  *
- * On any failure inside the transaction, the Prisma writes roll back and the
+ * NO tenant-side audit_logs write for the demo_create action itself — the
+ * platform router writes one `platform_audit_logs` row with the operator
+ * as the acting party.
+ *
+ * On any failure inside the transaction, Prisma writes roll back and the
  * catch-block compensates the Supabase Auth user via `auth.admin.deleteUser`.
  */
 export async function createDemo(
   prisma: PrismaClient,
-  creatingUserId: string,
   input: CreateDemoInput,
-  audit: AuditContext,
+  platformUserId: string,
+  audit: { ipAddress?: string | null; userAgent?: string | null },
 ): Promise<CreateDemoResult> {
   const templateKey = input.demoTemplate ?? DEFAULT_DEMO_TEMPLATE
   const template = getDemoTemplate(templateKey) // throws if unknown
@@ -123,7 +161,10 @@ export async function createDemo(
   try {
     const result = await prisma.$transaction(
       async (tx) => {
-        // 1. Tenant row
+        // 1. Tenant row — real operator attribution via the new column.
+        //    Legacy `demo_created_by` column is left at its default NULL
+        //    (the repo omits the field because Prisma's relation-aware
+        //    input rejects the scalar directly).
         const tenant = await repo.createDemoTenant(tx, {
           name: input.tenantName.trim(),
           slug: input.tenantSlug.trim().toLowerCase(),
@@ -134,18 +175,20 @@ export async function createDemo(
           notes: null,
           demoExpiresAt,
           demoTemplate: templateKey,
-          demoCreatedById: creatingUserId,
+          demoCreatedByPlatformUserId: platformUserId,
           demoNotes: input.notes?.trim() ?? null,
         })
 
-        // 2. Enable demo modules
+        // 2. Enable demo modules — also attribute to the platform operator
+        //    via the parallel enabled_by_platform_user_id column.
         for (const mod of DEMO_MODULES) {
           await tx.tenantModule.upsert({
             where: { tenantId_module: { tenantId: tenant.id, module: mod } },
             create: {
               tenantId: tenant.id,
               module: mod,
-              enabledById: creatingUserId,
+              enabledById: null,
+              enabledByPlatformUserId: platformUserId,
             },
             update: {},
           })
@@ -154,10 +197,10 @@ export async function createDemo(
         // 3. Ensure the system-wide "Demo Admin" group exists.
         const demoAdminGroup = await repo.findSystemDemoAdminGroup(tx)
 
-        // 4. Create admin user via users-service (Phase 0 flow). Returns the
-        //    created public.users row and the welcome-email delivery result.
-        //    users-service has already created the auth.users row — we capture
-        //    the id for the outer catch-block rollback.
+        // 4. Create admin user via users-service (Phase 0 flow). The audit
+        //    userId for the users-service internal audit row is the platform
+        //    sentinel — platformUserId is a platform_users.id and would fail
+        //    a tenant-side users.id FK lookup.
         const { user: adminUser, welcomeEmail } = await createUser(
           tx,
           tenant.id,
@@ -168,7 +211,11 @@ export async function createDemo(
             isActive: true,
             isLocked: false,
           },
-          audit,
+          {
+            userId: PLATFORM_SYSTEM_USER_ID,
+            ipAddress: audit.ipAddress,
+            userAgent: audit.userAgent,
+          },
         )
         createdAuthUserId = adminUser.id
 
@@ -184,28 +231,7 @@ export async function createDemo(
       { timeout: 120_000 }, // 2min — template apply + supabase roundtrip
     )
 
-    // 6. Audit after commit — matches the existing pattern in tenants.ts:344.
-    await auditLog
-      .log(prisma, {
-        tenantId: result.tenant.id,
-        userId: creatingUserId,
-        action: "demo_create",
-        entityType: "tenant",
-        entityId: result.tenant.id,
-        entityName: result.tenant.name,
-        changes: null,
-        metadata: {
-          demoTemplate: templateKey,
-          demoExpiresAt: demoExpiresAt.toISOString(),
-          durationDays,
-          adminUserId: result.adminUser.id,
-          adminEmail: input.adminEmail,
-          welcomeEmailSent: result.welcomeEmail.sent,
-        },
-        ipAddress: audit.ipAddress,
-        userAgent: audit.userAgent,
-      })
-      .catch((err) => console.error("[AuditLog] demo_create failed:", err))
+    // NO tenant-side audit log — the platform router writes platform_audit_logs.
 
     return {
       tenantId: result.tenant.id,
@@ -234,17 +260,51 @@ export async function createDemo(
   }
 }
 
-// --- listActiveDemos -------------------------------------------------------
+// --- listDemos -------------------------------------------------------------
 
-export async function listActiveDemos(prisma: PrismaClient) {
-  const demos = await repo.findActiveDemos(prisma)
+/**
+ * Lists ALL demo tenants (active + expired), returning a shape suitable for
+ * the platform-admin demo-tenants page. Computes `daysRemaining`, a `status`
+ * label, and a `DemoCreatorDTO` per row.
+ */
+export async function listDemos(prisma: PrismaClient) {
+  const demos = await repo.findDemos(prisma)
   const now = Date.now()
-  return demos.map((d) => ({
-    ...d,
-    daysRemaining: d.demoExpiresAt
+  return demos.map((d) => {
+    const daysRemaining = d.demoExpiresAt
       ? Math.ceil((d.demoExpiresAt.getTime() - now) / (24 * 60 * 60 * 1000))
-      : 0,
-  }))
+      : 0
+    const status: "active" | "expired" = d.isActive ? "active" : "expired"
+    const creator: DemoCreatorDTO = d.demoCreatedByPlatformUser
+      ? {
+          source: "platform",
+          id: d.demoCreatedByPlatformUser.id,
+          displayName: d.demoCreatedByPlatformUser.displayName,
+          email: d.demoCreatedByPlatformUser.email,
+        }
+      : d.demoCreatedBy
+        ? {
+            source: "tenant",
+            id: d.demoCreatedBy.id,
+            displayName: d.demoCreatedBy.displayName,
+            email: d.demoCreatedBy.email,
+          }
+        : { source: "unknown", id: null, displayName: null, email: null }
+    return {
+      id: d.id,
+      name: d.name,
+      slug: d.slug,
+      isActive: d.isActive,
+      isDemo: d.isDemo,
+      demoExpiresAt: d.demoExpiresAt,
+      demoTemplate: d.demoTemplate,
+      demoNotes: d.demoNotes,
+      createdAt: d.createdAt,
+      daysRemaining,
+      status,
+      creator,
+    }
+  })
 }
 
 // --- extendDemo ------------------------------------------------------------
@@ -257,14 +317,11 @@ export async function listActiveDemos(prisma: PrismaClient) {
  * /demo-expired gate), calling extend reactivates it. Rationale: sales wants
  * to "rescue" a demo after a last-minute deal conversation without having to
  * flip isActive in the DB manually.
- *
- * The reactivation is logged as part of the `demo_extend` audit entry.
  */
 export async function extendDemo(
   prisma: PrismaClient,
   tenantId: string,
   additionalDays: 7 | 14,
-  audit: AuditContext,
 ) {
   const existing = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!existing || !existing.isDemo) throw new DemoTenantNotFoundError()
@@ -284,48 +341,49 @@ export async function extendDemo(
     prisma,
     tenantId,
     newExpiresAt,
-    wasInactive, // reactivate if it was inactive
+    wasInactive,
   )
 
-  await auditLog
-    .log(prisma, {
-      tenantId,
-      userId: audit.userId,
-      action: "demo_extend",
-      entityType: "tenant",
-      entityId: tenantId,
-      entityName: existing.name,
-      changes: {
-        demoExpiresAt: {
-          old: existing.demoExpiresAt,
-          new: newExpiresAt,
-        },
-        ...(wasInactive
-          ? { isActive: { old: existing.isActive, new: true } }
-          : {}),
-      },
-      metadata: { additionalDays },
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    })
-    .catch((err) => console.error("[AuditLog] demo_extend failed:", err))
-
+  // NO tenant-side audit log — platform router does platform_audit_logs.
   return updated
 }
 
 // --- convertDemo -----------------------------------------------------------
 
+/**
+ * Converts a demo tenant to a real tenant.
+ *
+ * Atomic steps inside a $transaction:
+ *   1. Snapshot the module keys enabled on the demo (must happen BEFORE the
+ *      optional wipe, because wipeTenantData L3 deletes `tenant_modules` and
+ *      would otherwise lose the list).
+ *   2. Optionally wipe tenant content (keepAuth=true so the admin user
+ *      survives).
+ *   3. Strip demo flags via `convertDemoKeepData`.
+ *
+ * Re-insertion of the modules (after a discardData wipe) and the subscription
+ * bridge both live in the PLATFORM ROUTER — not in this service — because
+ * `subscriptionService.createSubscription` opens its own `$transaction` and
+ * cannot be nested inside an outer tx.
+ */
 export async function convertDemo(
   prisma: PrismaClient,
   tenantId: string,
   input: { discardData: boolean },
-  audit: AuditContext,
-) {
+): Promise<ConvertDemoResult> {
   const existing = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!existing || !existing.isDemo) throw new DemoTenantNotFoundError()
 
-  await prisma.$transaction(
+  const snapshottedModules = await prisma.$transaction(
     async (tx) => {
+      // Snapshot modules INSIDE the tx, BEFORE the wipe (wipeTenantData L3
+      // would nuke tenant_modules otherwise).
+      const existingModules = await tx.tenantModule.findMany({
+        where: { tenantId },
+        select: { module: true },
+      })
+      const moduleKeys = existingModules.map((m) => m.module)
+
       if (input.discardData) {
         // Wipe tenant content but preserve users/user_groups/user_tenants so
         // the prospect's admin account survives the conversion.
@@ -333,36 +391,21 @@ export async function convertDemo(
       }
 
       await repo.convertDemoKeepData(tx, tenantId)
+
+      return moduleKeys
     },
     { timeout: 120_000 },
   )
 
-  await auditLog
-    .log(prisma, {
-      tenantId,
-      userId: audit.userId,
-      action: "demo_convert",
-      entityType: "tenant",
-      entityId: tenantId,
-      entityName: existing.name,
-      changes: {
-        isDemo: { old: true, new: false },
-      },
-      metadata: {
-        discardData: input.discardData,
-        originalTemplate: existing.demoTemplate,
-      },
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    })
-    .catch((err) => console.error("[AuditLog] demo_convert failed:", err))
+  // NO notifyConvertRequest — platform router orchestrates the post-convert
+  // flow (re-insert modules, subscription bridge, audit).
+  // NO tenant-side audit log — platform router does platform_audit_logs.
 
-  // Notify sales about the conversion — fire-and-forget via email_send_log.
-  await notifyConvertRequest(prisma, existing, audit.userId).catch((err) =>
-    console.error("[demo-tenant-service] convert notification failed:", err),
-  )
-
-  return { ok: true as const }
+  return {
+    snapshottedModules,
+    originalTemplate: existing.demoTemplate,
+    tenantName: existing.name,
+  }
 }
 
 // --- expireDemoNow ---------------------------------------------------------
@@ -370,30 +413,13 @@ export async function convertDemo(
 export async function expireDemoNow(
   prisma: PrismaClient,
   tenantId: string,
-  audit: AuditContext,
 ) {
   const existing = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!existing || !existing.isDemo) throw new DemoTenantNotFoundError()
 
   await repo.markDemoExpired(prisma, tenantId, new Date())
 
-  await auditLog
-    .log(prisma, {
-      tenantId,
-      userId: audit.userId,
-      action: "demo_manual_expire",
-      entityType: "tenant",
-      entityId: tenantId,
-      entityName: existing.name,
-      changes: { isActive: { old: existing.isActive, new: false } },
-      metadata: null,
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    })
-    .catch((err) =>
-      console.error("[AuditLog] demo_manual_expire failed:", err),
-    )
-
+  // NO tenant-side audit log — platform router does platform_audit_logs.
   return { ok: true as const }
 }
 
@@ -402,7 +428,6 @@ export async function expireDemoNow(
 export async function deleteDemo(
   prisma: PrismaClient,
   tenantId: string,
-  audit: AuditContext,
 ) {
   const existing = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!existing || !existing.isDemo) throw new DemoTenantNotFoundError()
@@ -412,28 +437,10 @@ export async function deleteDemo(
     )
   }
 
-  // Audit BEFORE delete so the audit row's tenantId stays valid and we keep a
-  // historical record. audit_logs has NO FK to tenants, so the entry survives.
-  await auditLog
-    .log(prisma, {
-      tenantId,
-      userId: audit.userId,
-      action: "demo_delete",
-      entityType: "tenant",
-      entityId: tenantId,
-      entityName: existing.name,
-      changes: null,
-      metadata: {
-        originalTemplate: existing.demoTemplate,
-        createdAt: existing.createdAt,
-        demoExpiredAt: existing.demoExpiresAt,
-      },
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    })
-    .catch((err) => console.error("[AuditLog] demo_delete failed:", err))
-
-  // Hard delete: wipe tenant content + auth, then the tenant row itself.
+  // Platform router writes audit BEFORE calling this — `target_tenant_id`
+  // is still a valid row at that point. Once the delete commits, the
+  // `platform_audit_logs.target_tenant_id` FK cascades to NULL (SET NULL)
+  // but the row's metadata survives for post-mortem lookup.
   await prisma.$transaction(
     async (tx) => {
       await wipeTenantData(tx, tenantId, { keepAuth: false })
@@ -454,6 +461,13 @@ export async function deleteDemo(
  * user_tenants) AND the demo must be expired. Does NOT require the
  * `tenants.manage` permission — the demo admin user only has access to
  * their own demo.
+ *
+ * Side effects (all fire-and-forget, ordered):
+ *   1. Insert a `demo_convert_requests` row for the platform inbox
+ *      (Phase 6 — wired once the table exists).
+ *   2. Insert a pending `email_send_log` row so the retry cron delivers
+ *      the sales notification.
+ *   3. Write a `demo_convert_req` row to tenant-side `audit_logs`.
  */
 export async function requestConvertFromExpired(
   prisma: PrismaClient,
@@ -480,7 +494,21 @@ export async function requestConvertFromExpired(
     throw new DemoTenantForbiddenError("Demo is not expired")
   }
 
-  // 3. Fire-and-forget notification
+  // 3. Inbox row for platform admin — fire-and-forget. If this fails, the
+  //    email still goes out and the operator can re-request manually.
+  await demoConvertRequestService
+    .create(prisma, {
+      tenantId,
+      requestedByUserId: requestingUserId,
+    })
+    .catch((err) =>
+      console.error(
+        "[demo-tenant-service] convert-request inbox write failed:",
+        err,
+      ),
+    )
+
+  // 4. Fire-and-forget email notification
   await notifyConvertRequest(prisma, tenant, requestingUserId).catch((err) =>
     console.error(
       "[demo-tenant-service] convert-request notification failed:",
@@ -488,7 +516,7 @@ export async function requestConvertFromExpired(
     ),
   )
 
-  // 4. Audit
+  // 5. Tenant-side audit log (unchanged — this is a self-service tenant action)
   await auditLog
     .log(prisma, {
       tenantId,
