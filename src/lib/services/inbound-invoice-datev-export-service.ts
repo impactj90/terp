@@ -132,22 +132,50 @@ export function buildDatevHeader(): string {
 /**
  * Build DATEV column header line (row 2).
  */
-function buildColumnHeader(): string {
+export function buildColumnHeader(): string {
   return [
-    "Umsatz (ohne Soll/Haben-Kz)",
-    "Soll/Haben-Kennzeichen",
-    "WKZ Umsatz",
-    "Kurs",
-    "Basis-Umsatz",
-    "WKZ Basis-Umsatz",
-    "Konto",
-    "Gegenkonto (ohne BU-Schlüssel)",
-    "BU-Schlüssel",
-    "Belegdatum",
-    "Belegfeld 1",
-    "Belegfeld 2",
-    "Skonto",
-    "Buchungstext",
+    // Pos 1-14 (bestehend)
+    "Umsatz (ohne Soll/Haben-Kz)",          // 1
+    "Soll/Haben-Kennzeichen",               // 2
+    "WKZ Umsatz",                           // 3
+    "Kurs",                                 // 4
+    "Basis-Umsatz",                         // 5
+    "WKZ Basis-Umsatz",                     // 6
+    "Konto",                                // 7
+    "Gegenkonto (ohne BU-Schl\u00FCssel)",  // 8
+    "BU-Schl\u00FCssel",                    // 9
+    "Belegdatum",                           // 10
+    "Belegfeld 1",                          // 11
+    "Belegfeld 2",                          // 12
+    "Skonto",                               // 13
+    "Buchungstext",                         // 14
+    // Pos 15-36 (benannt aber nicht befüllt — Header-Namen sind Pflicht)
+    "Postensperre",                         // 15
+    "Diverse Adressnummer",                 // 16
+    "Gesch\u00E4ftspartnerbank",            // 17
+    "Sachverhalt",                          // 18
+    "Zinssperre",                           // 19
+    "Beleglink",                            // 20
+    "Beleginfo \u2013 Art 1",              // 21
+    "Beleginfo \u2013 Inhalt 1",           // 22
+    "Beleginfo \u2013 Art 2",              // 23
+    "Beleginfo \u2013 Inhalt 2",           // 24
+    "Beleginfo \u2013 Art 3",              // 25
+    "Beleginfo \u2013 Inhalt 3",           // 26
+    "Beleginfo \u2013 Art 4",              // 27
+    "Beleginfo \u2013 Inhalt 4",           // 28
+    "Beleginfo \u2013 Art 5",              // 29
+    "Beleginfo \u2013 Inhalt 5",           // 30
+    "Beleginfo \u2013 Art 6",              // 31
+    "Beleginfo \u2013 Inhalt 6",           // 32
+    "Beleginfo \u2013 Art 7",              // 33
+    "Beleginfo \u2013 Inhalt 7",           // 34
+    "Beleginfo \u2013 Art 8",              // 35
+    "Beleginfo \u2013 Inhalt 8",           // 36
+    // Pos 37-39 (KOST-Felder)
+    "KOST1 \u2013 Kostenstelle",           // 37
+    "KOST2 \u2013 Kostenstelle",           // 38
+    "Kost-Menge",                           // 39
   ].join(";")
 }
 
@@ -188,6 +216,8 @@ export async function exportToCsv(
     include: {
       supplier: { select: { company: true, vatId: true } },
       lineItems: { select: { vatRate: true } },
+      order: { select: { code: true } },
+      costCenter: { select: { code: true } },
     },
     orderBy: { invoiceDate: "asc" },
   })
@@ -216,20 +246,30 @@ export async function exportToCsv(
     )
 
     const row = [
-      formatDecimal(Number(inv.totalGross ?? 0)),           // Umsatz
-      "S",                                                   // Soll
-      "EUR",                                                 // WKZ
-      "",                                                    // Kurs
-      "",                                                    // Basis-Umsatz
-      "",                                                    // WKZ Basis-Umsatz
-      "",                                                    // Konto (Aufwandskonto — Phase 3)
-      "",                                                    // Gegenkonto (Kreditor — Phase 3)
-      String(vatKey),                                        // BU-Schlüssel
-      inv.invoiceDate ? formatDatevDate(inv.invoiceDate) : "", // Belegdatum
-      escapeField(truncate(inv.invoiceNumber ?? "", 12)),    // Belegfeld 1 (max 12)
-      "",                                                    // Belegfeld 2
-      "",                                                    // Skonto
-      escapeField(buchungstext),                             // Buchungstext
+      // Pos 1-14
+      formatDecimal(Number(inv.totalGross ?? 0)),           // 1: Umsatz
+      "S",                                                   // 2: Soll
+      "EUR",                                                 // 3: WKZ
+      "",                                                    // 4: Kurs
+      "",                                                    // 5: Basis-Umsatz
+      "",                                                    // 6: WKZ Basis-Umsatz
+      "",                                                    // 7: Konto (Phase 3)
+      "",                                                    // 8: Gegenkonto (Phase 3)
+      String(vatKey),                                        // 9: BU-Schlüssel
+      inv.invoiceDate ? formatDatevDate(inv.invoiceDate) : "", // 10: Belegdatum
+      escapeField(truncate(inv.invoiceNumber ?? "", 12)),    // 11: Belegfeld 1
+      "",                                                    // 12: Belegfeld 2
+      "",                                                    // 13: Skonto
+      escapeField(buchungstext),                             // 14: Buchungstext
+      // Pos 15-36 (22 leere Strings)
+      "", "", "", "", "", "",                                 // 15-20
+      "", "", "", "", "", "",                                 // 21-26
+      "", "", "", "", "", "",                                 // 27-32
+      "", "", "", "",                                         // 33-36
+      // Pos 37-39 (KOST-Felder)
+      escapeField(inv.order?.code ?? ""),                    // 37: KOST1
+      escapeField(inv.costCenter?.code ?? ""),               // 38: KOST2
+      "",                                                    // 39: KOST-Menge
     ]
 
     lines.push(row.join(";"))

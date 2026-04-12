@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { ArrowLeft, Save, Send, ChevronRight, ChevronLeft, Check, X, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,8 @@ import { InboundInvoiceStatusBadge } from './inbound-invoice-status-badge'
 import { InboundInvoiceLineItems, type LineItem } from './inbound-invoice-line-items'
 import { SupplierAssignmentDialog } from './supplier-assignment-dialog'
 import { InboundApprovalTimeline } from './inbound-approval-timeline'
+import { OrderCombobox } from './order-combobox'
+import { CostCenterCombobox } from './cost-center-combobox'
 import {
   useInboundInvoice,
   useInboundInvoicePdfUrl,
@@ -42,6 +45,7 @@ const formatDate = (d: string | Date | null | undefined) => {
 
 export function InboundInvoiceDetail({ id }: Props) {
   const t = useTranslations('inboundInvoices')
+  const locale = useLocale()
   const router = useRouter()
   const { data: invoice, isLoading } = useInboundInvoice(id)
   const { data: pdfUrl } = useInboundInvoicePdfUrl(id)
@@ -76,6 +80,8 @@ export function InboundInvoiceDetail({ id }: Props) {
         totalGross: invoice.totalGross != null ? Number(invoice.totalGross) : '',
         paymentTermDays: invoice.paymentTermDays ?? '',
         notes: invoice.notes ?? '',
+        orderId: invoice.orderId ?? null,
+        costCenterId: invoice.costCenterId ?? null,
       })
       setLineItems(
         (invoice.lineItems ?? []).map((li: Record<string, unknown>, idx: number) => ({
@@ -115,6 +121,8 @@ export function InboundInvoiceDetail({ id }: Props) {
         totalGross: form.totalGross !== '' ? Number(form.totalGross) : null,
         paymentTermDays: form.paymentTermDays !== '' ? Number(form.paymentTermDays) : null,
         notes: (form.notes as string) || null,
+        orderId: (form.orderId as string) || null,
+        costCenterId: (form.costCenterId as string) || null,
       })
 
       if (lineItems.length > 0) {
@@ -391,6 +399,48 @@ export function InboundInvoiceDetail({ id }: Props) {
                 ) : (
                   <p className="text-sm text-muted-foreground">{t('detail.noSupplierAssigned')}</p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Order & Cost Center Assignment */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">{t('detail.assignmentTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t('detail.orderLabel')}</Label>
+                  {isEditable ? (
+                    <OrderCombobox
+                      value={form.orderId as string | null}
+                      onChange={(id) => handleFieldChange('orderId', id)}
+                    />
+                  ) : invoice.order ? (
+                    <Link
+                      href={`/${locale}/admin/orders/${invoice.order.id}`}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      {invoice.order.code} — {invoice.order.name}
+                    </Link>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('detail.noOrderAssigned')}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t('detail.costCenterLabel')}</Label>
+                  {isEditable ? (
+                    <CostCenterCombobox
+                      value={form.costCenterId as string | null}
+                      onChange={(id) => handleFieldChange('costCenterId', id)}
+                    />
+                  ) : invoice.costCenter ? (
+                    <p className="text-sm">
+                      {invoice.costCenter.code} — {invoice.costCenter.name}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('detail.noCostCenterAssigned')}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

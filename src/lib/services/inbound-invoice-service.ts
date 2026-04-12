@@ -19,7 +19,7 @@ const MATERIAL_FIELDS = ["totalNet", "totalVat", "totalGross", "supplierId", "du
 
 const TRACKED_FIELDS = [
   "invoiceNumber", "invoiceDate", "dueDate", "totalNet", "totalVat", "totalGross",
-  "supplierId", "paymentTermDays", "notes", "status",
+  "supplierId", "orderId", "costCenterId", "paymentTermDays", "notes", "status",
 ] as const
 
 // --- Error Classes ---
@@ -205,6 +205,28 @@ export async function update(
     throw new InboundInvoiceValidationError(
       `Cannot edit invoice in status ${existing.status}`
     )
+  }
+
+  // Validate orderId belongs to same tenant
+  if (data.orderId) {
+    const order = await prisma.order.findFirst({
+      where: { id: data.orderId as string, tenantId },
+      select: { id: true },
+    })
+    if (!order) {
+      throw new InboundInvoiceValidationError("Order not found or belongs to another tenant")
+    }
+  }
+
+  // Validate costCenterId belongs to same tenant
+  if (data.costCenterId) {
+    const costCenter = await prisma.costCenter.findFirst({
+      where: { id: data.costCenterId as string, tenantId },
+      select: { id: true },
+    })
+    if (!costCenter) {
+      throw new InboundInvoiceValidationError("Cost center not found or belongs to another tenant")
+    }
   }
 
   // Check material field changes → increment approvalVersion

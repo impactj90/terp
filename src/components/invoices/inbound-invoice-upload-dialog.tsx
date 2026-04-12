@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Upload, Loader2, FileText } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import {
@@ -20,6 +20,7 @@ interface Props {
 
 export function InboundInvoiceUploadDialog({ open, onOpenChange }: Props) {
   const t = useTranslations('inboundInvoices')
+  const locale = useLocale()
   const router = useRouter()
   const createFromUpload = useCreateFromUpload()
   const [isDragOver, setIsDragOver] = React.useState(false)
@@ -67,7 +68,7 @@ export function InboundInvoiceUploadDialog({ open, onOpenChange }: Props) {
 
       toast.success(t('upload.success'))
       handleOpenChange(false)
-      router.push(`/invoices/inbound/${result.id}`)
+      router.push(`/${locale}/invoices/inbound/${result.id}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('upload.error')
       toast.error(msg)

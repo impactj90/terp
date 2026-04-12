@@ -76,9 +76,18 @@ describe("tenantManagement.create", () => {
     const tenantCreate = vi.fn().mockResolvedValue(makeTenant())
     const platformAuditCreate = vi.fn().mockResolvedValue(null)
 
+    const userGroupCreate = vi.fn().mockResolvedValue({
+      id: "g0000000-0000-4000-a000-000000000001",
+      tenantId: TENANT_ID,
+      name: "Administratoren",
+      code: "ADMIN",
+      isAdmin: true,
+    })
+
     const ctx = createMockPlatformContext({
       prisma: {
         tenant: { findUnique: tenantFindUnique, create: tenantCreate },
+        userGroup: { create: userGroupCreate },
         platformAuditLog: { create: platformAuditCreate },
       },
     })

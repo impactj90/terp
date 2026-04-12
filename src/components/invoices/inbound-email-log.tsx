@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -52,6 +52,7 @@ const formatDateTime = (d: string | Date | null | undefined) => {
 
 export function InboundEmailLog() {
   const t = useTranslations('inboundInvoices')
+  const locale = useLocale()
   const router = useRouter()
 
   const [statusFilter, setStatusFilter] = React.useState<EmailLogStatus>('all')
@@ -168,7 +169,7 @@ export function InboundEmailLog() {
                         size="sm"
                         className="h-auto p-0"
                         onClick={() =>
-                          router.push(`/invoices/inbound/${entry.invoiceId}`)
+                          router.push(`/${locale}/invoices/inbound/${entry.invoiceId}`)
                         }
                       >
                         {t('emailLog.viewInvoice')}

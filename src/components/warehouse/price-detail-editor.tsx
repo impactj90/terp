@@ -29,7 +29,8 @@ export function PriceDetailEditor({
   canManage = false,
 }: PriceDetailEditorProps) {
   const t = useTranslations('warehousePrices')
-  const { data: article, isLoading: articleLoading } = useWhArticle(articleId || '', !!articleId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: article, isLoading: articleLoading } = useWhArticle(articleId || '', !!articleId) as { data: Record<string, any> | undefined; isLoading: boolean }
   const setPrice = useSetWhArticlePrice()
   const removePrice = useRemoveWhArticlePrice()
 

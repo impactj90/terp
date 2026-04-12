@@ -24,6 +24,8 @@ export function RetentionLogsTable() {
   const { data, isLoading } = useDsgvoLogs({ page, pageSize: PAGE_SIZE })
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items = (data?.items ?? []) as Array<Record<string, any>>
 
   if (isLoading) {
     return (
@@ -59,7 +61,7 @@ export function RetentionLogsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.items.map((log) => (
+            {items.map((log) => (
               <TableRow key={log.id}>
                 <TableCell className="whitespace-nowrap">
                   {new Date(log.executedAt).toLocaleString()}

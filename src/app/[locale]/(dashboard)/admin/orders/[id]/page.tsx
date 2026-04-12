@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { ArrowLeft, Edit, Trash2, Plus, Package } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
@@ -15,11 +16,14 @@ import {
   useOrderBookings,
   useDeleteOrderBooking,
 } from '@/hooks'
+import { useInboundInvoices } from '@/hooks/useInboundInvoices'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   OrderStatusBadge,
@@ -49,9 +53,13 @@ export default function OrderDetailPage() {
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['orders.manage'])
   const t = useTranslations('adminOrders')
   const tc = useTranslations('common')
+  const locale = useLocale()
 
   const orderId = params.id
   const { data: order, isLoading } = useOrder(orderId, !authLoading && !permLoading && canAccess)
+  const { data: inboundInvoicesData, isLoading: inboundInvoicesLoading } =
+    useInboundInvoices({ orderId }, !authLoading && !permLoading && canAccess && !!orderId)
+  const inboundInvoices = inboundInvoicesData?.items ?? []
 
   // Edit / delete order state
   const [editOpen, setEditOpen] = React.useState(false)
@@ -190,6 +198,7 @@ export default function OrderDetailPage() {
           <TabsTrigger value="details">{t('tabDetails')}</TabsTrigger>
           <TabsTrigger value="assignments">{t('tabAssignments')}</TabsTrigger>
           <TabsTrigger value="bookings">{t('tabBookings')}</TabsTrigger>
+          <TabsTrigger value="inbound-invoices">{t('tabInboundInvoices')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-6">
@@ -295,6 +304,53 @@ export default function OrderDetailPage() {
                   onEdit={(b) => { setEditBooking(b); setBookingFormOpen(true) }}
                   onDelete={(b) => setDeleteBooking(b)}
                 />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inbound-invoices" className="mt-6 space-y-4">
+          <h3 className="text-lg font-medium">{t('sectionInboundInvoices')}</h3>
+          <Card>
+            <CardContent className="p-0">
+              {inboundInvoicesLoading ? (
+                <div className="p-6"><Skeleton className="h-32" /></div>
+              ) : inboundInvoices.length === 0 ? (
+                <div className="text-center py-12 px-6">
+                  <p className="text-muted-foreground">{t('emptyInboundInvoices')}</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('inboundInvoiceNumber')}</TableHead>
+                      <TableHead>{t('inboundInvoiceSupplier')}</TableHead>
+                      <TableHead>{t('inboundInvoiceDate')}</TableHead>
+                      <TableHead className="text-right">{t('inboundInvoiceGross')}</TableHead>
+                      <TableHead>{t('inboundInvoiceStatus')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inboundInvoices.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell>
+                          <Link href={`/${locale}/invoices/inbound/${inv.id}`}
+                                className="text-blue-600 hover:underline">
+                            {inv.number}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{inv.supplier?.company ?? '—'}</TableCell>
+                        <TableCell>{inv.invoiceDate ? formatDate(inv.invoiceDate) : '—'}</TableCell>
+                        <TableCell className="text-right">
+                          {inv.totalGross != null ? Number(inv.totalGross).toFixed(2) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{inv.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>

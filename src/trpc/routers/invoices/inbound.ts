@@ -29,6 +29,8 @@ const listSchema = z.object({
   status: z.string().optional(),
   supplierId: z.string().uuid().optional(),
   supplierStatus: z.string().optional(),
+  orderId: z.string().uuid().optional(),
+  costCenterId: z.string().uuid().optional(),
   search: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
@@ -51,6 +53,8 @@ const updateSchema = z.object({
   totalGross: z.number().nullable().optional(),
   paymentTermDays: z.number().int().nullable().optional(),
   notes: z.string().nullable().optional(),
+  orderId: z.string().uuid().nullable().optional(),
+  costCenterId: z.string().uuid().nullable().optional(),
 })
 
 const lineItemSchema = z.object({

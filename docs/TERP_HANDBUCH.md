@@ -713,6 +713,8 @@ Ein Unternehmen hat zwei Standorte in Deutschland und Österreich:
 | Auftragsdetails | 📍 Verwaltung → Aufträge → Zeile anklicken → Tab „Details" | Anzeige im Abschnitt „Abrechnung" |
 | Lohnexport-Vorschau | 📍 Administration → Lohnexporte → ⋯ → Vorschau | Spalte „Kostenstelle" pro Mitarbeiter |
 | Berichte generieren | 📍 Administration → Berichte → Bericht erstellen | Multi-Auswahl-Filter „Kostenstellen" |
+| Eingangsrechnung bearbeiten | 📍 Rechnungen → Eingangsrechnungen → Rechnung öffnen | Dropdown „Kostenstelle" in der Karte „Zuordnung" (Entwurf/Abgelehnt) |
+| DATEV-Export (Eingangsrechnungen) | 📍 Eingangsrechnung → DATEV Export | Kostenstellen-Code als KOST2 in Spalte 38 |
 | Audit-Protokoll | 📍 Administration → Audit-Protokoll | Entitätstyp „Kostenstelle" im Filter |
 
 #### Praxisbeispiel
@@ -3888,6 +3890,14 @@ Tabelle mit Spalten: Code, Name, Status (Badge), Kunde, Gültig ab, Gültig bis.
 1. 📍 **„Neue Buchung"** → Mitarbeiter, Aktivität, Datum, Stunden + Minuten, Beschreibung
 2. 📍 „Speichern"
 3. ✅ Tabelle zeigt: Datum, Mitarbeiter, Aktivität, Zeit (h:mm), Beschreibung, Quelle (Badge: Manuell/Auto/Import)
+
+**Tab „Eingangsrechnungen":** Eingangsrechnungen, die diesem Auftrag zugeordnet sind
+- ✅ Tabelle zeigt: Nummer (interner Link zur Rechnungs-Detailseite), Lieferant, Datum, Bruttobetrag, Status (Badge)
+- Klick auf die Rechnungsnummer navigiert direkt zur Eingangsrechnungs-Detailseite
+- Leerzustand: „Noch keine Eingangsrechnungen mit diesem Auftrag verknüpft"
+- Die Zuordnung erfolgt nicht hier, sondern über die Karte „Zuordnung" auf der Eingangsrechnungs-Detailseite (siehe Abschnitt 22.4)
+
+> 💡 **Zusammenhang mit DATEV-Export:** Wenn einer Eingangsrechnung ein Auftrag zugeordnet ist, wird der Auftrags-Code als KOST1 im DATEV-Buchungsstapel exportiert (siehe Abschnitt 22.9). So kann der Steuerberater die Eingangsrechnung direkt dem richtigen Kostenträger zuordnen.
 
 Ein vollständiges Praxisbeispiel zum Anlegen eines Auftrags mit Aktivitäten, Mitarbeiterzuweisungen und Zeitbuchungen finden Sie in Abschnitt **10.1.1**.
 
@@ -10222,17 +10232,30 @@ Die Detailseite zeigt ein **Side-by-Side-Layout**:
 - Bei zugeordnetem Lieferant: Firmenname und CRM-Nummer
 - Bei unbekanntem Lieferant: ZUGFeRD-Verkäuferdaten + Button **„Lieferant zuweisen"**
 
-**3. Freigabeverlauf** (nur nach Einreichung):
+**3. Zuordnung:**
+
+| Feld | Beschreibung | Bearbeitbar |
+|------|-------------|-------------|
+| Auftrag (optional) | Verknüpfung mit einem Auftrag aus der Auftragsverwaltung | Entwurf / Abgelehnt |
+| Kostenstelle (optional) | Verknüpfung mit einer Kostenstelle | Entwurf / Abgelehnt |
+
+- **Im Bearbeitungsmodus** (Entwurf/Abgelehnt): Suchbares Dropdown-Feld — Eingabe filtert nach Code und Name. Auswahl per Klick, Entfernen über X-Button.
+- **Im Lesemodus** (Freigegeben/Exportiert): Auftrag wird als klickbarer Link zur Auftrags-Detailseite angezeigt. Kostenstelle wird als Text (Code — Name) angezeigt.
+- **Ohne Zuordnung**: Text „Kein Auftrag zugeordnet" bzw. „Keine Kostenstelle zugeordnet".
+
+> 💡 **Auftrag und Kostenstelle sind keine Pflichtfelder** und haben keinen Einfluss auf den Freigabe-Workflow (keine Erhöhung der Freigabeversion). Die Zuordnung dient der buchhalterischen Klassifikation und wird im DATEV-Export als KOST1 (Auftrag) bzw. KOST2 (Kostenstelle) ausgegeben (siehe Abschnitt 22.9).
+
+**4. Freigabeverlauf** (nur nach Einreichung):
 - Vertikale Timeline aller Genehmigungsschritte
 - Pro Schritt: Schrittnummer, zugewiesener Genehmiger, Status-Badge, Entscheidungszeitpunkt
 - Abgelehnte Schritte zeigen den Ablehnungsgrund in Rot
 - Ungültig gewordene Schritte (nach Rechnungsänderung) werden ausgegraut mit Hinweis „Ungültig (Rechnung geändert)"
 
-**4. ZUGFeRD** (nur wenn erkannt):
+**5. ZUGFeRD** (nur wenn erkannt):
 - Profil-Badge (z. B. EN16931, XRECHNUNG)
 - Quellenangabe (manual/imap/zugferd)
 
-**5. Notizen:**
+**6. Notizen:**
 - Freitext-Feld für interne Anmerkungen
 
 ---
@@ -10359,15 +10382,27 @@ Zeile anklicken → öffnet die Rechnungs-Detailseite.
 - Zeile 2: Spaltenüberschriften
 - Zeile 3+: Buchungszeilen
 
-| DATEV-Feld | Inhalt |
-|-----------|--------|
-| Umsatz | Bruttobetrag (Komma als Dezimaltrennzeichen) |
-| Soll/Haben | S (immer Soll für Eingangsrechnungen) |
-| WKZ | EUR |
-| BU-Schlüssel | 9 (19% MwSt), 8 (7% MwSt), 0 (steuerfrei) |
-| Belegdatum | TTMM (4-stellig, ohne Jahr) |
-| Belegfeld 1 | Rechnungsnummer (max. 12 Zeichen) |
-| Buchungstext | „Lieferant Rechnungsnr." (max. 60 Zeichen) |
+**Befüllte Spalten (39 Spalten gemäß DATEV-Buchungsstapel V12):**
+
+| Pos. | DATEV-Feld | Inhalt |
+|------|-----------|--------|
+| 1 | Umsatz | Bruttobetrag (Komma als Dezimaltrennzeichen) |
+| 2 | Soll/Haben | S (immer Soll für Eingangsrechnungen) |
+| 3 | WKZ Umsatz | EUR |
+| 4–8 | Kurs, Basis-Umsatz, WKZ Basis, Konto, Gegenkonto | Leer (wird ggf. in einer späteren Phase befüllt) |
+| 9 | BU-Schlüssel | 9 (19% MwSt), 8 (7% MwSt), 0 (steuerfrei) |
+| 10 | Belegdatum | TTMM (4-stellig, ohne Jahr) |
+| 11 | Belegfeld 1 | Rechnungsnummer (max. 12 Zeichen) |
+| 12–13 | Belegfeld 2, Skonto | Leer |
+| 14 | Buchungstext | „Lieferant Rechnungsnr." (max. 60 Zeichen) |
+| 15–36 | Postensperre bis Beleginfo – Inhalt 8 | Leer (DATEV-Pflicht-Header, von Terp nicht befüllt) |
+| **37** | **KOST1 – Kostenstelle** | **Auftrags-Code** (z. B. `AUF-001`) — aus dem zugeordneten Auftrag der Rechnung |
+| **38** | **KOST2 – Kostenstelle** | **Kostenstellen-Code** (z. B. `KST-100`) — aus der zugeordneten Kostenstelle der Rechnung |
+| 39 | Kost-Menge | Leer |
+
+> 💡 **KOST1 und KOST2** werden nur befüllt, wenn der Rechnung ein Auftrag bzw. eine Kostenstelle zugeordnet wurde (siehe Abschnitt 22.4, Karte „Zuordnung"). Ohne Zuordnung bleiben die Felder leer — der DATEV-Import funktioniert trotzdem fehlerfrei.
+
+> 💡 **Spalten 15–36** sind im DATEV-Buchungsstapel-Standard als Pflicht-Header definiert (z. B. „Postensperre", „Beleginfo – Art 1" bis „Beleginfo – Inhalt 8"). Terp befüllt diese Felder nicht, gibt aber die korrekten Spaltennamen im CSV-Header aus, damit der DATEV-Importer die Datei akzeptiert.
 
 > 💡 **Exportierte Rechnungen** können über die Funktion „Zurücksetzen" (Berechtigung: `inbound_invoices.manage`) wieder auf „Entwurf" zurückgesetzt werden, falls ein erneuter Export nötig ist.
 
@@ -10567,6 +10602,33 @@ Das E-Mail-Log zeigt alle vom IMAP-Poller verarbeiteten E-Mails. Nützlich zur F
 3. 📍 Einreicher öffnet die abgelehnte Rechnung → Ablehnungsgrund wird im Freigabeverlauf angezeigt
 4. Betrag korrigieren → **„Speichern"** → **„Zur Freigabe"**
 5. ✅ Neuer Genehmigungsdurchlauf startet (alte Genehmigungen werden automatisch ungültig)
+
+#### Beispiel 4: Eingangsrechnung einem Auftrag und einer Kostenstelle zuordnen (KOST1/KOST2 im DATEV-Export)
+
+**Ausgangslage:** Ein Handwerksbetrieb erhält eine Materialrechnung des Baustoffhändlers „Schmitz GmbH" über 2.380,00 € brutto. Das Material wurde für den Kundenauftrag „Dachsanierung Familie Müller" eingekauft. Der Betrieb hat in Terp den Auftrag `AUF-2026-017` (Name: „Dachsanierung Müller") und die Kostenstelle `KST-100` (Name: „Werkstatt") angelegt. Der Steuerberater möchte die Rechnung im DATEV-Buchungsstapel direkt dem Auftrag und der Werkstatt-Kostenstelle zuordnen können.
+
+1. 📍 Seitenleiste → Rechnungen → Eingangsrechnungen → Liste → Rechnung „ER-42" (Schmitz GmbH) anklicken
+2. ✅ Detailseite öffnet sich, Status „Entwurf"
+3. 📍 Sidebar → Karte **„Zuordnung"**
+4. **Auftrag-Feld:** Klick in das Suchfeld → Eingabe „Müller" → Dropdown zeigt `AUF-2026-017 — Dachsanierung Müller` → auswählen
+5. ✅ Feld zeigt: `AUF-2026-017 — Dachsanierung Müller`
+6. **Kostenstelle-Feld:** Klick in das Suchfeld → Eingabe „Werk" → Dropdown zeigt `KST-100 — Werkstatt` → auswählen
+7. ✅ Feld zeigt: `KST-100 — Werkstatt`
+8. 📍 **„Speichern"** (oben rechts) → Toast „Gespeichert"
+9. 📍 **„Zur Freigabe"** → Genehmiger genehmigt → Status: „Freigegeben"
+10. 📍 Buchhaltung klickt **„DATEV Export"** → CSV wird heruntergeladen
+11. ✅ CSV öffnen: In der Datenzeile der Rechnung steht in **Spalte 37 (KOST1)** der Wert `AUF-2026-017` und in **Spalte 38 (KOST2)** der Wert `KST-100`
+12. ✅ Der Steuerberater importiert die CSV in DATEV → Rechnung ist automatisch dem richtigen Auftrag und der richtigen Kostenstelle zugeordnet
+
+**Gegenprobe im Auftrag:**
+1. 📍 Seitenleiste → Verwaltung → Aufträge → `AUF-2026-017` anklicken
+2. 📍 Tab **„Eingangsrechnungen"**
+3. ✅ Tabelle zeigt die Rechnung `ER-42` von Schmitz GmbH mit Datum, Bruttobetrag (2.380,00) und Status „Exportiert"
+4. 📍 Klick auf `ER-42` → navigiert zurück zur Rechnungs-Detailseite
+
+> 💡 **Zuordnung entfernen:** Solange die Rechnung im Status „Entwurf" oder „Abgelehnt" ist, kann die Zuordnung über den X-Button neben dem Feld gelöscht werden. Nach Speichern ist der Auftrag/die Kostenstelle entfernt und wird im DATEV-Export als leeres Feld ausgegeben.
+
+> 💡 **Historische Rechnungen:** Bereits exportierte Rechnungen können über die Funktion „Zurücksetzen" (📍 Berechtigung `inbound_invoices.manage`) auf „Entwurf" zurückgesetzt, mit Auftrag/Kostenstelle versehen und erneut exportiert werden.
 
 ---
 

@@ -3,6 +3,8 @@ import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const DEFAULT_INCLUDE = {
   supplier: { select: { id: true, number: true, company: true, vatId: true } },
+  order: { select: { id: true, code: true, name: true } },
+  costCenter: { select: { id: true, code: true, name: true } },
   lineItems: { orderBy: { sortOrder: "asc" as const } },
   approvals: { orderBy: { stepOrder: "asc" as const } },
   createdByUser: { select: { id: true, displayName: true, email: true } },
@@ -38,6 +40,8 @@ export async function findMany(
     status?: string
     supplierId?: string
     supplierStatus?: string
+    orderId?: string
+    costCenterId?: string
     search?: string
     dateFrom?: string
     dateTo?: string
@@ -54,6 +58,8 @@ export async function findMany(
   if (filters?.status) where.status = filters.status
   if (filters?.supplierId) where.supplierId = filters.supplierId
   if (filters?.supplierStatus) where.supplierStatus = filters.supplierStatus
+  if (filters?.orderId) where.orderId = filters.orderId
+  if (filters?.costCenterId) where.costCenterId = filters.costCenterId
 
   if (filters?.search) {
     where.OR = [
@@ -75,6 +81,8 @@ export async function findMany(
       where,
       include: {
         supplier: { select: { id: true, number: true, company: true } },
+        order: { select: { id: true, code: true, name: true } },
+        costCenter: { select: { id: true, code: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
       skip,

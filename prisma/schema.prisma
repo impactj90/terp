@@ -1353,8 +1353,9 @@ model CostCenter {
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employees Employee[]
-  orders    Order[]
+  employees       Employee[]
+  orders          Order[]
+  inboundInvoices InboundInvoice[]
 
   // Indexes
   @@unique([tenantId, code], map: "cost_centers_tenant_id_code_key")
@@ -2132,6 +2133,7 @@ model Order {
   crmInquiries        CrmInquiry[]
   billingDocuments    BillingDocument[]
   billingServiceCases BillingServiceCase[]
+  inboundInvoices     InboundInvoice[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")
@@ -5631,6 +5633,8 @@ model InboundInvoice {
   datevExportedAt     DateTime? @map("datev_exported_at") @db.Timestamptz(6)
   datevExportedBy     String?   @map("datev_exported_by") @db.Uuid
   notes               String?   @db.Text
+  orderId             String?   @map("order_id") @db.Uuid
+  costCenterId        String?   @map("cost_center_id") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdBy           String?   @map("created_by") @db.Uuid
@@ -5641,12 +5645,16 @@ model InboundInvoice {
   submitter        User?                     @relation("InboundInvoiceSubmitter", fields: [submittedBy], references: [id], onDelete: SetNull)
   datevExporter    User?                     @relation("InboundInvoiceDatevExporter", fields: [datevExportedBy], references: [id], onDelete: SetNull)
   createdByUser    User?                     @relation("InboundInvoiceCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  order            Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  costCenter       CostCenter?               @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   lineItems        InboundInvoiceLineItem[]
   approvals        InboundInvoiceApproval[]
 
   @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
   @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
   @@index([tenantId, invoiceDate(sort: Desc)], map: "idx_inbound_invoices_tenant_date")
+  @@index([tenantId, orderId], map: "idx_inbound_invoices_order")
+  @@index([tenantId, costCenterId], map: "idx_inbound_invoices_cost_center")
   @@map("inbound_invoices")
 }
 

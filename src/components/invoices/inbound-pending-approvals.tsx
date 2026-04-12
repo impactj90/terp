@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,6 +22,7 @@ const formatPrice = (v: number | string | null | undefined) => {
 
 export function InboundPendingApprovals() {
   const t = useTranslations('inboundInvoices')
+  const locale = useLocale()
   const router = useRouter()
   const { data: approvals, isLoading } = usePendingApprovals()
 
@@ -71,7 +72,7 @@ export function InboundPendingApprovals() {
             <TableRow
               key={approval.id}
               className="cursor-pointer"
-              onClick={() => router.push(`/invoices/inbound/${inv.id}`)}
+              onClick={() => router.push(`/${locale}/invoices/inbound/${inv.id}`)}
             >
               <TableCell className="font-medium">
                 {inv.invoiceNumber ?? inv.number}

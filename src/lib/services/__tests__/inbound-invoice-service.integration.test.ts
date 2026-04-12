@@ -31,6 +31,10 @@ import * as lineItemRepo from "../inbound-invoice-line-item-repository"
 const TEST_TENANT_ID = "f0000000-0000-4000-a000-000000000505"
 const TEST_TENANT_SLUG = "inbound-invoice-integration"
 const TEST_USER_ID = "a0000000-0000-4000-a000-000000000505"
+const OTHER_TENANT_ID = "f0000000-0000-4000-a000-000000000599"
+const TEST_ORDER_ID = "f0000000-0000-4000-a000-000000000510"
+const TEST_COSTCENTER_ID = "f0000000-0000-4000-a000-000000000511"
+const OTHER_TENANT_ORDER_ID = "f0000000-0000-4000-a000-000000000512"
 
 const FIXTURES_DIR = path.resolve(__dirname, "fixtures/zugferd")
 
@@ -77,6 +81,39 @@ beforeAll(async () => {
     update: {},
     create: { userId: TEST_USER_ID, tenantId: TEST_TENANT_ID },
   })
+
+  // Other tenant for cross-tenant tests
+  await prisma.tenant.upsert({
+    where: { id: OTHER_TENANT_ID },
+    update: {},
+    create: {
+      id: OTHER_TENANT_ID,
+      name: "Other Tenant",
+      slug: "inbound-invoice-other",
+      isActive: true,
+    },
+  })
+
+  // Test cost center
+  await prisma.costCenter.upsert({
+    where: { id: TEST_COSTCENTER_ID },
+    create: { id: TEST_COSTCENTER_ID, tenantId: TEST_TENANT_ID, code: "KST-001", name: "Test Kostenstelle" },
+    update: {},
+  })
+
+  // Test order
+  await prisma.order.upsert({
+    where: { id: TEST_ORDER_ID },
+    create: { id: TEST_ORDER_ID, tenantId: TEST_TENANT_ID, code: "AUF-001", name: "Test Auftrag" },
+    update: {},
+  })
+
+  // Order in other tenant for cross-tenant check
+  await prisma.order.upsert({
+    where: { id: OTHER_TENANT_ORDER_ID },
+    create: { id: OTHER_TENANT_ORDER_ID, tenantId: OTHER_TENANT_ID, code: "AUF-999", name: "Fremder Auftrag" },
+    update: {},
+  })
 })
 
 afterAll(async () => {
@@ -85,6 +122,12 @@ afterAll(async () => {
     .deleteMany({ where: { invoice: { tenantId: TEST_TENANT_ID } } })
     .catch(() => {})
   await prisma.inboundInvoice
+    .deleteMany({ where: { tenantId: { in: [TEST_TENANT_ID, OTHER_TENANT_ID] } } })
+    .catch(() => {})
+  await prisma.order
+    .deleteMany({ where: { tenantId: { in: [TEST_TENANT_ID, OTHER_TENANT_ID] } } })
+    .catch(() => {})
+  await prisma.costCenter
     .deleteMany({ where: { tenantId: TEST_TENANT_ID } })
     .catch(() => {})
   await prisma.inboundEmailLog
@@ -100,7 +143,7 @@ afterAll(async () => {
     .deleteMany({ where: { tenantId: TEST_TENANT_ID } })
     .catch(() => {})
   await prisma.user.deleteMany({ where: { id: TEST_USER_ID } }).catch(() => {})
-  await prisma.tenant.deleteMany({ where: { id: TEST_TENANT_ID } }).catch(() => {})
+  await prisma.tenant.deleteMany({ where: { id: { in: [TEST_TENANT_ID, OTHER_TENANT_ID] } } }).catch(() => {})
 })
 
 async function cleanupInvoices() {
@@ -444,5 +487,92 @@ describe.sequential("inbound-invoice-service integration", () => {
     const result = await service.list(prisma, TEST_TENANT_ID, { status: "DRAFT" })
     expect(result.total).toBeGreaterThanOrEqual(2)
     expect(result.items.every((i) => i.status === "DRAFT")).toBe(true)
+  })
+
+  // ---------------------------------------------------------------
+  // 14. Order/CostCenter assignment
+  // ---------------------------------------------------------------
+  describe("order/costCenter assignment", () => {
+    it("should update orderId and costCenterId", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "order-assign.pdf", TEST_USER_ID)
+
+      const updated = await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        orderId: TEST_ORDER_ID,
+        costCenterId: TEST_COSTCENTER_ID,
+      })
+      expect(updated.orderId).toBe(TEST_ORDER_ID)
+      expect(updated.costCenterId).toBe(TEST_COSTCENTER_ID)
+      expect(updated.order?.code).toBe("AUF-001")
+      expect(updated.costCenter?.code).toBe("KST-001")
+    })
+
+    it("should not increment approvalVersion when orderId changes", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "order-ver.pdf", TEST_USER_ID)
+      const vBefore = invoice.approvalVersion
+
+      const updated = await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        orderId: TEST_ORDER_ID,
+      })
+      expect(updated.approvalVersion).toBe(vBefore)
+    })
+
+    it("should not increment approvalVersion when costCenterId changes", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "cc-ver.pdf", TEST_USER_ID)
+      const vBefore = invoice.approvalVersion
+
+      const updated = await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        costCenterId: TEST_COSTCENTER_ID,
+      })
+      expect(updated.approvalVersion).toBe(vBefore)
+    })
+
+    it("should reject orderId from different tenant", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "cross-tenant.pdf", TEST_USER_ID)
+
+      await expect(
+        service.update(prisma, TEST_TENANT_ID, invoice.id, {
+          orderId: OTHER_TENANT_ORDER_ID,
+        })
+      ).rejects.toThrow("Order not found or belongs to another tenant")
+    })
+
+    it("should allow clearing orderId with null", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "clear-order.pdf", TEST_USER_ID)
+
+      await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        orderId: TEST_ORDER_ID,
+      })
+      const cleared = await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        orderId: null,
+      })
+      expect(cleared.orderId).toBeNull()
+    })
+
+    it("should include order in getById response", async () => {
+      const pdf = await createPlainPdf()
+      const invoice = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "getbyid-order.pdf", TEST_USER_ID)
+
+      await service.update(prisma, TEST_TENANT_ID, invoice.id, {
+        orderId: TEST_ORDER_ID,
+      })
+      const fetched = await service.getById(prisma, TEST_TENANT_ID, invoice.id)
+      expect(fetched.order).toEqual({ id: TEST_ORDER_ID, code: "AUF-001", name: "Test Auftrag" })
+    })
+
+    it("should filter list by orderId", async () => {
+      const pdf = await createPlainPdf()
+      const inv1 = await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "filter1.pdf", TEST_USER_ID)
+      await service.createFromUpload(prisma, TEST_TENANT_ID, pdf, "filter2.pdf", TEST_USER_ID)
+      await service.update(prisma, TEST_TENANT_ID, inv1.id, { orderId: TEST_ORDER_ID })
+
+      const result = await service.list(prisma, TEST_TENANT_ID, { orderId: TEST_ORDER_ID })
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0]!.id).toBe(inv1.id)
+    })
   })
 })

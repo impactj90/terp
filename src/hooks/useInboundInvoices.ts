@@ -8,6 +8,8 @@ export function useInboundInvoices(
     status?: string
     supplierId?: string
     supplierStatus?: string
+    orderId?: string
+    costCenterId?: string
     search?: string
     dateFrom?: string
     dateTo?: string
@@ -23,6 +25,8 @@ export function useInboundInvoices(
         status: options?.status,
         supplierId: options?.supplierId,
         supplierStatus: options?.supplierStatus,
+        orderId: options?.orderId,
+        costCenterId: options?.costCenterId,
         search: options?.search,
         dateFrom: options?.dateFrom,
         dateTo: options?.dateTo,

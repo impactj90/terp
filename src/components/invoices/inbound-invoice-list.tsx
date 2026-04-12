@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Plus, MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,7 @@ const formatPrice = (v: number | string | null | undefined) => {
 
 export function InboundInvoiceList() {
   const t = useTranslations('inboundInvoices')
+  const locale = useLocale()
   const router = useRouter()
   const [search, setSearch] = React.useState('')
   const [statusFilter, setStatusFilter] = React.useState('ALL')
@@ -120,7 +121,7 @@ export function InboundInvoiceList() {
             <div
               key={inv.id}
               className="cursor-pointer px-1 py-3"
-              onClick={() => router.push(`/invoices/inbound/${inv.id}`)}
+              onClick={() => router.push(`/${locale}/invoices/inbound/${inv.id}`)}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{inv.number}</span>
@@ -155,7 +156,7 @@ export function InboundInvoiceList() {
                 <TableRow
                   key={inv.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/invoices/inbound/${inv.id}`)}
+                  onClick={() => router.push(`/${locale}/invoices/inbound/${inv.id}`)}
                 >
                   <TableCell className="font-medium">{inv.number}</TableCell>
                   <TableCell>{(inv.supplier as { company?: string } | null)?.company ?? inv.sellerName ?? '—'}</TableCell>

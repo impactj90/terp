@@ -34,7 +34,7 @@ export function autoMockPrisma(partial: Record<string, any>): Record<string, any
     })
   }
 
-  return new Proxy(partial, {
+  const proxy: Record<string, any> = new Proxy(partial, {
     get(target, prop: string) {
       if (prop === "$transaction") {
         if (prop in target) return target[prop]
@@ -42,7 +42,7 @@ export function autoMockPrisma(partial: Record<string, any>): Record<string, any
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           async (fnOrArray: ((tx: any) => Promise<any>) | any[]) => {
             if (typeof fnOrArray === "function") {
-              return fnOrArray(target)
+              return fnOrArray(proxy)
             }
             return Promise.all(fnOrArray)
           }
@@ -58,6 +58,7 @@ export function autoMockPrisma(partial: Record<string, any>): Record<string, any
       return createModelProxy(target[prop] as Record<string, unknown>)
     },
   })
+  return proxy
 }
 
 export function createMockPlatformUser(

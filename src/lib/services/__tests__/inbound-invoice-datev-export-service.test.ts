@@ -27,6 +27,7 @@ vi.mock("@/lib/pubsub/topics", () => ({
 import {
   formatDatevDate,
   buildDatevHeader,
+  buildColumnHeader,
   VAT_KEY_MAP,
   exportToCsv,
 } from "../inbound-invoice-datev-export-service"
@@ -56,6 +57,55 @@ describe("DATEV format helpers", () => {
     const header = buildDatevHeader()
     expect(header.split(";").length).toBeGreaterThanOrEqual(15)
   })
+
+  it("buildColumnHeader has 39 columns with exact DATEV names", () => {
+    const header = buildColumnHeader()
+    const columns = header.split(";")
+    expect(columns).toHaveLength(39)
+
+    const expected = [
+      "Umsatz (ohne Soll/Haben-Kz)",
+      "Soll/Haben-Kennzeichen",
+      "WKZ Umsatz",
+      "Kurs",
+      "Basis-Umsatz",
+      "WKZ Basis-Umsatz",
+      "Konto",
+      "Gegenkonto (ohne BU-Schl\u00FCssel)",
+      "BU-Schl\u00FCssel",
+      "Belegdatum",
+      "Belegfeld 1",
+      "Belegfeld 2",
+      "Skonto",
+      "Buchungstext",
+      "Postensperre",
+      "Diverse Adressnummer",
+      "Gesch\u00E4ftspartnerbank",
+      "Sachverhalt",
+      "Zinssperre",
+      "Beleglink",
+      "Beleginfo \u2013 Art 1",
+      "Beleginfo \u2013 Inhalt 1",
+      "Beleginfo \u2013 Art 2",
+      "Beleginfo \u2013 Inhalt 2",
+      "Beleginfo \u2013 Art 3",
+      "Beleginfo \u2013 Inhalt 3",
+      "Beleginfo \u2013 Art 4",
+      "Beleginfo \u2013 Inhalt 4",
+      "Beleginfo \u2013 Art 5",
+      "Beleginfo \u2013 Inhalt 5",
+      "Beleginfo \u2013 Art 6",
+      "Beleginfo \u2013 Inhalt 6",
+      "Beleginfo \u2013 Art 7",
+      "Beleginfo \u2013 Inhalt 7",
+      "Beleginfo \u2013 Art 8",
+      "Beleginfo \u2013 Inhalt 8",
+      "KOST1 \u2013 Kostenstelle",
+      "KOST2 \u2013 Kostenstelle",
+      "Kost-Menge",
+    ]
+    expect(columns).toEqual(expected)
+  })
 })
 
 // --- Integration Tests (real DB) ---
@@ -63,6 +113,8 @@ describe("DATEV format helpers", () => {
 const TEST_TENANT_ID = "f0000000-0000-4000-a000-000000000808"
 const TEST_TENANT_SLUG = "datev-export-integration"
 const TEST_USER_ID = "a0000000-0000-4000-a000-000000000801"
+const TEST_ORDER_ID = "f0000000-0000-4000-a000-000000000820"
+const TEST_COSTCENTER_ID = "f0000000-0000-4000-a000-000000000821"
 
 describe.sequential("DATEV export integration", () => {
   beforeAll(async () => {
@@ -81,11 +133,23 @@ describe.sequential("DATEV export integration", () => {
       update: {},
       create: { userId: TEST_USER_ID, tenantId: TEST_TENANT_ID },
     })
+    await prisma.costCenter.upsert({
+      where: { id: TEST_COSTCENTER_ID },
+      create: { id: TEST_COSTCENTER_ID, tenantId: TEST_TENANT_ID, code: "KST-001", name: "Test Kostenstelle" },
+      update: {},
+    })
+    await prisma.order.upsert({
+      where: { id: TEST_ORDER_ID },
+      create: { id: TEST_ORDER_ID, tenantId: TEST_TENANT_ID, code: "AUF-001", name: "Test Auftrag" },
+      update: {},
+    })
   })
 
   afterAll(async () => {
     await prisma.inboundInvoiceLineItem.deleteMany({ where: { invoice: { tenantId: TEST_TENANT_ID } } }).catch(() => {})
     await prisma.inboundInvoice.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
+    await prisma.order.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
+    await prisma.costCenter.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
     await prisma.crmAddress.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
     await prisma.numberSequence.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
     await prisma.userTenant.deleteMany({ where: { tenantId: TEST_TENANT_ID } }).catch(() => {})
@@ -267,7 +331,74 @@ describe.sequential("DATEV export integration", () => {
 
     const csvString = iconv.decode(result.csv, "win1252")
     const lines = csvString.split("\r\n")
-    // Data row should have semicolons
-    expect(lines[2]!.split(";").length).toBeGreaterThanOrEqual(10)
+    // Data row should have 39 fields
+    expect(lines[2]!.split(";")).toHaveLength(39)
+  })
+
+  // ---------------------------------------------------------------
+  // KOST fields
+  // ---------------------------------------------------------------
+  describe("KOST fields in export", () => {
+    it("should export KOST1 with order code when orderId is set", async () => {
+      const inv = await createApprovedInvoice({ orderId: TEST_ORDER_ID })
+
+      const result = await exportToCsv(
+        prisma, TEST_TENANT_ID, { invoiceIds: [inv.id] }, TEST_USER_ID
+      )
+      const csv = iconv.decode(result.csv, "win1252")
+      const fields = csv.split("\r\n")[2]!.split(";")
+      expect(fields[36]).toBe("AUF-001")  // KOST1 (0-indexed: position 37)
+      expect(fields[37]).toBe("")          // KOST2 empty
+    })
+
+    it("should export KOST2 with cost center code when costCenterId is set", async () => {
+      const inv = await createApprovedInvoice({ costCenterId: TEST_COSTCENTER_ID })
+
+      const result = await exportToCsv(
+        prisma, TEST_TENANT_ID, { invoiceIds: [inv.id] }, TEST_USER_ID
+      )
+      const csv = iconv.decode(result.csv, "win1252")
+      const fields = csv.split("\r\n")[2]!.split(";")
+      expect(fields[36]).toBe("")          // KOST1 empty
+      expect(fields[37]).toBe("KST-001")  // KOST2
+    })
+
+    it("should export both KOST1 and KOST2 when both are set", async () => {
+      const inv = await createApprovedInvoice({
+        orderId: TEST_ORDER_ID,
+        costCenterId: TEST_COSTCENTER_ID,
+      })
+
+      const result = await exportToCsv(
+        prisma, TEST_TENANT_ID, { invoiceIds: [inv.id] }, TEST_USER_ID
+      )
+      const csv = iconv.decode(result.csv, "win1252")
+      const fields = csv.split("\r\n")[2]!.split(";")
+      expect(fields[36]).toBe("AUF-001")
+      expect(fields[37]).toBe("KST-001")
+    })
+
+    it("should leave KOST1/KOST2 empty when neither is set", async () => {
+      const inv = await createApprovedInvoice()
+
+      const result = await exportToCsv(
+        prisma, TEST_TENANT_ID, { invoiceIds: [inv.id] }, TEST_USER_ID
+      )
+      const csv = iconv.decode(result.csv, "win1252")
+      const fields = csv.split("\r\n")[2]!.split(";")
+      expect(fields[36]).toBe("")
+      expect(fields[37]).toBe("")
+    })
+
+    it("should have 39 fields per data row", async () => {
+      const inv = await createApprovedInvoice()
+
+      const result = await exportToCsv(
+        prisma, TEST_TENANT_ID, { invoiceIds: [inv.id] }, TEST_USER_ID
+      )
+      const csv = iconv.decode(result.csv, "win1252")
+      const dataRow = csv.split("\r\n")[2]!
+      expect(dataRow.split(";")).toHaveLength(39)
+    })
   })
 })
