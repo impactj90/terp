@@ -1,4 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 import { PrismaClient } from "@/generated/prisma/client"
 
 /**
@@ -21,7 +22,7 @@ function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL!
   const isRemote = connectionString.includes("supabase.co") || connectionString.includes("pooler.supabase.com")
 
-  const adapter = new PrismaPg({
+  const pool = new pg.Pool({
     connectionString,
     ssl: isRemote ? { rejectUnauthorized: false } : undefined,
     // Serverless-optimized: single connection pass-through to avoid
@@ -33,6 +34,7 @@ function createPrismaClient(): PrismaClient {
       statement_timeout: 30_000,
     }),
   })
+  const adapter = new PrismaPg(pool)
 
   return new PrismaClient({
     adapter,

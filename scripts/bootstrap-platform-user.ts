@@ -22,12 +22,20 @@ import { stdin, stdout } from "node:process"
 import * as os from "node:os"
 
 // Load env files BEFORE importing the Prisma client so DATABASE_URL is set.
+// Preserve any externally-provided DATABASE_URL (e.g. via --env-file or inline)
+// so that `pnpm tsx --env-file=.env.production scripts/bootstrap-platform-user.ts`
+// targets prod instead of the local dev DB from .env.local.
+const externalDbUrl = process.env.DATABASE_URL
 loadDotenv({ path: resolve(process.cwd(), ".env") })
 loadDotenv({ path: resolve(process.cwd(), ".env.local"), override: true })
+if (externalDbUrl) {
+  process.env.DATABASE_URL = externalDbUrl
+}
 
 // Static imports — these are fine because `PrismaClient` only reads env
 // when we actually instantiate it below (not at module load).
 import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 import { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { hashPassword } from "@/lib/platform/password"
 import * as platformAudit from "@/lib/platform/audit-service"
@@ -74,10 +82,11 @@ function createPrisma(): PrismaClient {
   const isRemote =
     connectionString.includes("supabase.co") ||
     connectionString.includes("pooler.supabase.com")
-  const adapter = new PrismaPg({
+  const pool = new pg.Pool({
     connectionString,
     ssl: isRemote ? { rejectUnauthorized: false } : undefined,
   })
+  const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
 
