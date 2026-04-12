@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for CorrectionMessage and related models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function countMessages(
   prisma: PrismaClient,
@@ -59,13 +60,11 @@ export async function findMessageById(
 
 export async function updateMessage(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correctionMessage.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.correctionMessage, { id, tenantId }, data, { entity: "CorrectionMessage" })
 }
 
 export async function findActiveMessages(

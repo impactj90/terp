@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the ExtendedTravelRule model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -65,17 +66,16 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.extendedTravelRule.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.extendedTravelRule, { id, tenantId }, data, { entity: "ExtendedTravelRule" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.extendedTravelRule.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.extendedTravelRule.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

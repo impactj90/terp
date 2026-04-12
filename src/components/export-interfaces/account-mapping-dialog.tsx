@@ -13,6 +13,7 @@ import {
   Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -71,10 +72,15 @@ export function AccountMappingDialog({
   const { data: assignedData } = useExportInterfaceAccounts(item?.id ?? '', open && !!item)
   const setAccountsMutation = useSetExportInterfaceAccounts()
 
-  // Extract data from wrapped responses
-  const allAccounts: Account[] = (accountsData as { data?: Account[] })?.data ?? []
-  const assignedAccountsData: ExportInterfaceAccount[] =
-    (assignedData as { data?: ExportInterfaceAccount[] })?.data ?? []
+  // Extract data from wrapped responses — stabilize references to prevent infinite re-renders
+  const allAccounts: Account[] = React.useMemo(
+    () => (accountsData as { data?: Account[] })?.data ?? [],
+    [accountsData]
+  )
+  const assignedAccountsData: ExportInterfaceAccount[] = React.useMemo(
+    () => (assignedData as { data?: ExportInterfaceAccount[] })?.data ?? [],
+    [assignedData]
+  )
 
   // Build a lookup map from account ID to account object
   const accountMap = React.useMemo(() => {
@@ -88,9 +94,9 @@ export function AccountMappingDialog({
     if (open && item) {
       // Sort assigned accounts by sort_order and extract their IDs
       const sorted = [...assignedAccountsData].sort(
-        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
       )
-      setAssignedIds(sorted.map((a) => a.account_id))
+      setAssignedIds(sorted.map((a) => a.accountId))
       setSelectedAvailable(new Set())
       setSelectedAssigned(new Set())
       setSearchAvailable('')
@@ -121,11 +127,11 @@ export function AccountMappingDialog({
       .map((id) => {
         const account = accountMap.get(id)
         // Fallback: try to find from assignedAccountsData
-        const assigned = assignedAccountsData.find((a) => a.account_id === id)
+        const assigned = assignedAccountsData.find((a) => a.accountId === id)
         return {
           id,
-          code: account?.code ?? assigned?.account_code ?? '',
-          name: account?.name ?? assigned?.account_name ?? '',
+          code: account?.code ?? assigned?.account?.code ?? '',
+          name: account?.name ?? assigned?.account?.name ?? '',
         }
       })
       .filter((a) => {
@@ -325,42 +331,58 @@ export function AccountMappingDialog({
 
             {/* Transfer Buttons */}
             <div className="flex flex-col items-center justify-center gap-1 py-4">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleAddAll}
-                disabled={availableAccounts.length === 0}
-                title={tm('addAll')}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleAddSelected}
-                disabled={selectedAvailable.size === 0}
-                title={tm('addSelected')}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleRemoveSelected}
-                disabled={selectedAssigned.size === 0}
-                title={tm('removeSelected')}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={handleRemoveAll}
-                disabled={assignedIds.length === 0}
-                title={tm('removeAll')}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleAddAll}
+                    disabled={availableAccounts.length === 0}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('addAll')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleAddSelected}
+                    disabled={selectedAvailable.size === 0}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('addSelected')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleRemoveSelected}
+                    disabled={selectedAssigned.size === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('removeSelected')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={handleRemoveAll}
+                    disabled={assignedIds.length === 0}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tm('removeAll')}</TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Assigned Accounts Panel */}
@@ -417,24 +439,32 @@ export function AccountMappingDialog({
                   <span />
                 )}
                 <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={handleMoveUp}
-                    disabled={selectedAssigned.size === 0}
-                    title={tm('moveUp')}
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={handleMoveDown}
-                    disabled={selectedAssigned.size === 0}
-                    title={tm('moveDown')}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleMoveUp}
+                        disabled={selectedAssigned.size === 0}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tm('moveUp')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleMoveDown}
+                        disabled={selectedAssigned.size === 0}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tm('moveDown')}</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

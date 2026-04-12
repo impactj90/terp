@@ -43,13 +43,55 @@ port = 54323
 api_url = "http://127.0.0.1"
 
 [inbucket]
-enabled = false
+enabled = true
+smtp_port = 54325
 
 [storage]
-enabled = false
+enabled = true
+file_size_limit = "10MiB"
+
+[storage.buckets.documents]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf", "text/xml"]
+
+[storage.buckets.tenant-logos]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
+
+[storage.buckets.avatars]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
+[storage.buckets.wh-article-images]
+public = false
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
+[storage.buckets.crm-attachments]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+
+[storage.buckets.hr-personnel-files]
+public = false
+file_size_limit = "20MiB"
+allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+
+[storage.buckets.inbound-invoices]
+public = false
+file_size_limit = "20MiB"
+allowed_mime_types = ["application/pdf", "text/xml", "application/xml", "image/jpeg", "image/png"]
 
 [auth]
 enabled = true
+# Base URL the app is served from. Used by auth.admin.generateLink() as the
+# default redirect target and to validate incoming redirect_to values.
+# See thoughts/shared/plans/2026-04-09-demo-tenant-system.md (Phase 0 refinement).
+site_url = "http://127.0.0.1:3001"
+additional_redirect_urls = ["http://127.0.0.1:3001/**"]
 
 [edge_runtime]
 enabled = false

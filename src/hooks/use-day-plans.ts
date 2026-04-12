@@ -57,6 +57,9 @@ export function useCreateDayPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
     },
   })
 }
@@ -72,6 +75,12 @@ export function useUpdateDayPlan() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })
@@ -89,6 +98,12 @@ export function useDeleteDayPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -104,6 +119,9 @@ export function useCopyDayPlan() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
       })
     },
   })
@@ -121,6 +139,12 @@ export function useCreateDayPlanBreak() {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -136,6 +160,12 @@ export function useDeleteDayPlanBreak() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })
@@ -153,6 +183,12 @@ export function useCreateDayPlanBonus() {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -168,6 +204,12 @@ export function useDeleteDayPlanBonus() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.dayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })

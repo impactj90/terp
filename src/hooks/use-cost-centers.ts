@@ -82,6 +82,9 @@ export function useUpdateCostCenter() {
       queryClient.invalidateQueries({
         queryKey: trpc.costCenters.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.costCenters.getById.queryKey(),
+      })
     },
   })
 }
@@ -103,6 +106,9 @@ export function useDeleteCostCenter() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.costCenters.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.costCenters.getById.queryKey(),
       })
     },
   })

@@ -151,8 +151,11 @@ export default function TimeClockPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader />
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header: hidden on mobile to maximize clock area */}
+      <div className="hidden sm:block">
+        <PageHeader />
+      </div>
 
       {/* Show action errors inline */}
       {actionError && (
@@ -173,8 +176,8 @@ export default function TimeClockPage() {
 
       {/* Main Clock Section */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center space-y-6">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col items-center space-y-4 sm:space-y-6">
             {/* Current Time Display */}
             <CurrentTime />
 
@@ -183,30 +186,34 @@ export default function TimeClockPage() {
 
             {/* Running Timer */}
             <RunningTimer
-              startTime={clockState.clockInTime}
-              isRunning={clockState.status === 'clocked_in'}
+              startTime={clockState.timerStartTime}
+              isRunning={clockState.status !== 'clocked_out'}
             />
 
-            {/* Main Clock Button */}
-            <ClockButton
-              status={clockState.status}
-              onAction={handleActionWithFeedback}
-              isLoading={clockState.isActionLoading}
-              disabled={clockState.isLoading}
-            />
+            {/* Main Clock Button — full width on mobile, circle on desktop */}
+            <div className="w-full px-2 sm:w-auto sm:px-0">
+              <ClockButton
+                status={clockState.status}
+                onAction={handleActionWithFeedback}
+                isLoading={clockState.isActionLoading}
+                disabled={clockState.isLoading}
+              />
+            </div>
 
-            {/* Secondary Actions */}
-            <SecondaryActions
-              status={clockState.status}
-              onAction={handleActionWithFeedback}
-              isLoading={clockState.isActionLoading}
-            />
+            {/* Secondary Actions — full width on mobile */}
+            <div className="w-full px-2 sm:w-auto sm:px-0">
+              <SecondaryActions
+                status={clockState.status}
+                onAction={handleActionWithFeedback}
+                isLoading={clockState.isActionLoading}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Stats and History Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         <TodayStats
           grossMinutes={dailyValue.grossTime ?? 0}
           breakMinutes={dailyValue.breakTime ?? 0}
@@ -218,7 +225,7 @@ export default function TimeClockPage() {
         />
 
         <BookingHistory
-          bookings={clockState.bookings as unknown as Parameters<typeof BookingHistory>[0]['bookings']}
+          bookings={clockState.bookings}
           isLoading={clockState.isLoading}
         />
       </div>
@@ -246,7 +253,7 @@ function PageHeader() {
 }
 
 interface EmployeeSelectorProps {
-  employees: Array<{ id?: string; first_name?: string; last_name?: string }>
+  employees: Array<{ id?: string; firstName?: string; lastName?: string }>
   selectedId: string
   onSelect: (id: string) => void
 }
@@ -255,7 +262,7 @@ function EmployeeSelector({ employees, selectedId, onSelect }: EmployeeSelectorP
   const t = useTranslations('timeClock')
   const selected = employees.find(e => e.id === selectedId)
   const selectedName = selected
-    ? `${selected.first_name} ${selected.last_name}`
+    ? `${selected.firstName} ${selected.lastName}`
     : t('selectEmployee')
 
   return (
@@ -271,7 +278,7 @@ function EmployeeSelector({ employees, selectedId, onSelect }: EmployeeSelectorP
             key={emp.id}
             onClick={() => emp.id && onSelect(emp.id)}
           >
-            {emp.first_name} {emp.last_name}
+            {emp.firstName} {emp.lastName}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

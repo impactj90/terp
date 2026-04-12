@@ -3,7 +3,11 @@
  *
  * Pure Prisma data-access functions for the AuditLog model.
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
+
+// Tx accepts either the root PrismaClient or a TransactionClient; write
+// helpers stay usable from inside prisma.$transaction callbacks.
+type Tx = PrismaClient | Prisma.TransactionClient
 
 export interface AuditLogListParams {
   page?: number
@@ -75,6 +79,94 @@ export async function count(
   params?: AuditLogListParams
 ) {
   const where = buildWhere(tenantId, params)
+  return prisma.auditLog.count({ where })
+}
+
+export interface AuditLogCreateInput {
+  tenantId: string
+  userId: string | null
+  action: string
+  entityType: string
+  entityId: string
+  entityName?: string | null
+  changes?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
+  ipAddress?: string | null
+  userAgent?: string | null
+}
+
+export async function create(
+  prisma: Tx,
+  data: AuditLogCreateInput
+) {
+  return prisma.auditLog.create({
+    data: {
+      tenantId: data.tenantId,
+      userId: data.userId,
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      entityName: data.entityName ?? null,
+      changes: (data.changes as Prisma.InputJsonValue) ?? undefined,
+      metadata: (data.metadata as Prisma.InputJsonValue) ?? undefined,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+    },
+  })
+}
+
+export async function createBulk(
+  prisma: Tx,
+  data: AuditLogCreateInput[]
+) {
+  return prisma.auditLog.createMany({
+    data: data.map((d) => ({
+      tenantId: d.tenantId,
+      userId: d.userId,
+      action: d.action,
+      entityType: d.entityType,
+      entityId: d.entityId,
+      entityName: d.entityName ?? null,
+      changes: (d.changes as Prisma.InputJsonValue) ?? undefined,
+      metadata: (d.metadata as Prisma.InputJsonValue) ?? undefined,
+      ipAddress: d.ipAddress ?? null,
+      userAgent: d.userAgent ?? null,
+    })),
+  })
+}
+
+// --- Export support ---
+
+export interface AuditLogExportParams {
+  userId?: string
+  entityType?: string
+  entityId?: string
+  action?: string
+  fromDate?: string
+  toDate?: string
+}
+
+export async function findAllForExport(
+  prisma: PrismaClient,
+  tenantId: string,
+  params?: AuditLogExportParams,
+  limit = 10000
+) {
+  const where = buildWhere(tenantId, params as AuditLogListParams)
+  return prisma.auditLog.findMany({
+    where,
+    include: auditLogUserInclude,
+    orderBy: { performedAt: "desc" },
+    take: limit,
+  })
+}
+
+export async function countForExport(
+  prisma: PrismaClient,
+  tenantId: string,
+  params?: AuditLogExportParams
+) {
+  const where = buildWhere(tenantId, params as AuditLogListParams)
   return prisma.auditLog.count({ where })
 }
 

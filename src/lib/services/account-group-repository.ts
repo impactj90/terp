@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the AccountGroup model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -61,26 +62,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.accountGroup.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.accountGroup, { id, tenantId }, data, { entity: "AccountGroup" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.accountGroup.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.accountGroup.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countAccounts(
   prisma: PrismaClient,
+  tenantId: string,
   accountGroupId: string
 ) {
   return prisma.account.count({
-    where: { accountGroupId },
+    where: { tenantId, accountGroupId },
   })
 }

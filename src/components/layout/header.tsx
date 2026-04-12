@@ -1,83 +1,80 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { Menu, Search } from 'lucide-react'
+import { CircleHelp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { UserMenu } from './user-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 import { Notifications } from './notifications'
 import { TenantSelector } from './tenant-selector'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
+import { CommandMenu } from './command-menu'
+import { Breadcrumbs } from './breadcrumbs'
 
 interface HeaderProps {
   className?: string
-  /** Callback when mobile menu button is clicked */
-  onMobileMenuClick?: () => void
 }
 
 /**
- * Fixed header component.
- * Contains mobile menu trigger, search, tenant selector, notifications, and user menu.
+ * Header component matching shadcn sidebar-07 pattern.
+ * Left: SidebarTrigger | Separator | Breadcrumbs
+ * Right: Search + compact actions
  */
-export function Header({ className, onMobileMenuClick }: HeaderProps) {
+export function Header({ className }: HeaderProps) {
   const t = useTranslations('header')
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 flex h-[var(--header-height)] items-center gap-4 border-b bg-background px-4 lg:px-6',
+        'sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 lg:rounded-t-xl',
         className
       )}
     >
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden"
-        onClick={onMobileMenuClick}
-        aria-label={t('openMenu')}
-      >
-        <Menu className="h-5 w-5" aria-hidden="true" />
-      </Button>
-
-      {/* Search (placeholder) - hidden on mobile */}
-      <div className="hidden flex-1 md:flex md:max-w-md">
-        <div className="relative w-full">
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            placeholder={t('search')}
-            className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label={t('search')}
-          />
-        </div>
+      {/* Left side: trigger + breadcrumbs */}
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <Breadcrumbs showHomeIcon={false} />
       </div>
 
-      {/* Spacer for mobile */}
-      <div className="flex-1 md:hidden" />
+      {/* Spacer */}
+      <div className="flex-1" />
 
-      {/* Right side actions */}
+      {/* Right side: search + actions */}
       <div className="flex items-center gap-2">
-        {/* Tenant selector - hidden on mobile */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex">
+          <CommandMenu />
+        </div>
+
+        <div className="hidden md:flex items-center">
           <TenantSelector />
         </div>
 
-        {/* Language switcher */}
-        <LocaleSwitcher />
+        <div className="flex items-center gap-0.5">
+          <LocaleSwitcher />
 
-        {/* Theme toggle */}
-        <ThemeToggle />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <a
+                  href="/hilfe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t('help')}
+                >
+                  <CircleHelp className="h-4 w-4" />
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('help')}</TooltipContent>
+          </Tooltip>
 
-        {/* Notifications */}
-        <Notifications />
-
-        {/* User menu */}
-        <UserMenu />
+          <ThemeToggle />
+          <Notifications />
+        </div>
       </div>
     </header>
   )

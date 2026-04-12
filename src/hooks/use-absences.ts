@@ -1,5 +1,6 @@
 import { useTRPC, useTRPCClient } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 interface UseAbsencesOptions {
   employeeId?: string
@@ -108,6 +109,7 @@ function transformToLegacy(
 function useAbsenceInvalidation() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return () => {
     queryClient.invalidateQueries({
@@ -139,6 +141,8 @@ function useAbsenceInvalidation() {
         )
       },
     })
+    // Invalidate downstream recalc cascade (dayView → dailyValues → monthlyValues)
+    invalidateTimeData()
   }
 }
 

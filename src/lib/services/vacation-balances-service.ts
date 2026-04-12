@@ -5,10 +5,18 @@
  * Delegates data access to the repository layer.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import type { Prisma } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
 import type { DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import * as repo from "./vacation-balances-repository"
 import { mapBalanceToOutput } from "./vacation-balance-output"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Constants ---
+
+const ENTITY_TYPE = "vacation_balance"
+const TRACKED_FIELDS = ["entitlement", "carryover", "adjustments", "carryoverExpiresAt"]
 
 // --- Error Classes ---
 
@@ -20,8 +28,8 @@ export class VacationBalanceNotFoundError extends Error {
 }
 
 export class VacationBalanceConflictError extends Error {
-  constructor() {
-    super("Vacation balance already exists for this employee and year")
+  constructor(message = "Vacation balance already exists for this employee and year") {
+    super(message)
     this.name = "VacationBalanceConflictError"
   }
 }
@@ -65,34 +73,60 @@ export async function initializeBalances(
     select: { id: true },
   })
 
+  // Batch-fetch existing balances to avoid N+1
+  const empIds = employees.map((e) => e.id)
+  const existingBalances = await prisma.vacationBalance.findMany({
+    where: { tenantId, employeeId: { in: empIds }, year },
+    select: { employeeId: true },
+  })
+  const existingSet = new Set(existingBalances.map((b) => b.employeeId))
+
+  // Batch-fetch previous-year and current-year balances to avoid N+1 in carryover
+  const prevYearBalances = doCarryover
+    ? await repo.findBalancesByTenantAndYear(prisma, tenantId, year - 1)
+    : []
+  const prevBalanceMap = new Map(prevYearBalances.map((b) => [b.employeeId, b]))
+
+  const currentYearBalances = doCarryover
+    ? await repo.findBalancesByTenantAndYear(prisma, tenantId, year)
+    : []
+  const currentBalanceMap = new Map(
+    currentYearBalances.map((b) => [b.employeeId, b])
+  )
+
   let createdCount = 0
   for (const emp of employees) {
     try {
-      // Optionally carryover from previous year
-      if (doCarryover) {
-        await carryoverFromPreviousYear(prisma, tenantId, emp.id, year)
-      }
+      // Wrap carryover + balance creation in a transaction to ensure atomicity
+      // per employee (prevents partial state if one operation fails or races)
+      await prisma.$transaction(async (tx) => {
+        // Optionally carryover from previous year using pre-fetched balances
+        if (doCarryover) {
+          await carryoverFromPreviousYearBatch(
+            tx as PrismaClient,
+            tenantId,
+            emp.id,
+            year,
+            prevBalanceMap,
+            currentBalanceMap
+          )
+        }
 
-      // Create balance if it doesn't exist
-      const existing = await repo.findBalanceByEmployeeAndYear(
-        prisma,
-        tenantId,
-        emp.id,
-        year
-      )
-      if (!existing) {
-        await repo.createBalance(prisma, {
-          tenantId,
-          employeeId: emp.id,
-          year,
-          entitlement: 0,
-          carryover: 0,
-          adjustments: 0,
-          taken: 0,
-          carryoverExpiresAt: null,
-        })
-        createdCount++
-      }
+        // Create balance if it doesn't exist
+        if (!existingSet.has(emp.id)) {
+          await repo.createBalance(tx as PrismaClient, {
+            tenantId,
+            employeeId: emp.id,
+            year,
+            entitlement: 0,
+            carryover: 0,
+            adjustments: 0,
+            taken: 0,
+            carryoverExpiresAt: null,
+          })
+          createdCount++
+        }
+      })
     } catch {
       // Continue on individual errors (matches Go behavior)
     }
@@ -106,45 +140,34 @@ export async function initializeBalances(
 
 /**
  * Carries over available balance from previous year to current year.
- * Simplified version -- creates/updates current year carryover field.
+ * Batch-optimized version: uses pre-fetched balance maps instead of individual DB queries.
  */
-async function carryoverFromPreviousYear(
+async function carryoverFromPreviousYearBatch(
   prisma: PrismaClient,
   tenantId: string,
   employeeId: string,
-  year: number
+  year: number,
+  prevBalanceMap: Map<string, { entitlement: unknown; carryover: unknown; adjustments: unknown; taken: unknown }>,
+  _currentBalanceMap: Map<string, { id: string }>
 ) {
-  const prevBalance = await repo.findBalanceByEmployeeAndYear(
-    prisma,
-    tenantId,
-    employeeId,
-    year - 1
-  )
+  const prevBalance = prevBalanceMap.get(employeeId)
   if (!prevBalance) return
 
-  // Calculate available = entitlement + carryover + adjustments - taken
-  const entitlement = Number(prevBalance.entitlement)
-  const carryover = Number(prevBalance.carryover)
-  const adjustments = Number(prevBalance.adjustments)
-  const taken = Number(prevBalance.taken)
-  const available = entitlement + carryover + adjustments - taken
+  // Calculate available = entitlement + carryover + adjustments - taken using Decimal arithmetic
+  const entitlement = new Prisma.Decimal(prevBalance.entitlement as string | number)
+  const carryover = new Prisma.Decimal(prevBalance.carryover as string | number)
+  const adjustments = new Prisma.Decimal(prevBalance.adjustments as string | number)
+  const taken = new Prisma.Decimal(prevBalance.taken as string | number)
+  const available = entitlement.plus(carryover).plus(adjustments).minus(taken)
 
-  if (available <= 0) return
+  if (available.lte(0)) return
 
-  // Get or create current year balance
-  const currentBalance = await repo.findBalanceByEmployeeAndYear(
-    prisma,
-    tenantId,
-    employeeId,
-    year
-  )
-
-  if (currentBalance) {
-    await repo.updateBalance(prisma, currentBalance.id, {
-      carryover: available,
-    })
-  } else {
-    await repo.createBalance(prisma, {
+  // Atomically create or update the current year balance with carryover
+  await prisma.vacationBalance.upsert({
+    where: {
+      employeeId_year: { employeeId, year },
+    },
+    create: {
       tenantId,
       employeeId,
       year,
@@ -153,8 +176,11 @@ async function carryoverFromPreviousYear(
       adjustments: 0,
       taken: 0,
       carryoverExpiresAt: null,
-    })
-  }
+    },
+    update: {
+      carryover: available,
+    },
+  })
 }
 
 // --- Service Functions ---
@@ -216,11 +242,20 @@ export async function listBalances(
 export async function getBalanceById(
   prisma: PrismaClient,
   tenantId: string,
-  balanceId: string
+  balanceId: string,
+  dataScope?: DataScope
 ) {
   const balance = await repo.findBalanceByIdAndTenant(prisma, tenantId, balanceId)
   if (!balance) {
     throw new VacationBalanceNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, balance as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Vacation balance")
   }
 
   return mapBalanceToOutput(balance)
@@ -240,30 +275,59 @@ export async function createBalance(
     carryover: number
     adjustments: number
     carryoverExpiresAt?: Date | null
-  }
+  },
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  const existing = await repo.findBalanceByEmployeeAndYear(
-    prisma,
-    tenantId,
-    input.employeeId,
-    input.year
-  )
-  if (existing) {
-    throw new VacationBalanceConflictError()
+  // Check data scope on target employee
+  if (dataScope) {
+    const emp = await prisma.employee.findFirst({
+      where: { id: input.employeeId, tenantId },
+      select: { id: true, departmentId: true },
+    })
+    if (emp) {
+      checkRelatedEmployeeDataScope(
+        dataScope,
+        { employeeId: emp.id, employee: { departmentId: emp.departmentId } },
+        "Vacation balance"
+      )
+    }
   }
 
-  const balance = await repo.createBalance(prisma, {
-    tenantId,
-    employeeId: input.employeeId,
-    year: input.year,
-    entitlement: input.entitlement,
-    carryover: input.carryover,
-    adjustments: input.adjustments,
-    taken: 0,
-    carryoverExpiresAt: input.carryoverExpiresAt ?? null,
-  })
+  try {
+    const balance = await repo.createBalance(prisma, {
+      tenantId,
+      employeeId: input.employeeId,
+      year: input.year,
+      entitlement: input.entitlement,
+      carryover: input.carryover,
+      adjustments: input.adjustments,
+      taken: 0,
+      carryoverExpiresAt: input.carryoverExpiresAt ?? null,
+    })
 
-  return mapBalanceToOutput(balance)
+    // Never throws — audit failures must not block the actual operation
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "create",
+        entityType: ENTITY_TYPE,
+        entityId: (balance as unknown as Record<string, unknown>).id as string,
+        entityName: `${input.year}`,
+        changes: null,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err));
+    }
+
+    return mapBalanceToOutput(balance)
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new VacationBalanceConflictError("Vacation balance already exists for this employee and year")
+    }
+    throw err
+  }
 }
 
 /**
@@ -278,11 +342,21 @@ export async function updateBalance(
     carryover?: number
     adjustments?: number
     carryoverExpiresAt?: Date | null
-  }
+  },
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  const existing = await repo.findBalanceByIdSimple(prisma, tenantId, input.id)
+  const existing = await repo.findBalanceByIdAndTenant(prisma, tenantId, input.id)
   if (!existing) {
     throw new VacationBalanceNotFoundError()
+  }
+
+  // Check data scope
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Vacation balance")
   }
 
   const data: Prisma.VacationBalanceUpdateInput = {}
@@ -299,7 +373,27 @@ export async function updateBalance(
     data.carryoverExpiresAt = input.carryoverExpiresAt
   }
 
-  const balance = await repo.updateBalance(prisma, input.id, data)
+  const balance = await repo.updateBalance(prisma, tenantId, input.id, data)
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      balance as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    );
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: ENTITY_TYPE,
+      entityId: input.id,
+      entityName: `${(existing as unknown as Record<string, unknown>).year}`,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err));
+  }
 
   return mapBalanceToOutput(balance)
 }

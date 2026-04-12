@@ -8,6 +8,28 @@ import {
   createUserWithPermissions,
 } from "./helpers"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import * as vehicleService from "@/lib/services/vehicle-service"
+
+vi.mock("@/lib/services/vehicle-service", () => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+  VehicleNotFoundError: class VehicleNotFoundError extends Error {
+    constructor(message = "Vehicle not found") {
+      super(message)
+      this.name = "VehicleNotFoundError"
+    }
+  },
+  VehicleValidationError: class VehicleValidationError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "VehicleValidationError"
+    }
+  },
+}))
+vi.mock("@/lib/services/audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
 
 // --- Constants ---
 
@@ -223,14 +245,9 @@ describe("vehicles.create", () => {
 
 describe("vehicles.update", () => {
   it("updates vehicle name (partial)", async () => {
-    const existing = makeVehicle()
     const updated = makeVehicle({ name: "Updated Truck" })
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(vehicleService.update).mockResolvedValue(updated as ReturnType<typeof makeVehicle>)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({
       id: VEHICLE_ID,
@@ -238,22 +255,19 @@ describe("vehicles.update", () => {
     })
 
     expect(result.name).toBe("Updated Truck")
-    expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          name: "Updated Truck",
-        }),
-      })
+    expect(vehicleService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: VEHICLE_ID, name: "Updated Truck" }),
+      expect.objectContaining({ userId: USER_ID })
     )
   })
 
   it("rejects whitespace-only name on update", async () => {
-    const existing = makeVehicle()
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-      },
-    }
+    vi.mocked(vehicleService.update).mockRejectedValue(
+      new vehicleService.VehicleValidationError("Vehicle name is required")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: VEHICLE_ID, name: "   " })
@@ -261,11 +275,10 @@ describe("vehicles.update", () => {
   })
 
   it("throws NOT_FOUND for missing vehicle", async () => {
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(vehicleService.update).mockRejectedValue(
+      new vehicleService.VehicleNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: VEHICLE_ID, name: "New Name" })
@@ -273,24 +286,17 @@ describe("vehicles.update", () => {
   })
 
   it("supports partial updates (isActive, sortOrder)", async () => {
-    const existing = makeVehicle()
     const updated = makeVehicle({ isActive: false, sortOrder: 5 })
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(vehicleService.update).mockResolvedValue(updated as ReturnType<typeof makeVehicle>)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: VEHICLE_ID, isActive: false, sortOrder: 5 })
 
-    expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          isActive: false,
-          sortOrder: 5,
-        }),
-      })
+    expect(vehicleService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: VEHICLE_ID, isActive: false, sortOrder: 5 }),
+      expect.objectContaining({ userId: USER_ID })
     )
   })
 })
@@ -299,35 +305,25 @@ describe("vehicles.update", () => {
 
 describe("vehicles.delete", () => {
   it("deletes a vehicle with no trip records", async () => {
-    const existing = makeVehicle()
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
-      },
-      tripRecord: {
-        count: vi.fn().mockResolvedValue(0),
-      },
-    }
+    vi.mocked(vehicleService.remove).mockResolvedValue(undefined)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: VEHICLE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.vehicle.delete).toHaveBeenCalledWith({
-      where: { id: VEHICLE_ID },
-    })
+    expect(vehicleService.remove).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      VEHICLE_ID,
+      expect.objectContaining({ userId: USER_ID })
+    )
   })
 
   it("rejects deletion when trip records exist", async () => {
-    const existing = makeVehicle()
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-      },
-      tripRecord: {
-        count: vi.fn().mockResolvedValue(3),
-      },
-    }
+    vi.mocked(vehicleService.remove).mockRejectedValue(
+      new vehicleService.VehicleValidationError("Cannot delete vehicle that has trip records")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.delete({ id: VEHICLE_ID })
@@ -335,11 +331,10 @@ describe("vehicles.delete", () => {
   })
 
   it("throws NOT_FOUND for missing vehicle", async () => {
-    const mockPrisma = {
-      vehicle: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(vehicleService.remove).mockRejectedValue(
+      new vehicleService.VehicleNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.delete({ id: VEHICLE_ID })

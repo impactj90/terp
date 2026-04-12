@@ -98,23 +98,23 @@ export default function AbsencesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">
             {t('subtitle')}
           </p>
         </div>
-        <Button onClick={handleRequestClick}>
+        <Button onClick={handleRequestClick} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
           {t('requestAbsence')}
         </Button>
       </div>
 
       {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_2fr]">
         {/* Left column - Balance and Requests */}
         <div className="space-y-6">
           <VacationBalanceCard employeeId={employeeId} />

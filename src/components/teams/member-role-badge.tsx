@@ -6,22 +6,24 @@ import type { components } from '@/types/legacy-api-types'
 
 type TeamMemberRole = components['schemas']['TeamMemberRole']
 
+type BadgeVariant = 'blue' | 'purple' | 'gray'
+
 interface MemberRoleBadgeProps {
   role: TeamMemberRole
 }
 
-const roleConfig: Record<TeamMemberRole, { labelKey: 'roleLead' | 'roleDeputy' | 'roleMember'; className: string }> = {
+const roleConfig: Record<TeamMemberRole, { labelKey: 'roleLead' | 'roleDeputy' | 'roleMember'; variant: BadgeVariant }> = {
   lead: {
     labelKey: 'roleLead' as const,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    variant: 'blue',
   },
   deputy: {
     labelKey: 'roleDeputy' as const,
-    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    variant: 'purple',
   },
   member: {
     labelKey: 'roleMember' as const,
-    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    variant: 'gray',
   },
 }
 
@@ -33,7 +35,7 @@ export function MemberRoleBadge({ role }: MemberRoleBadgeProps) {
   const config = roleConfig[role]
 
   return (
-    <Badge variant="secondary" className={config.className}>
+    <Badge variant={config.variant}>
       {t(config.labelKey)}
     </Badge>
   )

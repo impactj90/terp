@@ -44,6 +44,7 @@ const systemSettingsOutputSchema = z.object({
   serverAliveExpectedCompletionTime: z.number().nullable(),
   serverAliveThresholdMinutes: z.number().nullable(),
   serverAliveNotifyAdmins: z.boolean(),
+  deliveryNoteStockMode: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -66,7 +67,7 @@ const updateSettingsInputSchema = z.object({
   birthdayWindowDaysAfter: z.number().int().min(0).max(90).optional(),
   followUpEntriesEnabled: z.boolean().optional(),
   proxyHost: z.string().max(255).nullable().optional(),
-  proxyPort: z.number().int().nullable().optional(),
+  proxyPort: z.number().int().min(1).max(65535).nullable().optional(),
   proxyUsername: z.string().max(255).nullable().optional(),
   proxyPassword: z.string().max(255).nullable().optional(),
   proxyEnabled: z.boolean().optional(),
@@ -85,6 +86,7 @@ const updateSettingsInputSchema = z.object({
     .nullable()
     .optional(),
   serverAliveNotifyAdmins: z.boolean().optional(),
+  deliveryNoteStockMode: z.enum(["MANUAL", "CONFIRM", "AUTO"]).optional(),
 })
 
 const cleanupDateRangeInputSchema = z.object({
@@ -126,6 +128,7 @@ function mapToOutput(s: Record<string, unknown>) {
     serverAliveThresholdMinutes:
       (s.serverAliveThresholdMinutes as number | null) ?? null,
     serverAliveNotifyAdmins: s.serverAliveNotifyAdmins as boolean,
+    deliveryNoteStockMode: (s.deliveryNoteStockMode as string) ?? "MANUAL",
     createdAt: s.createdAt as Date,
     updatedAt: s.updatedAt as Date,
   }
@@ -171,7 +174,8 @@ export const systemSettingsRouter = createTRPCRouter({
         const updated = await settingsService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(updated as unknown as Record<string, unknown>)
       } catch (err) {
@@ -196,7 +200,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupDeleteBookings(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -221,7 +226,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupDeleteBookingData(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -245,7 +251,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupReReadBookings(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -270,7 +277,8 @@ export const systemSettingsRouter = createTRPCRouter({
         return await settingsService.cleanupMarkDeleteOrders(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

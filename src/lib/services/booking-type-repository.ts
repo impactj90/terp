@@ -5,6 +5,7 @@
  * Includes system types (tenantId = null) in tenant-scoped queries.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -71,26 +72,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.bookingType.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.bookingType, { id, tenantId }, data, { entity: "BookingType" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.bookingType.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.bookingType.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countBookingsByType(
   prisma: PrismaClient,
+  tenantId: string,
   bookingTypeId: string
 ) {
   return prisma.booking.count({
-    where: { bookingTypeId },
+    where: { tenantId, bookingTypeId },
   })
 }

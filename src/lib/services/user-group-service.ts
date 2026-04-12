@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { lookupPermission } from "@/lib/auth/permission-catalog"
 import * as repo from "./user-group-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -80,7 +82,8 @@ export async function create(
     permissions: string[]
     isAdmin: boolean
     isActive: boolean
-  }
+  },
+  audit: AuditContext
 ) {
   // Normalize name and code
   const name = input.name.trim()
@@ -113,7 +116,7 @@ export async function create(
   validatePermissionIds(input.permissions)
 
   // Create user group
-  return repo.create(prisma, {
+  const group = await repo.create(prisma, {
     tenantId,
     name,
     code,
@@ -123,6 +126,21 @@ export async function create(
     isSystem: false,
     isActive: input.isActive,
   })
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "create",
+    entityType: "user_group",
+    entityId: group.id,
+    entityName: group.name,
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
+
+  return group
 }
 
 export async function update(
@@ -136,7 +154,8 @@ export async function update(
     permissions?: string[]
     isAdmin?: boolean
     isActive?: boolean
-  }
+  },
+  audit: AuditContext
 ) {
   // Fetch existing group (scoped to current tenant or system groups)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -217,7 +236,7 @@ export async function update(
   }
 
   // Update group
-  const group = await repo.update(prisma, input.id, data)
+  const group = (await repo.update(prisma, tenantId, input.id, data))!
 
   // If isAdmin changed, cascade role update to all users in this group
   if (
@@ -225,8 +244,27 @@ export async function update(
     (previousIsAdmin ?? false) !== input.isAdmin
   ) {
     const newRole = input.isAdmin ? "admin" : "user"
-    await repo.updateUsersRole(prisma, input.id, newRole)
+    await repo.updateUsersRole(prisma, tenantId, input.id, newRole)
   }
+
+  // Never throws — audit failures must not block the actual operation
+  const TRACKED_FIELDS = ["name", "description", "isAdmin"]
+  const changes = auditLog.computeChanges(
+    existing as unknown as Record<string, unknown>,
+    group as unknown as Record<string, unknown>,
+    TRACKED_FIELDS,
+  )
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "update",
+    entityType: "user_group",
+    entityId: group.id,
+    entityName: group.name,
+    changes,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 
   return group
 }
@@ -234,7 +272,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
 
@@ -247,5 +286,18 @@ export async function remove(
     throw new UserGroupForbiddenError("Cannot delete system group")
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  // Never throws — audit failures must not block the actual operation
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: audit.userId,
+    action: "delete",
+    entityType: "user_group",
+    entityId: id,
+    entityName: existing.name,
+    changes: null,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+  }).catch(err => console.error('[AuditLog] Failed:', err))
 }

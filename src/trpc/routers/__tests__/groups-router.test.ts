@@ -249,8 +249,11 @@ describe("groups.update", () => {
     const updated = makeGroup({ name: "Updated", description: "New desc" })
     const mockPrisma = {
       employeeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -311,8 +314,11 @@ describe("groups.update", () => {
     const updated = makeGroup({ code: "GRP001" })
     const mockPrisma = {
       employeeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -322,8 +328,8 @@ describe("groups.update", () => {
       code: "GRP001",
     })
     expect(result.code).toBe("GRP001")
-    // Should only call findFirst once (for existence check), not a second time for uniqueness
-    expect(mockPrisma.employeeGroup.findFirst).toHaveBeenCalledTimes(1)
+    // findFirst called twice: once for existence check, once for re-fetch after updateMany
+    expect(mockPrisma.employeeGroup.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing group", async () => {
@@ -347,7 +353,7 @@ describe("groups.delete", () => {
     const mockPrisma = {
       employeeGroup: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0),
@@ -356,8 +362,8 @@ describe("groups.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ type: "employee", id: GROUP_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.employeeGroup.delete).toHaveBeenCalledWith({
-      where: { id: GROUP_ID },
+    expect(mockPrisma.employeeGroup.deleteMany).toHaveBeenCalledWith({
+      where: { id: GROUP_ID, tenantId: TENANT_ID },
     })
   })
 
@@ -407,7 +413,7 @@ describe("groups.delete", () => {
       const mockPrisma = {
         [delegateName]: {
           findFirst: vi.fn().mockResolvedValue(existing),
-          delete: vi.fn().mockResolvedValue(existing),
+          deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         employee: {
           count: vi.fn().mockResolvedValue(0),
@@ -416,7 +422,7 @@ describe("groups.delete", () => {
       const caller = createCaller(createTestContext(mockPrisma))
       await caller.delete({ type, id: GROUP_ID })
       expect(mockPrisma.employee.count).toHaveBeenCalledWith({
-        where: { [fkColumn]: GROUP_ID },
+        where: { tenantId: TENANT_ID, [fkColumn]: GROUP_ID },
       })
     }
   })

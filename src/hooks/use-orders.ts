@@ -61,6 +61,9 @@ export function useUpdateOrder() {
       queryClient.invalidateQueries({
         queryKey: trpc.orders.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.getById.queryKey(),
+      })
     },
   })
 }
@@ -73,6 +76,18 @@ export function useDeleteOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.orders.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.byOrder.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderBookings.list.queryKey(),
       })
     },
   })

@@ -11,6 +11,7 @@ interface UseEmployeesOptions {
   departmentId?: string
   costCenterId?: string
   employmentTypeId?: string
+  locationId?: string
   isActive?: boolean
   hasExitDate?: boolean
 }
@@ -94,6 +95,9 @@ export function useCreateEmployee() {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.search.queryKey(),
+      })
     },
   })
 }
@@ -116,6 +120,12 @@ export function useUpdateEmployee() {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.search.queryKey(),
+      })
     },
   })
 }
@@ -137,6 +147,12 @@ export function useDeleteEmployee() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.search.queryKey(),
       })
     },
   })
@@ -162,6 +178,15 @@ export function useBulkAssignTariff() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employees.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeTariffAssignments.effective.queryKey(),
       })
     },
   })

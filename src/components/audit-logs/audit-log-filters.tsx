@@ -32,15 +32,34 @@ interface AuditLogFiltersProps {
 }
 
 const ENTITY_TYPES = [
-  'booking', 'absence', 'monthly_value', 'daily_value', 'employee', 'user',
-  'department', 'team', 'cost_center', 'employment_type', 'day_plan', 'week_plan',
-  'tariff', 'holiday', 'absence_type', 'booking_type', 'account', 'vacation_balance',
-  'report',
-]
+  'employee', 'booking', 'absence_day', 'correction', 'user', 'user_group',
+  'department', 'team', 'cost_center', 'employment_type', 'location', 'group',
+  'day_plan', 'week_plan', 'schedule', 'schedule_task', 'shift', 'tariff', 'tariff_break',
+  'employee_tariff_assignment', 'employee_day_plan', 'holiday',
+  'absence_type', 'absence_type_group', 'booking_type', 'booking_type_group', 'booking_reason',
+  'account', 'account_group', 'calculation_rule', 'macro', 'macro_assignment',
+  'order', 'order_booking', 'order_assignment',
+  'vacation_balance', 'vacation_calc_group', 'vacation_capping_rule', 'vacation_capping_rule_group',
+  'vacation_special_calc', 'employee_capping_exception',
+  'monthly_values', 'daily_value',
+  'billing_document', 'billing_document_position', 'billing_payment',
+  'billing_recurring_invoice', 'billing_price_list', 'billing_price_list_entry',
+  'billing_service_case', 'billing_document_template', 'billing_tenant_config',
+  'crm_address', 'crm_contact', 'bank_account', 'crm_inquiry', 'crm_task', 'crm_correspondence',
+  'payroll_export', 'report', 'export_interface',
+  'access_profile', 'access_zone', 'employee_access_assignment',
+  'employee_card', 'employee_contact',
+  'vehicle', 'vehicle_route', 'trip_record',
+  'notification_preference', 'number_sequence',
+  'system_settings', 'tenant', 'tenant_module',
+  'contact_type', 'contact_kind', 'activity',
+  'travel_allowance_rule_set', 'local_travel_rule', 'extended_travel_rule',
+  'monthly_eval_template',
+].sort()
 
 const ACTIONS = [
-  'create', 'update', 'delete', 'approve', 'reject', 'close',
-  'reopen', 'export', 'import', 'login', 'logout',
+  'create', 'update', 'delete', 'approve', 'reject', 'cancel', 'close',
+  'reopen', 'finalize', 'forward', 'export', 'import',
 ]
 
 export function AuditLogFilters({

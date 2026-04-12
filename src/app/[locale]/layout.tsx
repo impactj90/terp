@@ -1,9 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import '../globals.css'
 import { TRPCReactProvider } from '@/trpc/client'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
+import { Toaster } from 'sonner'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { hasLocale } from 'next-intl'
@@ -16,11 +17,32 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('metadata')
   return {
     title: t('title'),
     description: t('description'),
+    applicationName: 'Terp',
+    appleWebApp: {
+      capable: true,
+      title: 'Terp',
+      statusBarStyle: 'default',
+    },
+    formatDetection: {
+      telephone: false,
+    },
   }
 }
 
@@ -40,12 +62,13 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-dvh bg-background font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
-          <ThemeProvider defaultTheme="system">
+          <ThemeProvider defaultTheme="light" defaultColorTheme="modern">
             <TRPCReactProvider>
               <AuthProvider>
                 {children}
+                <Toaster richColors closeButton position="bottom-right" />
               </AuthProvider>
             </TRPCReactProvider>
           </ThemeProvider>

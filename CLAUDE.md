@@ -74,6 +74,110 @@ prisma/schema.prisma  -> Database schema (Prisma)
 
 **Database**: Prisma ORM with PostgreSQL (Supabase). Migrations via `supabase migration new`.
 
+## Platform Subscription Billing (Phase 10a)
+
+When `PLATFORM_OPERATOR_TENANT_ID` is set, the platform admin's module
+bookings also create `BillingRecurringInvoice` rows inside the designated
+operator tenant, wrapped in `platform_subscriptions` lifecycle records. Two
+daily crons run in sequence:
+
+1. `/api/cron/recurring-invoices` at 04:00 UTC — Terp cron, generates
+   DRAFT invoices from all due recurring templates (cross-tenant).
+2. `/api/cron/platform-subscription-autofinalize` at 04:15 UTC — new
+   platform cron, finalizes DRAFT invoices belonging to platform
+   subscriptions (matched via a `[platform_subscription:<id>]` marker in
+   `BillingRecurringInvoice.internalNotes`). Finalize triggers PDF +
+   XRechnung generation as a side effect of the existing Terp service.
+
+Email delivery is manual in Phase 10a — operator sends from the tenant-
+side billing UI.
+
+**House-tenant rule**: The operator tenant is NEVER billed for modules
+booked on itself. `enableModule` / `disableModule` skip the subscription
+block entirely when `tenantId === PLATFORM_OPERATOR_TENANT_ID`, and
+`createSubscription` throws `PlatformSubscriptionSelfBillError` as
+defense-in-depth. Use `subscriptionService.isOperatorTenant(tenantId)`
+to check this from any caller. The "house" rule prevents the operator
+from accidentally generating self-issued invoices for internal module
+usage — modules toggle on/off normally, just without a subscription
+side-effect.
+
+**Hard constraint**: Terp-side code (`src/lib/services/billing-*`,
+`crm-*`, `email-*`, `src/trpc/routers/`) must not be modified by platform
+features. Platform code may READ Terp models directly via Prisma, but all
+WRITES to Terp tables go through the existing Terp services with
+`(prisma, tenantId, ...)`. Prisma relations from platform models to Terp
+models are defined at the SQL level only (via migration `REFERENCES`
+clauses) — no `@relation` declarations in `schema.prisma`.
+
+Key files:
+- `src/lib/platform/module-pricing.ts` — hardcoded module price catalog
+- `src/lib/platform/subscription-service.ts` — bridge logic (create, cancel, list)
+- `src/lib/platform/subscription-autofinalize-service.ts` — autofinalize logic
+- `src/app/api/cron/platform-subscription-autofinalize/route.ts` — cron route
+- `prisma/schema.prisma` `PlatformSubscription` model — subscription state
+
+See `thoughts/shared/plans/2026-04-10-platform-subscription-billing.md`
+for the full plan.
+
+## Demo-Tenant Platform Management (Phase 10b)
+
+Demo-tenant lifecycle is owned by the platform admin world. The tenant
+app no longer exposes demo management — all operator actions flow
+through `/platform/tenants/demo` gated by `platformAuthedProcedure`.
+The tenant-side self-service "Request Convert" action on `/demo-expired`
+stays and now materializes as a row in the `demo_convert_requests`
+inbox at `/platform/tenants/convert-requests`.
+
+Key files:
+- `src/trpc/platform/routers/demoTenantManagement.ts` — 7 procedures
+  (templates, list, create, extend, convert, expireNow, delete)
+- `src/trpc/platform/routers/demoConvertRequests.ts` — inbox
+  (list, countPending, resolve, dismiss)
+- `src/trpc/routers/demo-self-service.ts` — tenant-side
+  `requestConvertFromExpired` (unchanged behavior, runs via
+  `protectedProcedure`)
+- `src/lib/services/demo-tenant-service.ts` — service layer shared
+  by both routers
+- `src/lib/services/demo-convert-request-service.ts` — inbox CRUD
+- `src/app/platform/(authed)/tenants/demo/page.tsx` — admin UI
+- `src/app/platform/(authed)/tenants/convert-requests/page.tsx` — inbox UI
+
+**Convert → Subscription coupling**: When a platform operator converts
+a demo tenant, the `convert` procedure snapshots enabled modules from
+`tenant_modules` (before any wipe), re-inserts them after a
+`discardData=true` wipe, then for each module calls
+`subscriptionService.createSubscription(...)` with the operator-selected
+`billingCycle` (MONTHLY default). Partial subscription-create failures
+are collected in `failedModules[]` in the response; the operator must
+manually retry via the modules page. The convert itself is committed
+regardless — converted tenants cannot be "un-converted". This orchestration
+lives in the router, not the service, because `createSubscription`
+opens its own `$transaction` and cannot be nested inside the convert tx.
+
+**Creator attribution**: The `tenants.demo_created_by_platform_user_id`
+column (added in migration `20260422100000`) stores the real platform
+operator. The legacy `tenants.demo_created_by` column (pointing at
+`public.users.id`) is preserved but receives no new writes from
+platform-initiated creates. `listDemos()` merges both sources into a
+`DemoCreatorDTO` with `source: "platform" | "tenant" | "unknown"`.
+
+**Audit split**: Every platform-admin demo mutation (create/extend/
+convert/expireNow/delete) writes exactly one `platform_audit_logs` row
+and zero tenant-side `audit_logs` rows. The only exception is the
+users-service internal audit row from the demo-admin user creation —
+that row is attributed to `PLATFORM_SYSTEM_USER_ID`, not to the
+operator. The tenant-side `demo_convert_req` audit row from the
+self-service flow is unchanged.
+
+**Cron unchanged**: `/api/cron/expire-demo-tenants` continues to write
+tenant-side `audit_logs` with `userId=null` and `action="demo_expired"`.
+The cron is a system event (not an operator action) and stays in the
+tenant audit trail.
+
+See `thoughts/shared/plans/2026-04-11-demo-tenant-platform-migration.md`
+for the full plan.
+
 ## Important
 
 - All new backend logic uses service + repository pattern in `src/lib/services/`

@@ -6,6 +6,20 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./trip-record-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "vehicleId",
+  "routeId",
+  "tripDate",
+  "startMileage",
+  "endMileage",
+  "distanceKm",
+  "notes",
+]
 
 // --- Error Classes ---
 
@@ -111,7 +125,8 @@ export async function create(
     endMileage?: number
     distanceKm?: number
     notes?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate tripDate
   const tripDate = new Date(input.tripDate)
@@ -152,6 +167,20 @@ export async function create(
     notes: input.notes?.trim() || null,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "trip_record",
+      entityId: record.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return mapRecord(record)
 }
 
@@ -166,7 +195,8 @@ export async function update(
     endMileage?: number | null
     distanceKm?: number | null
     notes?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify record exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
@@ -217,14 +247,35 @@ export async function update(
     data.notes = input.notes === null ? null : input.notes.trim()
   }
 
-  const record = await repo.update(prisma, input.id, data)
-  return mapRecord(record)
+  const record = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      record as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "trip_record",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return mapRecord(record!)
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify record exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
@@ -232,5 +283,19 @@ export async function remove(
     throw new TripRecordNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "trip_record",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

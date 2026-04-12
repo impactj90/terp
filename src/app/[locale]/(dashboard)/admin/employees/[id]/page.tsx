@@ -8,10 +8,21 @@ import { format } from 'date-fns'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { useEmployee, useDeleteEmployee } from '@/hooks'
+import { TaxSocialSecurityTab } from '@/components/employees/payroll/tax-social-security-tab'
+import { BankDetailsTab } from '@/components/employees/payroll/bank-details-tab'
+import { CompensationTab } from '@/components/employees/payroll/compensation-tab'
+import { FamilyTab } from '@/components/employees/payroll/family-tab'
+import { BenefitsTab } from '@/components/employees/payroll/benefits-tab'
+import { DisabilityTab } from '@/components/employees/payroll/disability-tab'
+import { ForeignAssignmentsTab } from '@/components/employees/payroll/foreign-assignments-tab'
+import { GarnishmentsTab } from '@/components/employees/payroll/garnishments-tab'
+import { SpecialCasesTab } from '@/components/employees/payroll/special-cases-tab'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/employees/status-badge'
 import { EmployeeFormSheet } from '@/components/employees/employee-form-sheet'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -21,6 +32,7 @@ import {
   TariffAssignmentDeleteDialog,
   EffectiveTariffPreview,
 } from '@/components/employees/tariff-assignments'
+import { PersonnelFileTab } from '@/components/hr/personnel-file-tab'
 import type { components } from '@/types/legacy-api-types'
 
 type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
@@ -31,7 +43,13 @@ export default function EmployeeDetailPage() {
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('adminEmployees')
+  const tc = useTranslations('common')
   const ta = useTranslations('employeeTariffAssignments')
+  const tp = useTranslations('employeePayroll')
+
+  const { allowed: canViewPayroll } = useHasPermission(['personnel.payroll_data.view'])
+  const { allowed: canViewGarnishments } = useHasPermission(['personnel.garnishment.view'])
+  const { allowed: canViewForeignAssignments } = useHasPermission(['personnel.foreign_assignment.view'])
 
   const employeeId = params.id
   const { data: employee, isLoading } = useEmployee(employeeId, !authLoading && !permLoading && canAccess)
@@ -86,45 +104,68 @@ export default function EmployeeDetailPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/employees')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-medium">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="shrink-0 self-start" onClick={() => router.push('/admin/employees')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-medium">
             {employee.firstName[0]}{employee.lastName[0]}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
                 {employee.firstName} {employee.lastName}
               </h1>
               <StatusBadge isActive={employee.isActive} exitDate={employee.exitDate} />
             </div>
-            <p className="text-muted-foreground">{employee.personnelNumber}</p>
+            <p className="text-muted-foreground truncate">{employee.personnelNumber}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push(`/timesheet?employee=${employee.id}`)}>
-              <Clock className="mr-2 h-4 w-4" />
-              {t('viewTimesheet')}
-            </Button>
-            <Button variant="outline" onClick={() => setEditOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              {t('edit')}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)}>
-              <UserX className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => router.push(`/timesheet?employee=${employee.id}`)}>
+            <Clock className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">{t('viewTimesheet')}</span>
+            <span className="sm:hidden">Zeiten</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            {t('edit')}
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)}>
+                <UserX className="h-4 w-4 text-destructive" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tc('delete')}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Tabbed content */}
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">{ta('tabOverview')}</TabsTrigger>
-          <TabsTrigger value="tariff-assignments">{ta('tabLabel')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1 filter-scroll-area">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="overview">{ta('tabOverview')}</TabsTrigger>
+            <TabsTrigger value="tariff-assignments">{ta('tabLabel')}</TabsTrigger>
+            {canViewPayroll && <TabsTrigger value="tax-sv">{tp('tabs.taxSocialSecurity')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="bank">{tp('tabs.bankDetails')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="compensation">{tp('tabs.compensation')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="family">{tp('tabs.family')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="benefits">{tp('tabs.benefits')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="disability">{tp('tabs.disability')}</TabsTrigger>}
+            {canViewForeignAssignments && <TabsTrigger value="foreign-assignments">{tp('tabs.foreignAssignments')}</TabsTrigger>}
+            {canViewGarnishments && <TabsTrigger value="garnishments">{tp('tabs.garnishments')}</TabsTrigger>}
+            {canViewPayroll && <TabsTrigger value="special-cases">{tp('tabs.specialCases')}</TabsTrigger>}
+            <TabsTrigger value="personnel-file">{t('tabPersonnelFile')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="mt-6">
           {/* Overview content -- same sections as employee-detail-sheet */}
@@ -148,7 +189,7 @@ export default function EmployeeDetailPage() {
                   <DetailRow label={t('labelDepartment')} value={employee.department?.name} />
                   <DetailRow label={t('labelCostCenter')} value={employee.costCenter ? `${employee.costCenter.name} (${employee.costCenter.code})` : undefined} />
                   <DetailRow label={t('labelEmploymentType')} value={employee.employmentType?.name} />
-                  <DetailRow label={t('labelTariff')} value={employee.tariffId ?? undefined} />
+                  <DetailRow label={t('labelTariff')} value={employee.tariff?.name} />
                   <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate)} />
                   <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate)} />
                 </div>
@@ -178,9 +219,9 @@ export default function EmployeeDetailPage() {
                           <p className="text-sm font-medium">{card.cardNumber}</p>
                           <p className="text-xs text-muted-foreground capitalize">{card.cardType}</p>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${card.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                        <Badge variant={card.isActive ? 'green' : 'gray'}>
                           {card.isActive ? t('statusActive') : t('statusInactive')}
-                        </span>
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -198,6 +239,64 @@ export default function EmployeeDetailPage() {
             onDelete={(a) => setDeleteAssignment(a)}
           />
           <EffectiveTariffPreview employeeId={employeeId} />
+        </TabsContent>
+
+        {canViewPayroll && (
+          <TabsContent value="tax-sv" className="mt-6">
+            <TaxSocialSecurityTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="bank" className="mt-6">
+            <BankDetailsTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="compensation" className="mt-6">
+            <CompensationTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="family" className="mt-6">
+            <FamilyTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="benefits" className="mt-6">
+            <BenefitsTab employeeId={employeeId} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="disability" className="mt-6">
+            <DisabilityTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        {canViewForeignAssignments && (
+          <TabsContent value="foreign-assignments" className="mt-6">
+            <ForeignAssignmentsTab employeeId={employeeId} />
+          </TabsContent>
+        )}
+
+        {canViewGarnishments && (
+          <TabsContent value="garnishments" className="mt-6">
+            <GarnishmentsTab employeeId={employeeId} />
+          </TabsContent>
+        )}
+
+        {canViewPayroll && (
+          <TabsContent value="special-cases" className="mt-6">
+            <SpecialCasesTab employeeId={employeeId} employee={employee} />
+          </TabsContent>
+        )}
+
+        <TabsContent value="personnel-file" className="mt-6">
+          <PersonnelFileTab employeeId={employeeId} />
         </TabsContent>
       </Tabs>
 

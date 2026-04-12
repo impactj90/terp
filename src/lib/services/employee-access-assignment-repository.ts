@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the EmployeeAccessAssignment model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const assignmentInclude = {
   employee: {
@@ -19,9 +20,24 @@ const assignmentInclude = {
   },
 } as const
 
-export async function findMany(prisma: PrismaClient, tenantId: string) {
+export async function findMany(
+  prisma: PrismaClient,
+  tenantId: string,
+  scopeWhere?: Record<string, unknown> | null
+) {
+  const where: Record<string, unknown> = { tenantId }
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
+  }
   return prisma.employeeAccessAssignment.findMany({
-    where: { tenantId },
+    where,
     orderBy: { createdAt: "desc" },
     include: assignmentInclude,
   })
@@ -79,18 +95,19 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeAccessAssignment.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.employeeAccessAssignment, { id, tenantId }, data, {
     include: assignmentInclude,
+    entity: "EmployeeAccessAssignment",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeAccessAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeAccessAssignment.deleteMany({
+    where: { id, employee: { tenantId } },
   })
+  return count > 0
 }

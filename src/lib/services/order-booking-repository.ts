@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the OrderBooking model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const orderBookingInclude = {
   employee: {
@@ -142,27 +143,29 @@ export async function create(
 
 export async function findByIdWithInclude(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.orderBooking.findUniqueOrThrow({
-    where: { id },
+  return prisma.orderBooking.findFirst({
+    where: { id, tenantId },
     include: orderBookingInclude,
   })
 }
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.orderBooking.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.orderBooking, { id, tenantId }, data, {
+    entity: "OrderBooking",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.orderBooking.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.orderBooking.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

@@ -13,13 +13,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
+export interface DepartmentData {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+  [key: string]: unknown
+}
 
-type Department = components['schemas']['Department']
-type DepartmentNode = components['schemas']['DepartmentNode']
+export interface DepartmentNodeType {
+  department: DepartmentData
+  children: DepartmentNodeType[]
+}
+
+type Department = DepartmentData
 
 interface DepartmentTreeNodeProps {
-  node: DepartmentNode
+  node: DepartmentNodeType
   depth: number
   expandedIds: Set<string>
   onToggle: (id: string) => void
@@ -88,8 +99,8 @@ export function DepartmentTreeNode({
         </div>
 
         {/* Status badge */}
-        <Badge variant={department.is_active ? 'default' : 'secondary'} className="shrink-0">
-          {department.is_active ? t('statusActive') : t('statusInactive')}
+        <Badge variant={department.isActive ? 'default' : 'secondary'} className="shrink-0">
+          {department.isActive ? t('statusActive') : t('statusInactive')}
         </Badge>
 
         {/* Children count */}
@@ -108,6 +119,7 @@ export function DepartmentTreeNode({
               className="opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Aktionen</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

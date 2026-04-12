@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the DailyValue model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const dailyValueListAllInclude = {
   employee: {
@@ -83,13 +84,13 @@ export async function findByIdWithEmployee(
 
 export async function updateStatus(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   status: string
 ) {
-  return prisma.dailyValue.update({
-    where: { id },
-    data: { status },
+  return tenantScopedUpdate(prisma.dailyValue, { id, tenantId }, { status }, {
     include: dailyValueListAllInclude,
+    entity: "DailyValue",
   })
 }
 

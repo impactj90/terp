@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 interface UseBookingsOptions {
   employeeId?: string
@@ -68,6 +69,7 @@ export function useBooking(id: string, enabled = true) {
 export function useCreateBooking() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.bookings.create.mutationOptions(),
     onSuccess: () => {
@@ -77,10 +79,7 @@ export function useCreateBooking() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
-      // Invalidate day views since recalculation was triggered
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -91,6 +90,7 @@ export function useCreateBooking() {
 export function useUpdateBooking() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.bookings.update.mutationOptions(),
     onSuccess: () => {
@@ -100,10 +100,7 @@ export function useUpdateBooking() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
-      // Invalidate day views since recalculation was triggered
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }
@@ -114,6 +111,7 @@ export function useUpdateBooking() {
 export function useDeleteBooking() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.bookings.delete.mutationOptions(),
     onSuccess: () => {
@@ -123,10 +121,7 @@ export function useDeleteBooking() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.getById.queryKey(),
       })
-      // Invalidate day views since recalculation was triggered
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      invalidateTimeData()
     },
   })
 }

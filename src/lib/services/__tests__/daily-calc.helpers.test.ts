@@ -26,6 +26,7 @@ import {
   convertBonusesToSurchargeConfigs,
   calculateAbsenceCredit,
   getCreditMultiplier,
+  calculateAbsenceRuleValue,
 } from "../daily-calc.helpers"
 import type { BookingWithType, DayPlanWithDetails } from "../daily-calc.types"
 
@@ -683,6 +684,37 @@ describe("daily-calc helpers", () => {
 
     it("floors the result", () => {
       expect(calculateAbsenceCredit(481, 2, 1.0)).toBe(240)
+    })
+  })
+
+  describe("calculateAbsenceRuleValue", () => {
+    it("uses ruleValue when > 0", () => {
+      // ruleValue=120, factor=1.0 → 120 minutes
+      expect(calculateAbsenceRuleValue(480, 120, 1.0)).toBe(120)
+    })
+
+    it("uses targetTime when ruleValue is 0", () => {
+      // ruleValue=0 → use targetTime=480, factor=1.0 → 480
+      expect(calculateAbsenceRuleValue(480, 0, 1.0)).toBe(480)
+    })
+
+    it("applies factor as multiplier", () => {
+      // ruleValue=0 → use targetTime=480, factor=0.5 → 240
+      expect(calculateAbsenceRuleValue(480, 0, 0.5)).toBe(240)
+    })
+
+    it("floors the result", () => {
+      // 480 * 0.33 = 158.4 → 158
+      expect(calculateAbsenceRuleValue(480, 0, 0.33)).toBe(158)
+    })
+
+    it("returns 0 when factor is 0", () => {
+      expect(calculateAbsenceRuleValue(480, 0, 0)).toBe(0)
+    })
+
+    it("uses fixed ruleValue * factor (ignoring targetTime)", () => {
+      // ruleValue=60, factor=2.0 → 120 (targetTime=480 is ignored)
+      expect(calculateAbsenceRuleValue(480, 60, 2.0)).toBe(120)
     })
   })
 })

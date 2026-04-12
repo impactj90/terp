@@ -1,3 +1,4 @@
+import * as React from "react"
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
@@ -46,6 +47,9 @@ export function useCreateVacationSpecialCalculation() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.getById.queryKey(),
+      })
     },
   })
 }
@@ -62,6 +66,9 @@ export function useUpdateVacationSpecialCalculation() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.getById.queryKey(),
+      })
     },
   })
 }
@@ -77,6 +84,9 @@ export function useDeleteVacationSpecialCalculation() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationSpecialCalcs.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationSpecialCalcs.getById.queryKey(),
       })
     },
   })
@@ -127,6 +137,9 @@ export function useCreateVacationCalculationGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCalcGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -143,6 +156,9 @@ export function useUpdateVacationCalculationGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCalcGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -158,6 +174,9 @@ export function useDeleteVacationCalculationGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCalcGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCalcGroups.getById.queryKey(),
       })
     },
   })
@@ -208,6 +227,9 @@ export function useCreateVacationCappingRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -224,6 +246,9 @@ export function useUpdateVacationCappingRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -239,6 +264,9 @@ export function useDeleteVacationCappingRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRules.getById.queryKey(),
       })
     },
   })
@@ -289,6 +317,9 @@ export function useCreateVacationCappingRuleGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -305,6 +336,9 @@ export function useUpdateVacationCappingRuleGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -320,6 +354,9 @@ export function useDeleteVacationCappingRuleGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vacationCappingRuleGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vacationCappingRuleGroups.getById.queryKey(),
       })
     },
   })
@@ -375,6 +412,9 @@ export function useCreateEmployeeCappingException() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeCappingExceptions.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.getById.queryKey(),
+      })
     },
   })
 }
@@ -390,6 +430,9 @@ export function useUpdateEmployeeCappingException() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeCappingExceptions.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.getById.queryKey(),
       })
     },
   })
@@ -407,6 +450,9 @@ export function useDeleteEmployeeCappingException() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeCappingExceptions.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeCappingExceptions.getById.queryKey(),
+      })
     },
   })
 }
@@ -415,20 +461,72 @@ export function useDeleteEmployeeCappingException() {
 
 /**
  * Hook to calculate vacation entitlement preview (tRPC).
+ *
+ * These were changed from mutations to queries (AUDIT-014) since they are
+ * read-only calculations. This hook preserves the mutation-like API surface
+ * (data, isPending, mutateAsync) for backward compatibility with the UI
+ * component that triggers calculation via a button click.
  */
 export function useVacationEntitlementPreview() {
   const trpc = useTRPC()
-  return useMutation({
-    ...trpc.vacation.entitlementPreview.mutationOptions(),
-  })
+  const queryClient = useQueryClient()
+  const [data, setData] = React.useState<Awaited<ReturnType<typeof fetchPreview>> | undefined>()
+  const [isPending, setIsPending] = React.useState(false)
+
+  type PreviewInput = { employeeId: string; year: number; calcGroupId?: string }
+
+  const fetchPreview = async (params: PreviewInput) => {
+    const opts = trpc.vacation.entitlementPreview.queryOptions(params)
+    return queryClient.fetchQuery({ ...opts, staleTime: 0 })
+  }
+
+  return {
+    data,
+    isPending,
+    mutateAsync: async (params: PreviewInput) => {
+      setIsPending(true)
+      try {
+        const result = await fetchPreview(params)
+        setData(result)
+        return result
+      } finally {
+        setIsPending(false)
+      }
+    },
+  }
 }
 
 /**
  * Hook to calculate vacation carryover preview (tRPC).
+ *
+ * Same pattern as useVacationEntitlementPreview -- preserves mutation-like
+ * API surface while using the query endpoint underneath.
  */
 export function useVacationCarryoverPreview() {
   const trpc = useTRPC()
-  return useMutation({
-    ...trpc.vacation.carryoverPreview.mutationOptions(),
-  })
+  const queryClient = useQueryClient()
+  const [data, setData] = React.useState<Awaited<ReturnType<typeof fetchPreview>> | undefined>()
+  const [isPending, setIsPending] = React.useState(false)
+
+  type PreviewInput = { employeeId: string; year: number }
+
+  const fetchPreview = async (params: PreviewInput) => {
+    const opts = trpc.vacation.carryoverPreview.queryOptions(params)
+    return queryClient.fetchQuery({ ...opts, staleTime: 0 })
+  }
+
+  return {
+    data,
+    isPending,
+    mutateAsync: async (params: PreviewInput) => {
+      setIsPending(true)
+      try {
+        const result = await fetchPreview(params)
+        setData(result)
+        return result
+      } finally {
+        setIsPending(false)
+      }
+    },
+  }
 }

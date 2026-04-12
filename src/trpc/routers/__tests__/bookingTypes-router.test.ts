@@ -283,8 +283,11 @@ describe("bookingTypes.update", () => {
     const updated = makeBookingType({ name: "Updated", category: "break" })
     const mockPrisma = {
       bookingType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -331,7 +334,7 @@ describe("bookingTypes.delete", () => {
     const mockPrisma = {
       bookingType: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       booking: {
         count: vi.fn().mockResolvedValue(0),
@@ -340,8 +343,8 @@ describe("bookingTypes.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: BT_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.bookingType.delete).toHaveBeenCalledWith({
-      where: { id: BT_ID },
+    expect(mockPrisma.bookingType.deleteMany).toHaveBeenCalledWith({
+      where: { id: BT_ID, tenantId: TENANT_ID },
     })
   })
 

@@ -57,6 +57,9 @@ export function useCreateAccountGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.accountGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -73,6 +76,9 @@ export function useUpdateAccountGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.accountGroups.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.getById.queryKey(),
+      })
     },
   })
 }
@@ -88,6 +94,9 @@ export function useDeleteAccountGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.accountGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accountGroups.getById.queryKey(),
       })
     },
   })

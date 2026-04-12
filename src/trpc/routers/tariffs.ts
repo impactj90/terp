@@ -142,20 +142,20 @@ const createTariffInputSchema = z.object({
   validTo: z.string().date().optional(),
   isActive: z.boolean().optional().default(true),
   // Vacation
-  annualVacationDays: z.number().optional(),
+  annualVacationDays: z.number().min(0).max(365).optional(),
   workDaysPerWeek: z.number().int().min(1).max(7).optional(),
   vacationBasis: z.enum(VACATION_BASES).optional(),
   vacationCappingRuleGroupId: z.string().optional(),
   // Target hours
-  dailyTargetHours: z.number().optional(),
-  weeklyTargetHours: z.number().optional(),
-  monthlyTargetHours: z.number().optional(),
-  annualTargetHours: z.number().optional(),
+  dailyTargetHours: z.number().min(0).max(24).optional(),
+  weeklyTargetHours: z.number().min(0).max(168).optional(),
+  monthlyTargetHours: z.number().min(0).max(744).optional(),
+  annualTargetHours: z.number().min(0).max(8784).optional(),
   // Flextime
-  maxFlextimePerMonth: z.number().int().optional(),
-  upperLimitAnnual: z.number().int().optional(),
-  lowerLimitAnnual: z.number().int().optional(),
-  flextimeThreshold: z.number().int().optional(),
+  maxFlextimePerMonth: z.number().int().min(-8784).max(8784).optional(),
+  upperLimitAnnual: z.number().int().min(-8784).max(8784).optional(),
+  lowerLimitAnnual: z.number().int().min(-8784).max(8784).optional(),
+  flextimeThreshold: z.number().int().min(-8784).max(8784).optional(),
   creditType: z.enum(CREDIT_TYPES).optional(),
   // Rhythm
   rhythmType: z.enum(RHYTHM_TYPES).optional(),
@@ -183,20 +183,20 @@ const updateTariffInputSchema = z.object({
   validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
   // Vacation
-  annualVacationDays: z.number().nullable().optional(),
+  annualVacationDays: z.number().min(0).max(365).nullable().optional(),
   workDaysPerWeek: z.number().int().min(1).max(7).nullable().optional(),
   vacationBasis: z.enum(VACATION_BASES).nullable().optional(),
   vacationCappingRuleGroupId: z.string().nullable().optional(),
   // Target hours
-  dailyTargetHours: z.number().nullable().optional(),
-  weeklyTargetHours: z.number().nullable().optional(),
-  monthlyTargetHours: z.number().nullable().optional(),
-  annualTargetHours: z.number().nullable().optional(),
+  dailyTargetHours: z.number().min(0).max(24).nullable().optional(),
+  weeklyTargetHours: z.number().min(0).max(168).nullable().optional(),
+  monthlyTargetHours: z.number().min(0).max(744).nullable().optional(),
+  annualTargetHours: z.number().min(0).max(8784).nullable().optional(),
   // Flextime
-  maxFlextimePerMonth: z.number().int().nullable().optional(),
-  upperLimitAnnual: z.number().int().nullable().optional(),
-  lowerLimitAnnual: z.number().int().nullable().optional(),
-  flextimeThreshold: z.number().int().nullable().optional(),
+  maxFlextimePerMonth: z.number().int().min(-8784).max(8784).nullable().optional(),
+  upperLimitAnnual: z.number().int().min(-8784).max(8784).nullable().optional(),
+  lowerLimitAnnual: z.number().int().min(-8784).max(8784).nullable().optional(),
+  flextimeThreshold: z.number().int().min(-8784).max(8784).nullable().optional(),
   creditType: z.enum(CREDIT_TYPES).nullable().optional(),
   // Rhythm
   rhythmType: z.enum(RHYTHM_TYPES).optional(),
@@ -217,8 +217,8 @@ const updateTariffInputSchema = z.object({
 const createBreakInputSchema = z.object({
   tariffId: z.string(),
   breakType: z.enum(BREAK_TYPES),
-  afterWorkMinutes: z.number().int().optional(),
-  duration: z.number().int().min(1, "Duration must be positive"),
+  afterWorkMinutes: z.number().int().min(0).max(1440).optional(),
+  duration: z.number().int().min(1).max(1440),
   isPaid: z.boolean().optional(),
 })
 
@@ -441,7 +441,8 @@ export const tariffsRouter = createTRPCRouter({
         const result = await tariffsService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(result as unknown as Record<string, unknown>, {
@@ -469,7 +470,8 @@ export const tariffsRouter = createTRPCRouter({
         const result = await tariffsService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapToOutput(result as unknown as Record<string, unknown>, {
@@ -494,7 +496,7 @@ export const tariffsRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await tariffsService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await tariffsService.remove(ctx.prisma, ctx.tenantId!, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -517,7 +519,8 @@ export const tariffsRouter = createTRPCRouter({
         return await tariffsService.createBreak(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)
@@ -541,7 +544,8 @@ export const tariffsRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.tariffId,
-          input.breakId
+          input.breakId,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

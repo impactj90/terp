@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./order-assignment-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["orderId", "employeeId", "validFrom", "validTo"]
 
 // --- Error Classes ---
 
@@ -83,7 +89,8 @@ export async function create(
     role?: string
     validFrom?: string
     validTo?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   let created: { id: string }
   try {
@@ -106,7 +113,20 @@ export async function create(
   }
 
   // Re-fetch with relation preloads
-  return repo.findByIdWithIncludes(prisma, created.id)
+  const result = await repo.findByIdWithIncludes(prisma, tenantId, created.id)
+  if (!result) {
+    throw new OrderAssignmentNotFoundError()
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "order_assignment",
+      entityId: result.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function update(
@@ -118,7 +138,8 @@ export async function update(
     validFrom?: string | null
     validTo?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify assignment exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
@@ -144,16 +165,31 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, input.id, data)
+  await repo.update(prisma, tenantId, input.id, data)
 
   // Re-fetch with relation preloads
-  return repo.findByIdWithIncludes(prisma, input.id)
+  const result = await repo.findByIdWithIncludes(prisma, tenantId, input.id)
+  if (!result) {
+    throw new OrderAssignmentNotFoundError()
+  }
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "order_assignment",
+      entityId: input.id, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify assignment exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
@@ -161,5 +197,13 @@ export async function remove(
     throw new OrderAssignmentNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "order_assignment",
+      entityId: id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

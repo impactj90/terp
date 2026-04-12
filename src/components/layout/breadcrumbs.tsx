@@ -59,6 +59,7 @@ const segmentToKey: Record<string, string> = {
   'contact-types': 'contactTypes',
   'vacation-config': 'vacationConfig',
   'employee-messages': 'employeeMessages',
+  postings: 'postings',
 }
 
 interface BreadcrumbNavItem {
@@ -147,7 +148,7 @@ export function Breadcrumbs({
   }
 
   return (
-    <Breadcrumb className="mb-4">
+    <Breadcrumb>
       <BreadcrumbList>
         {/* Home link */}
         <BreadcrumbItem>

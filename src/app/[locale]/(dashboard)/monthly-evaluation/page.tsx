@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
+import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,15 +25,16 @@ import { CloseMonthSheet } from '@/components/monthly-evaluation/close-month-she
 import { ReopenMonthSheet } from '@/components/monthly-evaluation/reopen-month-sheet'
 import { MonthlyExportButtons } from '@/components/monthly-evaluation/monthly-export-buttons'
 
-const statusStyles = {
-  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  closed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+const statusVariants = {
+  open: 'blue' as const,
+  closed: 'green' as const,
 }
 
 export default function MonthlyEvaluationPage() {
   const t = useTranslations('monthlyEvaluation')
   const tc = useTranslations('common')
   const locale = useLocale()
+  const searchParams = useSearchParams()
   const { user, isLoading: authLoading } = useAuth()
   const { allowed: canViewAll } = useHasPermission(['time_tracking.view_all'])
 
@@ -48,6 +51,24 @@ export default function MonthlyEvaluationPage() {
   // Sheet states
   const [closeSheetOpen, setCloseSheetOpen] = useState(false)
   const [reopenSheetOpen, setReopenSheetOpen] = useState(false)
+
+  // Read URL params (e.g. from year-overview navigation)
+  useEffect(() => {
+    const yearParam = searchParams.get('year')
+    const monthParam = searchParams.get('month')
+    const employeeParam = searchParams.get('employee')
+    if (yearParam) {
+      const y = parseInt(yearParam, 10)
+      if (!isNaN(y)) setSelectedYear(y)
+    }
+    if (monthParam) {
+      const m = parseInt(monthParam, 10)
+      if (!isNaN(m) && m >= 1 && m <= 12) setSelectedMonth(m)
+    }
+    if (employeeParam) {
+      setSelectedEmployeeId(employeeParam)
+    }
+  }, [searchParams])
 
   // Fetch employees for admin selector
   const { data: employeesData } = useEmployees({
@@ -131,12 +152,12 @@ export default function MonthlyEvaluationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">
             {t('subtitle')}
           </p>
         </div>
@@ -144,7 +165,7 @@ export default function MonthlyEvaluationPage() {
         <div className="flex items-center gap-2">
           {/* Status badge */}
           {monthlyValue && (
-            <Badge className={monthlyValue.is_closed ? statusStyles.closed : statusStyles.open}>
+            <Badge variant={monthlyValue.is_closed ? statusVariants.closed : statusVariants.open}>
               {monthlyValue.is_closed ? t('statusClosed') : t('statusOpen')}
             </Badge>
           )}
@@ -162,26 +183,28 @@ export default function MonthlyEvaluationPage() {
             </Button>
           )}
 
-          {/* Export */}
-          <MonthlyExportButtons
-            monthlyValue={monthlyValue}
-            dailyValues={dailyValues}
-            year={selectedYear}
-            month={selectedMonth}
-            employeeName={employeeName}
-          />
+          {/* Export — hidden on mobile */}
+          <div className="hidden sm:block">
+            <MonthlyExportButtons
+              monthlyValue={monthlyValue}
+              dailyValues={dailyValues}
+              year={selectedYear}
+              month={selectedMonth}
+              employeeName={employeeName}
+            />
+          </div>
         </div>
       </div>
 
       {/* Controls row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
         {/* Employee selector (admin only) */}
         {canViewAll && (
           <Select
             value={selectedEmployeeId ?? ''}
             onValueChange={setSelectedEmployeeId}
           >
-            <SelectTrigger className="w-[250px]">
+            <SelectTrigger className="w-full sm:w-[250px]">
               <SelectValue placeholder={tc('selectEmployee')} />
             </SelectTrigger>
             <SelectContent>
@@ -196,24 +219,35 @@ export default function MonthlyEvaluationPage() {
 
         {/* Month navigation */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={navigateToCurrent}>
+          <Button variant="outline" size="sm" onClick={navigateToCurrent} className="min-h-[44px] sm:min-h-0">
             {t('current')}
           </Button>
-          <div className="flex items-center rounded-md border">
-            <Button variant="ghost" size="icon-sm" onClick={navigatePrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="px-3 text-sm font-medium min-w-[160px] text-center">
+          <div className="flex flex-1 items-center rounded-md border">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={navigatePrevious} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('previousMonth')}</TooltipContent>
+            </Tooltip>
+            <span className="flex-1 px-2 sm:px-3 text-sm font-medium min-w-0 text-center truncate">
               {monthLabel}
             </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={navigateNext}
-              disabled={!canNavigateNext}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={navigateNext}
+                  disabled={!canNavigateNext}
+                  className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('nextMonth')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -228,8 +262,8 @@ export default function MonthlyEvaluationPage() {
 
       {/* Daily breakdown table */}
       {effectiveEmployeeId && (
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="overflow-hidden">
+          <CardContent className="pt-4 sm:pt-6 px-2 sm:px-6">
             <DailyBreakdownTable
               dailyValues={dailyValues}
               isLoading={dailyLoading}

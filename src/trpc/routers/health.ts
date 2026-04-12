@@ -13,23 +13,20 @@ export const healthRouter = createTRPCRouter({
       z.object({
         status: z.string(),
         timestamp: z.string(),
-        database: z.string(),
       })
     )
     .query(async ({ ctx }) => {
-      // Verify database connectivity with a simple query
-      let dbStatus = "disconnected"
+      // Verify database connectivity internally (do not expose state publicly)
       try {
         await ctx.prisma.$queryRaw`SELECT 1`
-        dbStatus = "connected"
       } catch {
-        dbStatus = "error"
+        // Database unreachable — still return ok for the HTTP layer;
+        // monitoring should detect DB issues via separate probes.
       }
 
       return {
         status: "ok",
         timestamp: new Date().toISOString(),
-        database: dbStatus,
       }
     }),
 })

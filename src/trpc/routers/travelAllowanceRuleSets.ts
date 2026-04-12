@@ -47,8 +47,8 @@ const createRuleSetInputSchema = z.object({
   code: z.string().min(1, "Code is required").max(50),
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
-  validFrom: z.string().optional(),
-  validTo: z.string().optional(),
+  validFrom: z.string().date().optional(),
+  validTo: z.string().date().optional(),
   calculationBasis: z.enum(["per_day", "per_booking"]).optional(),
   distanceRule: z.enum(["longest", "shortest", "first", "last"]).optional(),
   sortOrder: z.number().int().optional(),
@@ -59,8 +59,8 @@ const updateRuleSetInputSchema = z.object({
   // Code is NOT updatable (immutable after creation)
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
-  validFrom: z.string().nullable().optional(),
-  validTo: z.string().nullable().optional(),
+  validFrom: z.string().date().nullable().optional(),
+  validTo: z.string().date().nullable().optional(),
   calculationBasis: z.enum(["per_day", "per_booking"]).optional(),
   distanceRule: z.enum(["longest", "shortest", "first", "last"]).optional(),
   isActive: z.boolean().optional(),
@@ -167,7 +167,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         const rs = await travelAllowanceRuleSetService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapRuleSet(rs)
       } catch (err) {
@@ -191,7 +192,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         const rs = await travelAllowanceRuleSetService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapRuleSet(rs)
       } catch (err) {
@@ -215,7 +217,8 @@ export const travelAllowanceRuleSetsRouter = createTRPCRouter({
         await travelAllowanceRuleSetService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

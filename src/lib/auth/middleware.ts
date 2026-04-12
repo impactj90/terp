@@ -10,6 +10,7 @@
  * @see apps/api/internal/middleware/authorization.go
  */
 import { TRPCError } from "@trpc/server"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { createMiddleware } from "@/trpc/init"
 import type { ContextUser } from "@/trpc/init"
 import {
@@ -73,7 +74,8 @@ export function requireSelfOrPermission(
   userIdGetter: (input: unknown) => string,
   permissionId: string
 ) {
-  return createMiddleware(async ({ ctx, input, next }) => {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
     const user = (ctx as AuthenticatedContext).user
     if (!user) {
       throw new TRPCError({
@@ -82,7 +84,12 @@ export function requireSelfOrPermission(
       })
     }
 
-    const targetUserId = userIdGetter(input)
+    // Resolve input: use parsed input if available, otherwise fall back to
+    // getRawInput() (needed when middleware runs before .input() in the chain)
+    const resolvedInput =
+      opts.input ?? (await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput())
+
+    const targetUserId = userIdGetter(resolvedInput)
 
     // Self-access: user's own ID matches target
     if (user.id === targetUserId) {
@@ -120,7 +127,8 @@ export function requireEmployeePermission(
   ownPermission: string,
   allPermission: string
 ) {
-  return createMiddleware(async ({ ctx, input, next }) => {
+  return createMiddleware(async (opts) => {
+    const { ctx, next } = opts
     const user = (ctx as AuthenticatedContext).user
     if (!user) {
       throw new TRPCError({
@@ -134,7 +142,12 @@ export function requireEmployeePermission(
       return next({ ctx })
     }
 
-    const targetEmployeeId = employeeIdGetter(input)
+    // Resolve input: use parsed input if available, otherwise fall back to
+    // getRawInput() (needed when middleware runs before .input() in the chain)
+    const resolvedInput =
+      opts.input ?? (await (opts as unknown as { getRawInput: () => Promise<unknown> }).getRawInput())
+
+    const targetEmployeeId = employeeIdGetter(resolvedInput)
 
     // Own employee check
     if (user.employeeId && user.employeeId === targetEmployeeId) {
@@ -148,6 +161,26 @@ export function requireEmployeePermission(
       // Different employee -- need "all" permission
       if (hasPermission(user, allPermission)) {
         return next({ ctx })
+      }
+
+      // Team-based read access: if user has ownPermission and shares a team
+      // with the target employee, allow read access (e.g. team overview).
+      if (user.employeeId && hasPermission(user, ownPermission)) {
+        const prisma = (ctx as { prisma: PrismaClient }).prisma
+        const sharedTeam = await prisma.teamMember.findFirst({
+          where: {
+            employeeId: targetEmployeeId,
+            team: {
+              members: {
+                some: { employeeId: user.employeeId },
+              },
+            },
+          },
+          select: { teamId: true },
+        })
+        if (sharedTeam) {
+          return next({ ctx })
+        }
       }
     }
 

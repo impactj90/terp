@@ -58,28 +58,28 @@ type OrderOutput = z.infer<typeof orderOutputSchema>
 // --- Input Schemas ---
 
 const createOrderInputSchema = z.object({
-  code: z.string().min(1, "Code is required"),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  status: z.string().optional(),
-  customer: z.string().optional(),
+  code: z.string().min(1, "Code is required").max(50),
+  name: z.string().min(1, "Name is required").max(255),
+  description: z.string().max(2000).optional(),
+  status: z.string().max(50).optional(),
+  customer: z.string().max(255).optional(),
   costCenterId: z.string().optional(),
-  billingRatePerHour: z.number().optional(),
-  validFrom: z.string().optional(),
-  validTo: z.string().optional(),
+  billingRatePerHour: z.number().min(0).max(999999.99).optional(),
+  validFrom: z.string().date().optional(),
+  validTo: z.string().date().optional(),
 })
 
 const updateOrderInputSchema = z.object({
   id: z.string(),
-  code: z.string().min(1).optional(),
-  name: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
-  status: z.string().optional(),
-  customer: z.string().nullable().optional(),
+  code: z.string().min(1).max(50).optional(),
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  status: z.string().max(50).optional(),
+  customer: z.string().max(255).nullable().optional(),
   costCenterId: z.string().nullable().optional(),
-  billingRatePerHour: z.number().nullable().optional(),
-  validFrom: z.string().nullable().optional(),
-  validTo: z.string().nullable().optional(),
+  billingRatePerHour: z.number().min(0).max(999999.99).nullable().optional(),
+  validFrom: z.string().date().nullable().optional(),
+  validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -145,7 +145,7 @@ export const ordersRouter = createTRPCRouter({
       z
         .object({
           isActive: z.boolean().optional(),
-          status: z.string().optional(),
+          status: z.string().max(50).optional(),
         })
         .optional()
     )
@@ -205,7 +205,8 @@ export const ordersRouter = createTRPCRouter({
         const order = await orderService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapOrderToOutput(order)
       } catch (err) {
@@ -231,7 +232,8 @@ export const ordersRouter = createTRPCRouter({
         const order = await orderService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapOrderToOutput(order)
       } catch (err) {
@@ -252,7 +254,9 @@ export const ordersRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await orderService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await orderService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

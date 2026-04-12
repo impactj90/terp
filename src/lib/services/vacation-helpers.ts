@@ -74,6 +74,7 @@ export async function resolveTariff(
   const assignment = await prisma.employeeTariffAssignment.findFirst({
     where: {
       employeeId: employee.id,
+      tenantId,
       isActive: true,
       effectiveFrom: { lte: refDate },
       OR: [

@@ -6,9 +6,11 @@
  */
 import { createTRPCRouter, createCallerFactory } from "../init"
 import { healthRouter } from "./health"
+import { aiAssistantRouter } from "./aiAssistant"
 import { authRouter } from "./auth"
 import { permissionsRouter } from "./permissions"
 import { tenantsRouter } from "./tenants"
+import { demoSelfServiceRouter } from "./demo-self-service"
 import { userGroupsRouter } from "./userGroups"
 import { usersRouter } from "./users"
 import { departmentsRouter } from "./departments"
@@ -68,6 +70,7 @@ import { monthlyEvalTemplatesRouter } from "./monthlyEvalTemplates"
 import { correctionsRouter } from "./corrections"
 import { correctionAssistantRouter } from "./correctionAssistant"
 import { employeeDayPlansRouter } from "./employeeDayPlans"
+import { dsgvoRouter } from "./dsgvo"
 import { dailyValuesRouter } from "./dailyValues"
 import { dailyAccountValuesRouter } from "./dailyAccountValues"
 import { monthlyValuesRouter } from "./monthlyValues"
@@ -77,12 +80,44 @@ import { accountsRouter } from "./accounts"
 import { accountGroupsRouter } from "./accountGroups"
 import { contactTypesRouter } from "./contactTypes"
 import { contactKindsRouter } from "./contactKinds"
+import { tenantModulesRouter } from "./tenantModules"
+import { crmRouter } from "./crm"
+import { billingRouter } from "./billing"
+import { warehouseRouter } from "./warehouse"
+import { hrRouter } from "./hr"
+import { emailRouter } from "./email"
+import { invoicesRouter } from "./invoices"
+import { employeeChildrenRouter } from "./employeeChildren"
+import { employeeCompanyCarsRouter } from "./employeeCompanyCars"
+import { employeeJobBikesRouter } from "./employeeJobBikes"
+import { employeeMealAllowancesRouter } from "./employeeMealAllowances"
+import { employeeVouchersRouter } from "./employeeVouchers"
+import { employeeJobTicketsRouter } from "./employeeJobTickets"
+import { employeePensionsRouter } from "./employeePensions"
+import { employeeSavingsRouter } from "./employeeSavings"
+import { employeeGarnishmentsRouter } from "./employeeGarnishments"
+import { employeeParentalLeavesRouter } from "./employeeParentalLeaves"
+import { employeeMaternityLeavesRouter } from "./employeeMaternityLeaves"
+import { employeeForeignAssignmentsRouter } from "./employeeForeignAssignments"
+import { employeeOtherEmploymentsRouter } from "./employeeOtherEmployments"
+import { healthInsuranceProvidersRouter } from "./healthInsuranceProviders"
+import { activityCodesKldbRouter } from "./activityCodesKldb"
+import { payrollWagesRouter } from "./payrollWages"
+import { exportTemplatesRouter } from "./exportTemplates"
+import { exportTemplateSnapshotsRouter } from "./exportTemplateSnapshots"
+import { exportTemplateSchedulesRouter } from "./exportTemplateSchedules"
+import { systemExportTemplatesRouter } from "./systemExportTemplates"
+import { payrollBulkImportRouter } from "./payrollBulkImport"
+import { employeeSalaryHistoryRouter } from "./employeeSalaryHistory"
+import { datevOnboardingRouter } from "./datevOnboarding"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
+  aiAssistant: aiAssistantRouter,
   auth: authRouter,
   permissions: permissionsRouter,
   tenants: tenantsRouter,
+  demoSelfService: demoSelfServiceRouter,
   users: usersRouter,
   userGroups: userGroupsRouter,
   departments: departmentsRouter,
@@ -142,6 +177,7 @@ export const appRouter = createTRPCRouter({
   corrections: correctionsRouter,
   correctionAssistant: correctionAssistantRouter,
   employeeDayPlans: employeeDayPlansRouter,
+  dsgvo: dsgvoRouter,
   dailyValues: dailyValuesRouter,
   dailyAccountValues: dailyAccountValuesRouter,
   monthlyValues: monthlyValuesRouter,
@@ -151,6 +187,36 @@ export const appRouter = createTRPCRouter({
   accountGroups: accountGroupsRouter,
   contactTypes: contactTypesRouter,
   contactKinds: contactKindsRouter,
+  tenantModules: tenantModulesRouter,
+  crm: crmRouter,
+  billing: billingRouter,
+  warehouse: warehouseRouter,
+  hr: hrRouter,
+  email: emailRouter,
+  invoices: invoicesRouter,
+  employeeChildren: employeeChildrenRouter,
+  employeeCompanyCars: employeeCompanyCarsRouter,
+  employeeJobBikes: employeeJobBikesRouter,
+  employeeMealAllowances: employeeMealAllowancesRouter,
+  employeeVouchers: employeeVouchersRouter,
+  employeeJobTickets: employeeJobTicketsRouter,
+  employeePensions: employeePensionsRouter,
+  employeeSavings: employeeSavingsRouter,
+  employeeGarnishments: employeeGarnishmentsRouter,
+  employeeParentalLeaves: employeeParentalLeavesRouter,
+  employeeMaternityLeaves: employeeMaternityLeavesRouter,
+  employeeForeignAssignments: employeeForeignAssignmentsRouter,
+  employeeOtherEmployments: employeeOtherEmploymentsRouter,
+  healthInsuranceProviders: healthInsuranceProvidersRouter,
+  activityCodesKldb: activityCodesKldbRouter,
+  payrollWages: payrollWagesRouter,
+  exportTemplates: exportTemplatesRouter,
+  exportTemplateSnapshots: exportTemplateSnapshotsRouter,
+  exportTemplateSchedules: exportTemplateSchedulesRouter,
+  systemExportTemplates: systemExportTemplatesRouter,
+  payrollBulkImport: payrollBulkImportRouter,
+  employeeSalaryHistory: employeeSalaryHistoryRouter,
+  datevOnboarding: datevOnboardingRouter,
 })
 
 /** Type-only export for client-side inference. */

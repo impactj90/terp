@@ -5,6 +5,7 @@
  * NotificationPreference models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -72,11 +73,8 @@ export async function findByIdForUser(
   })
 }
 
-export async function markRead(prisma: PrismaClient, id: string) {
-  return prisma.notification.update({
-    where: { id },
-    data: { readAt: new Date() },
-  })
+export async function markRead(prisma: PrismaClient, tenantId: string, id: string) {
+  return tenantScopedUpdate(prisma.notification, { id, tenantId }, { readAt: new Date() } as Record<string, unknown>, { entity: "Notification" })
 }
 
 export async function markAllRead(

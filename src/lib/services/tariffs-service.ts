@@ -8,6 +8,16 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./tariffs-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -90,7 +100,8 @@ export async function create(
     rhythmStartDate?: string
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -180,6 +191,21 @@ export async function create(
 
   // Re-fetch with full details
   const result = await repo.findByIdWithDetails(prisma, tenantId, created.id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "tariff",
+      entityId: created.id,
+      entityName: name,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
@@ -212,7 +238,8 @@ export async function update(
     rhythmStartDate?: string | null
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify tariff exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -353,7 +380,7 @@ export async function update(
   }
 
   // Update tariff + rhythm sub-records in transaction
-  await repo.updateTariffWithSubRecords(prisma, input.id, {
+  await repo.updateTariffWithSubRecords(prisma, tenantId, input.id, {
     tariffData: data,
     rhythmType,
     rhythmTypeChanged: input.rhythmType !== undefined,
@@ -363,13 +390,34 @@ export async function update(
 
   // Re-fetch with full details
   const result = await repo.findByIdWithDetails(prisma, tenantId, input.id)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      result as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "tariff",
+      entityId: input.id,
+      entityName: (result as unknown as Record<string, unknown>).name as string ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify tariff exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -378,7 +426,7 @@ export async function remove(
   }
 
   // Check usage in EmployeeTariffAssignment
-  const assignmentCount = await repo.countEmployeeTariffAssignments(prisma, id)
+  const assignmentCount = await repo.countEmployeeTariffAssignments(prisma, tenantId, id)
   if (assignmentCount > 0) {
     throw new TariffValidationError(
       "Cannot delete tariff that is assigned to employees"
@@ -386,7 +434,7 @@ export async function remove(
   }
 
   // Check direct employee tariffId references
-  const employeeCount = await repo.countEmployeesByTariff(prisma, id)
+  const employeeCount = await repo.countEmployeesByTariff(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new TariffValidationError(
       "Cannot delete tariff that is assigned to employees"
@@ -394,7 +442,21 @@ export async function remove(
   }
 
   // Hard delete (cascades to breaks, tariffWeekPlans, tariffDayPlans)
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "tariff",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function createBreak(
@@ -406,7 +468,8 @@ export async function createBreak(
     afterWorkMinutes?: number
     duration: number
     isPaid?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify parent tariff exists (tenant-scoped)
   const tariff = await repo.findById(prisma, tenantId, input.tariffId)
@@ -415,7 +478,7 @@ export async function createBreak(
   }
 
   // Auto-calculate sortOrder
-  const breakCount = await repo.countBreaks(prisma, input.tariffId)
+  const breakCount = await repo.countBreaks(prisma, tenantId, input.tariffId)
 
   const created = await repo.createBreak(prisma, {
     tariffId: input.tariffId,
@@ -425,6 +488,20 @@ export async function createBreak(
     isPaid: input.isPaid ?? false,
     sortOrder: breakCount,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId: tariff.tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "tariff_break",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return {
     id: created.id,
@@ -443,7 +520,8 @@ export async function deleteBreak(
   prisma: PrismaClient,
   tenantId: string,
   tariffId: string,
-  breakId: string
+  breakId: string,
+  audit?: AuditContext
 ) {
   // Verify parent tariff exists (tenant-scoped)
   const tariff = await repo.findById(prisma, tenantId, tariffId)
@@ -459,6 +537,20 @@ export async function deleteBreak(
 
   // Delete break
   await repo.deleteBreak(prisma, breakId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "tariff_break",
+      entityId: breakId,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Private Helpers ---
@@ -486,7 +578,7 @@ async function validateRhythmForCreate(
       }
       break
 
-    case "rolling_weekly":
+    case "rolling_weekly": {
       // Require week plan IDs
       if (!input.weekPlanIds || input.weekPlanIds.length === 0) {
         throw new TariffValidationError(
@@ -499,16 +591,19 @@ async function validateRhythmForCreate(
           "rhythm_start_date is required for rolling_weekly and x_days rhythms"
         )
       }
-      // Validate all week plan IDs
-      for (const wpId of input.weekPlanIds) {
-        const wp = await repo.findWeekPlan(prisma, tenantId, wpId)
-        if (!wp) {
-          throw new TariffValidationError("Invalid week plan reference")
-        }
+      // Batch validate all week plan IDs
+      const uniqueWpIds = [...new Set(input.weekPlanIds)]
+      const foundWps = await prisma.weekPlan.findMany({
+        where: { id: { in: uniqueWpIds }, tenantId },
+        select: { id: true },
+      })
+      if (foundWps.length !== uniqueWpIds.length) {
+        throw new TariffValidationError("Invalid week plan reference")
       }
       break
+    }
 
-    case "x_days":
+    case "x_days": {
       // Require cycle days
       if (input.cycleDays === undefined || input.cycleDays === null) {
         throw new TariffValidationError(
@@ -523,6 +618,7 @@ async function validateRhythmForCreate(
       }
       // Validate day plans
       if (input.dayPlans) {
+        const dayPlanIds: string[] = []
         for (const dp of input.dayPlans) {
           if (dp.dayPosition < 1 || dp.dayPosition > input.cycleDays) {
             throw new TariffValidationError(
@@ -530,14 +626,23 @@ async function validateRhythmForCreate(
             )
           }
           if (dp.dayPlanId) {
-            const plan = await repo.findDayPlan(prisma, tenantId, dp.dayPlanId)
-            if (!plan) {
-              throw new TariffValidationError("Invalid day plan reference")
-            }
+            dayPlanIds.push(dp.dayPlanId)
+          }
+        }
+        // Batch validate all day plan IDs
+        if (dayPlanIds.length > 0) {
+          const uniqueDpIds = [...new Set(dayPlanIds)]
+          const foundDps = await prisma.dayPlan.findMany({
+            where: { id: { in: uniqueDpIds }, tenantId },
+            select: { id: true },
+          })
+          if (foundDps.length !== uniqueDpIds.length) {
+            throw new TariffValidationError("Invalid day plan reference")
           }
         }
       }
       break
+    }
   }
 }
 
@@ -553,16 +658,20 @@ async function validateRhythmForUpdate(
   }
 ) {
   switch (rhythmType) {
-    case "rolling_weekly":
+    case "rolling_weekly": {
       if (input.weekPlanIds && input.weekPlanIds.length > 0) {
-        for (const wpId of input.weekPlanIds) {
-          const wp = await repo.findWeekPlan(prisma, tenantId, wpId)
-          if (!wp) {
-            throw new TariffValidationError("Invalid week plan reference")
-          }
+        // Batch validate all week plan IDs
+        const uniqueWpIds = [...new Set(input.weekPlanIds)]
+        const foundWps = await prisma.weekPlan.findMany({
+          where: { id: { in: uniqueWpIds }, tenantId },
+          select: { id: true },
+        })
+        if (foundWps.length !== uniqueWpIds.length) {
+          throw new TariffValidationError("Invalid week plan reference")
         }
       }
       break
+    }
 
     case "x_days": {
       // Get effective cycle_days
@@ -576,6 +685,7 @@ async function validateRhythmForUpdate(
         input.dayPlans.length > 0 &&
         effectiveCycleDays
       ) {
+        const dayPlanIds: string[] = []
         for (const dp of input.dayPlans) {
           if (
             dp.dayPosition < 1 ||
@@ -586,10 +696,18 @@ async function validateRhythmForUpdate(
             )
           }
           if (dp.dayPlanId) {
-            const plan = await repo.findDayPlan(prisma, tenantId, dp.dayPlanId)
-            if (!plan) {
-              throw new TariffValidationError("Invalid day plan reference")
-            }
+            dayPlanIds.push(dp.dayPlanId)
+          }
+        }
+        // Batch validate all day plan IDs
+        if (dayPlanIds.length > 0) {
+          const uniqueDpIds = [...new Set(dayPlanIds)]
+          const foundDps = await prisma.dayPlan.findMany({
+            where: { id: { in: uniqueDpIds }, tenantId },
+            select: { id: true },
+          })
+          if (foundDps.length !== uniqueDpIds.length) {
+            throw new TariffValidationError("Invalid day plan reference")
           }
         }
       }

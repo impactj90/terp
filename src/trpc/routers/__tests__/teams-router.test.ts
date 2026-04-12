@@ -5,6 +5,9 @@ import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import {
   createMockContext,
   createMockSession,
+  createMockUser,
+  createMockUserGroup,
+  createAdminUser,
   createUserWithPermissions,
   createMockUserTenant,
 } from "./helpers"
@@ -63,6 +66,36 @@ function createTestContext(prisma: Record<string, unknown>) {
     prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
     authToken: "test-token",
     user: createUserWithPermissions([TEAMS_MANAGE], {
+      userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
+    }),
+    session: createMockSession(),
+    tenantId: TENANT_ID,
+  })
+}
+
+function createAdminContext(prisma: Record<string, unknown>) {
+  return createMockContext({
+    prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
+    authToken: "test-token",
+    user: createAdminUser({
+      employeeId: EMPLOYEE_ID,
+      userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
+    }),
+    session: createMockSession(),
+    tenantId: TENANT_ID,
+  })
+}
+
+function createNonAdminContext(
+  prisma: Record<string, unknown>,
+  employeeId: string | null = EMPLOYEE_ID
+) {
+  return createMockContext({
+    prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
+    authToken: "test-token",
+    user: createMockUser({
+      userGroup: createMockUserGroup({ isAdmin: false, isActive: true }),
+      employeeId,
       userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
     }),
     session: createMockSession(),
@@ -285,8 +318,9 @@ describe("teams.update", () => {
         findFirst: vi
           .fn()
           .mockResolvedValueOnce(existing) // exists check
-          .mockResolvedValueOnce(null), // name uniqueness check
-        update: vi.fn().mockResolvedValue(updated),
+          .mockResolvedValueOnce(null) // name uniqueness check
+          .mockResolvedValueOnce(updated), // refetch after tenantScopedUpdate
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -334,8 +368,11 @@ describe("teams.update", () => {
     const updated = makeTeam({ name: "Frontend Team", _count: { members: 0 } })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -345,7 +382,8 @@ describe("teams.update", () => {
     })
     expect(result.name).toBe("Frontend Team")
     // Should NOT do uniqueness check when name hasn't changed
-    expect(mockPrisma.team.findFirst).toHaveBeenCalledTimes(1)
+    // findFirst called twice: existence check + refetch after tenantScopedUpdate
+    expect(mockPrisma.team.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("clears department when departmentId is null", async () => {
@@ -353,8 +391,11 @@ describe("teams.update", () => {
     const updated = makeTeam({ departmentId: null, _count: { members: 0 } })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -363,7 +404,7 @@ describe("teams.update", () => {
       departmentId: null,
     })
     expect(result.departmentId).toBeNull()
-    const updateCall = mockPrisma.team.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.team.updateMany.mock.calls[0]![0]
     expect(updateCall.data.departmentId).toBeNull()
   })
 
@@ -375,8 +416,11 @@ describe("teams.update", () => {
     })
     const mockPrisma = {
       team: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -408,14 +452,14 @@ describe("teams.delete", () => {
     const mockPrisma = {
       team: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TEAM_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.team.delete).toHaveBeenCalledWith({
-      where: { id: TEAM_ID },
+    expect(mockPrisma.team.deleteMany).toHaveBeenCalledWith({
+      where: { id: TEAM_ID, tenantId: TENANT_ID },
     })
   })
 
@@ -578,7 +622,7 @@ describe("teams.removeMember", () => {
         findFirst: vi.fn().mockResolvedValue(team),
       },
       teamMember: {
-        delete: vi.fn().mockResolvedValue(makeMember()),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -717,5 +761,176 @@ describe("teams.getByEmployee", () => {
       employeeId: EMPLOYEE_ID,
     })
     expect(result.items).toEqual([])
+  })
+})
+
+// --- teams.myTeams tests ---
+
+describe("teams.myTeams", () => {
+  it("admin sees all teams", async () => {
+    const teams = [
+      makeTeam({ id: TEAM_A_ID, name: "Team A" }),
+      makeTeam({ id: TEAM_B_ID, name: "Team B" }),
+    ]
+    const mockPrisma = {
+      team: {
+        findMany: vi.fn().mockResolvedValue(teams),
+        count: vi.fn().mockResolvedValue(2),
+      },
+    }
+    const caller = createCaller(createAdminContext(mockPrisma))
+    const result = await caller.myTeams({ isActive: true })
+    expect(result.items).toHaveLength(2)
+    expect(result.total).toBe(2)
+  })
+
+  it("non-admin sees only teams as member or leader", async () => {
+    const memberTeams = [
+      {
+        teamId: TEAM_A_ID,
+        employeeId: EMPLOYEE_ID,
+        role: "member",
+        joinedAt: new Date(),
+        team: makeTeam({ id: TEAM_A_ID, name: "Member Team" }),
+      },
+    ]
+    const leaderTeams = [
+      makeTeam({ id: TEAM_B_ID, name: "Leader Team", leaderEmployeeId: EMPLOYEE_ID }),
+    ]
+    const mockPrisma = {
+      teamMember: {
+        findMany: vi.fn().mockResolvedValue(memberTeams),
+      },
+      team: {
+        findMany: vi.fn().mockResolvedValue(leaderTeams),
+        count: vi.fn().mockResolvedValue(1),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma))
+    const result = await caller.myTeams({ isActive: true })
+    expect(result.items).toHaveLength(2)
+    const names = result.items.map((t) => t.name)
+    expect(names).toContain("Leader Team")
+    expect(names).toContain("Member Team")
+  })
+
+  it("non-admin without employeeId sees empty array", async () => {
+    const mockPrisma = {}
+    const caller = createCaller(createNonAdminContext(mockPrisma, null))
+    const result = await caller.myTeams()
+    expect(result.items).toEqual([])
+    expect(result.total).toBe(0)
+  })
+
+  it("non-admin deduplicates teams (member + leader of same team)", async () => {
+    const team = makeTeam({ id: TEAM_A_ID, name: "My Team", leaderEmployeeId: EMPLOYEE_ID })
+    const memberTeams = [
+      {
+        teamId: TEAM_A_ID,
+        employeeId: EMPLOYEE_ID,
+        role: "lead",
+        joinedAt: new Date(),
+        team,
+      },
+    ]
+    const leaderTeams = [team]
+    const mockPrisma = {
+      teamMember: {
+        findMany: vi.fn().mockResolvedValue(memberTeams),
+      },
+      team: {
+        findMany: vi.fn().mockResolvedValue(leaderTeams),
+        count: vi.fn().mockResolvedValue(1),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma))
+    const result = await caller.myTeams()
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]!.id).toBe(TEAM_A_ID)
+  })
+})
+
+// --- teams.myTeamById tests ---
+
+describe("teams.myTeamById", () => {
+  it("admin can access any team", async () => {
+    const team = makeTeam({ members: [makeMember()] })
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(team),
+      },
+    }
+    const caller = createCaller(createAdminContext(mockPrisma))
+    const result = await caller.myTeamById({ id: TEAM_ID })
+    expect(result.id).toBe(TEAM_ID)
+  })
+
+  it("non-admin member can access their team", async () => {
+    const team = {
+      ...makeTeam(),
+      members: [makeMember({ employeeId: EMPLOYEE_ID })],
+    }
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(team),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma))
+    const result = await caller.myTeamById({ id: TEAM_ID, includeMembers: true })
+    expect(result.id).toBe(TEAM_ID)
+    expect(result.members).toHaveLength(1)
+  })
+
+  it("non-admin leader can access their team (not a member)", async () => {
+    const team = makeTeam({ leaderEmployeeId: EMPLOYEE_ID, members: [] })
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(team),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma))
+    const result = await caller.myTeamById({ id: TEAM_ID })
+    expect(result.id).toBe(TEAM_ID)
+  })
+
+  it("non-admin without membership throws FORBIDDEN", async () => {
+    const team = {
+      ...makeTeam({ leaderEmployeeId: EMPLOYEE_B_ID }),
+      members: [makeMember({ employeeId: EMPLOYEE_B_ID })],
+    }
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(team),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma))
+    await expect(
+      caller.myTeamById({ id: TEAM_ID, includeMembers: true })
+    ).rejects.toThrow("No team access")
+  })
+
+  it("non-admin without employeeId throws FORBIDDEN", async () => {
+    const team = makeTeam()
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(team),
+      },
+    }
+    const caller = createCaller(createNonAdminContext(mockPrisma, null))
+    await expect(
+      caller.myTeamById({ id: TEAM_ID })
+    ).rejects.toThrow("No team access")
+  })
+
+  it("throws NOT_FOUND for missing team", async () => {
+    const mockPrisma = {
+      team: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    }
+    const caller = createCaller(createAdminContext(mockPrisma))
+    await expect(
+      caller.myTeamById({ id: TEAM_ID })
+    ).rejects.toThrow("Team not found")
   })
 })

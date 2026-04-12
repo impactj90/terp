@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // --- Interfaces ---
 
@@ -36,6 +37,7 @@ export function useAdminMonthlyValues(
       },
       { enabled: enabled && !!year && !!month }
     ),
+    refetchOnMount: 'always',
   })
 }
 
@@ -73,6 +75,12 @@ export function useCloseMonthById() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
     },
   })
 }
@@ -94,6 +102,12 @@ export function useReopenMonthById() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
     },
   })
 }
@@ -112,6 +126,15 @@ export function useCloseMonthBatch() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.yearOverview.queryKey(),
+      })
     },
   })
 }
@@ -123,13 +146,16 @@ export function useCloseMonthBatch() {
 export function useRecalculateMonthlyValues() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return useMutation({
     ...trpc.monthlyValues.recalculate.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: trpc.monthlyValues.list.queryKey(),
+        queryKey: trpc.monthlyValues.getById.queryKey(),
       })
+      // Recalculate affects dayView, dailyValues, and all monthlyValues
+      invalidateTimeData()
     },
   })
 }

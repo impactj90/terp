@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the EmployeeTariffAssignment model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findEmployeeById(
   prisma: PrismaClient,
@@ -19,11 +20,12 @@ export async function findEmployeeById(
 
 export async function findMany(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   params?: { isActive?: boolean }
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { employeeId }
+  const where: Record<string, any> = { tenantId, employeeId }
   if (params?.isActive !== undefined) {
     where.isActive = params.isActive
   }
@@ -31,6 +33,7 @@ export async function findMany(
   return prisma.employeeTariffAssignment.findMany({
     where,
     orderBy: { effectiveFrom: "desc" },
+    include: { tariff: { select: { id: true, code: true, name: true } } },
   })
 }
 
@@ -93,28 +96,29 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeTariffAssignment.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.employeeTariffAssignment, { id, tenantId }, data, { entity: "EmployeeTariffAssignment" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeTariffAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeTariffAssignment.deleteMany({
+    where: { id, employee: { tenantId } },
   })
+  return count > 0
 }
 
 export async function findEffective(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
   return prisma.employeeTariffAssignment.findFirst({
     where: {
+      tenantId,
       employeeId,
       isActive: true,
       effectiveFrom: { lte: date },

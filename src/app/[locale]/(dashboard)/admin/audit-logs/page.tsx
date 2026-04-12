@@ -5,10 +5,17 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
-import { useAuditLogs, useUsers } from '@/hooks'
+import { useAuditLogs, useUsers, useExportAuditLogsCsv, useExportAuditLogsPdf } from '@/hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   AuditLogSkeleton,
   AuditLogFilters,
@@ -16,7 +23,7 @@ import {
   AuditLogDetailSheet,
 } from '@/components/audit-logs'
 import type { DateRange } from '@/components/ui/date-range-picker'
-import type { components } from '@/types/legacy-api-types'
+import type { AuditLogEntry } from '@/components/audit-logs/types'
 
 export default function AuditLogsPage() {
   const router = useRouter()
@@ -25,6 +32,11 @@ export default function AuditLogsPage() {
   const t = useTranslations('auditLogs')
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['users.manage'])
+  const { allowed: canExport } = useHasPermission(['audit_log.export'])
+
+  // Export mutations
+  const exportCsvMutation = useExportAuditLogsCsv()
+  const exportPdfMutation = useExportAuditLogsPdf()
 
   // Read initial state from URL
   const initialFrom = searchParams.get('from')
@@ -49,12 +61,12 @@ export default function AuditLogsPage() {
   const [action, setAction] = React.useState<string | null>(initialAction)
 
   // Pagination state
-  const [allItems, setAllItems] = React.useState<components['schemas']['AuditLog'][]>([])
+  const [allItems, setAllItems] = React.useState<AuditLogEntry[]>([])
   const [cursor, setCursor] = React.useState<string | undefined>(undefined)
   const [limit] = React.useState(50)
 
   // Detail sheet state
-  const [selectedEntry, setSelectedEntry] = React.useState<components['schemas']['AuditLog'] | null>(null)
+  const [selectedEntry, setSelectedEntry] = React.useState<AuditLogEntry | null>(null)
 
   // Auth guard
   React.useEffect(() => {
@@ -91,7 +103,7 @@ export default function AuditLogsPage() {
     userId: userId ?? undefined,
     entityType: entityType ?? undefined,
     entityId: entityId || undefined,
-    action: action as components['schemas']['AuditLog']['action'] | undefined,
+    action: action ?? undefined,
     fromDate: fromStr,
     toDate: toStr,
     pageSize: limit,
@@ -106,9 +118,9 @@ export default function AuditLogsPage() {
   React.useEffect(() => {
     if (data?.items) {
       if (cursor) {
-        setAllItems(prev => [...prev, ...(data.items as unknown as components['schemas']['AuditLog'][])])
+        setAllItems(prev => [...prev, ...(data.items as unknown as AuditLogEntry[])])
       } else {
-        setAllItems(data.items as unknown as components['schemas']['AuditLog'][])
+        setAllItems(data.items as unknown as AuditLogEntry[])
       }
     }
   }, [data, cursor])
@@ -187,6 +199,59 @@ export default function AuditLogsPage() {
     syncToUrl({ dateRange: range, userId: null, entityType: null, entityId: '', action: null })
   }, [syncToUrl])
 
+  // Export handlers
+  const currentFilters = React.useMemo(() => ({
+    userId: userId ?? undefined,
+    entityType: entityType ?? undefined,
+    entityId: entityId || undefined,
+    action: action ?? undefined,
+    fromDate: fromStr,
+    toDate: toStr,
+  }), [userId, entityType, entityId, action, fromStr, toStr])
+
+  const triggerDownload = React.useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const handleExportCsv = React.useCallback(async () => {
+    try {
+      const result = await exportCsvMutation.mutateAsync(currentFilters)
+      const binaryString = atob(result.csv)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: 'text/csv;charset=utf-8;' })
+      triggerDownload(blob, result.filename)
+      toast.success(t('export.success', { count: result.count }))
+    } catch {
+      toast.error(t('export.error'))
+    }
+  }, [currentFilters, exportCsvMutation, triggerDownload, t])
+
+  const handleExportPdf = React.useCallback(async () => {
+    try {
+      const result = await exportPdfMutation.mutateAsync(currentFilters)
+      const binaryString = atob(result.pdf)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      triggerDownload(blob, result.filename)
+      toast.success(t('export.success', { count: result.count }))
+    } catch {
+      toast.error(t('export.error'))
+    }
+  }, [currentFilters, exportPdfMutation, triggerDownload, t])
+
   const hasFilters = !!(userId || entityType || entityId || action)
 
   if (authLoading || permLoading) {
@@ -199,9 +264,34 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('page.title')}</h1>
-        <p className="text-muted-foreground">{t('page.subtitle')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.subtitle')}</p>
+        </div>
+        {canExport && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={exportCsvMutation.isPending || exportPdfMutation.isPending}>
+                {(exportCsvMutation.isPending || exportPdfMutation.isPending) ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('export.generating')}</>
+                ) : (
+                  <><Download className="mr-2 h-4 w-4" />{t('export.button')}</>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCsv} disabled={exportCsvMutation.isPending}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                {t('export.csv')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPdf} disabled={exportPdfMutation.isPending}>
+                <FileText className="mr-2 h-4 w-4" />
+                {t('export.pdf')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <AuditLogFilters

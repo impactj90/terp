@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useAbsenceType } from '@/hooks'
+import { useAbsenceType, useCalculationRule } from '@/hooks'
 
 /** AbsenceType shape from tRPC output */
 interface AbsenceType {
@@ -104,6 +104,7 @@ export function AbsenceTypeDetailSheet({
 }: AbsenceTypeDetailSheetProps) {
   const t = useTranslations('adminAbsenceTypes')
   const { data: absenceType, isLoading } = useAbsenceType(absenceTypeId || '', open && !!absenceTypeId)
+  const { data: calculationRule } = useCalculationRule(absenceType?.calculationRuleId || '', open && !!absenceType?.calculationRuleId)
 
   const formatDateTime = (date: Date | string | undefined | null) => {
     if (!date) return '-'
@@ -130,7 +131,7 @@ export function AbsenceTypeDetailSheet({
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : absenceType ? (
-          <ScrollArea className="flex-1 -mx-4 px-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Header with color, name, and status */}
               <div className="flex items-center gap-4">
@@ -201,6 +202,17 @@ export function AbsenceTypeDetailSheet({
                     <span className="text-sm text-muted-foreground">{t('fieldRequiresApproval')}</span>
                     <BooleanBadge value={absenceType.requiresApproval} trueLabel={t('requiredLabel')} falseLabel={t('notRequiredLabel')} />
                   </div>
+                </div>
+              </div>
+
+              {/* Calculation */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">{t('sectionCalculation')}</h4>
+                <div className="rounded-lg border p-4">
+                  <DetailRow
+                    label={t('fieldCalculationRule')}
+                    value={calculationRule ? `${calculationRule.code} - ${calculationRule.name}` : '-'}
+                  />
                 </div>
               </div>
 

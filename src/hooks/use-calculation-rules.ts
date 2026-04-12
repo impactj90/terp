@@ -44,6 +44,9 @@ export function useCreateCalculationRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.calculationRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.calculationRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -60,6 +63,9 @@ export function useUpdateCalculationRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.calculationRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.calculationRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -75,6 +81,9 @@ export function useDeleteCalculationRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.calculationRules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.calculationRules.getById.queryKey(),
       })
     },
   })

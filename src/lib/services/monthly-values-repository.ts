@@ -128,14 +128,13 @@ export async function findByEmployeeMonth(
 
 export async function findByEmployeeYearMonth(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
-  return prisma.monthlyValue.findUnique({
-    where: {
-      employeeId_year_month: { employeeId, year, month },
-    },
+  return prisma.monthlyValue.findFirst({
+    where: { employeeId, year, month, tenantId },
   })
 }
 

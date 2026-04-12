@@ -32,6 +32,12 @@ function createMockPrisma(employees: Array<{ id: string }> = []) {
     employee: {
       findMany: vi.fn().mockResolvedValue(employees),
     },
+    holiday: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    systemSetting: {
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
   } as unknown as PrismaClient
 }
 

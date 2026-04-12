@@ -78,15 +78,15 @@ const userWithRelationsOutputSchema = userOutputSchema.extend({
 
 // --- Input Schemas ---
 
+// Phase 0: password removed — never used, misleading. New users are
+// created via Supabase Auth and receive an invite link (see users-service.ts).
 const createUserInputSchema = z.object({
   email: z.string().email(),
-  displayName: z.string().min(1),
-  tenantId: z.string().optional(),
-  username: z.string().optional(),
+  displayName: z.string().min(1).max(255),
+  username: z.string().max(50).optional(),
   userGroupId: z.string().optional(),
   employeeId: z.string().optional(),
-  password: z.string().optional(),
-  ssoId: z.string().optional(),
+  ssoId: z.string().max(255).optional(),
   isActive: z.boolean().optional().default(true),
   isLocked: z.boolean().optional().default(false),
   dataScopeType: dataScopeTypeEnum.optional().default("all"),
@@ -104,14 +104,24 @@ const createUserInputSchema = z.object({
     .default([]),
 })
 
+// Phase 0: create returns { user, welcomeEmail } so the admin UI can show
+// either a "sent" toast or a fallback dialog with the recovery link.
+const createUserOutputSchema = z.object({
+  user: userOutputSchema,
+  welcomeEmail: z.object({
+    sent: z.boolean(),
+    fallbackLink: z.string().nullable(),
+  }),
+})
+
 const updateUserInputSchema = z.object({
   id: z.string(),
-  displayName: z.string().min(1).optional(),
+  displayName: z.string().min(1).max(255).optional(),
   avatarUrl: z.string().nullable().optional(),
   userGroupId: z.string().nullable().optional(),
-  username: z.string().nullable().optional(),
+  username: z.string().max(50).nullable().optional(),
   employeeId: z.string().nullable().optional(),
-  ssoId: z.string().nullable().optional(),
+  ssoId: z.string().max(255).nullable().optional(),
   isActive: z.boolean().optional(),
   isLocked: z.boolean().optional(),
   dataScopeType: dataScopeTypeEnum.optional(),
@@ -122,7 +132,7 @@ const updateUserInputSchema = z.object({
 
 const changePasswordInputSchema = z.object({
   userId: z.string(),
-  newPassword: z.string().min(1, "New password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(128),
 })
 
 // --- Helpers ---
@@ -188,8 +198,8 @@ export const usersRouter = createTRPCRouter({
     .input(
       z
         .object({
-          search: z.string().optional(),
-          limit: z.number().optional(),
+          search: z.string().max(255).optional(),
+          limit: z.number().int().min(1).max(500).optional(),
         })
         .optional()
     )
@@ -275,15 +285,16 @@ export const usersRouter = createTRPCRouter({
   create: tenantProcedure
     .use(requirePermission(USERS_MANAGE))
     .input(createUserInputSchema)
-    .output(userOutputSchema)
+    .output(createUserOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const user = await userService.create(
+        const { user, welcomeEmail } = await userService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
-        return mapUserToOutput(user)
+        return { user: mapUserToOutput(user), welcomeEmail }
       } catch (err) {
         handleServiceError(err)
       }
@@ -299,13 +310,13 @@ export const usersRouter = createTRPCRouter({
    * Replaces: PATCH /users/{id} (Go UserHandler.Update + UserService.Update)
    */
   update: tenantProcedure
+    .input(updateUserInputSchema)
     .use(
       requireSelfOrPermission(
         (input) => (input as { id: string }).id,
         USERS_MANAGE
       )
     )
-    .input(updateUserInputSchema)
     .output(userOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -318,7 +329,8 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input,
-          { canManageAdminFields: canManage }
+          { canManageAdminFields: canManage },
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapUserToOutput(user)
       } catch (err) {
@@ -345,9 +357,66 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.id,
-          ctx.user!.id
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * users.avatarGetUploadUrl -- Get a signed URL to upload an avatar image.
+   * Self-only: users can only upload their own avatar.
+   */
+  avatarGetUploadUrl: tenantProcedure
+    .input(z.object({ mimeType: z.string() }))
+    .output(z.object({
+      signedUrl: z.string(),
+      path: z.string(),
+      token: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await userService.avatarGetUploadUrl(ctx.user!.id, input.mimeType)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * users.avatarConfirmUpload -- Confirm avatar upload and save public URL.
+   * Self-only: users can only update their own avatar.
+   */
+  avatarConfirmUpload: tenantProcedure
+    .input(z.object({
+      storagePath: z.string(),
+      mimeType: z.string(),
+      sizeBytes: z.number(),
+    }))
+    .output(z.object({ avatarUrl: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await userService.avatarConfirmUpload(
+          ctx.prisma,
+          ctx.user!.id,
+          input.storagePath,
+          input.mimeType,
+          input.sizeBytes
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * users.avatarDelete -- Remove the current user's avatar.
+   */
+  avatarDelete: tenantProcedure
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx }) => {
+      try {
+        return await userService.avatarDelete(ctx.prisma, ctx.user!.id)
       } catch (err) {
         handleServiceError(err)
       }
@@ -362,13 +431,13 @@ export const usersRouter = createTRPCRouter({
    * Replaces: POST /users/{id}/password (Go UserHandler.ChangePassword)
    */
   changePassword: tenantProcedure
+    .input(changePasswordInputSchema)
     .use(
       requireSelfOrPermission(
         (input) => (input as { userId: string }).userId,
         USERS_MANAGE
       )
     )
-    .input(changePasswordInputSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -376,7 +445,8 @@ export const usersRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.userId,
-          input.newPassword
+          input.newPassword,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

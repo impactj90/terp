@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the UserGroup model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -101,28 +102,28 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.userGroup.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.userGroup, { id, tenantId }, data, { entity: "UserGroup" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.userGroup.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.userGroup.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function updateUsersRole(
   prisma: PrismaClient,
+  tenantId: string,
   userGroupId: string,
   role: string
 ) {
   return prisma.user.updateMany({
-    where: { userGroupId },
+    where: { userGroupId, tenantId },
     data: { role },
   })
 }

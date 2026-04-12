@@ -213,12 +213,7 @@ export function EmployeeExceptionsTab() {
                     <TableCell>{item.year ?? t('exception.yearAll')}</TableCell>
                     <TableCell>
                       <Badge
-                        variant="secondary"
-                        className={
-                          item.exemptionType === 'full'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }
+                        variant={item.exemptionType === 'full' ? 'green' : 'yellow'}
                       >
                         {item.exemptionType === 'full' ? t('exception.exemptionFull') : t('exception.exemptionPartial')}
                       </Badge>
@@ -234,6 +229,7 @@ export function EmployeeExceptionsTab() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Aktionen</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

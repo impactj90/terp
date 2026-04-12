@@ -129,7 +129,7 @@ export function BalanceBreakdown({
     )
   }
 
-  const totalEntitlement = data.total_entitlement ?? 0
+  const totalEntitlement = data.total ?? data.total_entitlement ?? 0
   const remainingDays = data.available ?? 0
   const usedDays = data.taken ?? 0
   const plannedDays = 0

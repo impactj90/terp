@@ -7,6 +7,8 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./reports-repository"
 import type { EmployeeScope } from "./reports-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -151,6 +153,7 @@ function stripFileContent<T extends { fileContent?: unknown }>(
 
 async function gatherMonthlyOverview(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -166,15 +169,21 @@ async function gatherMonthlyOverview(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       const targetHours = (mv.totalTargetTime / 60).toFixed(2)
@@ -206,6 +215,7 @@ async function gatherMonthlyOverview(
 
 async function gatherOvertimeReport(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -220,15 +230,21 @@ async function gatherOvertimeReport(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       data.values.push([
@@ -250,6 +266,7 @@ async function gatherOvertimeReport(
 
 async function gatherDepartmentSummary(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -262,6 +279,17 @@ async function gatherDepartmentSummary(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   // Group employees by department
   const deptMap = new Map<string, EmployeeScope[]>()
@@ -279,13 +307,8 @@ async function gatherDepartmentSummary(
     let totalOT = 0
 
     for (const emp of deptEmps) {
-      const months: Array<{ year: number; month: number }> = []
-      iterateMonths(from, to, (year, month) => {
-        months.push({ year, month })
-      })
-
       for (const { year, month } of months) {
-        const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+        const mv = mvMap.get(`${emp.id}-${year}-${month}`)
         if (!mv) continue
         totalTarget += mv.totalTargetTime / 60
         totalWorked += mv.totalNetTime / 60
@@ -307,6 +330,7 @@ async function gatherDepartmentSummary(
 
 async function gatherAccountBalances(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -320,15 +344,21 @@ async function gatherAccountBalances(
   }
 
   const { from, to } = parseDateRange(params.fromDate, params.toDate)
+  const months: Array<{ year: number; month: number }> = []
+  iterateMonths(from, to, (year, month) => {
+    months.push({ year, month })
+  })
+
+  const empIds = employees.map((e) => e.id)
+  const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, months)
+  const mvMap = new Map<string, (typeof allMvs)[number]>()
+  for (const mv of allMvs) {
+    mvMap.set(`${mv.employeeId}-${mv.year}-${mv.month}`, mv)
+  }
 
   for (const emp of employees) {
-    const months: Array<{ year: number; month: number }> = []
-    iterateMonths(from, to, (year, month) => {
-      months.push({ year, month })
-    })
-
     for (const { year, month } of months) {
-      const mv = await repo.findMonthlyValue(prisma, emp.id, year, month)
+      const mv = mvMap.get(`${emp.id}-${year}-${month}`)
       if (!mv) continue
 
       data.values.push([
@@ -349,6 +379,7 @@ async function gatherAccountBalances(
 
 async function gatherVacationReport(
   prisma: PrismaClient,
+  tenantId: string,
   params: ReportParameters,
   employees: EmployeeScope[]
 ): Promise<ReportRow> {
@@ -369,8 +400,15 @@ async function gatherVacationReport(
     }
   }
 
+  const empIds = employees.map((e) => e.id)
+  const allVbs = await repo.findVacationBalancesBatch(prisma, tenantId, empIds, year)
+  const vbMap = new Map<string, (typeof allVbs)[number]>()
+  for (const vb of allVbs) {
+    vbMap.set(vb.employeeId, vb)
+  }
+
   for (const emp of employees) {
-    const vb = await repo.findVacationBalance(prisma, emp.id, year)
+    const vb = vbMap.get(emp.id)
     if (!vb) continue
 
     const entitlement = decimalToNumber(vb.entitlement)
@@ -543,7 +581,12 @@ export async function generate(
       teamIds?: string[]
     }
     createdBy: string | null
-  }
+  },
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
+  },
+  audit?: AuditContext
 ) {
   // Check date range requirement
   if (requiresDateRange(input.reportType)) {
@@ -579,32 +622,32 @@ export async function generate(
 
   try {
     // Update to generating status
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "generating",
       startedAt: new Date(),
-    })
+    }))!
 
     // Get employees in scope
-    const employees = await repo.findEmployeesInScope(prisma, tenantId, params)
+    const employees = await repo.findEmployeesInScope(prisma, tenantId, params, scopeFilter)
 
     // Gather data based on report type
     let data: ReportRow
 
     switch (input.reportType) {
       case "monthly_overview":
-        data = await gatherMonthlyOverview(prisma, params, employees)
+        data = await gatherMonthlyOverview(prisma, tenantId, params, employees)
         break
       case "overtime_report":
-        data = await gatherOvertimeReport(prisma, params, employees)
+        data = await gatherOvertimeReport(prisma, tenantId, params, employees)
         break
       case "department_summary":
-        data = await gatherDepartmentSummary(prisma, params, employees)
+        data = await gatherDepartmentSummary(prisma, tenantId, params, employees)
         break
       case "account_balances":
-        data = await gatherAccountBalances(prisma, params, employees)
+        data = await gatherAccountBalances(prisma, tenantId, params, employees)
         break
       case "vacation_report":
-        data = await gatherVacationReport(prisma, params, employees)
+        data = await gatherVacationReport(prisma, tenantId, params, employees)
         break
       case "daily_overview":
       case "weekly_overview":
@@ -635,21 +678,35 @@ export async function generate(
     const contentBuffer = Buffer.from(content)
 
     // Update record as completed
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "completed",
       fileContent: contentBuffer,
       fileSize: contentBuffer.length,
       rowCount: data.values.length,
       completedAt: new Date(),
-    })
+    }))!
   } catch (err) {
     // On error, set status to failed
     const errorMessage = err instanceof Error ? err.message : "Unknown error"
-    report = await repo.updateStatus(prisma, report.id, {
+    report = (await repo.updateStatus(prisma, tenantId, report.id, {
       status: "failed",
       errorMessage,
       completedAt: new Date(),
-    })
+    }))!
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "report",
+      entityId: report.id,
+      entityName: report.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return stripFileContent(report)
@@ -704,12 +761,27 @@ export async function download(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
     throw new ReportNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "report",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

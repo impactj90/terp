@@ -27,10 +27,43 @@ const dailyAccountValueInclude = {
   },
 } as const
 
+export interface AccountValueSummaryParams {
+  accountId: string
+  year: number
+  month: number // 1-12
+}
+
+export async function summarizeByEmployee(
+  prisma: PrismaClient,
+  tenantId: string,
+  params: AccountValueSummaryParams,
+  scopeWhere?: Record<string, unknown> | null
+) {
+  const fromDate = new Date(params.year, params.month - 1, 1)
+  const toDate = new Date(params.year, params.month, 0) // last day of month
+
+  const where: Record<string, unknown> = {
+    tenantId,
+    accountId: params.accountId,
+    valueDate: { gte: fromDate, lte: toDate },
+  }
+
+  if (scopeWhere) {
+    Object.assign(where, scopeWhere)
+  }
+
+  return prisma.dailyAccountValue.groupBy({
+    by: ['employeeId'],
+    where,
+    _sum: { valueMinutes: true },
+  })
+}
+
 export async function findMany(
   prisma: PrismaClient,
   tenantId: string,
-  params?: DailyAccountValueListParams
+  params?: DailyAccountValueListParams,
+  scopeWhere?: Record<string, unknown> | null
 ) {
   const where: Record<string, unknown> = { tenantId }
 
@@ -55,6 +88,17 @@ export async function findMany(
       valueDate.lte = new Date(params.toDate)
     }
     where.valueDate = valueDate
+  }
+
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
   }
 
   return prisma.dailyAccountValue.findMany({

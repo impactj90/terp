@@ -4,6 +4,7 @@
  * Pure Prisma query functions for employee message data access.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { relationScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /**
  * Lists employee messages for a tenant with optional status filtering.
@@ -121,14 +122,15 @@ export async function createMessageWithRecipients(
 }
 
 /**
- * Finds an employee by ID, including the linked user.
+ * Finds an employee by ID within a tenant, including the linked user.
  */
 export async function findEmployeeWithUser(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string
 ) {
   return prisma.employee.findFirst({
-    where: { id: employeeId },
+    where: { id: employeeId, tenantId },
     include: { user: true },
   })
 }
@@ -150,10 +152,11 @@ export async function createNotification(
 }
 
 /**
- * Updates a message recipient's status.
+ * Updates a message recipient's status (scoped to tenant via message relation).
  */
 export async function updateRecipientStatus(
   prisma: PrismaClient,
+  tenantId: string,
   recipientId: string,
   data: {
     status: string
@@ -161,8 +164,11 @@ export async function updateRecipientStatus(
     errorMessage?: string
   }
 ) {
-  return prisma.employeeMessageRecipient.update({
-    where: { id: recipientId },
-    data,
-  })
+  await relationScopedUpdate(
+    prisma.employeeMessageRecipient,
+    { id: recipientId, message: { tenantId } },
+    data as unknown as Record<string, unknown>,
+    { entity: "EmployeeMessageRecipient" },
+  )
+  return true
 }

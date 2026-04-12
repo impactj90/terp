@@ -52,6 +52,9 @@ export function useCreateLocalTravelRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.localTravelRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.localTravelRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -68,6 +71,9 @@ export function useUpdateLocalTravelRule() {
       queryClient.invalidateQueries({
         queryKey: trpc.localTravelRules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.localTravelRules.getById.queryKey(),
+      })
     },
   })
 }
@@ -83,6 +89,9 @@ export function useDeleteLocalTravelRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.localTravelRules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.localTravelRules.getById.queryKey(),
       })
     },
   })

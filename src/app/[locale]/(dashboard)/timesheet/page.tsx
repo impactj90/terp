@@ -3,10 +3,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -17,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useDailyValues, useDeleteBooking, useEmployees } from '@/hooks'
+import { useDailyValues, useDeleteBooking, useEmployees, useMonthlyValues } from '@/hooks'
 import {
   formatDate,
   getWeekRange,
@@ -136,6 +138,15 @@ export default function TimesheetPage() {
     enabled: !!effectiveEmployeeId && viewMode !== 'day',
   })
 
+  // Check if the current month is closed (blocks booking mutations)
+  const { data: monthlyValueData } = useMonthlyValues({
+    employeeId: effectiveEmployeeId,
+    year: currentDate.getFullYear(),
+    month: currentDate.getMonth() + 1,
+    enabled: !!effectiveEmployeeId,
+  })
+  const isMonthClosed = monthlyValueData?.data?.[0]?.is_closed ?? false
+
   // Prepare export data
   const exportData = useMemo(() => {
     if (viewMode === 'day') return undefined
@@ -224,8 +235,8 @@ export default function TimesheetPage() {
       await deleteBooking.mutateAsync({ id: deletingBooking.id })
       setIsDeleteDialogOpen(false)
       setDeletingBooking(null)
-    } catch (error) {
-      console.error('Failed to delete booking:', error)
+    } catch {
+      toast.error(t('deleteBookingFailed'))
     }
   }
 
@@ -236,7 +247,7 @@ export default function TimesheetPage() {
     }
   }
 
-  // Format period label for display
+  // Format period label for display (short for mobile, long for desktop)
   const periodLabel = useMemo(() => {
     switch (viewMode) {
       case 'day':
@@ -248,45 +259,58 @@ export default function TimesheetPage() {
     }
   }, [viewMode, currentDate, periodDates])
 
+  const periodLabelShort = useMemo(() => {
+    switch (viewMode) {
+      case 'day':
+        return currentDate.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+      case 'week':
+        return `${formatDisplayDate(periodDates.start, 'short')} - ${formatDisplayDate(periodDates.end, 'short')}`
+      case 'month':
+        return currentDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' })
+    }
+  }, [viewMode, currentDate, periodDates, locale])
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 sm:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">
             {employeeName
               ? t('entriesFor', { name: employeeName })
               : t('viewAndManage')}
           </p>
         </div>
 
-        {/* Export button */}
-        <ExportButtons
-          viewMode={viewMode}
-          periodStart={periodDates.start}
-          periodEnd={periodDates.end}
-          employeeId={effectiveEmployeeId}
-          employeeName={employeeName}
-          data={exportData}
-        />
+        {/* Export button — hidden on mobile */}
+        <div className="hidden sm:block">
+          <ExportButtons
+            viewMode={viewMode}
+            periodStart={periodDates.start}
+            periodEnd={periodDates.end}
+            employeeId={effectiveEmployeeId}
+            employeeName={employeeName}
+            data={exportData}
+          />
+        </div>
       </div>
 
-      {/* Controls row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+      {/* Controls */}
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Employee selector (admin only) */}
           {canViewAll && (
             <Select
               value={selectedEmployeeId ?? ''}
               onValueChange={setSelectedEmployeeId}
             >
-              <SelectTrigger className="w-[250px]">
+              <SelectTrigger className="w-full sm:w-[250px]">
                 <SelectValue placeholder={t('selectEmployee')} />
               </SelectTrigger>
               <SelectContent>
                 {employeesData?.items?.map((emp: { id: string; firstName: string; lastName: string }) => (
-                  <SelectItem key={emp.id} value={emp.id}>
+                  <SelectItem key={emp.id} value={emp.id} className="min-h-[44px] sm:min-h-0">
                     {emp.firstName} {emp.lastName}
                   </SelectItem>
                 ))}
@@ -297,43 +321,60 @@ export default function TimesheetPage() {
           {/* View mode tabs */}
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>
-              <TabsTrigger value="day">{t('day')}</TabsTrigger>
-              <TabsTrigger value="week">{t('week')}</TabsTrigger>
-              <TabsTrigger value="month">{t('month')}</TabsTrigger>
+              <TabsTrigger value="day" className="min-w-[44px] sm:min-w-0">{t('day')}</TabsTrigger>
+              <TabsTrigger value="week" className="min-w-[44px] sm:min-w-0">{t('week')}</TabsTrigger>
+              <TabsTrigger value="month" className="min-w-[44px] sm:min-w-0">{t('month')}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Period navigation */}
+        {/* Period navigation — full width on mobile */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={navigateToToday}>
+          <Button variant="outline" size="sm" onClick={navigateToToday} className="min-h-[44px] sm:min-h-0">
             {t('today')}
           </Button>
-          <div className="flex items-center rounded-md border">
-            <Button variant="ghost" size="icon-sm" onClick={navigatePrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="px-3 text-sm font-medium min-w-[180px] text-center">
-              {periodLabel}
+          <div className="flex flex-1 items-center rounded-md border">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={navigatePrevious} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('previousPeriod')}</TooltipContent>
+            </Tooltip>
+            <span className="flex-1 px-2 sm:px-3 text-sm font-medium min-w-0 text-center truncate">
+              <span className="sm:hidden">{periodLabelShort}</span>
+              <span className="hidden sm:inline">{periodLabel}</span>
             </span>
-            <Button variant="ghost" size="icon-sm" onClick={navigateNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={navigateNext} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('nextPeriod')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
 
       {/* Content based on view mode */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="overflow-hidden">
+        <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+          {isMonthClosed && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200 mb-4">
+              <Lock className="h-4 w-4 shrink-0" />
+              {t('monthClosed')}
+            </div>
+          )}
           {viewMode === 'day' && (
             <DayView
               date={currentDate}
               employeeId={effectiveEmployeeId}
-              isEditable={true}
-              onAddBooking={effectiveEmployeeId ? handleAddBooking : undefined}
-              onEditBooking={handleEditBooking}
-              onDeleteBooking={handleDeleteBooking}
+              isEditable={!isMonthClosed}
+              onAddBooking={effectiveEmployeeId && !isMonthClosed ? handleAddBooking : undefined}
+              onEditBooking={!isMonthClosed ? handleEditBooking : undefined}
+              onDeleteBooking={!isMonthClosed ? handleDeleteBooking : undefined}
             />
           )}
           {viewMode === 'week' && (

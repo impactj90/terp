@@ -4,11 +4,13 @@
  * Pure Prisma data-access functions for the Shift model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.shift.findMany({
     where: { tenantId },
     orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+    include: { dayPlan: { select: { id: true, code: true, name: true } } },
   })
 }
 
@@ -61,35 +63,36 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.shift.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.shift, { id, tenantId }, data, { entity: "Shift" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.shift.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.shift.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmployeeDayPlanUsages(
   prisma: PrismaClient,
+  tenantId: string,
   shiftId: string
 ) {
   return prisma.employeeDayPlan.count({
-    where: { shiftId },
+    where: { tenantId, shiftId },
   })
 }
 
 export async function countShiftAssignmentUsages(
   prisma: PrismaClient,
+  tenantId: string,
   shiftId: string
 ) {
   return prisma.shiftAssignment.count({
-    where: { shiftId },
+    where: { tenantId, shiftId },
   })
 }

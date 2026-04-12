@@ -21,7 +21,7 @@ export function LoadingSkeleton({
   sidebarCollapsed = false,
 }: LoadingSkeletonProps) {
   return (
-    <div className={cn('flex min-h-screen bg-background', className)}>
+    <div className={cn('flex min-h-dvh bg-background', className)}>
       {/* Sidebar skeleton */}
       {showSidebar && (
         <aside

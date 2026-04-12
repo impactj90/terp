@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { vacationBalancesRouter } from "../vacationBalances"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { Prisma } from "@/generated/prisma/client"
 import {
   createMockContext,
   createMockSession,
@@ -238,10 +239,14 @@ describe("vacationBalances.create", () => {
   })
 
   it("throws CONFLICT for duplicate employee+year", async () => {
-    const existing = makeBalance()
     const mockPrisma = {
       vacationBalance: {
-        findFirst: vi.fn().mockResolvedValue(existing),
+        create: vi.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+            code: "P2002",
+            clientVersion: "0.0.0",
+          })
+        ),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -289,8 +294,10 @@ describe("vacationBalances.update", () => {
     const updated = makeBalance({ entitlement: 28 })
     const mockPrisma = {
       vacationBalance: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -299,7 +306,7 @@ describe("vacationBalances.update", () => {
       entitlement: 28,
     })
     expect(result.entitlement).toBe(28)
-    expect(mockPrisma.vacationBalance.update).toHaveBeenCalledWith(
+    expect(mockPrisma.vacationBalance.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ entitlement: 28 }),
       })
@@ -311,8 +318,10 @@ describe("vacationBalances.update", () => {
     const updated = makeBalance({ carryover: 8 })
     const mockPrisma = {
       vacationBalance: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

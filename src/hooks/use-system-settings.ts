@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 /**
  * Hook to fetch system settings (singleton per tenant, tRPC).
@@ -36,7 +37,20 @@ export function useUpdateSystemSettings() {
  */
 export function useCleanupDeleteBookings() {
   const trpc = useTRPC()
-  return useMutation(trpc.systemSettings.cleanupDeleteBookings.mutationOptions())
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupDeleteBookings.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**
@@ -44,9 +58,26 @@ export function useCleanupDeleteBookings() {
  */
 export function useCleanupDeleteBookingData() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupDeleteBookingData.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupDeleteBookingData.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**
@@ -54,9 +85,20 @@ export function useCleanupDeleteBookingData() {
  */
 export function useCleanupReReadBookings() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupReReadBookings.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
+  return useMutation({
+    ...trpc.systemSettings.cleanupReReadBookings.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookings.getById.queryKey(),
+      })
+      invalidateTimeData()
+    },
+  })
 }
 
 /**
@@ -64,7 +106,19 @@ export function useCleanupReReadBookings() {
  */
 export function useCleanupMarkDeleteOrders() {
   const trpc = useTRPC()
-  return useMutation(
-    trpc.systemSettings.cleanupMarkDeleteOrders.mutationOptions()
-  )
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.systemSettings.cleanupMarkDeleteOrders.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.orders.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderBookings.list.queryKey(),
+      })
+    },
+  })
 }

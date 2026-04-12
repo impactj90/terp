@@ -7,109 +7,147 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
 } from 'react'
 
-const STORAGE_KEY = 'sidebar-collapsed'
+const STORAGE_SECTIONS = 'sidebar-sections'
+const STORAGE_FAVORITES = 'sidebar-favorites'
+
+/** Default: only 'main' section expanded */
+const DEFAULT_SECTIONS: Record<string, boolean> = { main: true }
 
 /**
- * Sidebar context value interface
+ * Sidebar extras context — manages favorites and section accordion state.
+ * Core open/collapsed state is handled by shadcn's SidebarProvider.
  */
-export interface SidebarContextValue {
-  /** Whether the sidebar is collapsed */
-  isCollapsed: boolean
-  /** Toggle sidebar collapsed state */
-  toggle: () => void
-  /** Collapse the sidebar */
-  collapse: () => void
-  /** Expand the sidebar */
-  expand: () => void
+export interface SidebarExtrasContextValue {
+  /** Section accordion state */
+  isSectionExpanded: (key: string) => boolean
+  toggleSection: (key: string) => void
+
+  /** Favorites */
+  favorites: string[]
+  addFavorite: (href: string) => void
+  removeFavorite: (href: string) => void
+  isFavorite: (href: string) => boolean
 }
 
-const SidebarContext = createContext<SidebarContextValue | null>(null)
+const SidebarExtrasContext = createContext<SidebarExtrasContextValue | null>(null)
 
-interface SidebarProviderProps {
+interface SidebarExtrasProviderProps {
   children: React.ReactNode
-  /** Initial collapsed state (default: false) */
-  defaultCollapsed?: boolean
 }
 
 /**
- * Provider component for sidebar state management.
- * Persists collapsed preference to localStorage.
- *
- * @example
- * ```tsx
- * <SidebarProvider>
- *   <Sidebar />
- *   <MainContent />
- * </SidebarProvider>
- * ```
+ * Provider for sidebar extras (favorites + section accordion state).
+ * Persists to localStorage.
  */
-export function SidebarProvider({
-  children,
-  defaultCollapsed = false,
-}: SidebarProviderProps) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
-  const [isInitialized, setIsInitialized] = useState(false)
+export function SidebarExtrasProvider({ children }: SidebarExtrasProviderProps) {
+  const [expandedSections, setExpandedSections] =
+    useState<Record<string, boolean>>(DEFAULT_SECTIONS)
+  const [favorites, setFavorites] = useState<string[]>([])
+  const isInitialized = useRef(false)
 
   // Load persisted state from localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored !== null) {
-        setIsCollapsed(stored === 'true')
+    if (typeof window === 'undefined') return
+
+    const storedSections = localStorage.getItem(STORAGE_SECTIONS)
+    if (storedSections) {
+      try {
+        setExpandedSections(JSON.parse(storedSections))
+      } catch {
+        // ignore corrupt data
       }
-      setIsInitialized(true)
     }
+
+    const storedFavorites = localStorage.getItem(STORAGE_FAVORITES)
+    if (storedFavorites) {
+      try {
+        setFavorites(JSON.parse(storedFavorites))
+      } catch {
+        // ignore corrupt data
+      }
+    }
+
+    isInitialized.current = true
   }, [])
 
-  // Persist state to localStorage when it changes
+  // Persist section state
   useEffect(() => {
-    if (isInitialized && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, String(isCollapsed))
+    if (isInitialized.current && typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_SECTIONS, JSON.stringify(expandedSections))
     }
-  }, [isCollapsed, isInitialized])
+  }, [expandedSections])
 
-  const toggle = useCallback(() => {
-    setIsCollapsed((prev) => !prev)
+  // Persist favorites
+  useEffect(() => {
+    if (isInitialized.current && typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_FAVORITES, JSON.stringify(favorites))
+    }
+  }, [favorites])
+
+  const isSectionExpanded = useCallback(
+    (key: string) => expandedSections[key] ?? false,
+    [expandedSections]
+  )
+
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
-  const collapse = useCallback(() => {
-    setIsCollapsed(true)
+  const favoritesSet = useMemo(() => new Set(favorites), [favorites])
+
+  const addFavorite = useCallback((href: string) => {
+    setFavorites((prev) => {
+      if (prev.includes(href)) return prev
+      return [...prev, href].slice(0, 8) // max 8 favorites
+    })
   }, [])
 
-  const expand = useCallback(() => {
-    setIsCollapsed(false)
+  const removeFavorite = useCallback((href: string) => {
+    setFavorites((prev) => prev.filter((f) => f !== href))
   }, [])
 
-  const value = useMemo<SidebarContextValue>(
+  const isFavorite = useCallback(
+    (href: string) => favoritesSet.has(href),
+    [favoritesSet]
+  )
+
+  const value = useMemo<SidebarExtrasContextValue>(
     () => ({
-      isCollapsed,
-      toggle,
-      collapse,
-      expand,
+      isSectionExpanded,
+      toggleSection,
+      favorites,
+      addFavorite,
+      removeFavorite,
+      isFavorite,
     }),
-    [isCollapsed, toggle, collapse, expand]
+    [
+      isSectionExpanded,
+      toggleSection,
+      favorites,
+      addFavorite,
+      removeFavorite,
+      isFavorite,
+    ]
   )
 
   return (
-    <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
+    <SidebarExtrasContext.Provider value={value}>
+      {children}
+    </SidebarExtrasContext.Provider>
   )
 }
 
 /**
- * Hook to access sidebar context.
- *
- * @example
- * ```tsx
- * const { isCollapsed, toggle } = useSidebar()
- * ```
+ * Hook to access sidebar extras (favorites + section state).
  */
-export function useSidebar(): SidebarContextValue {
-  const context = useContext(SidebarContext)
+export function useSidebarExtras(): SidebarExtrasContextValue {
+  const context = useContext(SidebarExtrasContext)
 
   if (!context) {
-    throw new Error('useSidebar must be used within a SidebarProvider')
+    throw new Error('useSidebarExtras must be used within a SidebarExtrasProvider')
   }
 
   return context

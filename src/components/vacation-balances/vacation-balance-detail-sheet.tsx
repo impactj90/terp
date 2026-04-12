@@ -35,10 +35,10 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function getRemainingBadgeClass(remaining: number): string {
-  if (remaining > 5) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-  if (remaining >= 1) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-  return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+function getRemainingBadgeVariant(remaining: number): 'green' | 'yellow' | 'red' {
+  if (remaining > 5) return 'green'
+  if (remaining >= 1) return 'yellow'
+  return 'red'
 }
 
 function formatDecimal(value: number | undefined | null): string {
@@ -88,7 +88,7 @@ export function VacationBalanceDetailSheet({
         </SheetHeader>
 
         {balance ? (
-          <ScrollArea className="flex-1 -mx-4 px-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Entitlement Breakdown */}
               <div className="space-y-2">
@@ -172,7 +172,7 @@ export function VacationBalanceDetailSheet({
                   <DetailRow
                     label={t('labelRemainingDays')}
                     value={
-                      <Badge variant="outline" className={getRemainingBadgeClass(remaining)}>
+                      <Badge variant={getRemainingBadgeVariant(remaining)}>
                         {formatDecimal(remaining)}
                       </Badge>
                     }

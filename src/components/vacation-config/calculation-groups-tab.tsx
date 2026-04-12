@@ -192,12 +192,7 @@ export function CalculationGroupsTab() {
                     <TableCell>{item.name}</TableCell>
                     <TableCell>
                       <Badge
-                        variant="secondary"
-                        className={
-                          item.basis === 'calendar_year'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        }
+                        variant={item.basis === 'calendar_year' ? 'blue' : 'green'}
                       >
                         {item.basis === 'calendar_year'
                           ? t('calcGroup.basisCalendarYear')
@@ -215,6 +210,7 @@ export function CalculationGroupsTab() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Aktionen</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

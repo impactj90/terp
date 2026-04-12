@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest"
 import { Prisma } from "@/generated/prisma/client"
 import { createCallerFactory } from "@/trpc/init"
@@ -21,6 +22,7 @@ const USER_ID = "a0000000-0000-4000-a000-000000000001"
 const EMP_ID = "a0000000-0000-4000-a000-000000000500"
 const EMP_B_ID = "a0000000-0000-4000-a000-000000000501"
 const DEPT_ID = "a0000000-0000-4000-a000-000000000200"
+const LOC_ID = "a0000000-0000-4000-a000-000000000300"
 
 const createCaller = createCallerFactory(employeesRouter)
 
@@ -41,6 +43,7 @@ function makeEmployee(
     departmentId: string | null
     costCenterId: string | null
     employmentTypeId: string | null
+    locationId: string | null
     tariffId: string | null
     weeklyHours: Prisma.Decimal
     vacationDaysPerYear: Prisma.Decimal
@@ -92,6 +95,7 @@ function makeEmployee(
     departmentId: null,
     costCenterId: null,
     employmentTypeId: null,
+    locationId: null,
     tariffId: null,
     weeklyHours: new Prisma.Decimal(40.0),
     vacationDaysPerYear: new Prisma.Decimal(30.0),
@@ -198,6 +202,19 @@ describe("employees.list", () => {
     expect(findManyCall.where.departmentId).toBe(DEPT_ID)
   })
 
+  it("filters by locationId", async () => {
+    const mockPrisma = {
+      employee: {
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await caller.list({ locationId: LOC_ID })
+    const findManyCall = mockPrisma.employee.findMany.mock.calls[0]![0]
+    expect(findManyCall.where.locationId).toBe(LOC_ID)
+  })
+
   it("searches by name", async () => {
     const mockPrisma = {
       employee: {
@@ -285,6 +302,7 @@ describe("employees.getById", () => {
       department: { id: DEPT_ID, name: "Engineering", code: "ENG" },
       costCenter: null,
       employmentType: null,
+      location: null,
       contacts: [],
       cards: [],
     }
@@ -319,6 +337,7 @@ describe("employees.getById", () => {
       department: null,
       costCenter: null,
       employmentType: null,
+      location: null,
       contacts: [],
       cards: [],
     }
@@ -406,13 +425,14 @@ describe("employees.create", () => {
   })
 
   it("rejects duplicate personnelNumber", async () => {
-    const existing = makeEmployee()
+    const p2002 = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "5.0.0", meta: { target: ["personnel_number"] } }
+    )
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(existing), // personnelNumber check
-        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockRejectedValue(p2002),
       },
       $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
     }
@@ -428,14 +448,14 @@ describe("employees.create", () => {
   })
 
   it("rejects duplicate PIN", async () => {
-    const existingByPIN = makeEmployee()
+    const p2002 = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "5.0.0", meta: { target: ["pin"] } }
+    )
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(null) // personnelNumber check passes
-          .mockResolvedValueOnce(existingByPIN), // PIN check fails
-        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockRejectedValue(p2002),
       },
       $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
     }
@@ -443,11 +463,10 @@ describe("employees.create", () => {
     await expect(
       caller.create({
         personnelNumber: "EMP002",
-        pin: "1",
         firstName: "Jane",
         lastName: "Doe",
         entryDate: new Date("2025-01-01"),
-      })
+      } as any)
     ).rejects.toThrow("PIN already exists")
   })
 
@@ -492,6 +511,49 @@ describe("employees.create", () => {
     ).rejects.toThrow("Exit date cannot be before entry date")
   })
 
+  it("creates employee with locationId", async () => {
+    const created = makeEmployee({ locationId: LOC_ID })
+    const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue(created),
+      },
+      $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.create({
+      personnelNumber: "EMP001",
+      firstName: "John",
+      lastName: "Doe",
+      entryDate: new Date("2025-01-01"),
+      locationId: LOC_ID,
+    })
+    expect(result.locationId).toBe(LOC_ID)
+    const createCall = mockPrisma.employee.create.mock.calls[0]![0]
+    expect(createCall.data.locationId).toBe(LOC_ID)
+  })
+
+  it("creates employee without locationId (nullable)", async () => {
+    const created = makeEmployee()
+    const mockPrisma = {
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue(created),
+      },
+      $queryRaw: vi.fn().mockResolvedValue([{ max_pin: "1" }]),
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.create({
+      personnelNumber: "EMP001",
+      firstName: "John",
+      lastName: "Doe",
+      entryDate: new Date("2025-01-01"),
+    })
+    expect(result.locationId).toBeNull()
+    const createCall = mockPrisma.employee.create.mock.calls[0]![0]
+    expect(createCall.data.locationId).toBeNull()
+  })
+
   it("converts Decimal fields", async () => {
     const created = makeEmployee({
       weeklyHours: new Prisma.Decimal(35),
@@ -526,8 +588,10 @@ describe("employees.update", () => {
     const updated = makeEmployee({ firstName: "Jane" })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -535,18 +599,55 @@ describe("employees.update", () => {
     expect(result.firstName).toBe("Jane")
   })
 
+  it("updates locationId", async () => {
+    const existing = makeEmployee()
+    const updated = makeEmployee({ locationId: LOC_ID })
+    const mockPrisma = {
+      employee: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.update({ id: EMP_ID, locationId: LOC_ID })
+    expect(result.locationId).toBe(LOC_ID)
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
+    expect(updateCall.data.locationId).toBe(LOC_ID)
+  })
+
+  it("clears locationId with clear flag", async () => {
+    const existing = makeEmployee({ locationId: LOC_ID })
+    const updated = makeEmployee({ locationId: null })
+    const mockPrisma = {
+      employee: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await caller.update({ id: EMP_ID, clearLocationId: true })
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
+    expect(updateCall.data.locationId).toBeNull()
+  })
+
   it("clears nullable FK with clear flag", async () => {
     const existing = makeEmployee({ departmentId: DEPT_ID })
     const updated = makeEmployee({ departmentId: null })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: EMP_ID, clearDepartmentId: true })
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.departmentId).toBeNull()
   })
 
@@ -621,14 +722,16 @@ describe("employees.delete", () => {
     const existing = makeEmployee()
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue({ ...existing, isActive: false }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce({ ...existing, isActive: false }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: EMP_ID })
     expect(result.success).toBe(true)
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.isActive).toBe(false)
     expect(updateCall.data.exitDate).toBeDefined()
   })
@@ -638,15 +741,15 @@ describe("employees.delete", () => {
     const existing = makeEmployee({ exitDate: existingDate })
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi
-          .fn()
-          .mockResolvedValue({ ...existing, isActive: false }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce({ ...existing, isActive: false }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.delete({ id: EMP_ID })
-    const updateCall = mockPrisma.employee.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employee.updateMany.mock.calls[0]![0]
     expect(updateCall.data.exitDate).toEqual(existingDate)
   })
 
@@ -727,11 +830,8 @@ describe("employees.bulkAssignTariff", () => {
     const emp2 = makeEmployee({ id: EMP_B_ID })
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(emp1)
-          .mockResolvedValueOnce(emp2),
-        update: vi.fn().mockResolvedValue({}),
+        findMany: vi.fn().mockResolvedValue([emp1, emp2]),
+        updateMany: vi.fn().mockResolvedValue({ count: 2 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -751,11 +851,8 @@ describe("employees.bulkAssignTariff", () => {
     })
     const mockPrisma = {
       employee: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(emp1)
-          .mockResolvedValueOnce(emp2),
-        update: vi.fn().mockResolvedValue({}),
+        findMany: vi.fn().mockResolvedValue([emp1, emp2]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const ctx = createTestContext(mockPrisma)
@@ -775,8 +872,8 @@ describe("employees.bulkAssignTariff", () => {
   it("skips employees not found", async () => {
     const mockPrisma = {
       employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        update: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

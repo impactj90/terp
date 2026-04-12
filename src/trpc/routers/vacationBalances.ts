@@ -50,7 +50,7 @@ export const vacationBalancesRouter = createTRPCRouter({
           page: z.number().int().positive().optional(),
           pageSize: z.number().int().min(1).max(100).optional(),
           employeeId: z.string().optional(),
-          year: z.number().int().optional(),
+          year: z.number().int().min(2000).max(2100).optional(),
           departmentId: z.string().optional(),
         })
         .optional()
@@ -85,11 +85,13 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(vacationBalanceOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
-        return await service.getBalanceById(ctx.prisma, ctx.tenantId!, input.id)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.getBalanceById(ctx.prisma, ctx.tenantId!, input.id, dataScope)
       } catch (err) {
         handleServiceError(err)
       }
@@ -105,20 +107,28 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
         year: z.number().int().min(1900).max(2200),
-        entitlement: z.number().default(0),
-        carryover: z.number().default(0),
-        adjustments: z.number().default(0),
+        entitlement: z.number().min(-365).max(365).default(0),
+        carryover: z.number().min(-365).max(365).default(0),
+        adjustments: z.number().min(-365).max(365).default(0),
         carryoverExpiresAt: z.date().nullable().optional(),
       })
     )
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.createBalance(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.createBalance(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }
@@ -164,19 +174,27 @@ export const vacationBalancesRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(ABSENCES_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         id: z.string(),
-        entitlement: z.number().optional(),
-        carryover: z.number().optional(),
-        adjustments: z.number().optional(),
+        entitlement: z.number().min(-365).max(365).optional(),
+        carryover: z.number().min(-365).max(365).optional(),
+        adjustments: z.number().min(-365).max(365).optional(),
         carryoverExpiresAt: z.date().nullable().optional(),
       })
     )
     .output(vacationBalanceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.updateBalance(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        return await service.updateBalance(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          dataScope,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
       } catch (err) {
         handleServiceError(err)
       }

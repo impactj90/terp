@@ -61,6 +61,9 @@ export function useCreateContactKind() {
       queryClient.invalidateQueries({
         queryKey: trpc.contactKinds.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactKinds.getById.queryKey(),
+      })
     },
   })
 }
@@ -77,6 +80,9 @@ export function useUpdateContactKind() {
       queryClient.invalidateQueries({
         queryKey: trpc.contactKinds.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactKinds.getById.queryKey(),
+      })
     },
   })
 }
@@ -92,6 +98,9 @@ export function useDeleteContactKind() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.contactKinds.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.contactKinds.getById.queryKey(),
       })
     },
   })

@@ -1,17 +1,19 @@
 # Phase 1: Grundeinrichtung
 
-## UC-001: Mandant anlegen
+## UC-001: Mandant anlegen (kann geskipped werden bei den E2E tests, Mandant wird per Seed angelegt)
 
 **Seite:** `/admin/tenants`
 **Aktion:** Neuen Mandanten erstellen (Name, Slug, Adresse, Urlaubsbasis)
 
 **Erwartetes Ergebnis:**
+
 - Neuer Eintrag in der `tenants`-Tabelle mit allen Feldern
 - Mandant erscheint in der Mandanten-Liste in der Admin-UI
 - `is_active` ist standardmaessig `true`
 - `vacation_basis` ist gesetzt (calendar_year oder entry_date)
 
 **Pruefpunkte:**
+
 - [ ] Mandant in `/admin/tenants` sichtbar
 - [ ] Alle Pflichtfelder (Name, Slug, Adresse) korrekt gespeichert
 - [ ] Slug ist URL-tauglich (lowercase, keine Sonderzeichen)
@@ -25,12 +27,14 @@
 **Aktion:** Neue Benutzergruppe erstellen (z.B. "Administratoren") mit Berechtigungen
 
 **Erwartetes Ergebnis:**
+
 - Neuer Eintrag in `user_groups`-Tabelle
 - `permissions`-Spalte enthaelt JSON-Array der gewaehlten Berechtigungs-IDs
 - `is_admin`-Flag korrekt gesetzt
 - Gruppe erscheint in der Gruppenliste
 
 **Pruefpunkte:**
+
 - [ ] Gruppe in `/admin/user-groups` sichtbar
 - [ ] Berechtigungen korrekt gespeichert (ueber `/api/v1/permissions` vergleichen)
 - [ ] Wenn `is_admin = true`: Mitglieder bekommen automatisch `role = admin`
@@ -44,6 +48,7 @@
 **Aktion:** Neuen Benutzer mit Email, Passwort, Anzeigename und Benutzergruppe erstellen
 
 **Erwartetes Ergebnis:**
+
 - Neuer Eintrag in `users`-Tabelle
 - `tenant_id` wird automatisch aus dem `X-Tenant-ID`-Header gesetzt (nicht NULL!)
 - `password_hash` enthaelt bcrypt-Hash (beginnt mit `$2a$`)
@@ -52,6 +57,7 @@
 - `is_active = true`, `is_locked = false` standardmaessig
 
 **Pruefpunkte:**
+
 - [ ] Benutzer in `/admin/users` sichtbar
 - [ ] `tenant_id` ist NICHT NULL in der DB
 - [ ] `password_hash` ist NICHT NULL in der DB
@@ -66,6 +72,7 @@
 **Aktion:** Ausloggen, dann mit Email/Passwort des neuen Benutzers anmelden
 
 **Erwartetes Ergebnis:**
+
 - Nach Logout: `auth_token` und `tenant_id` aus localStorage entfernt
 - Login-Request geht OHNE `X-Tenant-ID`-Header (da nach Logout geloescht)
 - Backend findet User per globalem Email-Lookup (`FindByEmail`)
@@ -74,6 +81,7 @@
 - Redirect zum Dashboard
 
 **Pruefpunkte:**
+
 - [ ] Nach Logout: localStorage hat kein `auth_token` und kein `tenant_id`
 - [ ] Login mit korrektem Passwort → Redirect zu `/dashboard`
 - [ ] Login mit falschem Passwort → Fehlermeldung, kein Redirect
@@ -89,11 +97,13 @@
 **Aktion:** Feiertage fuer ein Jahr generieren (z.B. 2026, Bundesland/Region waehlen)
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in `holidays`-Tabelle fuer das gewaehlte Jahr
 - Jeder Feiertag hat `tenant_id`, `holiday_date`, `name`, `category`
 - Gesetzliche Feiertage (Neujahr, Ostern, Weihnachten etc.) sind enthalten
 
 **Pruefpunkte:**
+
 - [ ] Feiertage in `/admin/holidays` sichtbar, nach Datum sortiert
 - [ ] Korrekte Anzahl Feiertage fuer die Region
 - [ ] Feiertage beeinflussen spaeter die Tagesberechnung (kein Soll an Feiertagen)
@@ -107,11 +117,13 @@
 **Aktion:** Abwesenheitsarten erstellen (Urlaub, Krank, Sonderurlaub, Fortbildung etc.)
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in `absence_types`-Tabelle
 - Jede Art hat `code`, `name`, `category`, `portion`, `deducts_vacation`, `color`
 - `tenant_id` ist gesetzt
 
 **Pruefpunkte:**
+
 - [ ] Abwesenheitsarten in `/admin/absence-types` sichtbar
 - [ ] Arten sind in der Abwesenheits-Beantragung (`/absences`) als Dropdown waehlbar
 - [ ] `deducts_vacation = true` bei Urlaub → spaeter wird Urlaubssaldo reduziert
@@ -125,11 +137,13 @@
 **Aktion:** Buchungsarten pruefen (Kommen, Gehen sind System-Buchungsarten), ggf. eigene anlegen (Dienstgang, Pause etc.)
 
 **Erwartetes Ergebnis:**
+
 - System-Buchungsarten (`is_system = true`) sind vorhanden und nicht loeschbar
 - Eigene Buchungsarten haben `tenant_id`, `direction` (in/out), `category`
 - Buchungsarten haben einen `code` (eindeutig) und `name`
 
 **Pruefpunkte:**
+
 - [ ] System-Buchungsarten (Kommen/Gehen) sind vorhanden
 - [ ] Eigene Buchungsarten erscheinen in der Buchungs-Erstellung
 - [ ] `direction` bestimmt ob Kommen (in) oder Gehen (out)
@@ -143,10 +157,12 @@
 **Aktion:** Kontaktarten erstellen (Privat-Email, Geschaefts-Telefon, Notfallkontakt etc.)
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in `contact_kinds`-Tabelle
 - Kontaktarten sind spaeter bei Mitarbeiter-Kontakten waehlbar
 
 **Pruefpunkte:**
+
 - [ ] Kontaktarten in `/admin/contact-types` sichtbar
 - [ ] Arten erscheinen in der Mitarbeiter-Detail-Seite beim Kontakt-Hinzufuegen
 
@@ -158,10 +174,12 @@
 **Aktion:** Beschaeftigungsarten erstellen (Vollzeit, Teilzeit, Minijob, Werkstudent etc.)
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in der Datenbank
 - Beschaeftigungsarten sind bei der Mitarbeiter-Erstellung waehlbar
 
 **Pruefpunkte:**
+
 - [ ] Beschaeftigungsarten in `/admin/employment-types` sichtbar
 - [ ] Arten erscheinen als Auswahl im Mitarbeiter-Formular
 
@@ -173,10 +191,12 @@
 **Aktion:** Kostenstellen erstellen (Code + Name, z.B. "KST-100 Verwaltung")
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in `cost_centers`-Tabelle
 - Kostenstellen sind bei Mitarbeitern und Auftraegen zuweisbar
 
 **Pruefpunkte:**
+
 - [ ] Kostenstellen in `/admin/cost-centers` sichtbar
 - [ ] Code ist eindeutig
 
@@ -188,8 +208,10 @@
 **Aktion:** Standorte erstellen (Name, Adresse)
 
 **Erwartetes Ergebnis:**
+
 - Eintraege in `locations`-Tabelle
 - Standorte sind bei Mitarbeitern zuweisbar
 
 **Pruefpunkte:**
+
 - [ ] Standorte in `/admin/locations` sichtbar

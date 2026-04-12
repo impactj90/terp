@@ -14,6 +14,7 @@
 
 import type { PrismaClient } from "@/generated/prisma/client"
 import { executeAction } from "@/lib/services/macros-service"
+import * as macrosRepo from "@/lib/services/macros-repository"
 
 // --- Exported Types ---
 
@@ -60,12 +61,17 @@ export class MacroExecutor {
       include: { assignments: true },
     })
 
+    const todayStr = date.toISOString().slice(0, 10)
+
+    const successfulWeeklyIds: string[] = []
     for (const macro of weeklyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
+        if (assignment.lastExecutedDate?.toISOString().slice(0, 10) === todayStr) continue
         if (assignment.executionDay === weekday) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
+            successfulWeeklyIds.push(assignment.id)
             executed++
           } catch (err) {
             failed++
@@ -78,6 +84,12 @@ export class MacroExecutor {
         }
       }
     }
+    if (successfulWeeklyIds.length > 0) {
+      await this.prisma.macroAssignment.updateMany({
+        where: { id: { in: successfulWeeklyIds }, tenantId },
+        data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+      })
+    }
 
     // 2. Execute monthly macros
     const monthlyMacros = await this.prisma.macro.findMany({
@@ -85,9 +97,11 @@ export class MacroExecutor {
       include: { assignments: true },
     })
 
+    const successfulMonthlyIds: string[] = []
     for (const macro of monthlyMacros) {
       for (const assignment of macro.assignments) {
         if (!assignment.isActive) continue
+        if (assignment.lastExecutedDate?.toISOString().slice(0, 10) === todayStr) continue
         // Monthly day fallback: if configured day exceeds month length, use last day
         let effectiveDay = assignment.executionDay
         if (effectiveDay > lastDayOfMonth) {
@@ -96,6 +110,7 @@ export class MacroExecutor {
         if (effectiveDay === dayOfMonth) {
           try {
             await this.executeSingleMacro(macro, "scheduled", assignment.id)
+            successfulMonthlyIds.push(assignment.id)
             executed++
           } catch (err) {
             failed++
@@ -107,6 +122,12 @@ export class MacroExecutor {
           }
         }
       }
+    }
+    if (successfulMonthlyIds.length > 0) {
+      await this.prisma.macroAssignment.updateMany({
+        where: { id: { in: successfulMonthlyIds }, tenantId },
+        data: { lastExecutedAt: new Date(), lastExecutedDate: date },
+      })
     }
 
     return { executed, failed, errors }
@@ -142,24 +163,33 @@ export class MacroExecutor {
       },
     })
 
-    // 2. Run the action
-    const actionResult = await executeAction({
-      id: macro.id,
-      name: macro.name,
-      macroType: macro.macroType,
-      actionType: macro.actionType,
-      actionParams: macro.actionParams,
-    })
+    // 2. Run the action (with try/finally to ensure execution record is always updated)
+    let actionResult
+    try {
+      actionResult = await executeAction({
+        id: macro.id,
+        name: macro.name,
+        macroType: macro.macroType,
+        actionType: macro.actionType,
+        actionParams: macro.actionParams,
+      })
+    } catch (err) {
+      // Unexpected throw — mark execution as failed so it doesn't stay "running"
+      await macrosRepo.updateExecution(this.prisma, macro.tenantId, execution.id, {
+        completedAt: new Date(),
+        status: "failed",
+        result: {},
+        errorMessage: String(err),
+      })
+      throw err
+    }
 
     // 3. Update execution record
-    await this.prisma.macroExecution.update({
-      where: { id: execution.id },
-      data: {
-        completedAt: new Date(),
-        status: actionResult.error ? "failed" : "completed",
-        result: (actionResult.result as object) ?? {},
-        errorMessage: actionResult.error,
-      },
+    await macrosRepo.updateExecution(this.prisma, macro.tenantId, execution.id, {
+      completedAt: new Date(),
+      status: actionResult.error ? "failed" : "completed",
+      result: (actionResult.result as object) ?? {},
+      errorMessage: actionResult.error ?? null,
     })
 
     // 4. If action returned an error, throw so caller counts it as failed

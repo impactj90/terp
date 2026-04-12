@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the BookingReason model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -62,17 +63,16 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.bookingReason.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.bookingReason, { id, tenantId }, data, { entity: "BookingReason" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.bookingReason.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.bookingReason.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

@@ -220,7 +220,8 @@ describe("reports.generate", () => {
     const mockPrisma = {
       report: {
         create: vi.fn().mockResolvedValue(pendingReport),
-        update: vi.fn()
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn()
           .mockResolvedValueOnce(generatingReport)
           .mockResolvedValueOnce(completedReport),
       },
@@ -273,7 +274,8 @@ describe("reports.generate", () => {
     const mockPrisma = {
       report: {
         create: vi.fn().mockResolvedValue(pendingReport),
-        update: vi.fn()
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn()
           .mockResolvedValueOnce(generatingReport)
           .mockResolvedValueOnce(completedReport),
       },
@@ -301,7 +303,8 @@ describe("reports.generate", () => {
     const mockPrisma = {
       report: {
         create: vi.fn().mockResolvedValue(pendingReport),
-        update: vi.fn()
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn()
           .mockResolvedValueOnce(generatingReport)
           .mockResolvedValueOnce(completedReport),
       },

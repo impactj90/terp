@@ -29,6 +29,11 @@ const CATEGORY_DEFINITIONS = [
   { id: 'bookingOverview', labelKey: 'categoryBookingOverview', resources: ['booking_overview'] },
   { id: 'absences', labelKey: 'categoryAbsences', resources: ['absences', 'absence_types'] },
   {
+    id: 'orders',
+    labelKey: 'categoryOrders',
+    resources: ['orders', 'activities', 'order_assignments', 'order_bookings'],
+  },
+  {
     id: 'configuration',
     labelKey: 'categoryConfiguration',
     resources: [
@@ -40,12 +45,67 @@ const CATEGORY_DEFINITIONS = [
       'departments',
       'teams',
       'accounts',
+      'time_plans',
+      'locations',
+      'groups',
     ],
+  },
+  {
+    id: 'advancedConfig',
+    labelKey: 'categoryAdvancedConfig',
+    resources: [
+      'schedules',
+      'contact_management',
+      'terminal_bookings',
+      'access_control',
+      'vehicle_data',
+      'travel_allowance',
+      'shift_planning',
+      'macros',
+      'cost_centers',
+      'employment_types',
+      'corrections',
+      'monthly_evaluations',
+      'vacation_config',
+    ],
+  },
+  { id: 'payroll', labelKey: 'categoryPayroll', resources: ['payroll'] },
+  {
+    id: 'crm',
+    labelKey: 'categoryCRM',
+    resources: ['crm_addresses', 'crm_correspondence', 'crm_inquiries', 'crm_tasks'],
+  },
+  {
+    id: 'billing',
+    labelKey: 'categoryBilling',
+    resources: [
+      'billing_documents',
+      'billing_service_cases',
+      'billing_payments',
+      'billing_price_lists',
+      'billing_recurring',
+      'documents',
+    ],
+  },
+  {
+    id: 'inbound_invoices',
+    labelKey: 'categoryInboundInvoices',
+    resources: ['inbound_invoices', 'email_imap'],
+  },
+  {
+    id: 'warehouse',
+    labelKey: 'categoryWarehouse',
+    resources: ['wh_articles', 'wh_article_groups', 'wh_purchase_orders', 'wh_stock', 'wh_supplier_invoices', 'wh_corrections'],
+  },
+  {
+    id: 'hr',
+    labelKey: 'categoryHR',
+    resources: ['hr_personnel_file', 'hr_personnel_file_categories'],
   },
   {
     id: 'admin',
     labelKey: 'categoryAdmin',
-    resources: ['users', 'tenants', 'settings', 'notifications'],
+    resources: ['users', 'tenants', 'settings', 'notifications', 'email_templates', 'email_smtp'],
   },
   { id: 'reports', labelKey: 'categoryReports', resources: ['reports'] },
 ] as const
@@ -158,7 +218,20 @@ export function UserGroupFormSheet({
       tenants: t('resourceTenants'),
       settings: t('resourceSettings'),
       notifications: t('resourceNotifications'),
+      documents: t('resourceDocuments'),
+      email_templates: t('resourceEmailTemplates'),
+      email_smtp: t('resourceEmailSmtp'),
       reports: t('resourceReports'),
+      wh_articles: t('resourceWhArticles'),
+      wh_article_groups: t('resourceWhArticleGroups'),
+      wh_purchase_orders: t('resourceWhPurchaseOrders'),
+      wh_stock: t('resourceWhStock'),
+      wh_supplier_invoices: t('resourceWhSupplierInvoices'),
+      wh_corrections: t('resourceWhCorrections'),
+      inbound_invoices: t('resourceInboundInvoices'),
+      email_imap: t('resourceEmailImap'),
+      hr_personnel_file: t('resourceHrPersonnelFile'),
+      hr_personnel_file_categories: t('resourceHrPersonnelFileCategories'),
     }),
     [t]
   )
@@ -178,6 +251,16 @@ export function UserGroupFormSheet({
       calculate_day: t('actionCalculateDay'),
       calculate_month: t('actionCalculateMonth'),
       delete_bookings: t('actionDeleteBookings'),
+      view: t('actionView'),
+      edit: t('actionEdit'),
+      order: t('actionOrder'),
+      pay: t('actionPay'),
+      run: t('actionRun'),
+      upload: t('actionUpload'),
+      export: t('actionExport'),
+      upload_image: t('actionUploadImage'),
+      delete_image: t('actionDeleteImage'),
+      view_confidential: t('actionViewConfidential'),
     }),
     [t]
   )
@@ -315,7 +398,7 @@ export function UserGroupFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-4 px-4">
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {isSystem && (
               <Alert>

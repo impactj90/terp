@@ -6,6 +6,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./employee-contacts-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -91,7 +93,8 @@ export async function createContact(
     label?: string
     isPrimary?: boolean
     contactKindId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   const employee = await repo.findEmployeeForTenant(prisma, tenantId, input.employeeId)
   if (!employee) {
@@ -117,6 +120,20 @@ export async function createContact(
     contactKindId: input.contactKindId ?? null,
   })
 
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employee_contact",
+      entityId: contact.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return mapContactToOutput(contact)
 }
 
@@ -128,9 +145,10 @@ export async function createContact(
 export async function deleteContact(
   prisma: PrismaClient,
   tenantId: string,
-  contactId: string
+  contactId: string,
+  audit?: AuditContext
 ) {
-  const contact = await repo.findContactWithEmployee(prisma, contactId)
+  const contact = await repo.findContactWithEmployee(prisma, tenantId, contactId)
   if (!contact) {
     throw new ContactNotFoundError()
   }
@@ -139,6 +157,21 @@ export async function deleteContact(
     throw new ContactNotFoundError()
   }
 
-  await repo.deleteContact(prisma, contactId)
+  await repo.deleteContact(prisma, tenantId, contactId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employee_contact",
+      entityId: contactId,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return { success: true }
 }

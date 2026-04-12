@@ -90,6 +90,9 @@ export function useCreateEmployeeMessage() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeMessages.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeMessages.listForEmployee.queryKey(),
+      })
     },
   })
 }
@@ -111,6 +114,12 @@ export function useSendEmployeeMessage() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeMessages.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeMessages.listForEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeMessages.getById.queryKey(),
       })
     },
   })

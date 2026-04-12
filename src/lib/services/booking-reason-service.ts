@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./booking-reason-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const TRACKED_FIELDS = ["label", "code", "isActive"]
 
 // --- Constants ---
 
@@ -97,7 +103,8 @@ export async function create(
     referenceTime?: string
     offsetMinutes?: number
     adjustmentBookingTypeId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -131,7 +138,7 @@ export async function create(
   }
 
   // Create booking reason -- always isActive: true
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     bookingTypeId: input.bookingTypeId,
     code,
@@ -142,6 +149,16 @@ export async function create(
     offsetMinutes: input.offsetMinutes ?? null,
     adjustmentBookingTypeId: input.adjustmentBookingTypeId || null,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "booking_reason",
+      entityId: created.id, entityName: created.label ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -156,7 +173,8 @@ export async function update(
     offsetMinutes?: number | null
     adjustmentBookingTypeId?: string | null
     clearAdjustment?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify reason exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -218,13 +236,25 @@ export async function update(
       : existing.offsetMinutes
   validateAdjustmentFields(finalRefTime, finalOffset)
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "booking_reason",
+      entityId: input.id, entityName: updated.label ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify reason exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -233,5 +263,13 @@ export async function remove(
   }
 
   // Hard delete
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "booking_reason",
+      entityId: id, entityName: existing.label ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

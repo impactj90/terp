@@ -77,6 +77,9 @@ export function useCreateOrderAssignment() {
         queryKey: trpc.orderAssignments.list.queryKey(),
       })
       queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
         queryKey: trpc.orderAssignments.byOrder.queryKey(),
       })
       queryClient.invalidateQueries({
@@ -96,6 +99,9 @@ export function useUpdateOrderAssignment() {
         queryKey: trpc.orderAssignments.list.queryKey(),
       })
       queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
         queryKey: trpc.orderAssignments.byOrder.queryKey(),
       })
       queryClient.invalidateQueries({
@@ -113,6 +119,9 @@ export function useDeleteOrderAssignment() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.orderAssignments.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.orderAssignments.getById.queryKey(),
       })
       queryClient.invalidateQueries({
         queryKey: trpc.orderAssignments.byOrder.queryKey(),

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { Clock, Edit, Mail, Phone, User, UserX } from 'lucide-react'
+import { AlertCircle, Clock, Edit, Mail, Phone, RefreshCw, User, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -16,6 +16,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusBadge } from './status-badge'
 import { useEmployee } from '@/hooks'
 
@@ -71,13 +73,14 @@ export function EmployeeDetailSheet({
   onDelete,
 }: EmployeeDetailSheetProps) {
   const t = useTranslations('adminEmployees')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   // Fetch employee details
-  const { data: employee, isLoading, isFetching } = useEmployee(employeeId ?? '', open && !!employeeId)
+  const { data: employee, isLoading, isFetching, error, refetch } = useEmployee(employeeId ?? '', open && !!employeeId)
 
   // Show skeleton while loading or when we have an ID but data hasn't loaded yet
-  const showSkeleton = isLoading || isFetching || (employeeId && !employee)
+  const showSkeleton = !error && (isLoading || isFetching || (employeeId && !employee))
 
   const formatDate = (date: string | undefined | null) => {
     if (!date) return '-'
@@ -104,13 +107,33 @@ export function EmployeeDetailSheet({
   }
 
   const initials = employee
-    ? `${employee.firstName[0]}${employee.lastName[0]}`
+    ? `${employee.firstName?.[0] ?? '?'}${employee.lastName?.[0] ?? '?'}`
     : '??'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
-        {showSkeleton ? (
+        {error ? (
+          <>
+            <SheetHeader>
+              <SheetTitle>{t('employeeDetails')}</SheetTitle>
+              <SheetDescription>{t('employeeInformation')}</SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
+              <AlertCircle className="h-12 w-12 text-destructive opacity-50" />
+              <p className="mt-4 text-destructive">{tc('failedToLoad')}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetch()}
+                className="mt-2"
+              >
+                <RefreshCw className="mr-1 h-4 w-4" />
+                {tc('retry')}
+              </Button>
+            </div>
+          </>
+        ) : showSkeleton ? (
           <EmployeeDetailSkeleton />
         ) : employee ? (
           <>
@@ -136,7 +159,7 @@ export function EmployeeDetailSheet({
               </div>
             </SheetHeader>
 
-            <ScrollArea className="flex-1 -mx-4 px-4">
+            <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="py-4 space-y-1">
                 {/* Contact Information */}
                 <SectionHeader>{t('sectionContact')}</SectionHeader>
@@ -171,7 +194,7 @@ export function EmployeeDetailSheet({
                 />
                 <DetailRow
                   label={t('labelTariff')}
-                  value={employee.tariffId || undefined}
+                  value={employee.tariff?.name}
                 />
                 <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate as unknown as string)} />
                 <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate as unknown as string)} />
@@ -203,15 +226,9 @@ export function EmployeeDetailSheet({
                               {card.cardType}
                             </p>
                           </div>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              card.isActive
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                            }`}
-                          >
+                          <Badge variant={card.isActive ? 'green' : 'gray'}>
                             {card.isActive ? t('statusActive') : t('statusInactive')}
-                          </span>
+                          </Badge>
                         </div>
                       ))}
                     </div>
@@ -235,9 +252,9 @@ export function EmployeeDetailSheet({
                             </p>
                           </div>
                           {contact.isPrimary && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <Badge variant="blue">
                               {t('primary')}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       ))}
@@ -256,9 +273,14 @@ export function EmployeeDetailSheet({
                 <Edit className="mr-2 h-4 w-4" />
                 {t('edit')}
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleDelete}>
-                <UserX className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleDelete}>
+                    <UserX className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tc('delete')}</TooltipContent>
+              </Tooltip>
             </SheetFooter>
           </>
         ) : (

@@ -5,6 +5,7 @@
  * and MacroExecution models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include constants ---
 
@@ -70,19 +71,18 @@ export async function createMacro(
 
 export async function updateMacro(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.macro.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.macro, { id, tenantId }, data, { entity: "Macro" })
 }
 
-export async function deleteMacro(prisma: PrismaClient, id: string) {
-  return prisma.macro.delete({
-    where: { id },
+export async function deleteMacro(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.macro.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- MacroAssignment ---
@@ -123,22 +123,22 @@ export async function createAssignment(
 
 export async function updateAssignment(
   prisma: PrismaClient,
+  tenantId: string,
   assignmentId: string,
   data: Record<string, unknown>
 ) {
-  return prisma.macroAssignment.update({
-    where: { id: assignmentId },
-    data,
-  })
+  return tenantScopedUpdate(prisma.macroAssignment, { id: assignmentId, tenantId }, data, { entity: "MacroAssignment" })
 }
 
 export async function deleteAssignment(
   prisma: PrismaClient,
+  tenantId: string,
   assignmentId: string
 ) {
-  return prisma.macroAssignment.delete({
-    where: { id: assignmentId },
+  const { count } = await prisma.macroAssignment.deleteMany({
+    where: { id: assignmentId, macro: { tenantId } },
   })
+  return count > 0
 }
 
 // --- MacroExecution ---
@@ -181,6 +181,7 @@ export async function createExecution(
 
 export async function updateExecution(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: {
     completedAt: Date
@@ -189,8 +190,5 @@ export async function updateExecution(
     errorMessage: string | null
   }
 ) {
-  return prisma.macroExecution.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.macroExecution, { id, tenantId }, data as Record<string, unknown>, { entity: "MacroExecution" })
 }

@@ -6,6 +6,8 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./terminal-booking-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
 
 // --- Error Classes ---
 
@@ -66,7 +68,8 @@ export async function importBookings(
       rawTimestamp: string
       rawBookingCode: string
     }>
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate input
   const batchReference = input.batchReference.trim()
@@ -78,83 +81,113 @@ export async function importBookings(
     throw new TerminalBookingValidationError("Terminal ID is required")
   }
 
-  // Idempotency check
-  const existing = await repo.findBatchByReference(
-    prisma,
-    tenantId,
-    batchReference
-  )
-  if (existing) {
+  // Idempotency check + batch create in a transaction to prevent duplicates
+  const txResult = await prisma.$transaction(async (tx) => {
+    const existing = await repo.findBatchByReference(
+      tx as PrismaClient,
+      tenantId,
+      batchReference
+    )
+    if (existing) {
+      return {
+        batch: existing,
+        wasDuplicate: true as const,
+        message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
+      }
+    }
+
+    const batch = await repo.createImportBatch(tx as PrismaClient, {
+      tenantId,
+      batchReference,
+      source: "terminal",
+      terminalId,
+      status: "processing",
+      recordsTotal: input.bookings.length,
+      startedAt: new Date(),
+    })
+
+    return { batch, wasDuplicate: false as const }
+  })
+
+  if (txResult.wasDuplicate) {
     return {
-      batch: existing,
+      batch: txResult.batch,
       wasDuplicate: true,
-      message: `Batch '${batchReference}' already imported (${existing.recordsTotal} records)`,
+      message: txResult.message,
     }
   }
 
-  // Create import batch
-  const batch = await repo.createImportBatch(prisma, {
-    tenantId,
-    batchReference,
-    source: "terminal",
-    terminalId,
-    status: "processing",
-    recordsTotal: input.bookings.length,
-    startedAt: new Date(),
-  })
+  const batch = txResult.batch
 
   try {
-    // Build raw booking records
-    const rawBookingData = []
-    for (const b of input.bookings) {
+    // Pre-fetch lookup maps to avoid N+1
+    const uniquePins = [...new Set(input.bookings.map((b) => b.employeePin))]
+    const uniqueCodes = [...new Set(input.bookings.map((b) => b.rawBookingCode))]
+
+    const [empsByPin, btsByCode] = await Promise.all([
+      prisma.employee.findMany({
+        where: { tenantId, pin: { in: uniquePins } },
+        select: { id: true, pin: true },
+      }),
+      prisma.bookingType.findMany({
+        where: {
+          OR: [
+            { tenantId, code: { in: uniqueCodes } },
+            { tenantId: null, code: { in: uniqueCodes } },
+          ],
+        },
+        select: { id: true, code: true },
+      }),
+    ])
+    const pinMap = new Map(empsByPin.map((e) => [e.pin, e.id]))
+    const codeMap = new Map(btsByCode.map((bt) => [bt.code, bt.id]))
+
+    // Build raw booking records using pre-fetched maps
+    const rawBookingData = input.bookings.map((b) => {
       const rawTimestamp = new Date(b.rawTimestamp)
       const bookingDate = new Date(
         rawTimestamp.getFullYear(),
         rawTimestamp.getMonth(),
         rawTimestamp.getDate()
       )
-
-      // Resolve employee by PIN (graceful)
-      let employeeId: string | null = null
-      const emp = await repo.findEmployeeByPin(prisma, tenantId, b.employeePin)
-      if (emp) {
-        employeeId = emp.id
-      }
-
-      // Resolve booking type by code (graceful)
-      let bookingTypeId: string | null = null
-      const bt = await repo.findBookingTypeByCode(
-        prisma,
-        tenantId,
-        b.rawBookingCode
-      )
-      if (bt) {
-        bookingTypeId = bt.id
-      }
-
-      rawBookingData.push({
+      return {
         tenantId,
         importBatchId: batch.id,
         terminalId,
         employeePin: b.employeePin,
-        employeeId,
+        employeeId: pinMap.get(b.employeePin) ?? null,
         rawTimestamp,
         rawBookingCode: b.rawBookingCode,
         bookingDate,
-        bookingTypeId,
+        bookingTypeId: codeMap.get(b.rawBookingCode) ?? null,
         status: "pending",
-      })
-    }
+      }
+    })
 
     // Batch insert raw bookings
     await repo.createManyRawBookings(prisma, rawBookingData)
 
     // Mark batch as completed
-    const updatedBatch = await repo.updateImportBatch(prisma, batch.id, {
+    const updatedBatch = await repo.updateImportBatch(prisma, tenantId, batch.id, {
       status: "completed",
       recordsImported: rawBookingData.length,
       completedAt: new Date(),
     })
+
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "import",
+        entityType: "terminal_import_batch",
+        entityId: updatedBatch.id,
+        entityName: batchReference,
+        changes: null,
+        metadata: { recordCount: rawBookingData.length, terminalId, batchReference },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
 
     return {
       batch: updatedBatch,
@@ -163,7 +196,7 @@ export async function importBookings(
     }
   } catch (error) {
     // Mark batch as failed
-    await repo.updateImportBatch(prisma, batch.id, {
+    await repo.updateImportBatch(prisma, tenantId, batch.id, {
       status: "failed",
       errorMessage:
         error instanceof Error ? error.message : "Unknown error",

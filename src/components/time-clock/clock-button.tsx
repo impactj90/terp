@@ -79,16 +79,19 @@ export function ClockButton({
       aria-label={`${label}. ${t('currentStatus', { status: status.replace(/_/g, ' ') })}`}
       aria-busy={isLoading}
       className={cn(
-        'h-32 w-32 rounded-full text-lg font-semibold shadow-lg',
+        // Mobile: full-width, tall touch target
+        'w-full min-h-[64px] rounded-2xl text-lg font-semibold shadow-lg',
+        // Desktop: circular button
+        'sm:h-32 sm:w-32 sm:rounded-full',
         'transition-all duration-200',
-        'hover:scale-105 active:scale-95',
+        'hover:scale-[1.02] active:scale-[0.98] sm:hover:scale-105 sm:active:scale-95',
         'focus:ring-4 focus:ring-ring focus:ring-offset-2',
         config.variant === 'default' && 'bg-success hover:bg-success/90',
         className
       )}
     >
-      <div className="flex flex-col items-center gap-2">
-        <Icon className="h-8 w-8" />
+      <div className="flex items-center justify-center gap-3 sm:flex-col sm:gap-2">
+        <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
         <span>{isLoading ? tc('loading') : label}</span>
       </div>
     </Button>

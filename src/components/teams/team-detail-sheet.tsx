@@ -31,6 +31,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TeamStatusBadge } from './team-status-badge'
 import { MemberRoleBadge } from './member-role-badge'
 import { useBulkAssignTariff, useTariffs, useTeam } from '@/hooks'
@@ -90,6 +91,7 @@ export function TeamDetailSheet({
   onManageMembers,
 }: TeamDetailSheetProps) {
   const t = useTranslations('adminTeams')
+  const tc = useTranslations('common')
 
   // Fetch team details with members
   const { data: team, isLoading, isFetching } = useTeam(teamId ?? '', open && !!teamId)
@@ -184,7 +186,7 @@ export function TeamDetailSheet({
               </div>
             </SheetHeader>
 
-            <ScrollArea className="flex-1 -mx-4 px-4">
+            <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="py-4 space-y-1">
                 {/* Organization */}
                 <SectionHeader>{t('sectionOrganization')}</SectionHeader>
@@ -283,9 +285,14 @@ export function TeamDetailSheet({
                 <Edit className="mr-2 h-4 w-4" />
                 {t('edit')}
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleDelete}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{tc('delete')}</TooltipContent>
+              </Tooltip>
             </SheetFooter>
 
             <Dialog open={assignOpen} onOpenChange={setAssignOpen}>

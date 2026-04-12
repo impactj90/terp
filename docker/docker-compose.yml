@@ -14,6 +14,9 @@ services:
       context: ..
       dockerfile: docker/web.dev.Dockerfile
     container_name: terp-web
+    env_file:
+      - ../.env
+      - ../.env.local
     ports:
       - "3001:3001"
     environment:
@@ -26,11 +29,22 @@ services:
       # NEXT_PUBLIC_ = browser-facing (localhost), SUPABASE_URL = server-side (container→host)
       SUPABASE_URL: http://host.docker.internal:54321
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ..:/app
       - /app/node_modules
       - /app/.next
+
+  greenmail:
+    image: greenmail/standalone:latest
+    container_name: terp-greenmail
+    ports:
+      - "3025:3025"   # SMTP
+      - "3143:3143"   # IMAP
+      - "3993:3993"   # IMAPS
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.users=test:test@test.local
+        -Dgreenmail.hostname=0.0.0.0

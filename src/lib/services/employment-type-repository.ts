@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the EmploymentType model.
  */
 import type { PrismaClient, Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -61,26 +62,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employmentType.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.employmentType, { id, tenantId }, data, { entity: "EmploymentType" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employmentType.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employmentType.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   employmentTypeId: string
 ) {
   return prisma.employee.count({
-    where: { employmentTypeId },
+    where: { tenantId, employmentTypeId },
   })
 }

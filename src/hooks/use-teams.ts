@@ -85,6 +85,34 @@ export function useTeamMembers(teamId: string, enabled = true) {
   )
 }
 
+/**
+ * Hook to fetch teams visible to the current user (scoped by membership/leadership).
+ * Admins see all teams, non-admins see only their own.
+ */
+export function useMyTeams(options: { isActive?: boolean; enabled?: boolean } = {}) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.teams.myTeams.queryOptions(
+      { isActive: options.isActive },
+      { enabled: options.enabled ?? true }
+    )
+  )
+}
+
+/**
+ * Hook to fetch a single team with membership check.
+ * Non-admins must be a member or leader of the team.
+ */
+export function useMyTeam(id: string, enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.teams.myTeamById.queryOptions(
+      { id, includeMembers: true },
+      { enabled: enabled && !!id }
+    )
+  )
+}
+
 // ==================== Mutation Hooks ====================
 
 /**
@@ -104,6 +132,9 @@ export function useCreateTeam() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
       })
     },
   })
@@ -127,6 +158,15 @@ export function useUpdateTeam() {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeamById.queryKey(),
+      })
     },
   })
 }
@@ -148,6 +188,15 @@ export function useDeleteTeam() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeamById.queryKey(),
       })
     },
   })
@@ -177,6 +226,12 @@ export function useAddTeamMember() {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.getMembers.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeamById.queryKey(),
+      })
     },
   })
 }
@@ -205,6 +260,12 @@ export function useUpdateTeamMember() {
       queryClient.invalidateQueries({
         queryKey: trpc.teams.getMembers.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeamById.queryKey(),
+      })
     },
   })
 }
@@ -232,6 +293,12 @@ export function useRemoveTeamMember() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.teams.getMembers.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeams.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.teams.myTeamById.queryKey(),
       })
     },
   })

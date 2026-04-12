@@ -22,9 +22,14 @@ import {
   HolidayGenerateDialog,
   HolidayCopyDialog,
 } from '@/components/holidays'
-import type { components } from '@/types/legacy-api-types'
-
-type Holiday = components['schemas']['Holiday']
+interface Holiday {
+  id: string
+  holidayDate: Date | string
+  name: string
+  holidayCategory: number
+  appliesToAll: boolean
+  departmentId: string | null
+}
 
 export default function HolidaysPage() {
   const router = useRouter()
@@ -210,7 +215,7 @@ export default function HolidaysPage() {
             ) : (
               <HolidayYearCalendar
                 year={year}
-                holidays={filteredHolidays as unknown as Holiday[]}
+                holidays={filteredHolidays}
                 onHolidayClick={handleHolidayClick}
                 onDateClick={handleDateClick}
               />
@@ -219,7 +224,7 @@ export default function HolidaysPage() {
             <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
           ) : (
             <HolidayDataTable
-              holidays={filteredHolidays as unknown as Holiday[]}
+              holidays={filteredHolidays}
               isLoading={false}
               onView={handleView}
               onEdit={handleEdit}

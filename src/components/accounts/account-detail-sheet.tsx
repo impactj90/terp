@@ -88,8 +88,8 @@ const accountTypeConfig: Record<string, {
   color: string
 }> = {
   bonus: { labelKey: 'typeBonus', icon: Award, variant: 'default', color: 'bg-amber-100' },
-  tracking: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary', color: 'bg-blue-100' },
-  balance: { labelKey: 'typeBalance', icon: Scale, variant: 'outline', color: 'bg-green-100' },
+  day: { labelKey: 'typeTracking', icon: BarChart3, variant: 'secondary', color: 'bg-blue-100' },
+  month: { labelKey: 'typeBalance', icon: Scale, variant: 'outline', color: 'bg-green-100' },
 }
 
 const unitLabelKeys: Record<string, string> = {
@@ -117,7 +117,7 @@ export function AccountDetailSheet({
   const isSystem = account?.isSystem ?? false
 
   // Get type info from runtime data
-  const typeKey = account?.accountType || 'tracking'
+  const typeKey = account?.accountType || 'day'
   const typeInfo = accountTypeConfig[typeKey] ?? { labelKey: typeKey, icon: BarChart3, variant: 'secondary' as const, color: 'bg-muted' }
   const TypeIcon = typeInfo.icon
 
@@ -144,7 +144,7 @@ export function AccountDetailSheet({
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : account ? (
-          <ScrollArea className="flex-1 -mx-4 px-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
               {/* Header with icon, name, and status */}
               <div className="flex items-center gap-4">

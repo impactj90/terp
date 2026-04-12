@@ -249,8 +249,11 @@ describe("bookingReasons.update", () => {
     })
     const mockPrisma = {
       bookingReason: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -278,8 +281,11 @@ describe("bookingReasons.update", () => {
     })
     const mockPrisma = {
       bookingReason: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -290,7 +296,7 @@ describe("bookingReasons.update", () => {
     expect(result.referenceTime).toBeNull()
     expect(result.offsetMinutes).toBeNull()
     expect(result.adjustmentBookingTypeId).toBeNull()
-    const updateCall = mockPrisma.bookingReason.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.bookingReason.updateMany.mock.calls[0]![0]
     expect(updateCall.data.referenceTime).toBeNull()
     expect(updateCall.data.offsetMinutes).toBeNull()
     expect(updateCall.data.adjustmentBookingTypeId).toBeNull()
@@ -339,14 +345,14 @@ describe("bookingReasons.delete", () => {
     const mockPrisma = {
       bookingReason: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: REASON_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.bookingReason.delete).toHaveBeenCalledWith({
-      where: { id: REASON_ID },
+    expect(mockPrisma.bookingReason.deleteMany).toHaveBeenCalledWith({
+      where: { id: REASON_ID, tenantId: TENANT_ID },
     })
   })
 

@@ -99,23 +99,84 @@ export function DailyBreakdownTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">{t('dailyBreakdown')}</h3>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-base sm:text-lg font-medium">{t('dailyBreakdown')}</h3>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
           {totals.errorCount > 0 && (
             <Badge variant="destructive">
               {totals.errorCount === 1 ? t('dayWithErrors', { count: totals.errorCount }) : t('daysWithErrors', { count: totals.errorCount })}
             </Badge>
           )}
           {totals.warningCount > 0 && (
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+            <Badge variant="yellow">
               {totals.warningCount === 1 ? t('dayWithWarnings', { count: totals.warningCount }) : t('daysWithWarnings', { count: totals.warningCount })}
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Mobile: day cards */}
+      <div className="space-y-1 sm:hidden">
+        {monthDates.map((date) => {
+          const dateString = formatDate(date)
+          const dailyValue = dailyValuesByDate.get(dateString)
+          const today = isToday(date)
+          const weekend = isWeekend(date)
+          const hasErrors = dailyValue?.has_error
+          const hasWarnings = !!(dailyValue?.warnings?.length)
+          const balance = (dailyValue?.overtime ?? 0) - (dailyValue?.undertime ?? 0)
+          const hasData = dailyValue && (dailyValue.net_time || dailyValue.target_time)
+
+          return (
+            <div
+              key={dateString}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors active:bg-muted/50 cursor-pointer',
+                today && 'bg-primary/5',
+                weekend && !dailyValue?.target_time && 'opacity-50',
+                hasErrors && 'bg-destructive/5',
+              )}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleRowClick(date)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleRowClick(date)
+                }
+              }}
+            >
+              <div className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium shrink-0',
+                today && 'bg-primary text-primary-foreground',
+              )}>
+                {date.getDate()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium">{formatDisplayDate(date, 'weekday')}</span>
+                  {hasErrors && <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">!</Badge>}
+                  {!hasErrors && hasWarnings && <Badge variant="yellow" className="text-[10px] px-1 py-0 h-4">!</Badge>}
+                </div>
+                {hasData && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    <TimeDisplay value={dailyValue?.net_time} format="duration" className="text-xs" />
+                    {(dailyValue?.target_time ?? 0) > 0 && (
+                      <span className="text-muted-foreground/60"> / <TimeDisplay value={dailyValue?.target_time} format="duration" className="text-xs" /></span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {hasData && (
+                <TimeDisplay value={balance} format="balance" className="text-sm font-medium shrink-0" />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -191,11 +252,11 @@ export function DailyBreakdownTable({
                   <TableCell className="text-center">
                     {hasErrors && dailyValue?.error_codes && dailyValue.error_codes.length > 0 ? (
                       <Badge variant="destructive" className="text-xs">
-                        {dailyValue.error_codes.length} {dailyValue.error_codes.length === 1 ? t('error') : t('errors')}
+                        {dailyValue.error_codes.length === 1 ? t('error', { count: 1 }) : t('errors', { count: dailyValue.error_codes.length })}
                       </Badge>
                     ) : hasWarnings && dailyValue?.warnings ? (
-                      <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        {dailyValue.warnings.length} {dailyValue.warnings.length === 1 ? t('warning') : t('warnings')}
+                      <Badge variant="yellow" className="text-xs">
+                        {dailyValue.warnings.length === 1 ? t('warning', { count: 1 }) : t('warnings', { count: dailyValue.warnings.length })}
                       </Badge>
                     ) : dailyValue ? (
                       <Badge variant="outline" className="text-xs">{t('ok')}</Badge>

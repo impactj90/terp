@@ -304,8 +304,12 @@ describe("employeeAccessAssignments.update", () => {
     })
     const mockPrisma = {
       employeeAccessAssignment: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing) // router data scope check
+          .mockResolvedValueOnce(existing) // service existence check
+          .mockResolvedValueOnce(updated), // tenantScopedUpdate refetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -319,25 +323,12 @@ describe("employeeAccessAssignments.update", () => {
     expect(result.isActive).toBe(false)
     expect(result.validFrom).toEqual(new Date("2025-06-01"))
     expect(result.validTo).toEqual(new Date("2025-12-31"))
-    expect(mockPrisma.employeeAccessAssignment.update).toHaveBeenCalledWith({
-      where: { id: ASSIGNMENT_ID },
+    expect(mockPrisma.employeeAccessAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: ASSIGNMENT_ID, tenantId: TENANT_ID },
       data: {
         isActive: false,
         validFrom: new Date("2025-06-01"),
         validTo: new Date("2025-12-31"),
-      },
-      include: {
-        employee: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            personnelNumber: true,
-          },
-        },
-        accessProfile: {
-          select: { id: true, code: true, name: true },
-        },
       },
     })
   })
@@ -363,15 +354,15 @@ describe("employeeAccessAssignments.delete", () => {
     const mockPrisma = {
       employeeAccessAssignment: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ASSIGNMENT_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.employeeAccessAssignment.delete).toHaveBeenCalledWith({
-      where: { id: ASSIGNMENT_ID },
+    expect(mockPrisma.employeeAccessAssignment.deleteMany).toHaveBeenCalledWith({
+      where: { id: ASSIGNMENT_ID, employee: { tenantId: TENANT_ID } },
     })
   })
 

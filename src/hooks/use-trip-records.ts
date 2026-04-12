@@ -60,6 +60,9 @@ export function useCreateTripRecord() {
       queryClient.invalidateQueries({
         queryKey: trpc.tripRecords.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tripRecords.getById.queryKey(),
+      })
     },
   })
 }
@@ -76,6 +79,9 @@ export function useUpdateTripRecord() {
       queryClient.invalidateQueries({
         queryKey: trpc.tripRecords.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tripRecords.getById.queryKey(),
+      })
     },
   })
 }
@@ -91,6 +97,9 @@ export function useDeleteTripRecord() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.tripRecords.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tripRecords.getById.queryKey(),
       })
     },
   })

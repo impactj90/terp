@@ -170,7 +170,8 @@ export const employmentTypesRouter = createTRPCRouter({
         const employmentType = await employmentTypeService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapEmploymentTypeToOutput(employmentType)
       } catch (err) {
@@ -196,7 +197,8 @@ export const employmentTypesRouter = createTRPCRouter({
         const employmentType = await employmentTypeService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapEmploymentTypeToOutput(employmentType)
       } catch (err) {
@@ -221,7 +223,8 @@ export const employmentTypesRouter = createTRPCRouter({
         await employmentTypeService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

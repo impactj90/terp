@@ -116,7 +116,7 @@ export function generateHolidays(
 
   // State-specific holidays
   if (state === "BW" || state === "BY" || state === "ST") {
-    holidays.push(fixed(1, 6, "Heilige Drei Koenige"))
+    holidays.push(fixed(1, 6, "Heilige Drei Könige"))
   }
 
   if (state === "BE" || state === "MV") {
@@ -140,7 +140,7 @@ export function generateHolidays(
   }
 
   if (state === "BY" || state === "SL") {
-    holidays.push(fixed(8, 15, "Mariae Himmelfahrt"))
+    holidays.push(fixed(8, 15, "Mariä Himmelfahrt"))
   }
 
   if (
@@ -209,7 +209,7 @@ export function easterSunday(year: number): Date {
 // --- Repentance Day ---
 
 /**
- * Compute Buss- und Bettag (Repentance and Prayer Day).
+ * Compute Buß- und Bettag (Repentance and Prayer Day).
  * The Wednesday before November 23.
  * Ported from Go: apps/api/internal/holiday/calendar.go lines 158-166.
  */
@@ -220,5 +220,5 @@ function repentanceDay(year: number): HolidayDefinition {
     // 3 = Wednesday
     date.setUTCDate(date.getUTCDate() - 1)
   }
-  return { date, name: "Buss- und Bettag" }
+  return { date, name: "Buß- und Bettag" }
 }

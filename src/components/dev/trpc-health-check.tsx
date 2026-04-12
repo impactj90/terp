@@ -23,7 +23,6 @@ export function TrpcHealthCheck() {
       {data && (
         <div className="space-y-0.5">
           <div>Status: {data.status}</div>
-          <div>DB: {data.database}</div>
           <div>Time: {new Date(data.timestamp).toLocaleTimeString()}</div>
         </div>
       )}

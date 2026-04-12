@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { useTranslations } from 'next-intl'
 
 type AssignmentRole = 'worker' | 'leader' | 'sales'
+type BadgeVariant = 'gray' | 'blue' | 'purple'
 
 interface OrderAssignmentRoleBadgeProps {
   role: string | undefined | null
@@ -11,19 +12,19 @@ interface OrderAssignmentRoleBadgeProps {
 
 const roleConfig: Record<
   AssignmentRole,
-  { labelKey: 'roleWorker' | 'roleLeader' | 'roleSales'; className: string }
+  { labelKey: 'roleWorker' | 'roleLeader' | 'roleSales'; variant: BadgeVariant }
 > = {
   worker: {
     labelKey: 'roleWorker' as const,
-    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    variant: 'gray',
   },
   leader: {
     labelKey: 'roleLeader' as const,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    variant: 'blue',
   },
   sales: {
     labelKey: 'roleSales' as const,
-    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    variant: 'purple',
   },
 }
 
@@ -35,7 +36,7 @@ export function OrderAssignmentRoleBadge({ role }: OrderAssignmentRoleBadgeProps
 
   if (!role) {
     return (
-      <Badge variant="secondary" className={roleConfig.worker.className}>
+      <Badge variant="gray">
         {t('roleWorker')}
       </Badge>
     )
@@ -44,7 +45,7 @@ export function OrderAssignmentRoleBadge({ role }: OrderAssignmentRoleBadgeProps
   const config = roleConfig[role as AssignmentRole]
 
   return (
-    <Badge variant="secondary" className={config.className}>
+    <Badge variant={config.variant}>
       {t(config.labelKey)}
     </Badge>
   )

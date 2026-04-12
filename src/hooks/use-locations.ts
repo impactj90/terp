@@ -82,6 +82,9 @@ export function useUpdateLocation() {
       queryClient.invalidateQueries({
         queryKey: trpc.locations.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.locations.getById.queryKey(),
+      })
     },
   })
 }
@@ -103,6 +106,9 @@ export function useDeleteLocation() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.locations.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.locations.getById.queryKey(),
       })
     },
   })

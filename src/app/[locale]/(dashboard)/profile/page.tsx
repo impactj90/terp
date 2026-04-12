@@ -67,7 +67,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           <AccountSettingsCard user={user} />
           <NoEmployeeLinkedMessage />
         </div>
@@ -76,11 +76,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">My Profile</h1>
+        <p className="text-sm text-muted-foreground">
           View and manage your personal information
         </p>
       </div>
@@ -89,19 +89,19 @@ export default function ProfilePage() {
       <ProfileHeader user={user} employee={employee as unknown as Parameters<typeof ProfileHeader>[0]['employee']} />
 
       {/* Personal Info and Employment Details */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <PersonalInfoCard employee={employee as unknown as Parameters<typeof PersonalInfoCard>[0]['employee']} />
         <EmploymentDetailsCard employee={employee as unknown as Parameters<typeof EmploymentDetailsCard>[0]['employee']} />
       </div>
 
       {/* Contacts and Cards */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <EmergencyContactsCard employeeId={employeeId} />
         <AccessCardsCard employeeId={employeeId} />
       </div>
 
       {/* Time Plan and Account Settings */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <TimePlanCard employeeId={employeeId} />
         <AccountSettingsCard user={user} />
       </div>
@@ -132,7 +132,7 @@ function ProfileLoadingSkeleton() {
       </div>
 
       {/* Cards grid skeleton */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="rounded-xl border bg-card py-6">
             <div className="px-6">

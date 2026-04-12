@@ -80,12 +80,14 @@ export async function findCappingGroupWithRules(
  */
 export async function findCappingExceptions(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number
 ) {
   return prisma.employeeCappingException.findMany({
     where: {
       employeeId,
+      employee: { tenantId },
       isActive: true,
       OR: [{ year }, { year: null }],
     },

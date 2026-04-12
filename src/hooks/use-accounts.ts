@@ -89,6 +89,9 @@ export function useUpdateAccount() {
       queryClient.invalidateQueries({
         queryKey: trpc.accounts.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accounts.getById.queryKey(),
+      })
     },
   })
 }
@@ -104,6 +107,9 @@ export function useDeleteAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.accounts.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.accounts.getById.queryKey(),
       })
     },
   })

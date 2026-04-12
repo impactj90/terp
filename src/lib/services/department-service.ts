@@ -6,6 +6,17 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./department-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "parentId",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -34,6 +45,7 @@ export class DepartmentConflictError extends Error {
 
 async function checkCircularReference(
   prisma: PrismaClient,
+  tenantId: string,
   deptId: string,
   proposedParentId: string
 ): Promise<boolean> {
@@ -44,7 +56,7 @@ async function checkCircularReference(
     if (visited.has(current)) return true
     visited.add(current)
 
-    const record = await repo.findParentId(prisma, current)
+    const record = await repo.findParentId(prisma, tenantId, current)
     if (!record) break
     current = record.parentId
   }
@@ -90,7 +102,8 @@ export async function create(
     description?: string
     parentId?: string
     managerEmployeeId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -121,7 +134,7 @@ export async function create(
   // Trim description if provided
   const description = input.description?.trim() || null
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     code,
     name,
@@ -130,6 +143,22 @@ export async function create(
     managerEmployeeId: input.managerEmployeeId ?? null,
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "department",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -143,7 +172,8 @@ export async function update(
     parentId?: string | null
     managerEmployeeId?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify department exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -212,6 +242,7 @@ export async function update(
       // Deep circular reference check
       const isCircular = await checkCircularReference(
         prisma,
+        tenantId,
         input.id,
         input.parentId
       )
@@ -233,13 +264,35 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return repo.update(prisma, input.id, data)
+  const updated = await repo.update(prisma, tenantId, input.id, data)
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "department",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify department exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -248,7 +301,7 @@ export async function remove(
   }
 
   // Check for children
-  const childCount = await repo.countChildren(prisma, id)
+  const childCount = await repo.countChildren(prisma, tenantId, id)
   if (childCount > 0) {
     throw new DepartmentValidationError(
       "Cannot delete department with child departments"
@@ -256,12 +309,26 @@ export async function remove(
   }
 
   // Check for employees
-  const employeeCount = await repo.countEmployees(prisma, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new DepartmentValidationError(
       "Cannot delete department with assigned employees"
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "department",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

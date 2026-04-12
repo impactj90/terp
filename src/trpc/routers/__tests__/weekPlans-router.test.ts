@@ -8,6 +8,34 @@ import {
   createUserWithPermissions,
   createMockUserTenant,
 } from "./helpers"
+import * as weekPlanService from "@/lib/services/week-plan-service"
+
+vi.mock("@/lib/services/week-plan-service", () => ({
+  update: vi.fn(),
+  remove: vi.fn(),
+  WeekPlanNotFoundError: class WeekPlanNotFoundError extends Error {
+    constructor(message = "Week plan not found") {
+      super(message)
+      this.name = "WeekPlanNotFoundError"
+    }
+  },
+  WeekPlanValidationError: class WeekPlanValidationError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "WeekPlanValidationError"
+    }
+  },
+  WeekPlanConflictError: class WeekPlanConflictError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = "WeekPlanConflictError"
+    }
+  },
+}))
+vi.mock("@/lib/services/audit-logs-service", () => ({
+  log: vi.fn().mockResolvedValue(undefined),
+  computeChanges: vi.fn().mockReturnValue(null),
+}))
 
 // --- Constants ---
 
@@ -164,7 +192,7 @@ describe("weekPlans.create", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(null), // code uniqueness
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue({ id: "exists" }), // all 7 validations pass
@@ -192,7 +220,7 @@ describe("weekPlans.create", () => {
       weekPlan: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findUnique: vi.fn().mockResolvedValue(created),
       },
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue({ id: "exists" }),
@@ -304,31 +332,25 @@ describe("weekPlans.create", () => {
 
 describe("weekPlans.update", () => {
   it("updates partial fields successfully", async () => {
-    const existing = makeWeekPlan()
     const updated = makeWeekPlan({ name: "Updated" })
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(weekPlanService.update).mockResolvedValue(updated as ReturnType<typeof makeWeekPlan>)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: WEEK_PLAN_ID, name: "Updated" })
     expect(result.name).toBe("Updated")
+    expect(weekPlanService.update).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({ id: WEEK_PLAN_ID, name: "Updated" }),
+      expect.objectContaining({ userId: expect.any(String) })
+    )
   })
 
   it("rejects duplicate code with CONFLICT", async () => {
-    const existing = makeWeekPlan({ code: "OLD" })
-    const conflicting = makeWeekPlan({ id: WEEK_PLAN_B_ID, code: "NEW" })
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(existing)
-          .mockResolvedValueOnce(conflicting),
-      },
-    }
+    vi.mocked(weekPlanService.update).mockRejectedValue(
+      new weekPlanService.WeekPlanConflictError("Week plan code already exists")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: WEEK_PLAN_ID, code: "NEW" })
@@ -336,27 +358,21 @@ describe("weekPlans.update", () => {
   })
 
   it("allows same code (no false conflict)", async () => {
-    const existing = makeWeekPlan({ code: "WEEK-1" })
+    vi.mocked(weekPlanService.update).mockClear()
     const updated = makeWeekPlan({ code: "WEEK-1" })
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
-      },
-    }
+    vi.mocked(weekPlanService.update).mockResolvedValue(updated as ReturnType<typeof makeWeekPlan>)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: WEEK_PLAN_ID, code: "WEEK-1" })
     expect(result.code).toBe("WEEK-1")
-    expect(mockPrisma.weekPlan.findFirst).toHaveBeenCalledTimes(1)
+    expect(weekPlanService.update).toHaveBeenCalledTimes(1)
   })
 
   it("throws NOT_FOUND for missing week plan", async () => {
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(weekPlanService.update).mockRejectedValue(
+      new weekPlanService.WeekPlanNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: WEEK_PLAN_ID, name: "Updated" })
@@ -364,15 +380,12 @@ describe("weekPlans.update", () => {
   })
 
   it("verifies completeness after update (all 7 days must have plans)", async () => {
-    const existing = makeWeekPlan()
-    const incompleteUpdated = makeWeekPlan({ mondayDayPlanId: null, mondayDayPlan: null })
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(incompleteUpdated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(incompleteUpdated),
-      },
-    }
+    vi.mocked(weekPlanService.update).mockRejectedValue(
+      new weekPlanService.WeekPlanValidationError(
+        "Week plan must have a day plan assigned for all 7 days"
+      )
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({ id: WEEK_PLAN_ID, mondayDayPlanId: null })
@@ -382,15 +395,10 @@ describe("weekPlans.update", () => {
   })
 
   it("validates day plan IDs when changed", async () => {
-    const existing = makeWeekPlan()
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-      },
-      dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(null), // day plan not found
-      },
-    }
+    vi.mocked(weekPlanService.update).mockRejectedValue(
+      new weekPlanService.WeekPlanValidationError("Invalid day plan reference")
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(
       caller.update({
@@ -405,27 +413,24 @@ describe("weekPlans.update", () => {
 
 describe("weekPlans.delete", () => {
   it("deletes week plan successfully", async () => {
-    const existing = makeWeekPlan()
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
-      },
-    }
+    vi.mocked(weekPlanService.remove).mockResolvedValue(undefined)
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: WEEK_PLAN_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.weekPlan.delete).toHaveBeenCalledWith({
-      where: { id: WEEK_PLAN_ID },
-    })
+    expect(weekPlanService.remove).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      WEEK_PLAN_ID,
+      expect.objectContaining({ userId: expect.any(String) })
+    )
   })
 
   it("throws NOT_FOUND for missing week plan", async () => {
-    const mockPrisma = {
-      weekPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
+    vi.mocked(weekPlanService.remove).mockRejectedValue(
+      new weekPlanService.WeekPlanNotFoundError()
+    )
+    const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(caller.delete({ id: WEEK_PLAN_ID })).rejects.toThrow(
       "Week plan not found"

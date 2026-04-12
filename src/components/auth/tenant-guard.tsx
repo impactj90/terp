@@ -31,7 +31,7 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
   if (isLoading) {
     return (
       loadingFallback ?? (
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-dvh items-center justify-center">
           <div className="text-muted-foreground">{t('loading')}</div>
         </div>
       )
@@ -41,7 +41,7 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
   // If no tenants available, show error
   if (tenants.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-dvh items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
@@ -64,7 +64,7 @@ export function TenantGuard({ children, loadingFallback }: TenantGuardProps) {
 
   // Show tenant selector for multiple tenants
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-dvh items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">

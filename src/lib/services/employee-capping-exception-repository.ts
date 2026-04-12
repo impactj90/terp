@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -13,7 +14,8 @@ export async function findMany(
     employeeId?: string
     cappingRuleId?: string
     year?: number
-  }
+  },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   const where: Record<string, unknown> = { tenantId }
 
@@ -28,6 +30,17 @@ export async function findMany(
   if (params?.year !== undefined) {
     // Match Go behavior: return entries for specific year OR null year
     where.OR = [{ year: params.year }, { year: null }]
+  }
+
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
   }
 
   return prisma.employeeCappingException.findMany({
@@ -99,17 +112,16 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeCappingException.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.employeeCappingException, { id, tenantId }, data, { entity: "EmployeeCappingException" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeCappingException.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeCappingException.deleteMany({
+    where: { id, employee: { tenantId } },
   })
+  return count > 0
 }

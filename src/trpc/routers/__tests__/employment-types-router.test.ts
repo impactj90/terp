@@ -246,8 +246,11 @@ describe("employmentTypes.update", () => {
     const updated = makeEmploymentType({ name: "Updated" })
     const mockPrisma = {
       employmentType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -303,14 +306,17 @@ describe("employmentTypes.update", () => {
     const updated = makeEmploymentType({ code: "FT" })
     const mockPrisma = {
       employmentType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: ET_ID, code: "FT" })
     expect(result.code).toBe("FT")
-    expect(mockPrisma.employmentType.findFirst).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.employmentType.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing employment type", async () => {
@@ -332,8 +338,11 @@ describe("employmentTypes.update", () => {
     const updated = makeEmploymentType({ vacationCalcGroupId: null })
     const mockPrisma = {
       employmentType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -342,7 +351,7 @@ describe("employmentTypes.update", () => {
       clearVacationCalcGroupId: true,
     })
     expect(result.vacationCalcGroupId).toBeNull()
-    const updateCall = mockPrisma.employmentType.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.employmentType.updateMany.mock.calls[0]![0]
     expect(updateCall.data.vacationCalcGroupId).toBeNull()
   })
 
@@ -351,8 +360,11 @@ describe("employmentTypes.update", () => {
     const updated = makeEmploymentType({ weeklyHoursDefault: 30.5 })
     const mockPrisma = {
       employmentType: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -372,7 +384,7 @@ describe("employmentTypes.delete", () => {
     const mockPrisma = {
       employmentType: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0),
@@ -381,8 +393,8 @@ describe("employmentTypes.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ET_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.employmentType.delete).toHaveBeenCalledWith({
-      where: { id: ET_ID },
+    expect(mockPrisma.employmentType.deleteMany).toHaveBeenCalledWith({
+      where: { id: ET_ID, tenantId: TENANT_ID },
     })
   })
 

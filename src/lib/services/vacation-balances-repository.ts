@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { employeeSelect } from "./vacation-balance-output"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /**
  * Lists vacation balances with pagination and filtering.
@@ -93,16 +94,30 @@ export async function findBalanceByIdSimple(
 }
 
 /**
+ * Finds all vacation balances for a tenant and year.
+ * Used for batch operations to avoid N+1 queries.
+ */
+export async function findBalancesByTenantAndYear(
+  prisma: PrismaClient,
+  tenantId: string,
+  year: number
+) {
+  return prisma.vacationBalance.findMany({
+    where: { tenantId, year },
+  })
+}
+
+/**
  * Updates a vacation balance by ID with partial data.
  */
 export async function updateBalance(
   prisma: PrismaClient,
+  tenantId: string,
   balanceId: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vacationBalance.update({
-    where: { id: balanceId },
-    data,
+  return tenantScopedUpdate(prisma.vacationBalance, { id: balanceId, tenantId }, data, {
     include: { employee: { select: employeeSelect } },
+    entity: "VacationBalance",
   })
 }

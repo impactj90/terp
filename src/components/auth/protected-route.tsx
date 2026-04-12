@@ -63,7 +63,7 @@ export function ProtectedRoute({
   // Show loading state while checking authentication
   if (isLoading) {
     return loadingFallback ?? (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     )
@@ -73,7 +73,7 @@ export function ProtectedRoute({
   // (redirect will happen via useEffect)
   if (!isAuthenticated) {
     return loadingFallback ?? (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="text-muted-foreground">{t('redirectingToLogin')}</div>
       </div>
     )

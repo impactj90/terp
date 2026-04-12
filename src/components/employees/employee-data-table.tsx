@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ResponsiveTable } from '@/components/ui/responsive-table'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from './status-badge'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Employee = any
+
+// Shared responsive column classes — applied to both TableHead and TableCell
+const COL = {
+  personnelNumber: 'hidden md:table-cell',
+  email: 'hidden xl:table-cell',
+  department: 'hidden lg:table-cell',
+  location: 'hidden xl:table-cell',
+  tariff: 'hidden xl:table-cell',
+  status: 'hidden sm:table-cell',
+  entryDate: 'hidden lg:table-cell',
+} as const
+
+// Sticky classes for checkbox (left-0) and name (left-12) columns on mobile
+const STICKY_CHECKBOX =
+  'max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-card data-[state=selected]:max-lg:bg-muted'
+const STICKY_NAME =
+  'max-lg:sticky max-lg:left-12 max-lg:z-10 max-lg:bg-card data-[state=selected]:max-lg:bg-muted sticky-col-end'
 
 interface EmployeeDataTableProps {
   /** List of employees to display */
@@ -101,172 +119,190 @@ export function EmployeeDataTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-12">
-            <Checkbox
-              checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-              onCheckedChange={handleSelectAll}
-              aria-label={t('selectAll')}
-            />
-          </TableHead>
-          <TableHead className="w-28">{t('columnPersonnelNumber')}</TableHead>
-          <TableHead>{t('columnName')}</TableHead>
-          <TableHead>{t('columnEmail')}</TableHead>
-          <TableHead>{t('columnDepartment')}</TableHead>
-          <TableHead>{t('columnTariff')}</TableHead>
-          <TableHead className="w-24">{t('columnStatus')}</TableHead>
-          <TableHead className="w-28">{t('columnEntryDate')}</TableHead>
-          <TableHead className="w-16">
-            <span className="sr-only">{t('columnActions')}</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {employees.map((employee) => (
-          <TableRow
-            key={employee.id}
-            data-state={selectedIds.has(employee.id) ? 'selected' : undefined}
-            className="cursor-pointer"
-            onClick={() => onView(employee)}
-          >
-            <TableCell onClick={(e) => e.stopPropagation()}>
+    <ResponsiveTable>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={`w-12 ${STICKY_CHECKBOX}`}>
               <Checkbox
-                checked={selectedIds.has(employee.id)}
-                onCheckedChange={() => handleSelectOne(employee.id)}
-                aria-label={t('selectEmployee', { first: employee.firstName, last: employee.lastName })}
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={handleSelectAll}
+                aria-label={t('selectAll')}
               />
-            </TableCell>
-            <TableCell className="font-mono text-sm">
-              {employee.personnelNumber}
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                  {employee.firstName[0]}
-                  {employee.lastName[0]}
-                </div>
-                <span className="font-medium">
-                  {employee.firstName} {employee.lastName}
-                </span>
-              </div>
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {employee.email || '-'}
-            </TableCell>
-            <TableCell>{'department' in employee ? (employee as unknown as { department?: { name: string } }).department?.name || '-' : '-'}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {employee.tariffId ? employee.tariffId.substring(0, 8) + '...' : '-'}
-            </TableCell>
-            <TableCell>
-              <StatusBadge
-                isActive={employee.isActive}
-                exitDate={employee.exitDate}
-              />
-            </TableCell>
-            <TableCell>{formatDate(employee.entryDate)}</TableCell>
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">{t('columnActions')}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onView(employee)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    {t('viewDetails')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onEdit(employee)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    {t('edit')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onViewTimesheet(employee)}>
-                    <Clock className="mr-2 h-4 w-4" />
-                    {t('viewTimesheet')}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => onDelete(employee)}
-                  >
-                    <UserX className="mr-2 h-4 w-4" />
-                    {t('deactivate')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+            </TableHead>
+            <TableHead className={`w-28 ${COL.personnelNumber}`}>{t('columnPersonnelNumber')}</TableHead>
+            <TableHead className={STICKY_NAME}>{t('columnName')}</TableHead>
+            <TableHead className={COL.email}>{t('columnEmail')}</TableHead>
+            <TableHead className={COL.department}>{t('columnDepartment')}</TableHead>
+            <TableHead className={COL.location}>{t('columnLocation')}</TableHead>
+            <TableHead className={COL.tariff}>{t('columnTariff')}</TableHead>
+            <TableHead className={`w-24 ${COL.status}`}>{t('columnStatus')}</TableHead>
+            <TableHead className={`w-28 ${COL.entryDate}`}>{t('columnEntryDate')}</TableHead>
+            <TableHead className="w-16">
+              <span className="sr-only">{t('columnActions')}</span>
+            </TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {employees.map((employee) => (
+            <TableRow
+              key={employee.id}
+              data-state={selectedIds.has(employee.id) ? 'selected' : undefined}
+              className="cursor-pointer"
+              onClick={() => onView(employee)}
+            >
+              <TableCell className={STICKY_CHECKBOX} onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedIds.has(employee.id)}
+                  onCheckedChange={() => handleSelectOne(employee.id)}
+                  aria-label={t('selectEmployee', { first: employee.firstName, last: employee.lastName })}
+                />
+              </TableCell>
+              <TableCell className={`font-mono text-sm ${COL.personnelNumber}`}>
+                {employee.personnelNumber}
+              </TableCell>
+              <TableCell className={STICKY_NAME}>
+                <div className="flex items-center gap-3 truncate-mobile">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                    {employee.firstName?.[0] ?? '?'}
+                    {employee.lastName?.[0] ?? '?'}
+                  </div>
+                  <span className="font-medium truncate">
+                    {employee.firstName} {employee.lastName}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell className={`text-muted-foreground ${COL.email}`}>
+                {employee.email || '-'}
+              </TableCell>
+              <TableCell className={COL.department}>{employee.department?.name || '-'}</TableCell>
+              <TableCell className={COL.location}>{employee.location?.name || '-'}</TableCell>
+              <TableCell className={`text-muted-foreground ${COL.tariff}`}>
+                {employee.tariff?.name || '-'}
+              </TableCell>
+              <TableCell className={COL.status}>
+                <StatusBadge
+                  isActive={employee.isActive}
+                  exitDate={employee.exitDate}
+                />
+              </TableCell>
+              <TableCell className={COL.entryDate}>{formatDate(employee.entryDate)}</TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">{t('columnActions')}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onView(employee)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('viewDetails')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(employee)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      {t('edit')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewTimesheet(employee)}>
+                      <Clock className="mr-2 h-4 w-4" />
+                      {t('viewTimesheet')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => onDelete(employee)}
+                    >
+                      <UserX className="mr-2 h-4 w-4" />
+                      {t('deactivate')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </ResponsiveTable>
   )
 }
 
 function EmployeeDataTableSkeleton() {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-12">
-            <Skeleton className="h-4 w-4" />
-          </TableHead>
-          <TableHead className="w-28">
-            <Skeleton className="h-4 w-20" />
-          </TableHead>
-          <TableHead>
-            <Skeleton className="h-4 w-16" />
-          </TableHead>
-          <TableHead>
-            <Skeleton className="h-4 w-16" />
-          </TableHead>
-          <TableHead>
-            <Skeleton className="h-4 w-24" />
-          </TableHead>
-          <TableHead className="w-24">
-            <Skeleton className="h-4 w-16" />
-          </TableHead>
-          <TableHead className="w-28">
-            <Skeleton className="h-4 w-20" />
-          </TableHead>
-          <TableHead className="w-16" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell>
+    <ResponsiveTable>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={`w-12 ${STICKY_CHECKBOX}`}>
               <Skeleton className="h-4 w-4" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-16" />
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-40" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-24" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-5 w-16 rounded-full" />
-            </TableCell>
-            <TableCell>
+            </TableHead>
+            <TableHead className={`w-28 ${COL.personnelNumber}`}>
               <Skeleton className="h-4 w-20" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-8 w-8" />
-            </TableCell>
+            </TableHead>
+            <TableHead className={STICKY_NAME}>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead className={COL.email}>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead className={COL.department}>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+            <TableHead className={COL.location}>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+            <TableHead className={COL.tariff}>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead className={`w-24 ${COL.status}`}>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead className={`w-28 ${COL.entryDate}`}>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
+            <TableHead className="w-16" />
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell className={STICKY_CHECKBOX}>
+                <Skeleton className="h-4 w-4" />
+              </TableCell>
+              <TableCell className={COL.personnelNumber}>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell className={STICKY_NAME}>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </TableCell>
+              <TableCell className={COL.email}>
+                <Skeleton className="h-4 w-40" />
+              </TableCell>
+              <TableCell className={COL.department}>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell className={COL.location}>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell className={COL.tariff}>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell className={COL.status}>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </TableCell>
+              <TableCell className={COL.entryDate}>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-8 w-8" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </ResponsiveTable>
   )
 }

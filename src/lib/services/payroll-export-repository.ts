@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -72,25 +73,28 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.payrollExport.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.payrollExport, { id, tenantId }, data, { entity: "PayrollExport" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.payrollExport.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.payrollExport.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function findEmployeesWithRelations(
   prisma: PrismaClient,
   tenantId: string,
   params?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
+  },
+  scopeFilter?: {
     departmentIds?: string[]
     employeeIds?: string[]
   }
@@ -101,6 +105,21 @@ export async function findEmployeesWithRelations(
   }
   if (params?.departmentIds && params.departmentIds.length > 0) {
     empWhere.departmentId = { in: params.departmentIds }
+  }
+
+  // Apply data scope constraints
+  if (scopeFilter?.departmentIds) {
+    if (empWhere.departmentId) {
+      // Intersect: keep only departmentIds that are in both the param filter and the scope
+      const paramIds = (empWhere.departmentId as { in: string[] }).in
+      const scopeIds = new Set(scopeFilter.departmentIds)
+      empWhere.departmentId = { in: paramIds.filter((id: string) => scopeIds.has(id)) }
+    } else {
+      empWhere.departmentId = { in: scopeFilter.departmentIds }
+    }
+  }
+  if (scopeFilter?.employeeIds) {
+    empWhere.id = { in: scopeFilter.employeeIds }
   }
 
   let employees = await prisma.employee.findMany({
@@ -123,12 +142,26 @@ export async function findEmployeesWithRelations(
 
 export async function findMonthlyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
   return prisma.monthlyValue.findFirst({
-    where: { employeeId, year, month },
+    where: { tenantId, employeeId, year, month },
+  })
+}
+
+export async function findMonthlyValuesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  year: number,
+  month: number
+) {
+  if (employeeIds.length === 0) return []
+  return prisma.monthlyValue.findMany({
+    where: { tenantId, employeeId: { in: employeeIds }, year, month },
   })
 }
 
@@ -144,10 +177,34 @@ export async function findExportInterfaceAccounts(
 
 export async function findAccountsByIds(
   prisma: PrismaClient,
+  tenantId: string,
   ids: string[]
 ) {
   return prisma.account.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, code: true },
+    where: { id: { in: ids }, tenantId },
+    select: { id: true, code: true, name: true, payrollCode: true },
+  })
+}
+
+export async function aggregateDailyAccountValues(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  accountIds: string[],
+  year: number,
+  month: number,
+) {
+  if (employeeIds.length === 0 || accountIds.length === 0) return []
+  const fromDate = new Date(year, month - 1, 1)
+  const toDate = new Date(year, month, 0)
+  return prisma.dailyAccountValue.groupBy({
+    by: ['employeeId', 'accountId'],
+    where: {
+      tenantId,
+      employeeId: { in: employeeIds },
+      accountId: { in: accountIds },
+      valueDate: { gte: fromDate, lte: toDate },
+    },
+    _sum: { valueMinutes: true },
   })
 }

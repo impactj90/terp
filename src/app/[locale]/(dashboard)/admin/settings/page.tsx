@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SystemSettingsForm, CleanupToolsSection } from '@/components/settings'
+import { SystemSettingsForm, CleanupToolsSection, ModuleSettings } from '@/components/settings'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -35,6 +35,9 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
+
+      {/* Module settings */}
+      <ModuleSettings />
 
       {/* Settings form with collapsible sections */}
       <SystemSettingsForm />

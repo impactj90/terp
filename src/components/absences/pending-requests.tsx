@@ -6,8 +6,10 @@ import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { QueryError } from '@/components/ui/query-error'
 import { useEmployeeAbsences } from '@/hooks'
 import { formatDate, parseISODate } from '@/lib/time-utils'
 import type { components } from '@/types/legacy-api-types'
@@ -55,7 +57,7 @@ export function PendingRequests({
 
   // Fetch absences for current year and next year
   const currentYear = new Date().getFullYear()
-  const { data: absencesData, isLoading } = useEmployeeAbsences(
+  const { data: absencesData, isLoading, isError, refetch } = useEmployeeAbsences(
     employeeId ?? '',
     {
       from: formatDate(new Date(currentYear, 0, 1)),
@@ -97,6 +99,10 @@ export function PendingRequests({
 
     return { pending, approved, rejected, cancelled }
   }, [absences])
+
+  if (isError) {
+    return <QueryError message={t('loadFailed')} onRetry={() => refetch()} className={className} />
+  }
 
   if (isLoading) {
     return (
@@ -279,32 +285,40 @@ function AbsenceCard({ absence, onClick, onEdit, onCancel, locale }: AbsenceCard
             {t(statusConfig.labelKey as Parameters<typeof t>[0])}
           </Badge>
           {onEdit && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-            >
-              <Edit className="h-4 w-4 text-muted-foreground" />
-              <span className="sr-only">{tc('edit')}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit()
+                  }}
+                >
+                  <Edit className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('edit')}</TooltipContent>
+            </Tooltip>
           )}
           {onCancel && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                onCancel()
-              }}
-            >
-              <Ban className="h-4 w-4 text-muted-foreground" />
-              <span className="sr-only">{t('cancelAbsence')}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCancel()
+                  }}
+                >
+                  <Ban className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('cancelAbsence')}</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>

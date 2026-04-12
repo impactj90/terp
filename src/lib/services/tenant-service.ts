@@ -240,7 +240,7 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return repo.update(prisma, input.id, data)
+  return (await repo.update(prisma, input.id, input.id, data))!
 }
 
 export async function deactivate(prisma: PrismaClient, id: string) {
@@ -250,5 +250,5 @@ export async function deactivate(prisma: PrismaClient, id: string) {
     throw new TenantNotFoundError()
   }
 
-  await repo.update(prisma, id, { isActive: false })
+  await repo.update(prisma, id, id, { isActive: false })
 }

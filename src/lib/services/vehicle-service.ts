@@ -6,6 +6,19 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./vehicle-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "description",
+  "licensePlate",
+  "isActive",
+  "sortOrder",
+]
 
 // --- Error Classes ---
 
@@ -57,7 +70,8 @@ export async function create(
     description?: string
     licensePlate?: string
     sortOrder?: number
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -77,7 +91,7 @@ export async function create(
     throw new VehicleConflictError("Vehicle code already exists")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     code,
     name,
@@ -86,6 +100,22 @@ export async function create(
     isActive: true,
     sortOrder: input.sortOrder ?? 0,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "vehicle",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -98,7 +128,8 @@ export async function update(
     licensePlate?: string | null
     isActive?: boolean
     sortOrder?: number
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify vehicle exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -135,13 +166,35 @@ export async function update(
     data.sortOrder = input.sortOrder
   }
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "vehicle",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify vehicle exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -150,12 +203,26 @@ export async function remove(
   }
 
   // Check if vehicle has trip records
-  const tripCount = await repo.countTripRecordsByVehicle(prisma, id)
+  const tripCount = await repo.countTripRecordsByVehicle(prisma, tenantId, id)
   if (tripCount > 0) {
     throw new VehicleValidationError(
       "Cannot delete vehicle that has trip records"
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "vehicle",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

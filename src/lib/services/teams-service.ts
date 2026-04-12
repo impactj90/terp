@@ -6,6 +6,18 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./teams-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "description",
+  "departmentId",
+  "leaderEmployeeId",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -74,7 +86,8 @@ export async function create(
     description?: string
     departmentId?: string
     leaderEmployeeId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate name
   const name = input.name.trim()
@@ -91,7 +104,7 @@ export async function create(
   // Trim description if provided
   const description = input.description?.trim() || null
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     name,
     description,
@@ -99,6 +112,22 @@ export async function create(
     leaderEmployeeId: input.leaderEmployeeId ?? null,
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "team",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -111,7 +140,8 @@ export async function update(
     departmentId?: string | null
     leaderEmployeeId?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify team exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -164,13 +194,35 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "team",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify team exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -179,7 +231,21 @@ export async function remove(
   }
 
   // Hard delete (members cascade via DB FK)
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "team",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Member Functions ---
@@ -280,8 +346,46 @@ export async function removeMember(
 
 export async function getByEmployee(
   prisma: PrismaClient,
-  employeeId: string
+  tenantId: string,
+  employeeId: string,
+  isActive?: boolean
 ) {
-  const memberships = await repo.findTeamsByEmployee(prisma, employeeId)
+  const memberships = await repo.findTeamsByEmployee(prisma, tenantId, employeeId, isActive)
   return memberships.map((m) => m.team)
+}
+
+export async function getMyTeams(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  isActive?: boolean
+) {
+  const [memberTeams, { teams: leaderTeams }] = await Promise.all([
+    repo.findTeamsByEmployee(prisma, tenantId, employeeId, isActive),
+    repo.findMany(prisma, tenantId, {
+      leaderEmployeeId: employeeId,
+      isActive,
+      pageSize: 100,
+    }),
+  ])
+
+  // Merge + deduplicate
+  const seen = new Set<string>()
+  const teams: typeof leaderTeams = []
+
+  for (const m of memberTeams) {
+    if (!seen.has(m.team.id)) {
+      seen.add(m.team.id)
+      teams.push(m.team)
+    }
+  }
+  for (const t of leaderTeams) {
+    if (!seen.has(t.id)) {
+      seen.add(t.id)
+      teams.push(t)
+    }
+  }
+
+  teams.sort((a, b) => a.name.localeCompare(b.name))
+  return { teams, total: teams.length }
 }

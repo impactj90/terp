@@ -4,12 +4,13 @@
  * Pure Prisma data-access functions for the EmployeeDayPlan model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include Objects ---
 
 export const edpListInclude = {
   dayPlan: { select: { id: true, code: true, name: true, planType: true } },
-  shift: { select: { id: true, code: true, name: true } },
+  shift: { select: { id: true, code: true, name: true, color: true } },
 } as const
 
 export const edpDetailInclude = {
@@ -30,7 +31,8 @@ export const edpDetailInclude = {
 export async function findMany(
   prisma: PrismaClient,
   tenantId: string,
-  params: { employeeId?: string; from: string; to: string }
+  params: { employeeId?: string; from: string; to: string },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   const where: Record<string, unknown> = {
     tenantId,
@@ -42,6 +44,17 @@ export async function findMany(
 
   if (params.employeeId) {
     where.employeeId = params.employeeId
+  }
+
+  if (scopeWhere) {
+    if (scopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((scopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, scopeWhere)
+    }
   }
 
   return prisma.employeeDayPlan.findMany({
@@ -101,20 +114,21 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employeeDayPlan.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.employeeDayPlan, { id, tenantId }, data, {
     include: edpListInclude,
+    entity: "EmployeeDayPlan",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.employeeDayPlan.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.employeeDayPlan.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function deleteRange(
@@ -176,10 +190,10 @@ export async function bulkUpsert(
     notes?: string
   }>
 ) {
-  await prisma.$transaction(async (tx) => {
-    for (const entry of entries) {
+  await prisma.$transaction(
+    entries.map((entry) => {
       const planDate = new Date(entry.planDate)
-      await tx.employeeDayPlan.upsert({
+      return prisma.employeeDayPlan.upsert({
         where: {
           employeeId_planDate: {
             employeeId: entry.employeeId,
@@ -202,6 +216,6 @@ export async function bulkUpsert(
           notes: entry.notes?.trim() || null,
         },
       })
-    }
-  })
+    })
+  )
 }

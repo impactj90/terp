@@ -84,10 +84,10 @@ export function RecentActivity({
   if (error) {
     return (
       <div className={cn('rounded-lg border', className)}>
-        <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">{t('recentActivity')}</h2>
+        <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="text-base font-semibold sm:text-lg">{t('recentActivity')}</h2>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
             <p className="text-sm">{t('failedToLoadActivity')}</p>
@@ -108,17 +108,17 @@ export function RecentActivity({
 
   return (
     <div className={cn('rounded-lg border', className)}>
-      <div className="border-b px-6 py-4">
-        <h2 className="text-lg font-semibold">{t('recentActivity')}</h2>
+      <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+        <h2 className="text-base font-semibold sm:text-lg">{t('recentActivity')}</h2>
       </div>
 
       {recentBookings.length === 0 ? (
-        <div className="p-6">
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            <div className="rounded-full bg-muted p-3">
-              <Activity className="h-6 w-6 text-muted-foreground" />
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col items-center justify-center py-3 text-center sm:py-4">
+            <div className="rounded-full bg-muted p-2.5 sm:p-3">
+              <Activity className="h-5 w-5 text-muted-foreground sm:h-6 sm:w-6" />
             </div>
-            <p className="mt-3 text-sm font-medium">{t('noRecentActivity')}</p>
+            <p className="mt-2.5 text-sm font-medium sm:mt-3">{t('noRecentActivity')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {t('bookingsWillAppear')}
             </p>
@@ -133,7 +133,7 @@ export function RecentActivity({
       )}
 
       {recentBookings.length > 0 && (
-        <div className="border-t px-6 py-3">
+        <div className="border-t px-4 py-2.5 sm:px-6 sm:py-3">
           <Link
             href="/timesheet"
             className="text-sm text-primary hover:underline"
@@ -185,15 +185,15 @@ function ActivityItem({ booking }: { booking: BookingItem }) {
   const wasEdited = booking.editedTime !== booking.originalTime
 
   return (
-    <div className="flex items-start gap-3 px-6 py-3">
-      <div className="mt-0.5 rounded-full bg-muted p-1.5">
+    <div className="flex items-start gap-2.5 px-4 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+      <div className="mt-0.5 rounded-full bg-muted p-1 sm:p-1.5">
         {getIcon()}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium">{getDescription()}</p>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <p className="text-sm font-medium truncate">{getDescription()}</p>
           {wasEdited && (
-            <span className="text-xs text-muted-foreground">{t('edited')}</span>
+            <span className="shrink-0 text-[11px] text-muted-foreground sm:text-xs">{t('edited')}</span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
@@ -210,16 +210,16 @@ function ActivityItem({ booking }: { booking: BookingItem }) {
 export function RecentActivitySkeleton({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-lg border', className)}>
-      <div className="border-b px-6 py-4">
-        <Skeleton className="h-6 w-32" />
+      <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+        <Skeleton className="h-5 w-28 sm:h-6 sm:w-32" />
       </div>
       <div className="divide-y">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-start gap-3 px-6 py-3">
-            <Skeleton className="mt-0.5 h-7 w-7 rounded-full" />
+          <div key={i} className="flex items-start gap-2.5 px-4 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+            <Skeleton className="mt-0.5 h-6 w-6 rounded-full sm:h-7 sm:w-7" />
             <div className="flex-1">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="mt-1 h-3 w-32" />
+              <Skeleton className="h-4 w-20 sm:w-24" />
+              <Skeleton className="mt-1 h-3 w-24 sm:w-32" />
             </div>
           </div>
         ))}

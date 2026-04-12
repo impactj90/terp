@@ -171,9 +171,10 @@ describe("bookingTypeGroups.create", () => {
     const created = makeGroup()
     const mockPrisma = {
       bookingTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)       // findByCode duplicate check
+          .mockResolvedValueOnce(created),   // findByIdWithMembers re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
       bookingTypeGroupMember: {},
     }
@@ -204,9 +205,10 @@ describe("bookingTypeGroups.create", () => {
     })
     const mockPrisma = {
       bookingTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)          // findByCode duplicate check
+          .mockResolvedValueOnce(withMembers),  // findByIdWithMembers re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(withMembers),
       },
       bookingTypeGroupMember: {
         createMany: vi.fn().mockResolvedValue({ count: 2 }),
@@ -265,9 +267,11 @@ describe("bookingTypeGroups.update", () => {
     })
     const mockPrisma = {
       bookingTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)  // findById existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithMembers re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -303,8 +307,9 @@ describe("bookingTypeGroups.update", () => {
     })
     const mockPrisma = {
       bookingTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)  // findById existence check
+          .mockResolvedValueOnce(updated),  // findByIdWithMembers re-fetch
       },
       bookingTypeGroupMember: {
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
@@ -336,9 +341,11 @@ describe("bookingTypeGroups.update", () => {
     })
     const mockPrisma = {
       bookingTypeGroup: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)  // findById existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithMembers re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       bookingTypeGroupMember: {
         deleteMany: vi.fn(),
@@ -377,14 +384,14 @@ describe("bookingTypeGroups.delete", () => {
     const mockPrisma = {
       bookingTypeGroup: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: GROUP_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.bookingTypeGroup.delete).toHaveBeenCalledWith({
-      where: { id: GROUP_ID },
+    expect(mockPrisma.bookingTypeGroup.deleteMany).toHaveBeenCalledWith({
+      where: { id: GROUP_ID, tenantId: TENANT_ID },
     })
   })
 

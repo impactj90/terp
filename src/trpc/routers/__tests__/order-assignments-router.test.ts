@@ -236,7 +236,7 @@ describe("orderAssignments.create", () => {
     const mockPrisma = {
       orderAssignment: {
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findFirst: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -255,7 +255,7 @@ describe("orderAssignments.create", () => {
     const mockPrisma = {
       orderAssignment: {
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findFirst: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -275,7 +275,7 @@ describe("orderAssignments.create", () => {
     const mockPrisma = {
       orderAssignment: {
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
+        findFirst: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -295,7 +295,7 @@ describe("orderAssignments.create", () => {
     const mockPrisma = {
       orderAssignment: {
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(fetched),
+        findFirst: vi.fn().mockResolvedValue(fetched),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -304,8 +304,8 @@ describe("orderAssignments.create", () => {
       employeeId: EMPLOYEE_ID,
     })
     expect(result.order.code).toBe("ORD001")
-    expect(mockPrisma.orderAssignment.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: ASSIGNMENT_ID },
+    expect(mockPrisma.orderAssignment.findFirst).toHaveBeenCalledWith({
+      where: { id: ASSIGNMENT_ID, tenantId: TENANT_ID },
       include: {
         order: { select: { id: true, code: true, name: true } },
         employee: {
@@ -350,9 +350,12 @@ describe("orderAssignments.update", () => {
     const updated = makeAssignment({ role: "leader" })
     const mockPrisma = {
       orderAssignment: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -365,9 +368,12 @@ describe("orderAssignments.update", () => {
     const updated = makeAssignment({ isActive: false })
     const mockPrisma = {
       orderAssignment: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -396,14 +402,14 @@ describe("orderAssignments.delete", () => {
     const mockPrisma = {
       orderAssignment: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: ASSIGNMENT_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.orderAssignment.delete).toHaveBeenCalledWith({
-      where: { id: ASSIGNMENT_ID },
+    expect(mockPrisma.orderAssignment.deleteMany).toHaveBeenCalledWith({
+      where: { id: ASSIGNMENT_ID, order: { tenantId: TENANT_ID } },
     })
   })
 

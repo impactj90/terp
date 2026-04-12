@@ -1,8 +1,15 @@
 import { useTranslations } from 'next-intl'
-import { Clock, ArrowRight, Edit, Trash } from 'lucide-react'
+import { Clock, ArrowRight, Pencil, Trash2, MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { BookingTimeTriple } from './time-display'
 
 interface Booking {
@@ -26,9 +33,6 @@ interface BookingPairProps {
   className?: string
 }
 
-/**
- * Display a pair of IN/OUT bookings with calculated duration.
- */
 export function BookingPair({
   inBooking,
   outBooking,
@@ -44,119 +48,197 @@ export function BookingPair({
   const isPaired = hasInBooking && hasOutBooking
   const isMissing = !hasInBooking || !hasOutBooking
 
+  const actionsMenu = isEditable && (hasInBooking || hasOutBooking) && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity shrink-0"
+        >
+          <MoreVertical className="h-3.5 w-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {hasInBooking && (
+          <>
+            <DropdownMenuItem onClick={() => onEdit?.(inBooking)}>
+              <Pencil className="h-3.5 w-3.5" />
+              {t('editInBooking')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => onDelete?.(inBooking)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t('deleteInBooking')}
+            </DropdownMenuItem>
+          </>
+        )}
+        {hasInBooking && hasOutBooking && <DropdownMenuSeparator />}
+        {hasOutBooking && (
+          <>
+            <DropdownMenuItem onClick={() => onEdit?.(outBooking)}>
+              <Pencil className="h-3.5 w-3.5" />
+              {t('editOutBooking')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => onDelete?.(outBooking)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t('deleteOutBooking')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   return (
-    <div className={cn(
-      'flex items-center gap-4 py-3 px-4 rounded-lg border',
-      isMissing && 'border-dashed border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-900/10',
-      className
-    )}>
-      {/* Clock icon */}
-      <Clock className={cn(
-        'h-4 w-4 shrink-0',
-        isMissing ? 'text-yellow-600' : 'text-muted-foreground'
-      )} />
-
-      {/* IN booking */}
-      <div className="flex-1 min-w-0">
-        {hasInBooking ? (
+    <div
+      className={cn(
+        'group rounded-lg border transition-colors',
+        isMissing
+          ? 'border-dashed border-amber-500/40 bg-amber-500/5'
+          : 'border-transparent bg-muted/30 hover:bg-muted/50',
+        className,
+      )}
+    >
+      {/* Mobile: stacked layout */}
+      <div className="sm:hidden p-3 space-y-2">
+        {/* Header row: icon + duration + actions */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {inBooking.booking_type?.name ?? 'IN'}
-            </Badge>
-            <BookingTimeTriple
-              original={inBooking.original_time}
-              edited={inBooking.edited_time}
-              calculated={inBooking.calculated_time}
+            <Clock
+              className={cn(
+                'h-3.5 w-3.5 shrink-0',
+                isMissing ? 'text-amber-500' : 'text-muted-foreground/50',
+              )}
             />
-            {inBooking.source !== 'terminal' && (
-              <Badge variant="secondary" className="text-xs">
-                {inBooking.source}
-              </Badge>
+            {isPaired && durationMinutes != null && (
+              <span className="text-sm font-medium tabular-nums font-mono">
+                {Math.floor(durationMinutes / 60)}:
+                {(durationMinutes % 60).toString().padStart(2, '0')}
+              </span>
             )}
           </div>
-        ) : (
-          <span className="text-sm text-yellow-600 italic">{t('missingInBooking')}</span>
-        )}
-      </div>
-
-      {/* Arrow */}
-      <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-
-      {/* OUT booking */}
-      <div className="flex-1 min-w-0">
-        {hasOutBooking ? (
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {outBooking.booking_type?.name ?? 'OUT'}
-            </Badge>
-            <BookingTimeTriple
-              original={outBooking.original_time}
-              edited={outBooking.edited_time}
-              calculated={outBooking.calculated_time}
-            />
-            {outBooking.source !== 'terminal' && (
-              <Badge variant="secondary" className="text-xs">
-                {outBooking.source}
+          {actionsMenu}
+        </div>
+        {/* IN booking row */}
+        <div className="flex items-center gap-2 min-w-0">
+          {hasInBooking ? (
+            <>
+              <Badge
+                variant="outline"
+                className="text-[11px] px-1.5 py-0 h-5 font-normal shrink-0"
+              >
+                {inBooking.booking_type?.name ?? 'IN'}
               </Badge>
-            )}
-          </div>
-        ) : (
-          <span className="text-sm text-yellow-600 italic">{t('missingOutBooking')}</span>
-        )}
+              <BookingTimeTriple
+                original={inBooking.original_time}
+                edited={inBooking.edited_time}
+                calculated={inBooking.calculated_time}
+              />
+            </>
+          ) : (
+            <span className="text-sm text-amber-500 italic">
+              {t('missingInBooking')}
+            </span>
+          )}
+        </div>
+        {/* Arrow + OUT booking row */}
+        <div className="flex items-center gap-2 min-w-0">
+          <ArrowRight className="h-3 w-3 text-muted-foreground/30 shrink-0" />
+          {hasOutBooking ? (
+            <>
+              <Badge
+                variant="outline"
+                className="text-[11px] px-1.5 py-0 h-5 font-normal shrink-0"
+              >
+                {outBooking.booking_type?.name ?? 'OUT'}
+              </Badge>
+              <BookingTimeTriple
+                original={outBooking.original_time}
+                edited={outBooking.edited_time}
+                calculated={outBooking.calculated_time}
+              />
+            </>
+          ) : (
+            <span className="text-sm text-amber-500 italic">
+              {t('missingOutBooking')}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Duration */}
-      {isPaired && durationMinutes !== undefined && durationMinutes !== null && (
-        <div className="text-sm font-medium tabular-nums min-w-[60px] text-right">
-          {Math.floor(durationMinutes / 60)}:{(durationMinutes % 60).toString().padStart(2, '0')}
-        </div>
-      )}
+      {/* Desktop: horizontal layout */}
+      <div className="hidden sm:flex items-center gap-3 py-2.5 px-3">
+        <Clock
+          className={cn(
+            'h-3.5 w-3.5 shrink-0',
+            isMissing ? 'text-amber-500' : 'text-muted-foreground/50',
+          )}
+        />
 
-      {/* Actions */}
-      {isEditable && (
-        <div className="flex items-center gap-1">
-          {hasInBooking && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => onEdit?.(inBooking)}
-                aria-label={t('editInBooking')}
+        {/* IN booking */}
+        <div className="flex-1 min-w-0">
+          {hasInBooking ? (
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-[11px] px-1.5 py-0 h-5 font-normal shrink-0"
               >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => onDelete?.(inBooking)}
-                aria-label={t('deleteInBooking')}
-              >
-                <Trash className="h-3 w-3" />
-              </Button>
-            </>
-          )}
-          {hasOutBooking && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => onEdit?.(outBooking)}
-                aria-label={t('editOutBooking')}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => onDelete?.(outBooking)}
-                aria-label={t('deleteOutBooking')}
-              >
-                <Trash className="h-3 w-3" />
-              </Button>
-            </>
+                {inBooking.booking_type?.name ?? 'IN'}
+              </Badge>
+              <BookingTimeTriple
+                original={inBooking.original_time}
+                edited={inBooking.edited_time}
+                calculated={inBooking.calculated_time}
+              />
+            </div>
+          ) : (
+            <span className="text-sm text-amber-500 italic">
+              {t('missingInBooking')}
+            </span>
           )}
         </div>
-      )}
+
+        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+
+        {/* OUT booking */}
+        <div className="flex-1 min-w-0">
+          {hasOutBooking ? (
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-[11px] px-1.5 py-0 h-5 font-normal shrink-0"
+              >
+                {outBooking.booking_type?.name ?? 'OUT'}
+              </Badge>
+              <BookingTimeTriple
+                original={outBooking.original_time}
+                edited={outBooking.edited_time}
+                calculated={outBooking.calculated_time}
+              />
+            </div>
+          ) : (
+            <span className="text-sm text-amber-500 italic">
+              {t('missingOutBooking')}
+            </span>
+          )}
+        </div>
+
+        {/* Duration */}
+        {isPaired && durationMinutes != null && (
+          <div className="text-sm font-medium tabular-nums min-w-[48px] text-right font-mono">
+            {Math.floor(durationMinutes / 60)}:
+            {(durationMinutes % 60).toString().padStart(2, '0')}
+          </div>
+        )}
+
+        {actionsMenu}
+      </div>
     </div>
   )
 }

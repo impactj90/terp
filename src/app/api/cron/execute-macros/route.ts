@@ -77,6 +77,26 @@ export async function executeExecuteMacros(
 
   console.log(`[execute-macros] Found ${tenants.length} active tenants`)
 
+  // --- Checkpoint: load already-completed tenants for this run ---
+  const runKey = targetDateStr
+  const completedCheckpoints = await prisma.cronCheckpoint.findMany({
+    where: { cronName: TASK_TYPE, runKey },
+    select: { tenantId: true },
+  })
+  const completedTenantIds = new Set(completedCheckpoints.map((c) => c.tenantId))
+
+  if (completedTenantIds.size > 0) {
+    console.log(
+      `[execute-macros] Checkpoint: ${completedTenantIds.size} tenants already completed, will skip`,
+    )
+  }
+
+  // Cleanup old checkpoints (> 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  await prisma.cronCheckpoint.deleteMany({
+    where: { cronName: TASK_TYPE, createdAt: { lt: thirtyDaysAgo } },
+  })
+
   const macroExecutor = new MacroExecutor(prisma)
   const logger = new CronExecutionLogger(prisma)
   const results: TenantResult[] = []
@@ -85,9 +105,33 @@ export async function executeExecuteMacros(
   let totalExecuted = 0
   let totalFailed = 0
 
+  const jobStartTime = Date.now()
+
   // Process tenants sequentially to avoid connection pool exhaustion
-  for (const tenant of tenants) {
+  for (let i = 0; i < tenants.length; i++) {
+    const tenant = tenants[i]!
     const tenantStart = Date.now()
+
+    // Timeout warning: alert when approaching 5-min Vercel limit
+    if (Date.now() - jobStartTime > 240_000) {
+      console.warn(
+        `[execute-macros] WARNING: approaching 5-min timeout. ` +
+          `${tenants.length - i} tenants remaining. Processed tenants are checkpointed for resume.`,
+      )
+    }
+
+    // Skip already-completed tenants (checkpoint hit)
+    if (completedTenantIds.has(tenant.id)) {
+      console.log(`[execute-macros] Tenant ${tenant.id}: checkpoint hit, skipping`)
+      results.push({
+        tenantId: tenant.id,
+        executed: 0,
+        failed: 0,
+        durationMs: 0,
+      })
+      tenantsProcessed++
+      continue
+    }
     let scheduleId: string | undefined
     let executionId: string | undefined
     let taskExecutionId: string | undefined
@@ -162,6 +206,32 @@ export async function executeExecuteMacros(
         failed: result.failed,
         durationMs,
       })
+
+      // Save checkpoint so re-runs skip this tenant
+      try {
+        await prisma.cronCheckpoint.upsert({
+          where: {
+            cronName_runKey_tenantId: {
+              cronName: TASK_TYPE,
+              runKey,
+              tenantId: tenant.id,
+            },
+          },
+          create: {
+            cronName: TASK_TYPE,
+            runKey,
+            tenantId: tenant.id,
+            status: "completed",
+            durationMs,
+          },
+          update: { status: "completed", durationMs },
+        })
+      } catch (cpErr) {
+        console.error(
+          `[execute-macros] Failed to save checkpoint for tenant ${tenant.id}:`,
+          cpErr,
+        )
+      }
 
       console.log(
         `[execute-macros] Tenant ${tenant.id}: ${result.executed} executed, ${result.failed} failed (${durationMs}ms)`,
@@ -240,7 +310,12 @@ export async function executeExecuteMacros(
 export async function GET(request: Request) {
   // 1. CRON_SECRET validation
   const authHeader = request.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    console.error('[execute-macros] CRON_SECRET is not configured')
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

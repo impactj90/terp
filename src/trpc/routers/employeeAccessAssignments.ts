@@ -14,7 +14,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope, buildRelatedEmployeeDataScopeWhere } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as employeeAccessAssignmentService from "@/lib/services/employee-access-assignment-service"
@@ -137,15 +138,19 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
+    .use(applyDataScope())
     .input(z.void().optional())
     .output(
       z.object({ data: z.array(employeeAccessAssignmentOutputSchema) })
     )
     .query(async ({ ctx }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeWhere = buildRelatedEmployeeDataScopeWhere(dataScope)
         const assignments = await employeeAccessAssignmentService.list(
           ctx.prisma,
-          ctx.tenantId!
+          ctx.tenantId!,
+          scopeWhere
         )
         return { data: assignments.map(mapAssignment) }
       } catch (err) {
@@ -162,15 +167,27 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   getById: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(employeeAccessAssignmentOutputSchema)
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
         const assignment = await employeeAccessAssignmentService.getById(
           ctx.prisma,
           ctx.tenantId!,
           input.id
         )
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: assignment.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeAccessAssignment")
+        }
         return mapAssignment(assignment)
       } catch (err) {
         handleServiceError(err)
@@ -186,14 +203,27 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
+    .use(applyDataScope())
     .input(createEmployeeAccessAssignmentInputSchema)
     .output(employeeAccessAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeAccessAssignment")
+        }
         const assignment = await employeeAccessAssignmentService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignment(assignment)
       } catch (err) {
@@ -210,14 +240,28 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   update: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
+    .use(applyDataScope())
     .input(updateEmployeeAccessAssignmentInputSchema)
     .output(employeeAccessAssignmentOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        // Fetch existing to check scope
+        const existing = await ctx.prisma.employeeAccessAssignment.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+          include: { employee: { select: { id: true, departmentId: true } } },
+        })
+        if (existing?.employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: existing.employeeId,
+            employee: { departmentId: existing.employee.departmentId },
+          }, "EmployeeAccessAssignment")
+        }
         const assignment = await employeeAccessAssignmentService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAssignment(assignment)
       } catch (err) {
@@ -232,14 +276,27 @@ export const employeeAccessAssignmentsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(ACCESS_CONTROL_MANAGE))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const existing = await ctx.prisma.employeeAccessAssignment.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+          include: { employee: { select: { id: true, departmentId: true } } },
+        })
+        if (existing?.employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: existing.employeeId,
+            employee: { departmentId: existing.employee.departmentId },
+          }, "EmployeeAccessAssignment")
+        }
         await employeeAccessAssignmentService.remove(
           ctx.prisma,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

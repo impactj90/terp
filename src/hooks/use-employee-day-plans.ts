@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // --- Query Hooks ---
 
@@ -81,6 +82,9 @@ export function useCreateEmployeeDayPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -109,6 +113,9 @@ export function useUpdateEmployeeDayPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.getById.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -136,6 +143,9 @@ export function useBulkCreateEmployeeDayPlans() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -160,6 +170,9 @@ export function useDeleteEmployeeDayPlanRange() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
       })
     },
   })
@@ -186,6 +199,9 @@ export function useDeleteEmployeeDayPlan() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.forEmployee.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
     },
   })
 }
@@ -204,6 +220,7 @@ export function useDeleteEmployeeDayPlan() {
 export function useGenerateFromTariff() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.employeeDayPlans.generateFromTariff.mutationOptions(),
     onSuccess: () => {
@@ -217,6 +234,8 @@ export function useGenerateFromTariff() {
       queryClient.invalidateQueries({
         queryKey: trpc.employeeDayPlans.getById.queryKey(),
       })
+      // Generation affects dayView, dailyValues, and monthlyValues
+      invalidateTimeData()
     },
   })
 }

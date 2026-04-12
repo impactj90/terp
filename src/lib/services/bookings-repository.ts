@@ -6,6 +6,7 @@
  * CRUD operations, derived booking management, and transactional deletes.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Prisma Include Objects ---
 
@@ -151,29 +152,33 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.booking.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.booking, { id, tenantId }, data, {
     include: bookingDetailInclude,
+    entity: "Booking",
   })
 }
 
 export async function deleteWithDerived(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
   await prisma.$transaction(async (tx) => {
-    // Delete any derived bookings pointing to this one
+    // Delete any derived bookings pointing to this one (scoped by tenant)
     await tx.booking.deleteMany({
-      where: { originalBookingId: id },
+      where: { originalBookingId: id, tenantId },
     })
-    // Delete the booking itself
-    await tx.booking.delete({
-      where: { id },
+    // Delete the booking itself (scoped by tenant)
+    const { count } = await tx.booking.deleteMany({
+      where: { id, tenantId },
     })
+    if (count === 0) {
+      throw new Error("Booking not found")
+    }
   })
 }
 
@@ -181,10 +186,11 @@ export async function deleteWithDerived(
 
 export async function findDerivedByOriginalId(
   prisma: PrismaClient,
+  tenantId: string,
   originalBookingId: string
 ) {
   return prisma.booking.findFirst({
-    where: { originalBookingId },
+    where: { tenantId, originalBookingId },
   })
 }
 
@@ -211,6 +217,7 @@ export async function createDerived(
 
 export async function updateDerived(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: {
     editedTime: number
@@ -219,8 +226,8 @@ export async function updateDerived(
     calculatedTime: null
   }
 ) {
-  return prisma.booking.update({
-    where: { id },
+  await prisma.booking.updateMany({
+    where: { id, tenantId },
     data,
   })
 }
@@ -229,11 +236,12 @@ export async function updateDerived(
 
 export async function findEmployeeDayPlan(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   planDate: Date
 ) {
   return prisma.employeeDayPlan.findFirst({
-    where: { employeeId, planDate },
+    where: { employeeId, planDate, tenantId },
     include: { dayPlan: true },
   })
 }

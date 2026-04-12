@@ -7,6 +7,17 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./employment-type-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "weeklyHours",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -62,7 +73,8 @@ export async function create(
     weeklyHoursDefault?: number
     isActive?: boolean
     vacationCalcGroupId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -88,7 +100,7 @@ export async function create(
     )
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     code,
     name,
@@ -99,6 +111,22 @@ export async function create(
     isActive: input.isActive ?? true,
     vacationCalcGroupId: input.vacationCalcGroupId ?? null,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "employment_type",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -112,7 +140,8 @@ export async function update(
     isActive?: boolean
     vacationCalcGroupId?: string
     clearVacationCalcGroupId?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify employment type exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -176,13 +205,35 @@ export async function update(
     data.vacationCalcGroupId = input.vacationCalcGroupId
   }
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employment_type",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify employment type exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -191,12 +242,26 @@ export async function remove(
   }
 
   // Check for employees
-  const employeeCount = await repo.countEmployees(prisma, id)
+  const employeeCount = await repo.countEmployees(prisma, tenantId, id)
   if (employeeCount > 0) {
     throw new EmploymentTypeValidationError(
       "Cannot delete employment type with assigned employees"
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employment_type",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

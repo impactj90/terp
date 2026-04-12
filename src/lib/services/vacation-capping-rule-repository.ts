@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -66,26 +67,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vacationCappingRule.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.vacationCappingRule, { id, tenantId }, data, { entity: "VacationCappingRule" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.vacationCappingRule.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.vacationCappingRule.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countGroupRuleUsages(
   prisma: PrismaClient,
+  tenantId: string,
   cappingRuleId: string
 ) {
   return prisma.vacationCappingRuleGroupRule.count({
-    where: { cappingRuleId },
+    where: { cappingRuleId, group: { tenantId } },
   })
 }

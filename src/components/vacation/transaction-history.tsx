@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl'
 import { Calendar } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -26,18 +25,18 @@ interface TransactionHistoryProps {
   className?: string
 }
 
-const statusStyles: Record<string, string> = {
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+const statusVariants: Record<string, 'green' | 'yellow' | 'red' | 'gray'> = {
+  approved: 'green',
+  pending: 'yellow',
+  rejected: 'red',
+  cancelled: 'gray',
 }
 
 function StatusBadge({ status }: { status: string }) {
   return (
     <Badge
-      variant="secondary"
-      className={cn('capitalize', statusStyles[status] ?? '')}
+      variant={statusVariants[status] ?? 'gray'}
+      className="capitalize"
     >
       {status}
     </Badge>
@@ -108,44 +107,78 @@ export function TransactionHistory({
             {t('noRecords', { year })}
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('date')}</TableHead>
-                <TableHead>{t('type')}</TableHead>
-                <TableHead className="text-right">{t('durationHeader')}</TableHead>
-                <TableHead>{t('status')}</TableHead>
-                <TableHead>{tc('notes')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Mobile: card list */}
+            <div className="space-y-2 sm:hidden">
               {sortedAbsences.map((absence: Absence) => (
-                <TableRow key={absence.id}>
-                  <TableCell className="font-medium">
-                    {absence.absence_date
-                      ? formatDisplayDate(new Date(absence.absence_date), 'short')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {absence.absence_type?.name ?? 'Vacation'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {absence.duration === 1
-                      ? t('oneDay')
-                      : absence.duration === 0.5
-                        ? t('halfDay')
-                        : t('countDays', { count: absence.duration })}
-                  </TableCell>
-                  <TableCell>
+                <div key={absence.id} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {absence.absence_date
+                        ? formatDisplayDate(new Date(absence.absence_date), 'short')
+                        : '-'}
+                    </span>
                     <StatusBadge status={absence.status ?? 'pending'} />
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {absence.notes ?? '-'}
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                    <span>{absence.absence_type?.name ?? 'Vacation'}</span>
+                    <span>
+                      {absence.duration === 1
+                        ? t('oneDay')
+                        : absence.duration === 0.5
+                          ? t('halfDay')
+                          : t('countDays', { count: absence.duration })}
+                    </span>
+                  </div>
+                  {absence.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{absence.notes}</p>
+                  )}
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('date')}</TableHead>
+                    <TableHead>{t('type')}</TableHead>
+                    <TableHead className="text-right">{t('durationHeader')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead>{tc('notes')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedAbsences.map((absence: Absence) => (
+                    <TableRow key={absence.id}>
+                      <TableCell className="font-medium">
+                        {absence.absence_date
+                          ? formatDisplayDate(new Date(absence.absence_date), 'short')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {absence.absence_type?.name ?? 'Vacation'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {absence.duration === 1
+                          ? t('oneDay')
+                          : absence.duration === 0.5
+                            ? t('halfDay')
+                            : t('countDays', { count: absence.duration })}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={absence.status ?? 'pending'} />
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                        {absence.notes ?? '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

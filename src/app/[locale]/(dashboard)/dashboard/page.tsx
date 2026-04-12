@@ -12,6 +12,7 @@ import {
   PendingActions,
   RecentActivity,
 } from '@/components/dashboard'
+import { PersonnelFileDashboardWidget } from '@/components/hr/personnel-file-dashboard-widget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
 
@@ -51,15 +52,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Dashboard Header */}
       <DashboardHeader user={user} />
 
       {/* Quick Actions */}
       <QuickActions employeeId={employeeId} />
 
-      {/* Stats Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards Grid — 2 cols on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <TodayScheduleCard employeeId={employeeId} />
         <HoursThisWeekCard employeeId={employeeId} />
         <VacationBalanceCard employeeId={employeeId} />
@@ -67,10 +68,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Two column layout for pending + activity */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <PendingActions employeeId={employeeId} />
         <RecentActivity employeeId={employeeId} />
       </div>
+
+      {/* HR Personnel File Widget */}
+      <PersonnelFileDashboardWidget />
     </div>
   )
 }
@@ -80,48 +84,48 @@ export default function DashboardPage() {
  */
 function DashboardLoadingSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header skeleton */}
       <div>
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="mt-2 h-4 w-48" />
+        <Skeleton className="h-7 w-48 sm:h-8 sm:w-64" />
+        <Skeleton className="mt-1.5 h-4 w-32 sm:mt-2 sm:w-48" />
       </div>
 
       {/* Quick actions skeleton */}
-      <div className="flex gap-2">
-        <Skeleton className="h-9 w-24" />
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-9 w-28" />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Skeleton className="h-11 w-full sm:h-9 sm:w-24" />
+        <Skeleton className="h-11 w-full sm:h-9 sm:w-32" />
+        <Skeleton className="h-11 w-full sm:h-9 sm:w-28" />
       </div>
 
       {/* Cards grid skeleton */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-lg border bg-card p-6">
+          <div key={i} className="rounded-lg border bg-card p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-3.5 w-16 sm:h-4 sm:w-24" />
+              <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
-            <Skeleton className="mt-2 h-8 w-20" />
-            <Skeleton className="mt-2 h-3 w-32" />
+            <Skeleton className="mt-2 h-6 w-14 sm:h-8 sm:w-20" />
+            <Skeleton className="mt-1.5 h-3 w-20 sm:mt-2 sm:w-32" />
           </div>
         ))}
       </div>
 
       {/* Activity sections skeleton */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {[1, 2].map((i) => (
           <div key={i} className="rounded-lg border">
-            <div className="border-b px-6 py-4">
-              <Skeleton className="h-6 w-32" />
+            <div className="border-b px-4 py-3 sm:px-6 sm:py-4">
+              <Skeleton className="h-5 w-28 sm:h-6 sm:w-32" />
             </div>
             <div className="divide-y">
               {[1, 2, 3].map((j) => (
-                <div key={j} className="flex items-start gap-3 px-6 py-3">
+                <div key={j} className="flex items-start gap-3 px-4 py-2.5 sm:px-6 sm:py-3">
                   <Skeleton className="h-4 w-4" />
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="mt-1 h-3 w-20" />
+                    <Skeleton className="h-4 w-36 sm:w-48" />
+                    <Skeleton className="mt-1 h-3 w-16 sm:w-20" />
                   </div>
                 </div>
               ))}

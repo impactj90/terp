@@ -1,3 +1,6 @@
+// Media query / responsive hooks
+export { useMediaQuery, useIsMobile } from './use-media-query'
+
 // Auth hooks (User type re-exported from auth-provider for backward compatibility)
 export { type User } from './use-auth'
 export {
@@ -97,6 +100,7 @@ export {
 } from './use-user-groups'
 export { usePermissions } from './use-permissions'
 export { useCurrentPermissions } from './use-current-permissions'
+export { useModules } from './use-modules'
 
 // Notifications
 export {
@@ -182,6 +186,8 @@ export {
 export {
   useTeams,
   useTeam,
+  useMyTeams,
+  useMyTeam,
   useTeamMembers,
   useCreateTeam,
   useUpdateTeam,
@@ -288,6 +294,51 @@ export {
   type PayrollExportPreview,
 } from './use-payroll-exports'
 
+// Payroll Wages (Lohnart-Mapping, Phase 2)
+export {
+  usePayrollWages,
+  useDefaultPayrollWages,
+  useInitializePayrollWages,
+  useUpdatePayrollWage,
+  useResetPayrollWages,
+} from './use-payroll-wages'
+
+// Export Templates (Phase 2)
+export {
+  useExportTemplates,
+  useExportTemplate,
+  useExportTemplateVersions,
+  useCreateExportTemplate,
+  useUpdateExportTemplate,
+  useDeleteExportTemplate,
+  usePreviewExportTemplate,
+  useTestExportTemplate,
+} from './use-export-templates'
+
+// System Export Templates (Phase 3 — standard-template library)
+export {
+  useSystemExportTemplates,
+  useSystemExportTemplate,
+  useCopySystemExportTemplate,
+} from './use-system-export-templates'
+
+// Payroll Bulk Import (Phase 3)
+export {
+  useParsePayrollBulkFile,
+  useConfirmPayrollBulkImport,
+} from './use-payroll-bulk-import'
+
+// Employee Salary History (Phase 3)
+export {
+  useEmployeeSalaryHistory,
+  useCreateSalaryHistoryEntry,
+  useUpdateSalaryHistoryEntry,
+  useDeleteSalaryHistoryEntry,
+} from './use-employee-salary-history'
+
+// DATEV Onboarding status (Phase 3)
+export { useDatevOnboardingStatus } from './use-datev-onboarding'
+
 // Export Interfaces (admin CRUD)
 export {
   useExportInterfaces as useExportInterfacesList,
@@ -332,6 +383,8 @@ export {
 export {
   useAuditLogs,
   useAuditLog,
+  useExportAuditLogsCsv,
+  useExportAuditLogsPdf,
 } from './use-audit-logs'
 
 // System Settings
@@ -351,7 +404,16 @@ export {
   useCreateTenant,
   useUpdateTenant,
   useDeactivateTenant,
+  useSupportSessions,
+  useActiveSupportSession,
+  useRequestSupportAccess,
+  useRevokeSupportAccess,
 } from './use-tenants'
+
+// Demo Self-Service (tenant-side /demo-expired page)
+// Admin-side demo lifecycle moved to platform-admin; see
+// /platform/tenants/demo.
+export { useRequestConvertFromExpired } from './use-demo-self-service'
 
 // Booking Type Groups
 export {
@@ -632,6 +694,11 @@ export {
   useDeleteAccount,
 } from './use-accounts'
 
+// Daily Account Values
+export {
+  useAccountValueSummary,
+} from './use-daily-account-values'
+
 // Contact Kinds
 export {
   useContactKinds,
@@ -648,3 +715,454 @@ export {
   useUpdateContactType,
   useDeleteContactType,
 } from './use-contact-types'
+
+// CRM Addresses
+export {
+  useCrmAddresses,
+  useCrmAddress,
+  useCreateCrmAddress,
+  useUpdateCrmAddress,
+  useDeleteCrmAddress,
+  useRestoreCrmAddress,
+  useCrmContacts,
+  useCreateCrmContact,
+  useUpdateCrmContact,
+  useDeleteCrmContact,
+  useCrmBankAccounts,
+  useCreateCrmBankAccount,
+  useUpdateCrmBankAccount,
+  useDeleteCrmBankAccount,
+  useCrmAddressHierarchy,
+  useSetCrmAddressParent,
+  useCrmGroupList,
+  useCrmGroupStats,
+} from './use-crm-addresses'
+
+// CRM Correspondence
+export {
+  useCrmCorrespondence,
+  useCrmCorrespondenceById,
+  useCreateCrmCorrespondence,
+  useUpdateCrmCorrespondence,
+  useDeleteCrmCorrespondence,
+} from './use-crm-correspondence'
+
+// CRM Correspondence Attachments
+export {
+  useCrmCorrespondenceAttachments,
+  useUploadCrmCorrespondenceAttachment,
+  useDeleteCrmCorrespondenceAttachment,
+  useCrmCorrespondenceDownloadUrl,
+} from './use-crm-correspondence-attachments'
+
+// CRM Inquiries
+export {
+  useCrmInquiries,
+  useCrmInquiryById,
+  useCreateCrmInquiry,
+  useUpdateCrmInquiry,
+  useCloseCrmInquiry,
+  useCancelCrmInquiry,
+  useReopenCrmInquiry,
+  useLinkCrmInquiryOrder,
+  useCreateCrmInquiryOrder,
+  useDeleteCrmInquiry,
+} from './use-crm-inquiries'
+
+// CRM Tasks
+export {
+  useCrmTasks,
+  useMyTasks,
+  useCrmTaskById,
+  useCreateCrmTask,
+  useUpdateCrmTask,
+  useCompleteCrmTask,
+  useCancelCrmTask,
+  useReopenCrmTask,
+  useMarkCrmTaskRead,
+  useDeleteCrmTask,
+} from './use-crm-tasks'
+
+// CRM Reports
+export {
+  useCrmOverview,
+  useCrmAddressStats,
+  useCrmCorrespondenceByPeriod,
+  useCrmCorrespondenceByType,
+  useCrmInquiryPipeline,
+  useCrmInquiryByEffort,
+  useCrmTaskCompletion,
+  useCrmTasksByAssignee,
+} from './use-crm-reports'
+
+// Billing Documents
+export {
+  useBillingDocuments,
+  useBillingDocumentById,
+  useCreateBillingDocument,
+  useUpdateBillingDocument,
+  useDeleteBillingDocument,
+  useFinalizeBillingDocument,
+  useForwardBillingDocument,
+  useCancelBillingDocument,
+  useDuplicateBillingDocument,
+  useDownloadBillingDocumentPdf,
+  useDownloadBillingDocumentXml,
+  useGenerateBillingDocumentEInvoice,
+  useBillingPositions,
+  useAddBillingPosition,
+  useUpdateBillingPosition,
+  useDeleteBillingPosition,
+  useReorderBillingPositions,
+} from './use-billing-documents'
+
+// Billing Document Templates
+export {
+  useBillingDocumentTemplates,
+  useBillingDocumentTemplatesByType,
+  useDefaultBillingDocumentTemplate,
+  useCreateBillingDocumentTemplate,
+  useUpdateBillingDocumentTemplate,
+  useDeleteBillingDocumentTemplate,
+  useSetDefaultBillingDocumentTemplate,
+} from './use-billing-document-templates'
+
+// Billing Tenant Config
+export {
+  useBillingTenantConfig,
+  useUpsertBillingTenantConfig,
+} from './use-billing-tenant-config'
+
+// Billing Service Cases
+export {
+  useBillingServiceCases,
+  useBillingServiceCase,
+  useCreateBillingServiceCase,
+  useUpdateBillingServiceCase,
+  useCloseBillingServiceCase,
+  useCreateInvoiceFromServiceCase,
+  useCreateOrderFromServiceCase,
+  useDeleteBillingServiceCase,
+} from './use-billing-service-cases'
+
+// Billing Payments (Open Items)
+export {
+  useBillingOpenItems,
+  useBillingOpenItem,
+  useBillingOpenItemsSummary,
+  useBillingPayments,
+  useCreateBillingPayment,
+  useCancelBillingPayment,
+} from './use-billing-payments'
+
+// Billing Price Lists
+export {
+  useBillingPriceLists,
+  useBillingPriceList,
+  useBillingPriceLookup,
+  usePriceListEntriesForAddress,
+  useCreateBillingPriceList,
+  useUpdateBillingPriceList,
+  useDeleteBillingPriceList,
+  useSetDefaultBillingPriceList,
+  useBillingPriceListEntries,
+  useCreateBillingPriceListEntry,
+  useUpdateBillingPriceListEntry,
+  useDeleteBillingPriceListEntry,
+  useBulkImportBillingPriceListEntries,
+} from './use-billing-price-lists'
+
+// Billing Recurring Invoices
+export {
+  useBillingRecurringInvoices,
+  useBillingRecurringInvoice,
+  useBillingRecurringInvoicePreview,
+  useCreateBillingRecurringInvoice,
+  useUpdateBillingRecurringInvoice,
+  useDeleteBillingRecurringInvoice,
+  useActivateBillingRecurringInvoice,
+  useDeactivateBillingRecurringInvoice,
+  useGenerateRecurringInvoice,
+  useGenerateDueRecurringInvoices,
+} from './use-billing-recurring'
+
+// Warehouse Articles
+export {
+  useWhArticles,
+  useWhArticle,
+  useWhArticleSearch,
+  useWhArticleGroups,
+  useCreateWhArticle,
+  useUpdateWhArticle,
+  useDeleteWhArticle,
+  useRestoreWhArticle,
+  useHardDeleteWhArticle,
+  useAdjustWhArticleStock,
+  useCreateWhArticleGroup,
+  useUpdateWhArticleGroup,
+  useDeleteWhArticleGroup,
+  useWhArticleSuppliers,
+  useAddWhArticleSupplier,
+  useUpdateWhArticleSupplier,
+  useRemoveWhArticleSupplier,
+  useWhArticleBom,
+  useAddWhArticleBom,
+  useUpdateWhArticleBom,
+  useRemoveWhArticleBom,
+} from './use-wh-articles'
+
+// Warehouse Article Images
+export {
+  useWhArticleImages,
+  useUploadWhArticleImage,
+  useSetPrimaryWhArticleImage,
+  useReorderWhArticleImages,
+  useDeleteWhArticleImage,
+} from './use-wh-article-images'
+
+// Warehouse Article Prices
+export {
+  useWhPriceLists,
+  useCreateWhPriceList,
+  useUpdateWhPriceList,
+  useDeleteWhPriceList,
+  useWhArticlePrices,
+  useWhPriceListArticles,
+  useSetWhArticlePrice,
+  useRemoveWhArticlePrice,
+  useBulkSetWhArticlePrices,
+  useCopyWhPriceList,
+  useAdjustWhPrices,
+} from './use-wh-article-prices'
+
+// Warehouse Purchase Orders
+export {
+  useWhPurchaseOrders,
+  useWhPurchaseOrder,
+  useWhReorderSuggestions,
+  useCreateWhPurchaseOrder,
+  useUpdateWhPurchaseOrder,
+  useDeleteWhPurchaseOrder,
+  useSendWhPurchaseOrder,
+  useCancelWhPurchaseOrder,
+  useCreateWhPOFromSuggestions,
+  useWhPOPositions,
+  useAddWhPOPosition,
+  useUpdateWhPOPosition,
+  useDeleteWhPOPosition,
+  useGenerateWhPurchaseOrderPdf,
+  useDownloadWhPurchaseOrderPdf,
+} from './use-wh-purchase-orders'
+
+// Warehouse Stock Movements
+export {
+  useWhPendingOrders,
+  useWhOrderPositions,
+  useWhStockMovements,
+  useWhArticleMovements,
+  useBookGoodsReceipt,
+  useBookSinglePosition,
+} from './use-wh-stock-movements'
+
+// Warehouse Withdrawals
+export {
+  useWhWithdrawals,
+  useWhWithdrawalsByOrder,
+  useWhWithdrawalsByDocument,
+  useCreateWhWithdrawal,
+  useCreateBatchWhWithdrawal,
+  useCancelWhWithdrawal,
+} from './use-wh-withdrawals'
+
+// Delivery Note Stock Bookings
+export {
+  usePreviewStockBookings,
+  useConfirmStockBookings,
+} from './use-delivery-note-stock'
+
+// Warehouse Corrections
+export {
+  useWhCorrectionMessages,
+  useWhCorrectionMessageById,
+  useWhCorrectionSummary,
+  useWhCorrectionRuns,
+  useResolveWhCorrection,
+  useDismissWhCorrection,
+  useResolveBulkWhCorrection,
+  useTriggerWhCorrectionRun,
+} from './use-wh-corrections'
+
+// Warehouse Reservations
+export {
+  useWhReservations,
+  useWhArticleAvailableStock,
+  useReleaseWhReservation,
+  useReleaseWhReservationsBulk,
+} from './use-wh-reservations'
+
+// Warehouse QR Scanner
+export {
+  useResolveQrCode,
+  useResolveByNumber,
+  useGenerateLabelPdf,
+  useGenerateAllLabelsPdf,
+  useGenerateSingleQr,
+  useQrRecentMovements,
+  useQrPendingPositions,
+} from './use-wh-qr'
+
+// Warehouse Stocktake
+export {
+  useWhStocktakes,
+  useWhStocktake,
+  useWhStocktakePositions,
+  useWhStocktakePositionByArticle,
+  useWhStocktakeStats,
+  useCreateWhStocktake,
+  useStartStocktakeCounting,
+  useRecordStocktakeCount,
+  useReviewStocktakePosition,
+  useSkipStocktakePosition,
+  useCompleteStocktake,
+  useCancelStocktake,
+  useDeleteStocktake,
+  useGenerateStocktakePdf,
+} from './use-wh-stocktake'
+
+// HR Personnel File
+export {
+  useHrPersonnelFileCategories,
+  useCreateHrPersonnelFileCategory,
+  useUpdateHrPersonnelFileCategory,
+  useDeleteHrPersonnelFileCategory,
+  useHrPersonnelFileEntries,
+  useHrPersonnelFileEntry,
+  useCreateHrPersonnelFileEntry,
+  useUpdateHrPersonnelFileEntry,
+  useDeleteHrPersonnelFileEntry,
+  useHrPersonnelFileReminders,
+  useHrPersonnelFileExpiring,
+  useUploadHrPersonnelFileAttachment,
+  useDeleteHrPersonnelFileAttachment,
+  useHrPersonnelFileDownloadUrl,
+} from './use-hr-personnel-file'
+
+// DSGVO Retention
+export {
+  useDsgvoRules,
+  useUpdateDsgvoRule,
+  useDsgvoPreview,
+  useExecuteDsgvoRetention,
+  useDsgvoLogs,
+} from './use-dsgvo'
+
+// AI Assistant
+export { useAiAssistantStream } from './use-ai-assistant'
+
+// Employee Payroll: Children
+export {
+  useEmployeeChildren,
+  useCreateEmployeeChild,
+  useUpdateEmployeeChild,
+  useDeleteEmployeeChild,
+} from './use-employee-children'
+
+// Employee Payroll: Company Cars
+export {
+  useEmployeeCompanyCars,
+  useCreateEmployeeCompanyCar,
+  useUpdateEmployeeCompanyCar,
+  useDeleteEmployeeCompanyCar,
+} from './use-employee-company-cars'
+
+// Employee Payroll: Job Bikes
+export {
+  useEmployeeJobBikes,
+  useCreateEmployeeJobBike,
+  useUpdateEmployeeJobBike,
+  useDeleteEmployeeJobBike,
+} from './use-employee-job-bikes'
+
+// Employee Payroll: Meal Allowances
+export {
+  useEmployeeMealAllowances,
+  useCreateEmployeeMealAllowance,
+  useUpdateEmployeeMealAllowance,
+  useDeleteEmployeeMealAllowance,
+} from './use-employee-meal-allowances'
+
+// Employee Payroll: Vouchers
+export {
+  useEmployeeVouchers,
+  useCreateEmployeeVoucher,
+  useUpdateEmployeeVoucher,
+  useDeleteEmployeeVoucher,
+} from './use-employee-vouchers'
+
+// Employee Payroll: Job Tickets
+export {
+  useEmployeeJobTickets,
+  useCreateEmployeeJobTicket,
+  useUpdateEmployeeJobTicket,
+  useDeleteEmployeeJobTicket,
+} from './use-employee-job-tickets'
+
+// Employee Payroll: Pensions
+export {
+  useEmployeePensions,
+  useCreateEmployeePension,
+  useUpdateEmployeePension,
+  useDeleteEmployeePension,
+} from './use-employee-pensions'
+
+// Employee Payroll: Savings
+export {
+  useEmployeeSavings,
+  useCreateEmployeeSaving,
+  useUpdateEmployeeSaving,
+  useDeleteEmployeeSaving,
+} from './use-employee-savings'
+
+// Employee Payroll: Garnishments
+export {
+  useEmployeeGarnishments,
+  useCreateEmployeeGarnishment,
+  useUpdateEmployeeGarnishment,
+  useDeleteEmployeeGarnishment,
+} from './use-employee-garnishments'
+
+// Employee Payroll: Parental Leaves
+export {
+  useEmployeeParentalLeaves,
+  useCreateEmployeeParentalLeave,
+  useUpdateEmployeeParentalLeave,
+  useDeleteEmployeeParentalLeave,
+} from './use-employee-parental-leaves'
+
+// Employee Payroll: Maternity Leaves
+export {
+  useEmployeeMaternityLeaves,
+  useCreateEmployeeMaternityLeave,
+  useUpdateEmployeeMaternityLeave,
+  useDeleteEmployeeMaternityLeave,
+} from './use-employee-maternity-leaves'
+
+// Employee Payroll: Foreign Assignments
+export {
+  useEmployeeForeignAssignments,
+  useCreateEmployeeForeignAssignment,
+  useUpdateEmployeeForeignAssignment,
+  useDeleteEmployeeForeignAssignment,
+} from './use-employee-foreign-assignments'
+
+// Employee Payroll: Other Employments
+export {
+  useEmployeeOtherEmployments,
+  useCreateEmployeeOtherEmployment,
+  useUpdateEmployeeOtherEmployment,
+  useDeleteEmployeeOtherEmployment,
+} from './use-employee-other-employments'
+
+// Employee Payroll: Lookups
+export { useHealthInsuranceProviders } from './use-health-insurance-providers'
+export { useActivityCodesKldb } from './use-activity-codes-kldb'

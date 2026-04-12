@@ -41,21 +41,21 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TranslationFn = (key: string, values?: Record<string, any>) => string
 
-const STATUS_BADGE_CONFIG: Record<string, { className: string; labelKey: string }> = {
+const STATUS_BADGE_CONFIG: Record<string, { variant: 'yellow' | 'green' | 'red' | 'gray'; labelKey: string }> = {
   pending: {
-    className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    variant: 'yellow',
     labelKey: 'bookings.statusPending',
   },
   processed: {
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    variant: 'green',
     labelKey: 'bookings.statusProcessed',
   },
   failed: {
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    variant: 'red',
     labelKey: 'bookings.statusFailed',
   },
   skipped: {
-    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    variant: 'gray',
     labelKey: 'bookings.statusSkipped',
   },
 }
@@ -265,7 +265,7 @@ export function BookingsTab() {
                           </Tooltip>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className={statusConfig!.className}>
+                          <Badge variant={statusConfig!.variant}>
                             {t(statusConfig!.labelKey as Parameters<typeof t>[0])}
                           </Badge>
                         </TableCell>

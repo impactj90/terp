@@ -12,7 +12,8 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
+import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as service from "@/lib/services/employee-contacts-service"
@@ -49,10 +50,22 @@ export const employeeContactsRouter = createTRPCRouter({
    */
   list: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
     .input(z.object({ employeeId: z.string() }))
     .output(z.object({ data: z.array(employeeContactOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeContact")
+        }
         return await service.listContacts(
           ctx.prisma,
           ctx.tenantId!,
@@ -73,6 +86,7 @@ export const employeeContactsRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
+    .use(applyDataScope())
     .input(
       z.object({
         employeeId: z.string(),
@@ -86,7 +100,19 @@ export const employeeContactsRouter = createTRPCRouter({
     .output(employeeContactOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.createContact(ctx.prisma, ctx.tenantId!, input)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const employee = await ctx.prisma.employee.findFirst({
+          where: { id: input.employeeId, tenantId: ctx.tenantId!, deletedAt: null },
+          select: { id: true, departmentId: true },
+        })
+        if (employee) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: employee.id,
+            employee: { departmentId: employee.departmentId },
+          }, "EmployeeContact")
+        }
+        return await service.createContact(ctx.prisma, ctx.tenantId!, input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }
@@ -102,11 +128,24 @@ export const employeeContactsRouter = createTRPCRouter({
    */
   delete: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
+    .use(applyDataScope())
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        return await service.deleteContact(ctx.prisma, ctx.tenantId!, input.id)
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const contact = await ctx.prisma.employeeContact.findFirst({
+          where: { id: input.id },
+          include: { employee: { select: { id: true, departmentId: true, tenantId: true } } },
+        })
+        if (contact) {
+          checkRelatedEmployeeDataScope(dataScope, {
+            employeeId: contact.employeeId,
+            employee: contact.employee ? { departmentId: contact.employee.departmentId } : null,
+          }, "EmployeeContact")
+        }
+        return await service.deleteContact(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }

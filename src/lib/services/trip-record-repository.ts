@@ -5,6 +5,7 @@
  * Includes vehicle and vehicleRoute relation preloads.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /** Prisma include for vehicle and vehicleRoute relation preloads */
 const tripRecordInclude = {
@@ -119,18 +120,19 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.tripRecord.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.tripRecord, { id, tenantId }, data, {
     include: tripRecordInclude,
+    entity: "TripRecord",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.tripRecord.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.tripRecord.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

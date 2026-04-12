@@ -45,6 +45,9 @@ export function useCreateVehicle() {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicles.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicles.getById.queryKey(),
+      })
     },
   })
 }
@@ -61,6 +64,9 @@ export function useUpdateVehicle() {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicles.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicles.getById.queryKey(),
+      })
     },
   })
 }
@@ -76,6 +82,9 @@ export function useDeleteVehicle() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.vehicles.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.vehicles.getById.queryKey(),
       })
     },
   })

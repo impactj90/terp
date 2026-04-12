@@ -38,7 +38,7 @@ function p(
 }
 
 /**
- * All 48 permissions, mirroring Go's allPermissions slice.
+ * All 101 permissions, mirroring Go's allPermissions slice.
  * Order matches the Go source file for easy comparison.
  */
 export const ALL_PERMISSIONS: Permission[] = [
@@ -219,6 +219,168 @@ export const ALL_PERMISSIONS: Permission[] = [
     "vacation_config",
     "manage",
     "Manage vacation configuration including special calculations, calculation groups, capping rules, and exceptions"
+  ),
+
+  // CRM Module
+  p("crm_addresses.view", "crm_addresses", "view", "View CRM addresses"),
+  p("crm_addresses.create", "crm_addresses", "create", "Create CRM addresses"),
+  p("crm_addresses.edit", "crm_addresses", "edit", "Edit CRM addresses"),
+  p("crm_addresses.delete", "crm_addresses", "delete", "Delete CRM addresses"),
+
+  // CRM Correspondence
+  p("crm_correspondence.view", "crm_correspondence", "view", "View CRM correspondence"),
+  p("crm_correspondence.create", "crm_correspondence", "create", "Create CRM correspondence"),
+  p("crm_correspondence.edit", "crm_correspondence", "edit", "Edit CRM correspondence"),
+  p("crm_correspondence.delete", "crm_correspondence", "delete", "Delete CRM correspondence"),
+  p("crm_correspondence.upload", "crm_correspondence", "upload", "Upload attachments to correspondence"),
+
+  // CRM Inquiries
+  p("crm_inquiries.view", "crm_inquiries", "view", "View CRM inquiries"),
+  p("crm_inquiries.create", "crm_inquiries", "create", "Create CRM inquiries"),
+  p("crm_inquiries.edit", "crm_inquiries", "edit", "Edit CRM inquiries"),
+  p("crm_inquiries.delete", "crm_inquiries", "delete", "Delete CRM inquiries"),
+
+  // CRM Tasks
+  p("crm_tasks.view", "crm_tasks", "view", "View CRM tasks and messages"),
+  p("crm_tasks.create", "crm_tasks", "create", "Create CRM tasks and messages"),
+  p("crm_tasks.edit", "crm_tasks", "edit", "Edit CRM tasks and messages"),
+  p("crm_tasks.delete", "crm_tasks", "delete", "Delete CRM tasks and messages"),
+
+  // Billing Documents
+  p("billing_documents.view", "billing_documents", "view", "View billing documents"),
+  p("billing_documents.create", "billing_documents", "create", "Create billing documents"),
+  p("billing_documents.edit", "billing_documents", "edit", "Edit billing documents"),
+  p("billing_documents.delete", "billing_documents", "delete", "Delete billing documents"),
+  p("billing_documents.finalize", "billing_documents", "finalize", "Finalize billing documents"),
+
+  // Billing Service Cases
+  p("billing_service_cases.view", "billing_service_cases", "view", "View service cases"),
+  p("billing_service_cases.create", "billing_service_cases", "create", "Create service cases"),
+  p("billing_service_cases.edit", "billing_service_cases", "edit", "Edit service cases"),
+  p("billing_service_cases.delete", "billing_service_cases", "delete", "Delete service cases"),
+
+  // Billing Payments
+  p("billing_payments.view", "billing_payments", "view", "View payments and open items"),
+  p("billing_payments.create", "billing_payments", "create", "Record payments"),
+  p("billing_payments.cancel", "billing_payments", "cancel", "Cancel payments"),
+
+  // Billing Price Lists
+  p("billing_price_lists.view", "billing_price_lists", "view", "View price lists"),
+  p("billing_price_lists.manage", "billing_price_lists", "manage", "Manage price lists and entries"),
+
+  // Billing Recurring Invoices
+  p("billing_recurring.view", "billing_recurring", "view", "View recurring invoices"),
+  p("billing_recurring.manage", "billing_recurring", "manage", "Manage recurring invoice templates"),
+  p("billing_recurring.generate", "billing_recurring", "generate", "Generate invoices from recurring templates"),
+
+  // Warehouse Articles
+  p("wh_articles.view", "wh_articles", "view", "View warehouse articles"),
+  p("wh_articles.create", "wh_articles", "create", "Create warehouse articles"),
+  p("wh_articles.edit", "wh_articles", "edit", "Edit warehouse articles"),
+  p("wh_articles.delete", "wh_articles", "delete", "Delete warehouse articles"),
+  p("wh_article_groups.manage", "wh_article_groups", "manage", "Manage warehouse article groups"),
+  p("wh_articles.upload_image", "wh_articles", "upload_image", "Upload article images"),
+  p("wh_articles.delete_image", "wh_articles", "delete_image", "Delete article images"),
+
+  // Warehouse Purchase Orders
+  p("wh_purchase_orders.view", "wh_purchase_orders", "view", "View purchase orders"),
+  p("wh_purchase_orders.create", "wh_purchase_orders", "create", "Create purchase orders"),
+  p("wh_purchase_orders.edit", "wh_purchase_orders", "edit", "Edit purchase orders"),
+  p("wh_purchase_orders.delete", "wh_purchase_orders", "delete", "Delete purchase orders"),
+  p("wh_purchase_orders.order", "wh_purchase_orders", "order", "Send/finalize purchase orders"),
+
+  // Warehouse Stock / Goods Receipt
+  p("wh_stock.view", "wh_stock", "view", "View stock movements and goods receipts"),
+  p("wh_stock.manage", "wh_stock", "manage", "Manage goods receipts and stock bookings"),
+
+  // Warehouse Supplier Invoices
+  p("wh_supplier_invoices.view", "wh_supplier_invoices", "view", "View supplier invoices"),
+  p("wh_supplier_invoices.create", "wh_supplier_invoices", "create", "Create supplier invoices"),
+  p("wh_supplier_invoices.edit", "wh_supplier_invoices", "edit", "Edit supplier invoices"),
+  p("wh_supplier_invoices.pay", "wh_supplier_invoices", "pay", "Record payments on supplier invoices"),
+
+  // Warehouse Corrections
+  p("wh_corrections.view", "wh_corrections", "view", "View warehouse correction assistant"),
+  p("wh_corrections.manage", "wh_corrections", "manage", "Manage warehouse correction messages"),
+  p("wh_corrections.run", "wh_corrections", "run", "Run warehouse correction checks"),
+
+  // Warehouse Reservations
+  p("wh_reservations.view", "wh_reservations", "view", "View stock reservations"),
+  p("wh_reservations.manage", "wh_reservations", "manage", "Manage/release stock reservations"),
+
+  // Warehouse QR Scanner
+  p("wh_qr.scan", "wh_qr", "scan", "Use QR scanner for warehouse operations"),
+  p("wh_qr.print", "wh_qr", "print", "Print QR code labels"),
+
+  // Warehouse Stocktake
+  p("wh_stocktake.view", "wh_stocktake", "view", "View stocktake sessions"),
+  p("wh_stocktake.create", "wh_stocktake", "create", "Create stocktake sessions"),
+  p("wh_stocktake.count", "wh_stocktake", "count", "Record counted quantities in stocktake"),
+  p("wh_stocktake.complete", "wh_stocktake", "complete", "Complete/finalize stocktake and adjust stock"),
+  p("wh_stocktake.delete", "wh_stocktake", "delete", "Delete draft stocktakes"),
+
+  // HR Personnel File
+  p("hr_personnel_file.view", "hr_personnel_file", "view", "View personnel file entries"),
+  p("hr_personnel_file.create", "hr_personnel_file", "create", "Create personnel file entries"),
+  p("hr_personnel_file.edit", "hr_personnel_file", "edit", "Edit personnel file entries"),
+  p("hr_personnel_file.delete", "hr_personnel_file", "delete", "Delete personnel file entries"),
+  p("hr_personnel_file.view_confidential", "hr_personnel_file", "view_confidential", "View confidential entries"),
+  p("hr_personnel_file_categories.manage", "hr_personnel_file_categories", "manage", "Manage personnel file categories"),
+
+  // DSGVO Data Retention
+  p("dsgvo.view", "dsgvo", "view", "View DSGVO retention rules and logs"),
+  p("dsgvo.manage", "dsgvo", "manage", "Manage DSGVO retention rules"),
+  p("dsgvo.execute", "dsgvo", "execute", "Execute DSGVO data deletion"),
+
+  // Email
+  p("documents.send", "documents", "send", "Send documents via email"),
+  p("email_templates.view", "email_templates", "view", "View email templates"),
+  p("email_templates.manage", "email_templates", "manage", "Manage email templates"),
+  p("email_smtp.view", "email_smtp", "view", "View SMTP configuration"),
+  p("email_smtp.manage", "email_smtp", "manage", "Manage SMTP configuration"),
+
+  // Inbound Invoices
+  p("inbound_invoices.view", "inbound_invoices", "view", "View inbound invoices"),
+  p("inbound_invoices.upload", "inbound_invoices", "upload", "Upload inbound invoices"),
+  p("inbound_invoices.edit", "inbound_invoices", "edit", "Edit inbound invoices"),
+  p("inbound_invoices.approve", "inbound_invoices", "approve", "Approve inbound invoices"),
+  p("inbound_invoices.export", "inbound_invoices", "export", "Export inbound invoices"),
+  p("inbound_invoices.manage", "inbound_invoices", "manage", "Manage inbound invoices"),
+
+  // Email IMAP
+  p("email_imap.view", "email_imap", "view", "View IMAP configuration"),
+  p("email_imap.manage", "email_imap", "manage", "Manage IMAP configuration"),
+
+  // Audit Log Export
+  p("audit_log.export", "audit_log", "export", "Export audit log entries as CSV or PDF"),
+
+  // Personnel Payroll Data
+  p("personnel.payroll_data.view", "personnel", "payroll_data.view", "View employee payroll master data (tax, social security, bank details)"),
+  p("personnel.payroll_data.edit", "personnel", "payroll_data.edit", "Edit employee payroll master data"),
+  p("personnel.garnishment.view", "personnel", "garnishment.view", "View employee garnishment data"),
+  p("personnel.garnishment.edit", "personnel", "garnishment.edit", "Edit employee garnishment data"),
+  p("personnel.foreign_assignment.view", "personnel", "foreign_assignment.view", "View employee foreign assignment data"),
+  p("personnel.foreign_assignment.edit", "personnel", "foreign_assignment.edit", "Edit employee foreign assignment data"),
+
+  // Export Templates (Phase 2 - Template-based export engine)
+  p("export_template.view", "export_template", "view", "View export templates"),
+  p("export_template.create", "export_template", "create", "Create export templates"),
+  p("export_template.edit", "export_template", "edit", "Edit export templates"),
+  p("export_template.delete", "export_template", "delete", "Delete export templates"),
+  p("export_template.execute", "export_template", "execute", "Execute export templates (generate exports)"),
+
+  // Export Templates (Phase 4 - Polish & advanced features)
+  p("export_template.restore_version", "export_template", "restore_version", "Restore a previous version of an export template"),
+  p("export_template.snapshot", "export_template", "snapshot", "Manage export template snapshot tests"),
+  p("export_template.share", "export_template", "share", "Share export templates across tenants"),
+  p("export_template.schedule", "export_template", "schedule", "Manage scheduled export template runs"),
+
+  // Platform support access (Phase 6 — platform-admin-system plan)
+  p(
+    "platform.support_access.grant",
+    "platform",
+    "support_access.grant",
+    "Grant platform operators time-limited support access to this tenant"
   ),
 ]
 

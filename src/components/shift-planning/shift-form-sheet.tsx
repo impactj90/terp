@@ -30,9 +30,17 @@ import {
   useUpdateShift,
   useDayPlans,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
-
-type Shift = components['schemas']['Shift']
+interface Shift {
+  id: string
+  code: string
+  name: string
+  description?: string | null
+  dayPlanId?: string | null
+  color?: string | null
+  qualification?: string | null
+  isActive?: boolean
+  sortOrder?: number
+}
 
 interface ShiftFormSheetProps {
   open: boolean
@@ -89,11 +97,11 @@ export function ShiftFormSheet({
         code: shift.code || '',
         name: shift.name || '',
         description: shift.description || '',
-        dayPlanId: shift.day_plan_id || '',
+        dayPlanId: shift.dayPlanId ?? '',
         color: shift.color || '#3B82F6',
         qualification: shift.qualification || '',
-        sortOrder: shift.sort_order ?? 0,
-        isActive: shift.is_active ?? true,
+        sortOrder: shift.sortOrder ?? 0,
+        isActive: shift.isActive ?? true,
       })
     } else {
       setForm(INITIAL_STATE)
@@ -159,7 +167,7 @@ export function ShiftFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Basic Information */}
             <div className="space-y-4">

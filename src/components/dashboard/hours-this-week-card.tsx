@@ -49,7 +49,16 @@ export function HoursThisWeekCard({
       return { totalNet: 0, totalTarget: 0, remaining: 0, daysWorked: 0 }
     }
 
-    const dailyValues = data.data
+    // The API returns the entire month — filter to only this week's dates
+    const weekStartDate = getWeekStart()
+    const weekEndDate = getWeekEnd()
+
+    const dailyValues = data.data.filter((dv) => {
+      if (!dv.date) return false
+      const dvDate = new Date(dv.date)
+      return dvDate >= weekStartDate && dvDate <= weekEndDate
+    })
+
     let totalNet = 0
     let totalTarget = 0
     let daysWorked = 0
@@ -72,15 +81,15 @@ export function HoursThisWeekCard({
 
   if (error) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('hoursThisWeek')}
           </span>
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <AlertCircle className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
+        <div className="mt-1.5 sm:mt-2">
+          <p className="text-xs text-destructive sm:text-sm">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -100,30 +109,30 @@ export function HoursThisWeekCard({
     : 0
 
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">
           {t('hoursThisWeek')}
         </span>
-        <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <Calendar className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
       </div>
-      <div className="mt-2">
-        <span className="text-2xl font-bold">
+      <div className="mt-1.5 sm:mt-2">
+        <span className="text-xl font-bold sm:text-2xl">
           {formatMinutes(stats.totalNet)}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
         {stats.remaining > 0
           ? t('remaining', { duration: formatDuration(stats.remaining) })
           : t('targetReached')}
       </p>
 
       {/* Simple progress bar */}
-      <div className="mt-3">
-        <div className="h-2 w-full rounded-full bg-muted">
+      <div className="mt-2 sm:mt-3">
+        <div className="h-1.5 w-full rounded-full bg-muted sm:h-2">
           <div
             className={cn(
-              'h-2 rounded-full transition-all',
+              'h-full rounded-full transition-all',
               progressPercent >= 100
                 ? 'bg-green-500'
                 : progressPercent >= 80
@@ -133,7 +142,7 @@ export function HoursThisWeekCard({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground sm:text-xs">
           <span>{t('daysCount', { count: stats.daysWorked })}</span>
           <span>
             {formatMinutes(stats.totalTarget)} {t('target')}
@@ -149,20 +158,20 @@ export function HoursThisWeekCard({
  */
 export function HoursThisWeekCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-28" />
+        <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </div>
-      <div className="mt-2">
-        <Skeleton className="h-8 w-20" />
+      <div className="mt-1.5 sm:mt-2">
+        <Skeleton className="h-6 w-14 sm:h-8 sm:w-20" />
       </div>
-      <Skeleton className="mt-2 h-3 w-24" />
-      <div className="mt-3">
-        <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="mt-1.5 h-3 w-20 sm:mt-2 sm:w-24" />
+      <div className="mt-2 sm:mt-3">
+        <Skeleton className="h-1.5 w-full rounded-full sm:h-2" />
         <div className="mt-1 flex justify-between">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-10 sm:w-12" />
+          <Skeleton className="h-3 w-12 sm:w-16" />
         </div>
       </div>
     </div>

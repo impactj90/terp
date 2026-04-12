@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./correction-assistant-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = ["customText", "severity", "isActive"]
 
 // --- Error Classes ---
 
@@ -16,7 +22,7 @@ export class CorrectionMessageNotFoundError extends Error {
   }
 }
 
-// --- Error Codes (from calculation/errors.go) ---
+// --- Error Codes (from calculation/errors.ts) ---
 
 const ERR_MISSING_COME = "MISSING_COME"
 const ERR_MISSING_GO = "MISSING_GO"
@@ -44,11 +50,29 @@ const WARN_FLEXTIME_CAPPED = "FLEXTIME_CAPPED"
 const WARN_BELOW_THRESHOLD = "BELOW_THRESHOLD"
 const WARN_NO_CARRYOVER = "NO_CARRYOVER"
 
+// --- Service-level codes (from daily-calc.ts) ---
+
+const WARN_BOOKINGS_ON_OFF_DAY = "BOOKINGS_ON_OFF_DAY"
+const WARN_WORKED_ON_HOLIDAY = "WORKED_ON_HOLIDAY"
+const WARN_ABSENCE_CREATED = "ABSENCE_CREATED"
+const WARN_ABSENCE_CREATION_FAILED = "ABSENCE_CREATION_FAILED"
+const WARN_ORDER_BOOKING_CREATED = "ORDER_BOOKING_CREATED"
+const WARN_ORDER_BOOKING_FAILED = "ORDER_BOOKING_FAILED"
+const WARN_NO_DEFAULT_ORDER = "NO_DEFAULT_ORDER"
+
+// --- Legacy codes (from old Go backend, may exist in seed data) ---
+
+const LEGACY_MISSING_CLOCK_OUT = "MISSING_CLOCK_OUT"
+const LEGACY_MISSING_CLOCK_IN = "MISSING_CLOCK_IN"
+const LEGACY_MISSING_BREAK = "MISSING_BREAK"
+
 function mapCorrectionErrorType(code: string): string {
   switch (code) {
     case ERR_MISSING_COME:
     case ERR_MISSING_GO:
     case ERR_NO_BOOKINGS:
+    case LEGACY_MISSING_CLOCK_OUT:
+    case LEGACY_MISSING_CLOCK_IN:
       return "missing_booking"
     case ERR_UNPAIRED_BOOKING:
       return "unpaired_booking"
@@ -67,40 +91,58 @@ function mapCorrectionErrorType(code: string): string {
     case WARN_SHORT_BREAK:
     case WARN_MANUAL_BREAK:
     case WARN_AUTO_BREAK_APPLIED:
+    case LEGACY_MISSING_BREAK:
       return "break_violation"
     case WARN_MAX_TIME_REACHED:
       return "exceeds_max_hours"
+    case WARN_BOOKINGS_ON_OFF_DAY:
+    case WARN_WORKED_ON_HOLIDAY:
+      return "off_day_work"
     default:
-      return "invalid_sequence"
+      return "other"
   }
 }
 
 function defaultCorrectionMessages(tenantId: string) {
   return [
-    { tenantId, code: ERR_MISSING_COME, defaultText: "Missing arrival booking", severity: "error", description: "No arrival booking found for this work day" },
-    { tenantId, code: ERR_MISSING_GO, defaultText: "Missing departure booking", severity: "error", description: "No departure booking found for this work day" },
-    { tenantId, code: ERR_UNPAIRED_BOOKING, defaultText: "Unpaired booking", severity: "error", description: "A booking exists without a matching pair" },
-    { tenantId, code: ERR_EARLY_COME, defaultText: "Arrival before allowed window", severity: "error", description: "Employee arrived before the allowed time window" },
-    { tenantId, code: ERR_LATE_COME, defaultText: "Arrival after allowed window", severity: "error", description: "Employee arrived after the allowed time window" },
-    { tenantId, code: ERR_EARLY_GO, defaultText: "Departure before allowed window", severity: "error", description: "Employee departed before the allowed time window" },
-    { tenantId, code: ERR_LATE_GO, defaultText: "Departure after allowed window", severity: "error", description: "Employee departed after the allowed time window" },
-    { tenantId, code: ERR_MISSED_CORE_START, defaultText: "Missed core hours start", severity: "error", description: "Employee arrived after mandatory core hours started" },
-    { tenantId, code: ERR_MISSED_CORE_END, defaultText: "Missed core hours end", severity: "error", description: "Employee departed before mandatory core hours ended" },
-    { tenantId, code: ERR_BELOW_MIN_WORK_TIME, defaultText: "Below minimum work time", severity: "error", description: "Actual work time is below the required minimum" },
-    { tenantId, code: ERR_NO_BOOKINGS, defaultText: "No bookings for the day", severity: "error", description: "No bookings exist for an active work day" },
-    { tenantId, code: ERR_INVALID_TIME, defaultText: "Invalid time value", severity: "error", description: "A booking has a time value outside the valid range" },
-    { tenantId, code: ERR_DUPLICATE_IN_TIME, defaultText: "Duplicate arrival time", severity: "error", description: "Multiple arrival bookings at the same time" },
-    { tenantId, code: ERR_NO_MATCHING_SHIFT, defaultText: "No matching time plan found", severity: "error", description: "No day plan matches the booking times for shift detection" },
-    { tenantId, code: WARN_CROSS_MIDNIGHT, defaultText: "Shift spans midnight", severity: "hint", description: "The work shift crosses midnight into the next day" },
-    { tenantId, code: WARN_MAX_TIME_REACHED, defaultText: "Maximum work time reached", severity: "hint", description: "Net time was capped at the maximum allowed" },
-    { tenantId, code: WARN_MANUAL_BREAK, defaultText: "Manual break booking exists", severity: "hint", description: "Break bookings exist; automatic break deduction was skipped" },
-    { tenantId, code: WARN_NO_BREAK_RECORDED, defaultText: "No break booking recorded", severity: "hint", description: "No break was booked although a break is required" },
-    { tenantId, code: WARN_SHORT_BREAK, defaultText: "Break duration too short", severity: "hint", description: "Recorded break is shorter than the required minimum" },
-    { tenantId, code: WARN_AUTO_BREAK_APPLIED, defaultText: "Automatic break applied", severity: "hint", description: "Break was automatically deducted per day plan rules" },
-    { tenantId, code: WARN_MONTHLY_CAP, defaultText: "Monthly cap reached", severity: "hint", description: "Flextime credit was capped at the monthly maximum" },
-    { tenantId, code: WARN_FLEXTIME_CAPPED, defaultText: "Flextime balance capped", severity: "hint", description: "Flextime balance was limited by positive or negative cap" },
-    { tenantId, code: WARN_BELOW_THRESHOLD, defaultText: "Below threshold", severity: "hint", description: "Overtime is below the configured threshold and was forfeited" },
-    { tenantId, code: WARN_NO_CARRYOVER, defaultText: "No carryover", severity: "hint", description: "Account credit type resets to zero with no carryover" },
+    // --- Fehler (errors) ---
+    { tenantId, code: ERR_MISSING_COME, defaultText: "Kommen-Buchung fehlt", severity: "error", description: "Keine Kommen-Buchung für diesen Arbeitstag gefunden" },
+    { tenantId, code: ERR_MISSING_GO, defaultText: "Gehen-Buchung fehlt", severity: "error", description: "Keine Gehen-Buchung für diesen Arbeitstag gefunden" },
+    { tenantId, code: ERR_UNPAIRED_BOOKING, defaultText: "Unpaarige Buchung", severity: "error", description: "Eine Buchung ohne passendes Gegenstück vorhanden" },
+    { tenantId, code: ERR_EARLY_COME, defaultText: "Kommen vor erlaubtem Zeitfenster", severity: "error", description: "Mitarbeiter kam vor dem erlaubten Zeitfenster" },
+    { tenantId, code: ERR_LATE_COME, defaultText: "Kommen nach erlaubtem Zeitfenster", severity: "error", description: "Mitarbeiter kam nach dem erlaubten Zeitfenster" },
+    { tenantId, code: ERR_EARLY_GO, defaultText: "Gehen vor erlaubtem Zeitfenster", severity: "error", description: "Mitarbeiter ging vor dem erlaubten Zeitfenster" },
+    { tenantId, code: ERR_LATE_GO, defaultText: "Gehen nach erlaubtem Zeitfenster", severity: "error", description: "Mitarbeiter ging nach dem erlaubten Zeitfenster" },
+    { tenantId, code: ERR_MISSED_CORE_START, defaultText: "Kernzeitbeginn nicht eingehalten", severity: "error", description: "Mitarbeiter kam nach Beginn der Kernarbeitszeit" },
+    { tenantId, code: ERR_MISSED_CORE_END, defaultText: "Kernzeitende nicht eingehalten", severity: "error", description: "Mitarbeiter ging vor Ende der Kernarbeitszeit" },
+    { tenantId, code: ERR_BELOW_MIN_WORK_TIME, defaultText: "Mindestarbeitszeit unterschritten", severity: "error", description: "Tatsächliche Arbeitszeit liegt unter dem Minimum" },
+    { tenantId, code: ERR_NO_BOOKINGS, defaultText: "Keine Buchungen vorhanden", severity: "error", description: "Keine Buchungen für einen aktiven Arbeitstag" },
+    { tenantId, code: ERR_INVALID_TIME, defaultText: "Ungültige Zeitangabe", severity: "error", description: "Eine Buchung hat einen ungültigen Zeitwert" },
+    { tenantId, code: ERR_DUPLICATE_IN_TIME, defaultText: "Doppelte Kommen-Buchung", severity: "error", description: "Mehrere Kommen-Buchungen zur gleichen Zeit" },
+    { tenantId, code: ERR_NO_MATCHING_SHIFT, defaultText: "Kein passender Tagesplan gefunden", severity: "error", description: "Kein Tagesplan passt zu den Buchungszeiten" },
+    // --- Hinweise (warnings) ---
+    { tenantId, code: WARN_CROSS_MIDNIGHT, defaultText: "Schicht über Mitternacht", severity: "hint", description: "Die Arbeitsschicht geht über Mitternacht hinaus" },
+    { tenantId, code: WARN_MAX_TIME_REACHED, defaultText: "Maximale Arbeitszeit erreicht", severity: "hint", description: "Nettozeit wurde auf das erlaubte Maximum begrenzt" },
+    { tenantId, code: WARN_MANUAL_BREAK, defaultText: "Manuelle Pausenbuchung vorhanden", severity: "hint", description: "Pausenbuchungen vorhanden; automatischer Pausenabzug übersprungen" },
+    { tenantId, code: WARN_NO_BREAK_RECORDED, defaultText: "Keine Pausenbuchung erfasst", severity: "hint", description: "Keine Pause gebucht, obwohl eine Pause erforderlich ist" },
+    { tenantId, code: WARN_SHORT_BREAK, defaultText: "Pausendauer zu kurz", severity: "hint", description: "Erfasste Pause ist kürzer als das erforderliche Minimum" },
+    { tenantId, code: WARN_AUTO_BREAK_APPLIED, defaultText: "Automatischer Pausenabzug", severity: "hint", description: "Pause wurde gemäß Tagesplanregeln automatisch abgezogen" },
+    { tenantId, code: WARN_MONTHLY_CAP, defaultText: "Monatsobergrenze erreicht", severity: "hint", description: "Gleitzeitgutschrift wurde auf das Monatsmaximum begrenzt" },
+    { tenantId, code: WARN_FLEXTIME_CAPPED, defaultText: "Gleitzeitguthaben gekappt", severity: "hint", description: "Gleitzeitguthaben wurde durch positive oder negative Obergrenze begrenzt" },
+    { tenantId, code: WARN_BELOW_THRESHOLD, defaultText: "Unterhalb der Schwelle", severity: "hint", description: "Überstunden liegen unter der konfigurierten Schwelle und verfallen" },
+    { tenantId, code: WARN_NO_CARRYOVER, defaultText: "Kein Übertrag", severity: "hint", description: "Kontogutschrift wird auf Null zurückgesetzt, kein Übertrag" },
+    // --- Service-level Hinweise (from daily-calc.ts) ---
+    { tenantId, code: WARN_BOOKINGS_ON_OFF_DAY, defaultText: "Buchungen an einem freien Tag", severity: "hint", description: "Es wurden Buchungen an einem freien Tag erfasst" },
+    { tenantId, code: WARN_WORKED_ON_HOLIDAY, defaultText: "Arbeit an einem Feiertag", severity: "hint", description: "Mitarbeiter hat an einem Feiertag gearbeitet" },
+    { tenantId, code: WARN_ABSENCE_CREATED, defaultText: "Abwesenheit automatisch erstellt", severity: "hint", description: "Eine automatische Abwesenheit wurde erfolgreich angelegt" },
+    { tenantId, code: WARN_ABSENCE_CREATION_FAILED, defaultText: "Automatische Abwesenheit fehlgeschlagen", severity: "hint", description: "Die automatische Erstellung einer Abwesenheit ist fehlgeschlagen" },
+    { tenantId, code: WARN_ORDER_BOOKING_CREATED, defaultText: "Auftragsbuchung automatisch erstellt", severity: "hint", description: "Eine automatische Auftragsbuchung wurde erfolgreich angelegt" },
+    { tenantId, code: WARN_ORDER_BOOKING_FAILED, defaultText: "Automatische Auftragsbuchung fehlgeschlagen", severity: "hint", description: "Die automatische Erstellung einer Auftragsbuchung ist fehlgeschlagen" },
+    { tenantId, code: WARN_NO_DEFAULT_ORDER, defaultText: "Kein Standardauftrag vorhanden", severity: "hint", description: "Kein Standardauftrag für die automatische Buchung konfiguriert" },
+    // --- Legacy codes (old Go backend, may still exist in DB) ---
+    { tenantId, code: LEGACY_MISSING_CLOCK_OUT, defaultText: "Gehen-Buchung fehlt", severity: "error", description: "Keine Gehen-Buchung gefunden (Legacy-Code)" },
+    { tenantId, code: LEGACY_MISSING_CLOCK_IN, defaultText: "Kommen-Buchung fehlt", severity: "error", description: "Keine Kommen-Buchung gefunden (Legacy-Code)" },
+    { tenantId, code: LEGACY_MISSING_BREAK, defaultText: "Pausenbuchung fehlt", severity: "error", description: "Keine Pausenbuchung gefunden (Legacy-Code)" },
   ]
 }
 
@@ -108,10 +150,20 @@ async function ensureDefaults(
   prisma: PrismaClient,
   tenantId: string
 ): Promise<void> {
-  const count = await repo.countMessages(prisma, tenantId)
-  if (count > 0) return
+  const existing = await repo.findManyMessages(prisma, tenantId)
+  const existingCodes = new Set(existing.map((m) => m.code))
 
-  await repo.createManyMessages(prisma, defaultCorrectionMessages(tenantId))
+  if (existingCodes.size === 0) {
+    await repo.createManyMessages(prisma, defaultCorrectionMessages(tenantId))
+    return
+  }
+
+  // Add any missing codes (e.g. new codes added after initial seed)
+  const defaults = defaultCorrectionMessages(tenantId)
+  const missing = defaults.filter((d) => !existingCodes.has(d.code))
+  if (missing.length > 0) {
+    await repo.createManyMessages(prisma, missing)
+  }
 }
 
 // --- Service Functions ---
@@ -146,7 +198,8 @@ export async function updateMessage(
     customText?: string | null
     severity?: string
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify exists with tenant scope
   const existing = await repo.findMessageById(prisma, tenantId, input.id)
@@ -174,13 +227,34 @@ export async function updateMessage(
     data.isActive = input.isActive
   }
 
-  return repo.updateMessage(prisma, input.id, data)
+  const updated = (await repo.updateMessage(prisma, tenantId, input.id, data))!
+
+  if (audit && updated) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "correction_message",
+      entityId: input.id,
+      entityName: existing.code ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 interface CorrectionAssistantError {
   code: string
   severity: string
-  message: string
+  customText: string | null
   errorType: string
 }
 
@@ -254,18 +328,18 @@ export async function listItems(
         if (severityFilter && severityFilter !== "error") continue
         if (codeFilter && codeFilter !== code) continue
 
-        let message = code
         let severity = "error"
+        let customText: string | null = null
         const catalogEntry = messageMap.get(code)
         if (catalogEntry) {
-          message = catalogEntry.customText || catalogEntry.defaultText
           severity = catalogEntry.severity
+          customText = catalogEntry.customText ?? null
         }
 
         errors.push({
           code,
           severity,
-          message,
+          customText,
           errorType: mapCorrectionErrorType(code),
         })
       }
@@ -277,18 +351,18 @@ export async function listItems(
         if (severityFilter && severityFilter !== "hint") continue
         if (codeFilter && codeFilter !== code) continue
 
-        let message = code
         let severity = "hint"
+        let customText: string | null = null
         const catalogEntry = messageMap.get(code)
         if (catalogEntry) {
-          message = catalogEntry.customText || catalogEntry.defaultText
           severity = catalogEntry.severity
+          customText = catalogEntry.customText ?? null
         }
 
         errors.push({
           code,
           severity,
-          message,
+          customText,
           errorType: mapCorrectionErrorType(code),
         })
       }

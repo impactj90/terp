@@ -5,6 +5,7 @@
  * ScheduleExecution, and ScheduleTaskExecution models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Prisma Include Objects ---
 
@@ -77,19 +78,18 @@ export async function createSchedule(
 
 export async function updateSchedule(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.schedule.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.schedule, { id, tenantId }, data, { entity: "Schedule" })
 }
 
-export async function deleteSchedule(prisma: PrismaClient, id: string) {
-  return prisma.schedule.delete({
-    where: { id },
+export async function deleteSchedule(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.schedule.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- Schedule Task ---
@@ -129,19 +129,25 @@ export async function createTask(
 
 export async function updateTask(
   prisma: PrismaClient,
+  tenantId: string,
   taskId: string,
   data: Record<string, unknown>
 ) {
-  return prisma.scheduleTask.update({
-    where: { id: taskId },
+  const { count } = await prisma.scheduleTask.updateMany({
+    where: { id: taskId, schedule: { tenantId } },
     data,
   })
+  if (count === 0) {
+    return null
+  }
+  return prisma.scheduleTask.findFirst({ where: { id: taskId, schedule: { tenantId } } })
 }
 
-export async function deleteTask(prisma: PrismaClient, taskId: string) {
-  return prisma.scheduleTask.delete({
-    where: { id: taskId },
+export async function deleteTask(prisma: PrismaClient, tenantId: string, taskId: string) {
+  const { count } = await prisma.scheduleTask.deleteMany({
+    where: { id: taskId, schedule: { tenantId } },
   })
+  return count > 0
 }
 
 // --- Schedule Execution ---
@@ -163,13 +169,11 @@ export async function createExecution(
 
 export async function updateExecution(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.scheduleExecution.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.scheduleExecution, { id, tenantId }, data, { entity: "ScheduleExecution" })
 }
 
 export async function findExecutionById(
@@ -213,11 +217,16 @@ export async function createTaskExecution(
 
 export async function updateTaskExecution(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.scheduleTaskExecution.update({
-    where: { id },
+  const { count } = await prisma.scheduleTaskExecution.updateMany({
+    where: { id, execution: { tenantId } },
     data,
   })
+  if (count === 0) {
+    return null
+  }
+  return prisma.scheduleTaskExecution.findFirst({ where: { id, execution: { tenantId } } })
 }

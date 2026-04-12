@@ -6,6 +6,21 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./monthly-eval-template-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "description",
+  "flextimeCapPositive",
+  "flextimeCapNegative",
+  "overtimeThreshold",
+  "maxCarryoverVacation",
+  "isDefault",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -70,14 +85,15 @@ export async function create(
     maxCarryoverVacation?: number
     isDefault?: boolean
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   const name = input.name.trim()
   if (name.length === 0) {
     throw new MonthlyEvalTemplateValidationError("Template name is required")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     name,
     description: input.description?.trim() ?? "",
@@ -88,6 +104,22 @@ export async function create(
     isDefault: input.isDefault ?? false,
     isActive: input.isActive ?? true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "monthly_eval_template",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -103,7 +135,8 @@ export async function update(
     maxCarryoverVacation?: number
     isDefault?: boolean
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify exists with tenant scope
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -144,19 +177,41 @@ export async function update(
     data.isDefault = input.isDefault
   }
 
-  return repo.update(
+  const updated = (await repo.update(
     prisma,
     tenantId,
     input.id,
     data,
     input.isDefault === true
-  )
+  ))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "monthly_eval_template",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
@@ -169,7 +224,21 @@ export async function remove(
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "monthly_eval_template",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function setDefault(
@@ -183,5 +252,5 @@ export async function setDefault(
     throw new MonthlyEvalTemplateNotFoundError()
   }
 
-  return repo.setDefault(prisma, tenantId, id)
+  return (await repo.setDefault(prisma, tenantId, id))!
 }

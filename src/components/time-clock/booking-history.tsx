@@ -5,9 +5,18 @@ import { LogIn, LogOut, Coffee, Briefcase } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
+import { formatMinutes } from '@/lib/time-utils'
 
-type Booking = components['schemas']['Booking']
+interface Booking {
+  id: string
+  editedTime: number
+  notes?: string | null
+  bookingType?: {
+    code: string
+    name: string
+    direction: string
+  } | null
+}
 
 interface BookingHistoryProps {
   bookings: Booking[]
@@ -45,8 +54,8 @@ export function BookingHistory({
   }
 
   const sortedBookings = [...bookings].sort((a, b) => {
-    const timeA = a.edited_time ?? 0
-    const timeB = b.edited_time ?? 0
+    const timeA = a.editedTime ?? 0
+    const timeB = b.editedTime ?? 0
     return timeB - timeA // Most recent first
   })
 
@@ -80,11 +89,11 @@ interface BookingItemProps {
 
 function BookingItem({ booking }: BookingItemProps) {
   const t = useTranslations('timeClock')
-  const code = booking.booking_type?.code ?? 'A1'
+  const code = booking.bookingType?.code ?? 'A1'
   const Icon = bookingTypeIcons[code] ?? LogIn
   const labelKey = bookingTypeLabelKeys[code]
-  const label = booking.booking_type?.name ?? (labelKey ? t(labelKey as Parameters<typeof t>[0]) : 'Booking')
-  const isInbound = booking.booking_type?.direction === 'in'
+  const label = booking.bookingType?.name ?? (labelKey ? t(labelKey as Parameters<typeof t>[0]) : 'Booking')
+  const isInbound = booking.bookingType?.direction === 'in'
 
   return (
     <div className="flex items-center justify-between">
@@ -105,7 +114,7 @@ function BookingItem({ booking }: BookingItemProps) {
         </div>
       </div>
       <span className="text-sm font-mono tabular-nums text-muted-foreground">
-        {booking.time_string}
+        {formatMinutes(booking.editedTime)}
       </span>
     </div>
   )

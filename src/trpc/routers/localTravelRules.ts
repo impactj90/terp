@@ -45,24 +45,24 @@ const localTravelRuleOutputSchema = z.object({
 
 const createLocalTravelRuleInputSchema = z.object({
   ruleSetId: z.string(),
-  minDistanceKm: z.number().optional(),
-  maxDistanceKm: z.number().optional(),
-  minDurationMinutes: z.number().int().optional(),
-  maxDurationMinutes: z.number().int().optional(),
-  taxFreeAmount: z.number().optional(),
-  taxableAmount: z.number().optional(),
+  minDistanceKm: z.number().min(0).max(100000).optional(),
+  maxDistanceKm: z.number().min(0).max(100000).optional(),
+  minDurationMinutes: z.number().int().min(0).max(1440).optional(),
+  maxDurationMinutes: z.number().int().min(0).max(1440).optional(),
+  taxFreeAmount: z.number().min(0).max(10000).optional(),
+  taxableAmount: z.number().min(0).max(10000).optional(),
   sortOrder: z.number().int().optional(),
 })
 
 const updateLocalTravelRuleInputSchema = z.object({
   id: z.string(),
   // ruleSetId is NOT updatable
-  minDistanceKm: z.number().optional(),
-  maxDistanceKm: z.number().nullable().optional(),
-  minDurationMinutes: z.number().int().optional(),
-  maxDurationMinutes: z.number().int().nullable().optional(),
-  taxFreeAmount: z.number().optional(),
-  taxableAmount: z.number().optional(),
+  minDistanceKm: z.number().min(0).max(100000).optional(),
+  maxDistanceKm: z.number().min(0).max(100000).nullable().optional(),
+  minDurationMinutes: z.number().int().min(0).max(1440).optional(),
+  maxDurationMinutes: z.number().int().min(0).max(1440).nullable().optional(),
+  taxFreeAmount: z.number().min(0).max(10000).optional(),
+  taxableAmount: z.number().min(0).max(10000).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 })
@@ -183,7 +183,8 @@ export const localTravelRulesRouter = createTRPCRouter({
         const rule = await localTravelRuleService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(rule)
       } catch (err) {
@@ -208,7 +209,8 @@ export const localTravelRulesRouter = createTRPCRouter({
         const rule = await localTravelRuleService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(rule)
       } catch (err) {
@@ -228,7 +230,9 @@ export const localTravelRulesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await localTravelRuleService.remove(ctx.prisma, tenantId, input.id)
+        await localTravelRuleService.remove(ctx.prisma, tenantId, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

@@ -1,8 +1,6 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useTRPC } from '@/trpc'
+import { useMemo, useCallback, useRef } from 'react'
 import { useCreateBooking } from '@/hooks/use-bookings'
 import { useBookingTypes } from '@/hooks/use-booking-types'
 import { useEmployeeDayView } from '@/hooks/use-employee-day'
@@ -31,9 +29,11 @@ interface UseClockStateOptions {
 }
 
 export function useClockState({ employeeId, enabled = true }: UseClockStateOptions) {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
   const today = getToday()
+
+  // Track the actual click timestamp (with seconds) so the timer starts at 0:00:00
+  // instead of jumping ahead due to editedTime being minute-precision only.
+  const actionTimestampRef = useRef<Date | null>(null)
 
   // Fetch today's data
   const dayView = useEmployeeDayView(employeeId, today, { enabled: enabled && !!employeeId })
@@ -59,18 +59,22 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
   }, [bookingTypes.data])
 
   // Determine current status from bookings
-  const { status, clockInTime, lastBooking } = useMemo(() => {
+  const { status, timerStartTime, lastBooking } = useMemo(() => {
     const bookings = dayView.data?.bookings ?? []
 
     if (bookings.length === 0) {
-      return { status: 'clocked_out' as ClockStatus, clockInTime: null, lastBooking: null }
+      return { status: 'clocked_out' as ClockStatus, timerStartTime: null, lastBooking: null }
     }
 
-    // Sort by time (ascending)
+    // Sort by time (ascending), then by createdAt as tiebreaker
     const sorted = [...bookings].sort((a, b) => {
       const timeA = a.editedTime ?? 0
       const timeB = b.editedTime ?? 0
-      return timeA - timeB
+      if (timeA !== timeB) return timeA - timeB
+      // Same editedTime: use createdAt to preserve insertion order
+      const createdA = new Date(a.createdAt).getTime()
+      const createdB = new Date(b.createdAt).getTime()
+      return createdA - createdB
     })
 
     const lastBooking = sorted[sorted.length - 1]
@@ -78,17 +82,9 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
 
     // Determine status based on last booking
     let status: ClockStatus = 'clocked_out'
-    let clockInTime: Date | null = null
 
     if (lastCode === CLOCK_IN || lastCode === BREAK_END || lastCode === ERRAND_END) {
       status = 'clocked_in'
-      // Find the last clock in time for the timer
-      const clockIn = sorted.find(b => b.bookingType?.code === CLOCK_IN)
-      if (clockIn && clockIn.editedTime !== undefined) {
-        const todayDate = new Date()
-        todayDate.setHours(0, 0, 0, 0)
-        clockInTime = new Date(todayDate.getTime() + clockIn.editedTime * 60000)
-      }
     } else if (lastCode === BREAK_START) {
       status = 'on_break'
     } else if (lastCode === ERRAND_START) {
@@ -97,12 +93,43 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
       status = 'clocked_out'
     }
 
-    return { status, clockInTime, lastBooking }
+    // Timer shows current phase duration:
+    // - clocked_in: time since last clock-in / break-end / errand-end
+    // - on_break: time since break started
+    // - on_errand: time since errand started
+    let timerStartTime: Date | null = null
+    if (status !== 'clocked_out' && lastBooking?.editedTime !== undefined) {
+      const todayDate = new Date()
+      todayDate.setHours(0, 0, 0, 0)
+      const serverStartTime = new Date(todayDate.getTime() + lastBooking.editedTime * 60000)
+
+      // Use the exact click timestamp if it falls within the same minute as
+      // the server's editedTime (which only has minute precision). This makes
+      // the timer start at 0:00:00 instead of jumping ahead by the lost seconds.
+      if (
+        actionTimestampRef.current &&
+        Math.floor(actionTimestampRef.current.getTime() / 60000) ===
+          Math.floor(serverStartTime.getTime() / 60000)
+      ) {
+        timerStartTime = actionTimestampRef.current
+      } else {
+        // Different minute → a booking from before this session or edited manually;
+        // clear the ref so we don't keep stale data
+        actionTimestampRef.current = null
+        timerStartTime = serverStartTime
+      }
+    } else {
+      actionTimestampRef.current = null
+    }
+
+    return { status, timerStartTime, lastBooking }
   }, [dayView.data?.bookings])
 
   // Action handler
   const handleAction = useCallback(
     async (action: string) => {
+      if (createBooking.isPending) return
+
       const codeMap: Record<string, string> = {
         clock_in: CLOCK_IN,
         clock_out: CLOCK_OUT,
@@ -129,18 +156,20 @@ export function useClockState({ employeeId, enabled = true }: UseClockStateOptio
         time: getCurrentTimeString(),
       })
 
-      // Invalidate day view to refresh (tRPC query key)
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
+      // Refetch day view to get updated bookings and daily values
+      await dayView.refetch()
+
+      // Capture timestamp AFTER refetch so the timer starts at ~0:00:00
+      // when the UI re-renders (editedTime only has minute precision)
+      actionTimestampRef.current = code !== CLOCK_OUT ? new Date() : null
     },
-    [employeeId, today, bookingTypeMap, createBooking, queryClient, trpc]
+    [employeeId, today, bookingTypeMap, createBooking, dayView.refetch]
   )
 
   return {
     // State
     status,
-    clockInTime,
+    timerStartTime,
     lastBooking,
     bookings: dayView.data?.bookings ?? [],
     dailyValue: dayView.data?.dailyValue,

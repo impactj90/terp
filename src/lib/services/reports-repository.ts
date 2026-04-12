@@ -5,6 +5,8 @@
  * and related data gathering queries.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Types ---
 
@@ -98,19 +100,18 @@ export async function create(
 
 export async function updateStatus(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.report.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.report, { id, tenantId }, data, { entity: "Report" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.report.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.report.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- Employee Scope Queries ---
@@ -123,6 +124,10 @@ export async function findEmployeesInScope(
     costCenterIds?: string[]
     teamIds?: string[]
     employeeIds?: string[]
+  },
+  scopeFilter?: {
+    departmentIds?: string[]
+    employeeIds?: string[]
   }
 ): Promise<EmployeeScope[]> {
   const empWhere: Record<string, unknown> = {
@@ -131,6 +136,20 @@ export async function findEmployeesInScope(
   }
   if (params.departmentIds && params.departmentIds.length > 0) {
     empWhere.departmentId = { in: params.departmentIds }
+  }
+
+  // Apply data scope constraints
+  if (scopeFilter?.departmentIds) {
+    if (empWhere.departmentId) {
+      const paramIds = (empWhere.departmentId as { in: string[] }).in
+      const scopeIds = new Set(scopeFilter.departmentIds)
+      empWhere.departmentId = { in: paramIds.filter((id: string) => scopeIds.has(id)) }
+    } else {
+      empWhere.departmentId = { in: scopeFilter.departmentIds }
+    }
+  }
+  if (scopeFilter?.employeeIds) {
+    empWhere.id = { in: scopeFilter.employeeIds }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -154,18 +173,13 @@ export async function findEmployeesInScope(
 
   // Filter by team IDs
   if (params.teamIds && params.teamIds.length > 0) {
-    const teamEmpIds = new Set<string>()
-    for (const teamId of params.teamIds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const members = await (prisma.teamMember as any).findMany({
-        where: { teamId },
-        select: { employeeId: true },
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for (const m of members as any[]) {
-        teamEmpIds.add(m.employeeId)
-      }
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const members = await (prisma.teamMember as any).findMany({
+      where: { teamId: { in: params.teamIds } },
+      select: { employeeId: true },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const teamEmpIds = new Set((members as any[]).map((m: any) => m.employeeId))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     employees = employees.filter((emp: any) => teamEmpIds.has(emp.id))
   }
@@ -184,13 +198,14 @@ export async function findEmployeesInScope(
 
 export async function findMonthlyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number,
   month: number
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (prisma.monthlyValue as any).findFirst({
-    where: { employeeId, year, month },
+    where: { tenantId, employeeId, year, month },
   })
 }
 
@@ -198,12 +213,43 @@ export async function findMonthlyValue(
 
 export async function findVacationBalance(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   year: number
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (prisma.vacationBalance as any).findFirst({
-    where: { employeeId, year },
+    where: { tenantId, employeeId, year },
+  })
+}
+
+export async function findMonthlyValuesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  yearMonthPairs: Array<{ year: number; month: number }>
+) {
+  if (employeeIds.length === 0 || yearMonthPairs.length === 0) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (prisma.monthlyValue as any).findMany({
+    where: {
+      tenantId,
+      employeeId: { in: employeeIds },
+      OR: yearMonthPairs.map((ym) => ({ year: ym.year, month: ym.month })),
+    },
+  })
+}
+
+export async function findVacationBalancesBatch(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  year: number
+) {
+  if (employeeIds.length === 0) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (prisma.vacationBalance as any).findMany({
+    where: { tenantId, employeeId: { in: employeeIds }, year },
   })
 }
 
@@ -257,31 +303,24 @@ export async function findAbsenceDays(
     employeeIds?: string[]
   }
 ): Promise<AbsenceDayRow[]> {
+  const fromDate = params.from.toISOString().slice(0, 10)
+  const toDate = params.to.toISOString().slice(0, 10)
+
   const employeeFilter = params.employeeIds && params.employeeIds.length > 0
-    ? `AND ad.employee_id = ANY($3::uuid[])`
-    : ""
+    ? Prisma.sql`AND ad.employee_id = ANY(${params.employeeIds}::uuid[])`
+    : Prisma.sql``
 
-  const queryParams: unknown[] = [
-    params.from.toISOString().slice(0, 10),
-    params.to.toISOString().slice(0, 10),
-  ]
-  if (params.employeeIds && params.employeeIds.length > 0) {
-    queryParams.push(params.employeeIds)
-  }
-
-  return prisma.$queryRawUnsafe(
-    `SELECT ad.absence_date, ad.employee_id, e.personnel_number,
+  return prisma.$queryRaw<AbsenceDayRow[]>`
+    SELECT ad.absence_date, ad.employee_id, e.personnel_number,
             COALESCE(at.name, '') as absence_type_name,
             ad.status, ad.duration
      FROM absence_days ad
      JOIN employees e ON e.id = ad.employee_id
      LEFT JOIN absence_types at ON at.id = ad.absence_type_id
-     WHERE ad.tenant_id = '${tenantId}'
-       AND ad.absence_date >= $1
-       AND ad.absence_date <= $2
+     WHERE ad.tenant_id = ${tenantId}::uuid
+       AND ad.absence_date >= ${fromDate}::date
+       AND ad.absence_date <= ${toDate}::date
        ${employeeFilter}
      ORDER BY ad.absence_date, e.personnel_number
-     LIMIT 10000`,
-    ...queryParams
-  )
+     LIMIT 10000`
 }

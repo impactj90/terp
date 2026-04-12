@@ -293,7 +293,58 @@ export class EmployeeDayPlanGenerator {
     let plansUpdated = 0
     let employeesSkipped = 0
 
-    // Process each employee
+    // Batch-load tariffs: collect unique tariffIds, fetch all at once
+    const tariffIds = [
+      ...new Set(
+        employees
+          .map((e) => e.tariffId)
+          .filter((id): id is string => id !== null),
+      ),
+    ]
+
+    const tariffRows =
+      tariffIds.length > 0
+        ? await this.prisma.tariff.findMany({
+            where: { id: { in: tariffIds }, tenantId },
+            include: tariffGenerateInclude,
+          })
+        : []
+
+    const tariffMap = new Map(tariffRows.map((t) => [t.id, t]))
+
+    // Batch-load existing plans for all employees in the date range
+    const employeeIdsWithTariff = employees
+      .filter((e) => e.tariffId !== null)
+      .map((e) => e.id)
+
+    const allExistingPlans =
+      employeeIdsWithTariff.length > 0
+        ? await this.prisma.employeeDayPlan.findMany({
+            where: {
+              tenantId,
+              employeeId: { in: employeeIdsWithTariff },
+              planDate: { gte: fromDate, lte: toDate },
+            },
+          })
+        : []
+
+    // Group existing plans by employeeId
+    const existingPlansByEmployee = new Map<string, typeof allExistingPlans>()
+    for (const plan of allExistingPlans) {
+      const list = existingPlansByEmployee.get(plan.employeeId) ?? []
+      list.push(plan)
+      existingPlansByEmployee.set(plan.employeeId, list)
+    }
+
+    // Collect all upserts across all employees, then batch-execute
+    const allPlansToUpsert: Array<{
+      employeeId: string
+      planDate: Date
+      dayPlanId: string | null
+      isUpdate: boolean
+    }> = []
+
+    // Process each employee (no more per-employee DB queries)
     for (const employee of employees) {
       // Skip if no tariffId
       if (!employee.tariffId) {
@@ -301,12 +352,7 @@ export class EmployeeDayPlanGenerator {
         continue
       }
 
-      // Fetch tariff with full details
-      const tariff = await this.prisma.tariff.findFirst({
-        where: { id: employee.tariffId, tenantId },
-        include: tariffGenerateInclude,
-      })
-
+      const tariff = tariffMap.get(employee.tariffId)
       if (!tariff) {
         employeesSkipped++
         continue
@@ -324,22 +370,21 @@ export class EmployeeDayPlanGenerator {
         continue
       }
 
-      // Get existing EDPs in date range for this employee
-      const existingPlans = await this.prisma.employeeDayPlan.findMany({
-        where: {
-          tenantId,
-          employeeId: employee.id,
-          planDate: {
-            gte: window.start,
-            lte: window.end,
-          },
-        },
-      })
+      // Use pre-loaded existing plans, filtered to sync window
+      const existingPlans = (
+        existingPlansByEmployee.get(employee.id) ?? []
+      ).filter(
+        (p) =>
+          p.planDate.getTime() >= window.start.getTime() &&
+          p.planDate.getTime() <= window.end.getTime(),
+      )
 
       // Build skip map: dates to skip based on source
       const skipDates = new Set<string>()
+      const existingDateKeys = new Set<string>()
       for (const plan of existingPlans) {
         const dateKey = plan.planDate.toISOString().split("T")[0]!
+        existingDateKeys.add(dateKey)
         if (plan.source !== "tariff") {
           // Always skip manual/holiday plans
           skipDates.add(dateKey)
@@ -350,12 +395,6 @@ export class EmployeeDayPlanGenerator {
       }
 
       // Generate plans for each day in window
-      const plansToUpsert: Array<{
-        employeeId: string
-        planDate: Date
-        dayPlanId: string | null
-      }> = []
-
       const current = new Date(window.start.getTime())
       while (current.getTime() <= window.end.getTime()) {
         const dateKey = current.toISOString().split("T")[0]!
@@ -367,10 +406,11 @@ export class EmployeeDayPlanGenerator {
           )
 
           if (dayPlanId !== null) {
-            plansToUpsert.push({
+            allPlansToUpsert.push({
               employeeId: employee.id,
               planDate: new Date(current.getTime()),
               dayPlanId,
+              isUpdate: existingDateKeys.has(dateKey),
             })
           }
         }
@@ -378,50 +418,46 @@ export class EmployeeDayPlanGenerator {
         current.setUTCDate(current.getUTCDate() + 1)
       }
 
-      // Bulk upsert plans
-      if (plansToUpsert.length > 0) {
-        // Track which are new vs updates
-        const existingDateKeys = new Set(
-          existingPlans.map(
-            (p) => p.planDate.toISOString().split("T")[0]!,
-          ),
-        )
+      employeesProcessed++
+    }
 
-        await this.prisma.$transaction(async (tx) => {
-          for (const plan of plansToUpsert) {
-            await tx.employeeDayPlan.upsert({
-              where: {
-                employeeId_planDate: {
-                  employeeId: plan.employeeId,
-                  planDate: plan.planDate,
-                },
-              },
-              create: {
-                tenantId,
+    // Bulk upsert all plans in chunked transactions (max 500 per transaction
+    // to avoid Prisma timeout on very large batches)
+    const CHUNK_SIZE = 500
+    for (let i = 0; i < allPlansToUpsert.length; i += CHUNK_SIZE) {
+      const chunk = allPlansToUpsert.slice(i, i + CHUNK_SIZE)
+      await this.prisma.$transaction(
+        chunk.map((plan) =>
+          this.prisma.employeeDayPlan.upsert({
+            where: {
+              employeeId_planDate: {
                 employeeId: plan.employeeId,
                 planDate: plan.planDate,
-                dayPlanId: plan.dayPlanId,
-                source: "tariff",
               },
-              update: {
-                dayPlanId: plan.dayPlanId,
-                source: "tariff",
-              },
-            })
-          }
-        })
+            },
+            create: {
+              tenantId,
+              employeeId: plan.employeeId,
+              planDate: plan.planDate,
+              dayPlanId: plan.dayPlanId,
+              source: "tariff",
+            },
+            update: {
+              dayPlanId: plan.dayPlanId,
+              source: "tariff",
+            },
+          }),
+        ),
+      )
+    }
 
-        for (const plan of plansToUpsert) {
-          const dateKey = plan.planDate.toISOString().split("T")[0]!
-          if (existingDateKeys.has(dateKey)) {
-            plansUpdated++
-          } else {
-            plansCreated++
-          }
-        }
+    // Count created vs updated
+    for (const plan of allPlansToUpsert) {
+      if (plan.isUpdate) {
+        plansUpdated++
+      } else {
+        plansCreated++
       }
-
-      employeesProcessed++
     }
 
     return {

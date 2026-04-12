@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Calendar, type DateRange } from '@/components/ui/calendar'
+import { QueryError } from '@/components/ui/query-error'
 import { useHolidays, useEmployeeAbsences } from '@/hooks'
 import { formatDate, parseISODate, getMonthRange } from '@/lib/time-utils'
 
@@ -36,14 +37,14 @@ export function AbsenceCalendarView({
   }, [month])
 
   // Fetch holidays for the visible range
-  const { data: holidaysData } = useHolidays({
+  const { data: holidaysData, isError: isHolidaysError, refetch: refetchHolidays } = useHolidays({
     from: formatDate(start),
     to: formatDate(end),
     enabled: true,
   })
 
   // Fetch absences for the visible range
-  const { data: absencesData } = useEmployeeAbsences(employeeId ?? '', {
+  const { data: absencesData, isError: isAbsencesError, refetch: refetchAbsences } = useEmployeeAbsences(employeeId ?? '', {
     from: formatDate(start),
     to: formatDate(end),
     enabled: !!employeeId,
@@ -63,6 +64,16 @@ export function AbsenceCalendarView({
     }
     return dates
   }, [absencesData])
+
+  if (isHolidaysError || isAbsencesError) {
+    return (
+      <QueryError
+        message={t('loadFailed')}
+        onRetry={() => { refetchHolidays(); refetchAbsences() }}
+        className={className}
+      />
+    )
+  }
 
   const handleSelect = (value: Date | DateRange | undefined) => {
     if (value instanceof Date) {

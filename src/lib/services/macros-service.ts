@@ -6,6 +6,12 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./macros-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Logging ---
+
+const MACRO_TRACKED_FIELDS = ["name", "code"]
 
 // --- Error Classes ---
 
@@ -143,7 +149,8 @@ export async function create(
     macroType: string
     actionType: string
     actionParams?: unknown
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate name
   const name = input.name.trim()
@@ -169,6 +176,15 @@ export async function create(
 
   // Re-fetch with assignments
   const result = await repo.findMacroById(prisma, tenantId, macro.id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "macro",
+      entityId: macro.id, entityName: result!.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
@@ -183,7 +199,8 @@ export async function update(
     actionType?: string
     actionParams?: unknown
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify macro exists (tenant-scoped)
   const existing = await repo.findMacroByIdBasic(prisma, tenantId, input.id)
@@ -230,17 +247,28 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.updateMacro(prisma, input.id, data)
+  await repo.updateMacro(prisma, tenantId, input.id, data)
 
   // Re-fetch with assignments
   const result = await repo.findMacroById(prisma, tenantId, input.id)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, MACRO_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "macro",
+      entityId: input.id, entityName: result!.name ?? null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return result!
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify macro exists (tenant-scoped)
   const existing = await repo.findMacroByIdBasic(prisma, tenantId, id)
@@ -249,7 +277,15 @@ export async function remove(
   }
 
   // Hard delete (cascades to assignments and executions via FK)
-  await repo.deleteMacro(prisma, id)
+  await repo.deleteMacro(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "macro",
+      entityId: id, entityName: existing.name ?? null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Assignment Management ---
@@ -276,7 +312,8 @@ export async function createAssignment(
     tariffId?: string
     employeeId?: string
     executionDay: number
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify macro exists in tenant
   const macro = await repo.findMacroByIdBasic(prisma, tenantId, input.macroId)
@@ -296,7 +333,7 @@ export async function createAssignment(
   // Validate executionDay based on macroType
   validateExecutionDay(macro.macroType, input.executionDay)
 
-  return repo.createAssignment(prisma, {
+  const created = await repo.createAssignment(prisma, {
     tenantId,
     macroId: input.macroId,
     tariffId: input.tariffId || null,
@@ -304,6 +341,16 @@ export async function createAssignment(
     executionDay: input.executionDay,
     isActive: true,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "create", entityType: "macro_assignment",
+      entityId: created.id, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function updateAssignment(
@@ -314,7 +361,8 @@ export async function updateAssignment(
     assignmentId: string
     executionDay?: number
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify macro exists in tenant
   const macro = await repo.findMacroByIdBasic(prisma, tenantId, input.macroId)
@@ -344,14 +392,26 @@ export async function updateAssignment(
     data.isActive = input.isActive
   }
 
-  return repo.updateAssignment(prisma, input.assignmentId, data)
+  const updated = (await repo.updateAssignment(prisma, tenantId, input.assignmentId, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, MACRO_TRACKED_FIELDS)
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "update", entityType: "macro_assignment",
+      entityId: input.assignmentId, entityName: null, changes,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function deleteAssignment(
   prisma: PrismaClient,
   tenantId: string,
   macroId: string,
-  assignmentId: string
+  assignmentId: string,
+  audit?: AuditContext
 ) {
   // Verify macro exists in tenant
   const macro = await repo.findMacroByIdBasic(prisma, tenantId, macroId)
@@ -365,7 +425,15 @@ export async function deleteAssignment(
     throw new MacroAssignmentNotFoundError()
   }
 
-  await repo.deleteAssignment(prisma, assignmentId)
+  await repo.deleteAssignment(prisma, tenantId, assignmentId)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId, userId: audit.userId, action: "delete", entityType: "macro_assignment",
+      entityId: assignmentId, entityName: null, changes: null,
+      ipAddress: audit.ipAddress, userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 // --- Execution ---
@@ -407,12 +475,12 @@ export async function triggerExecution(
   })
 
   // Update execution record
-  const updated = await repo.updateExecution(prisma, execution.id, {
+  const updated = (await repo.updateExecution(prisma, tenantId, execution.id, {
     completedAt: new Date(),
     status: actionResult.error ? "failed" : "completed",
     result: (actionResult.result as object) ?? {},
     errorMessage: actionResult.error,
-  })
+  }))!
 
   return updated
 }

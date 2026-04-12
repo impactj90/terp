@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
+import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeleteAbsence } from '@/hooks'
 import { parseISODate } from '@/lib/time-utils'
@@ -53,7 +54,7 @@ export function AbsenceCancelDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch {
-      // Error will be visible via ConfirmDialog loading state stopping
+      toast.error(t('failedToCancel'))
     }
   }
 

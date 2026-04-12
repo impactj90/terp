@@ -146,7 +146,7 @@ const taskCatalogEntrySchema = z.object({
 
 const createScheduleInputSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
   timingType: z.enum(TIMING_TYPES),
   timingConfig: z.unknown().optional(),
   isEnabled: z.boolean().optional(),
@@ -165,7 +165,7 @@ const createScheduleInputSchema = z.object({
 const updateScheduleInputSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(255).optional(),
-  description: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
   timingType: z.enum(TIMING_TYPES).optional(),
   timingConfig: z.unknown().optional(),
   isEnabled: z.boolean().optional(),
@@ -390,7 +390,8 @@ export const schedulesRouter = createTRPCRouter({
         const schedule = await schedulesService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapSchedule(schedule)
       } catch (err) {
@@ -415,7 +416,8 @@ export const schedulesRouter = createTRPCRouter({
         const schedule = await schedulesService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapSchedule(schedule)
       } catch (err) {
@@ -436,7 +438,9 @@ export const schedulesRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await schedulesService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await schedulesService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)
@@ -481,7 +485,8 @@ export const schedulesRouter = createTRPCRouter({
         const task = await schedulesService.createTask(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapTask(task)
       } catch (err) {
@@ -505,7 +510,8 @@ export const schedulesRouter = createTRPCRouter({
         const task = await schedulesService.updateTask(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapTask(task)
       } catch (err) {
@@ -535,7 +541,8 @@ export const schedulesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input.scheduleId,
-          input.taskId
+          input.taskId,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

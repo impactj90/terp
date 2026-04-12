@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // ==================== Schedule CRUD Hooks ====================
 
@@ -43,6 +44,9 @@ export function useCreateSchedule() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
+      })
     },
   })
 }
@@ -59,6 +63,9 @@ export function useUpdateSchedule() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
+      })
     },
   })
 }
@@ -74,6 +81,9 @@ export function useDeleteSchedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.getById.queryKey(),
       })
     },
   })
@@ -106,6 +116,9 @@ export function useCreateScheduleTask() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
+      })
     },
   })
 }
@@ -121,6 +134,9 @@ export function useUpdateScheduleTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
       })
     },
   })
@@ -138,6 +154,9 @@ export function useDeleteScheduleTask() {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.schedules.tasks.queryKey(),
+      })
     },
   })
 }
@@ -150,12 +169,17 @@ export function useDeleteScheduleTask() {
 export function useExecuteSchedule() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.schedules.execute.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.schedules.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employeeDayPlans.list.queryKey(),
+      })
+      invalidateTimeData()
     },
   })
 }

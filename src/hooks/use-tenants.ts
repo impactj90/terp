@@ -67,6 +67,9 @@ export function useUpdateTenant() {
       queryClient.invalidateQueries({
         queryKey: trpc.tenants.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.getById.queryKey(),
+      })
     },
   })
 }
@@ -79,6 +82,68 @@ export function useDeactivateTenant() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.tenants.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.getById.queryKey(),
+      })
+    },
+  })
+}
+
+// --- Support access (Phase 6 — platform-admin-system) ---
+
+/**
+ * Hook returning recent support sessions (pending / active / expired / revoked)
+ * for the current tenant. Powers the settings page table.
+ */
+export function useSupportSessions(enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tenants.listSupportSessions.queryOptions(undefined, { enabled })
+  )
+}
+
+/**
+ * Hook returning the currently-active support session (if any) for banner
+ * display. Polls every 30s so the banner disappears promptly after
+ * expiry/revocation.
+ */
+export function useActiveSupportSession() {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.tenants.activeSupportSession.queryOptions(undefined, {
+      refetchInterval: 30_000,
+    })
+  )
+}
+
+export function useRequestSupportAccess() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tenants.requestSupportAccess.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.listSupportSessions.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.activeSupportSession.queryKey(),
+      })
+    },
+  })
+}
+
+export function useRevokeSupportAccess() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.tenants.revokeSupportAccess.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.listSupportSessions.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenants.activeSupportSession.queryKey(),
       })
     },
   })

@@ -25,8 +25,8 @@ type GroupDelegate = {
   findMany: (args: { where: Record<string, unknown>; orderBy: Record<string, string> }) => Promise<GroupRecord[]>
   findFirst: (args: { where: Record<string, unknown> }) => Promise<GroupRecord | null>
   create: (args: { data: Record<string, unknown> }) => Promise<GroupRecord>
-  update: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<GroupRecord>
-  delete: (args: { where: Record<string, unknown> }) => Promise<GroupRecord>
+  updateMany: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<{ count: number }>
+  deleteMany: (args: { where: Record<string, unknown> }) => Promise<{ count: number }>
 }
 
 /**
@@ -120,35 +120,37 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   type: GroupType,
   id: string,
   data: Record<string, unknown>
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return delegate.update({
-    where: { id },
-    data,
-  })
+  await delegate.updateMany({ where: { id, tenantId }, data })
+  return delegate.findFirst({ where: { id, tenantId } })
 }
 
 export async function deleteById(
   prisma: PrismaClient,
+  tenantId: string,
   type: GroupType,
   id: string
 ) {
   const delegate = getGroupDelegate(prisma, type)
-  return delegate.delete({
-    where: { id },
+  const { count } = await delegate.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   type: GroupType,
   groupId: string
 ) {
   const fkColumn = getEmployeeFkColumn(type)
   return prisma.employee.count({
-    where: { [fkColumn]: groupId },
+    where: { tenantId, [fkColumn]: groupId },
   })
 }

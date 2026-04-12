@@ -73,14 +73,14 @@ export default function PayrollExportsPage() {
       id: item.id ?? '',
       year: item.year ?? year,
       month: item.month ?? month,
-      export_type: item.exportType ?? 'standard',
+      exportType: item.exportType ?? 'standard',
       format: item.format ?? '',
       status: item.status ?? 'pending',
-      employee_count: item.employeeCount ?? undefined,
-      total_hours: (item.totalHours as number | null) ?? undefined,
-      requested_at: item.requestedAt ? String(item.requestedAt) : undefined,
-      completed_at: item.completedAt ? String(item.completedAt) : undefined,
-      error_message: item.errorMessage ?? undefined,
+      employeeCount: item.employeeCount ?? undefined,
+      totalHours: (item.totalHours as number | null) ?? undefined,
+      requestedAt: item.requestedAt ? String(item.requestedAt) : undefined,
+      completedAt: item.completedAt ? String(item.completedAt) : undefined,
+      errorMessage: item.errorMessage ?? undefined,
     }))
   }, [exportsData, year, month])
 
@@ -187,12 +187,12 @@ export default function PayrollExportsPage() {
           setDeleteTarget(item)
         }}
         fullExport={fullExportData ? {
-          export_interface_id: fullExportData.exportInterfaceId,
-          file_size: fullExportData.fileSize,
-          row_count: fullExportData.rowCount,
-          total_overtime: fullExportData.totalOvertime as number | undefined,
-          started_at: fullExportData.startedAt ? String(fullExportData.startedAt) : undefined,
-          requested_at: fullExportData.requestedAt ? String(fullExportData.requestedAt) : undefined,
+          exportInterfaceId: fullExportData.exportInterfaceId,
+          fileSize: fullExportData.fileSize,
+          rowCount: fullExportData.rowCount,
+          totalOvertime: fullExportData.totalOvertime as number | undefined,
+          startedAt: fullExportData.startedAt ? String(fullExportData.startedAt) : undefined,
+          requestedAt: fullExportData.requestedAt ? String(fullExportData.requestedAt) : undefined,
           parameters: fullExportData.parameters as Record<string, unknown> | null | undefined,
         } : null}
       />
@@ -218,6 +218,7 @@ export default function PayrollExportsPage() {
         onOpenChange={setGenerateOpen}
         defaultYear={year}
         defaultMonth={month > 1 ? month - 1 : 12}
+        onSuccess={(y, m) => { setYear(y); setMonth(m) }}
       />
 
       {/* Preview */}

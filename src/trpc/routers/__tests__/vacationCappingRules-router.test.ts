@@ -227,8 +227,10 @@ describe("vacationCappingRules.update", () => {
     const updated = makeCappingRule({ name: "Updated Cap", capValue: 15 })
     const mockPrisma = {
       vacationCappingRule: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

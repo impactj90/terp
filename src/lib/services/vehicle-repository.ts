@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Vehicle model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.vehicle.findMany({
@@ -49,26 +50,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.vehicle.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.vehicle, { id, tenantId }, data, { entity: "Vehicle" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.vehicle.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.vehicle.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countTripRecordsByVehicle(
   prisma: PrismaClient,
+  tenantId: string,
   vehicleId: string
 ) {
   return prisma.tripRecord.count({
-    where: { vehicleId },
+    where: { tenantId, vehicleId },
   })
 }

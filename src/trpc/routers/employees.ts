@@ -18,6 +18,7 @@
  * @see apps/api/internal/handler/booking.go (DayView + Calculate)
  */
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import type { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
@@ -30,6 +31,7 @@ import {
 } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as employeesService from "@/lib/services/employees-service"
+import { decryptField, isEncrypted } from "@/lib/services/field-encryption"
 
 // --- Permission Constants ---
 
@@ -49,7 +51,7 @@ const employeeOutputSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
   personnelNumber: z.string(),
-  pin: z.string(),
+  pin: z.string().nullable(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().nullable(),
@@ -59,6 +61,7 @@ const employeeOutputSchema = z.object({
   departmentId: z.string().nullable(),
   costCenterId: z.string().nullable(),
   employmentTypeId: z.string().nullable(),
+  locationId: z.string().nullable(),
   tariffId: z.string().nullable(),
   weeklyHours: z.number(),
   vacationDaysPerYear: z.number(),
@@ -98,32 +101,83 @@ const employeeOutputSchema = z.object({
   calculationStartDate: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  // --- Payroll master data ---
+  taxId: z.string().nullable(),
+  taxClass: z.number().nullable(),
+  taxFactor: z.number().nullable(),
+  childTaxAllowance: z.number().nullable(),
+  denomination: z.string().nullable(),
+  spouseDenomination: z.string().nullable(),
+  payrollTaxAllowance: z.number().nullable(),
+  payrollTaxAddition: z.number().nullable(),
+  isPrimaryEmployer: z.boolean().nullable(),
+  socialSecurityNumber: z.string().nullable(),
+  healthInsuranceProviderId: z.string().nullable(),
+  healthInsuranceStatus: z.string().nullable(),
+  privateHealthInsuranceContribution: z.number().nullable(),
+  personnelGroupCode: z.string().nullable(),
+  contributionGroupCode: z.string().nullable(),
+  activityCode: z.string().nullable(),
+  midijobFlag: z.number().nullable(),
+  umlageU1: z.boolean().nullable(),
+  umlageU2: z.boolean().nullable(),
+  iban: z.string().nullable(),
+  bic: z.string().nullable(),
+  accountHolder: z.string().nullable(),
+  birthName: z.string().nullable(),
+  houseNumber: z.string().nullable(),
+  grossSalary: z.number().nullable(),
+  hourlyRate: z.number().nullable(),
+  paymentType: z.string().nullable(),
+  salaryGroup: z.string().nullable(),
+  contractType: z.string().nullable(),
+  probationMonths: z.number().nullable(),
+  noticePeriodEmployee: z.string().nullable(),
+  noticePeriodEmployer: z.string().nullable(),
+  disabilityDegree: z.number().nullable(),
+  disabilityEqualStatus: z.boolean().nullable(),
+  disabilityMarkers: z.string().nullable(),
+  disabilityIdValidUntil: z.date().nullable(),
+  bgInstitution: z.string().nullable(),
+  bgMembershipNumber: z.string().nullable(),
+  bgHazardTariff: z.string().nullable(),
+  university: z.string().nullable(),
+  studentId: z.string().nullable(),
+  fieldOfStudy: z.string().nullable(),
+  apprenticeshipOccupation: z.string().nullable(),
+  apprenticeshipExternalCompany: z.string().nullable(),
+  vocationalSchool: z.string().nullable(),
+  receivesOldAgePension: z.boolean().nullable(),
+  receivesDisabilityPension: z.boolean().nullable(),
+  receivesSurvivorPension: z.boolean().nullable(),
+  pensionStartDate: z.date().nullable(),
+  dateOfDeath: z.date().nullable(),
+  heirName: z.string().nullable(),
+  heirIban: z.string().nullable(),
+  receivesParentalAllowance: z.boolean().nullable(),
+  parentalAllowanceUntil: z.date().nullable(),
 })
 
 type EmployeeOutput = z.infer<typeof employeeOutputSchema>
 
+const relationSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+}).nullable()
+
+const employeeListItemOutputSchema = employeeOutputSchema.extend({
+  department: relationSchema,
+  location: relationSchema,
+  tariff: relationSchema,
+})
+
 const employeeDetailOutputSchema = employeeOutputSchema.extend({
-  department: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      code: z.string(),
-    })
-    .nullable(),
-  costCenter: z
-    .object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-    .nullable(),
-  employmentType: z
-    .object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-    .nullable(),
+  department: relationSchema,
+  costCenter: relationSchema,
+  employmentType: relationSchema,
+  location: relationSchema,
+  tariff: relationSchema,
   contacts: z.array(
     z.object({
       id: z.string(),
@@ -168,30 +222,31 @@ const listEmployeesInputSchema = z
   .object({
     page: z.number().int().positive().optional().default(1),
     pageSize: z.number().int().min(1).max(500).optional().default(20),
-    search: z.string().optional(),
+    search: z.string().max(255).optional(),
     departmentId: z.string().optional(),
     costCenterId: z.string().optional(),
     employmentTypeId: z.string().optional(),
+    locationId: z.string().optional(),
     isActive: z.boolean().optional(),
     hasExitDate: z.boolean().optional(),
   })
   .optional()
 
 const createEmployeeInputSchema = z.object({
-  personnelNumber: z.string().min(1, "Personnel number is required"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  pin: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
+  personnelNumber: z.string().max(50).optional(),
+  firstName: z.string().min(1, "First name is required").max(255),
+  lastName: z.string().min(1, "Last name is required").max(255),
+  email: z.string().email().optional(),
+  phone: z.string().max(50).optional(),
   entryDate: z.coerce.date(),
   exitDate: z.coerce.date().optional(),
   departmentId: z.string().optional(),
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
+  locationId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().optional(),
-  vacationDaysPerYear: z.number().optional(),
+  weeklyHours: z.number().min(0).max(168).optional(),
+  vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -218,32 +273,33 @@ const createEmployeeInputSchema = z.object({
   defaultOrderId: z.string().optional(),
   defaultActivityId: z.string().optional(),
   // Tariff overrides
-  partTimePercent: z.number().optional(),
-  dailyTargetHours: z.number().optional(),
-  weeklyTargetHours: z.number().optional(),
-  monthlyTargetHours: z.number().optional(),
-  annualTargetHours: z.number().optional(),
-  workDaysPerWeek: z.number().optional(),
+  partTimePercent: z.number().min(0).max(100).optional(),
+  dailyTargetHours: z.number().min(0).max(24).optional(),
+  weeklyTargetHours: z.number().min(0).max(168).optional(),
+  monthlyTargetHours: z.number().min(0).max(744).optional(),
+  annualTargetHours: z.number().min(0).max(8784).optional(),
+  workDaysPerWeek: z.number().min(0).max(7).optional(),
   // System
   calculationStartDate: z.coerce.date().optional(),
 })
 
 const updateEmployeeInputSchema = z.object({
   id: z.string(),
-  personnelNumber: z.string().min(1).optional(),
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  pin: z.string().optional(),
-  email: z.string().nullable().optional(),
-  phone: z.string().nullable().optional(),
+  personnelNumber: z.string().min(1).max(50).optional(),
+  firstName: z.string().min(1).max(255).optional(),
+  lastName: z.string().min(1).max(255).optional(),
+  pin: z.string().max(20).optional(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
   entryDate: z.coerce.date().optional(),
   exitDate: z.coerce.date().nullable().optional(),
   departmentId: z.string().optional(),
   costCenterId: z.string().optional(),
   employmentTypeId: z.string().optional(),
+  locationId: z.string().optional(),
   tariffId: z.string().optional(),
-  weeklyHours: z.number().optional(),
-  vacationDaysPerYear: z.number().optional(),
+  weeklyHours: z.number().min(0).max(168).optional(),
+  vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
   disabilityFlag: z.boolean().optional(),
   // Extended fields
@@ -270,18 +326,87 @@ const updateEmployeeInputSchema = z.object({
   defaultOrderId: z.string().optional(),
   defaultActivityId: z.string().optional(),
   // Tariff overrides
-  partTimePercent: z.number().nullable().optional(),
-  dailyTargetHours: z.number().nullable().optional(),
-  weeklyTargetHours: z.number().nullable().optional(),
-  monthlyTargetHours: z.number().nullable().optional(),
-  annualTargetHours: z.number().nullable().optional(),
-  workDaysPerWeek: z.number().nullable().optional(),
+  partTimePercent: z.number().min(0).max(100).nullable().optional(),
+  dailyTargetHours: z.number().min(0).max(24).nullable().optional(),
+  weeklyTargetHours: z.number().min(0).max(168).nullable().optional(),
+  monthlyTargetHours: z.number().min(0).max(744).nullable().optional(),
+  annualTargetHours: z.number().min(0).max(8784).nullable().optional(),
+  workDaysPerWeek: z.number().min(0).max(7).nullable().optional(),
   // System
   calculationStartDate: z.coerce.date().nullable().optional(),
+  // --- Payroll master data ---
+  // Tax
+  taxId: z.string().nullable().optional(),
+  taxClass: z.number().int().min(1).max(6).nullable().optional(),
+  taxFactor: z.number().nullable().optional(),
+  childTaxAllowance: z.number().nullable().optional(),
+  denomination: z.string().max(3).nullable().optional(),
+  spouseDenomination: z.string().max(3).nullable().optional(),
+  payrollTaxAllowance: z.number().nullable().optional(),
+  payrollTaxAddition: z.number().nullable().optional(),
+  isPrimaryEmployer: z.boolean().nullable().optional(),
+  // Social security
+  socialSecurityNumber: z.string().nullable().optional(),
+  healthInsuranceProviderId: z.string().nullable().optional(),
+  healthInsuranceStatus: z.string().nullable().optional(),
+  privateHealthInsuranceContribution: z.number().nullable().optional(),
+  personnelGroupCode: z.string().max(3).nullable().optional(),
+  contributionGroupCode: z.string().max(4).nullable().optional(),
+  activityCode: z.string().max(9).nullable().optional(),
+  midijobFlag: z.number().int().min(0).max(2).nullable().optional(),
+  umlageU1: z.boolean().nullable().optional(),
+  umlageU2: z.boolean().nullable().optional(),
+  // Bank
+  iban: z.string().nullable().optional(),
+  bic: z.string().max(11).nullable().optional(),
+  accountHolder: z.string().max(200).nullable().optional(),
+  // Personal extension
+  birthName: z.string().max(100).nullable().optional(),
+  houseNumber: z.string().max(20).nullable().optional(),
+  // Compensation
+  grossSalary: z.number().nullable().optional(),
+  hourlyRate: z.number().nullable().optional(),
+  paymentType: z.string().max(20).nullable().optional(),
+  salaryGroup: z.string().max(50).nullable().optional(),
+  // Contract extension
+  contractType: z.string().max(30).nullable().optional(),
+  probationMonths: z.number().int().nullable().optional(),
+  noticePeriodEmployee: z.string().max(50).nullable().optional(),
+  noticePeriodEmployer: z.string().max(50).nullable().optional(),
+  // Disability
+  disabilityDegree: z.number().int().min(20).max(100).nullable().optional(),
+  disabilityEqualStatus: z.boolean().nullable().optional(),
+  disabilityMarkers: z.string().max(20).nullable().optional(),
+  disabilityIdValidUntil: z.coerce.date().nullable().optional(),
+  // BG
+  bgInstitution: z.string().max(200).nullable().optional(),
+  bgMembershipNumber: z.string().max(30).nullable().optional(),
+  bgHazardTariff: z.string().max(10).nullable().optional(),
+  // Student / apprentice
+  university: z.string().max(200).nullable().optional(),
+  studentId: z.string().max(30).nullable().optional(),
+  fieldOfStudy: z.string().max(100).nullable().optional(),
+  apprenticeshipOccupation: z.string().max(200).nullable().optional(),
+  apprenticeshipExternalCompany: z.string().max(200).nullable().optional(),
+  vocationalSchool: z.string().max(200).nullable().optional(),
+  // Pension status
+  receivesOldAgePension: z.boolean().nullable().optional(),
+  receivesDisabilityPension: z.boolean().nullable().optional(),
+  receivesSurvivorPension: z.boolean().nullable().optional(),
+  pensionStartDate: z.coerce.date().nullable().optional(),
+  // Death
+  dateOfDeath: z.coerce.date().nullable().optional(),
+  heirName: z.string().max(200).nullable().optional(),
+  heirIban: z.string().nullable().optional(),
+  // Parental allowance
+  receivesParentalAllowance: z.boolean().nullable().optional(),
+  parentalAllowanceUntil: z.coerce.date().nullable().optional(),
   // Clear flags for nullable FKs
+  clearHealthInsuranceProviderId: z.boolean().optional(),
   clearDepartmentId: z.boolean().optional(),
   clearCostCenterId: z.boolean().optional(),
   clearEmploymentTypeId: z.boolean().optional(),
+  clearLocationId: z.boolean().optional(),
   clearTariffId: z.boolean().optional(),
   clearEmployeeGroupId: z.boolean().optional(),
   clearWorkflowGroupId: z.boolean().optional(),
@@ -298,6 +423,15 @@ const updateEmployeeInputSchema = z.object({
 function decimalToNumber(val: Prisma.Decimal | number | null | undefined): number | null {
   if (val === null || val === undefined) return null
   return Number(val)
+}
+
+function safeDecrypt(val: string | null | undefined): string | null {
+  if (!val) return null
+  try {
+    return isEncrypted(val) ? decryptField(val) : val
+  } catch {
+    return "[decryption error]"
+  }
 }
 
 /**
@@ -318,6 +452,7 @@ function mapEmployeeToOutput(emp: {
   departmentId: string | null
   costCenterId: string | null
   employmentTypeId: string | null
+  locationId: string | null
   tariffId: string | null
   weeklyHours: Prisma.Decimal | number
   vacationDaysPerYear: Prisma.Decimal | number
@@ -357,7 +492,7 @@ function mapEmployeeToOutput(emp: {
     id: emp.id,
     tenantId: emp.tenantId,
     personnelNumber: emp.personnelNumber,
-    pin: emp.pin,
+    pin: emp.pin ?? null,
     firstName: emp.firstName,
     lastName: emp.lastName,
     email: emp.email,
@@ -367,6 +502,7 @@ function mapEmployeeToOutput(emp: {
     departmentId: emp.departmentId,
     costCenterId: emp.costCenterId,
     employmentTypeId: emp.employmentTypeId,
+    locationId: emp.locationId,
     tariffId: emp.tariffId,
     weeklyHours: Number(emp.weeklyHours),
     vacationDaysPerYear: Number(emp.vacationDaysPerYear),
@@ -401,6 +537,61 @@ function mapEmployeeToOutput(emp: {
     calculationStartDate: emp.calculationStartDate,
     createdAt: emp.createdAt,
     updatedAt: emp.updatedAt,
+    // --- Payroll master data ---
+    taxId: safeDecrypt((emp as Record<string, unknown>).taxId as string | null),
+    taxClass: (emp as Record<string, unknown>).taxClass as number | null ?? null,
+    taxFactor: decimalToNumber((emp as Record<string, unknown>).taxFactor as Prisma.Decimal | null),
+    childTaxAllowance: decimalToNumber((emp as Record<string, unknown>).childTaxAllowance as Prisma.Decimal | null),
+    denomination: (emp as Record<string, unknown>).denomination as string | null ?? null,
+    spouseDenomination: (emp as Record<string, unknown>).spouseDenomination as string | null ?? null,
+    payrollTaxAllowance: decimalToNumber((emp as Record<string, unknown>).payrollTaxAllowance as Prisma.Decimal | null),
+    payrollTaxAddition: decimalToNumber((emp as Record<string, unknown>).payrollTaxAddition as Prisma.Decimal | null),
+    isPrimaryEmployer: (emp as Record<string, unknown>).isPrimaryEmployer as boolean | null ?? null,
+    socialSecurityNumber: safeDecrypt((emp as Record<string, unknown>).socialSecurityNumber as string | null),
+    healthInsuranceProviderId: (emp as Record<string, unknown>).healthInsuranceProviderId as string | null ?? null,
+    healthInsuranceStatus: (emp as Record<string, unknown>).healthInsuranceStatus as string | null ?? null,
+    privateHealthInsuranceContribution: decimalToNumber((emp as Record<string, unknown>).privateHealthInsuranceContribution as Prisma.Decimal | null),
+    personnelGroupCode: (emp as Record<string, unknown>).personnelGroupCode as string | null ?? null,
+    contributionGroupCode: (emp as Record<string, unknown>).contributionGroupCode as string | null ?? null,
+    activityCode: (emp as Record<string, unknown>).activityCode as string | null ?? null,
+    midijobFlag: (emp as Record<string, unknown>).midijobFlag as number | null ?? null,
+    umlageU1: (emp as Record<string, unknown>).umlageU1 as boolean | null ?? null,
+    umlageU2: (emp as Record<string, unknown>).umlageU2 as boolean | null ?? null,
+    iban: safeDecrypt((emp as Record<string, unknown>).iban as string | null),
+    bic: (emp as Record<string, unknown>).bic as string | null ?? null,
+    accountHolder: (emp as Record<string, unknown>).accountHolder as string | null ?? null,
+    birthName: (emp as Record<string, unknown>).birthName as string | null ?? null,
+    houseNumber: (emp as Record<string, unknown>).houseNumber as string | null ?? null,
+    grossSalary: decimalToNumber((emp as Record<string, unknown>).grossSalary as Prisma.Decimal | null),
+    hourlyRate: decimalToNumber((emp as Record<string, unknown>).hourlyRate as Prisma.Decimal | null),
+    paymentType: (emp as Record<string, unknown>).paymentType as string | null ?? null,
+    salaryGroup: (emp as Record<string, unknown>).salaryGroup as string | null ?? null,
+    contractType: (emp as Record<string, unknown>).contractType as string | null ?? null,
+    probationMonths: (emp as Record<string, unknown>).probationMonths as number | null ?? null,
+    noticePeriodEmployee: (emp as Record<string, unknown>).noticePeriodEmployee as string | null ?? null,
+    noticePeriodEmployer: (emp as Record<string, unknown>).noticePeriodEmployer as string | null ?? null,
+    disabilityDegree: (emp as Record<string, unknown>).disabilityDegree as number | null ?? null,
+    disabilityEqualStatus: (emp as Record<string, unknown>).disabilityEqualStatus as boolean | null ?? null,
+    disabilityMarkers: (emp as Record<string, unknown>).disabilityMarkers as string | null ?? null,
+    disabilityIdValidUntil: (emp as Record<string, unknown>).disabilityIdValidUntil as Date | null ?? null,
+    bgInstitution: (emp as Record<string, unknown>).bgInstitution as string | null ?? null,
+    bgMembershipNumber: (emp as Record<string, unknown>).bgMembershipNumber as string | null ?? null,
+    bgHazardTariff: (emp as Record<string, unknown>).bgHazardTariff as string | null ?? null,
+    university: (emp as Record<string, unknown>).university as string | null ?? null,
+    studentId: (emp as Record<string, unknown>).studentId as string | null ?? null,
+    fieldOfStudy: (emp as Record<string, unknown>).fieldOfStudy as string | null ?? null,
+    apprenticeshipOccupation: (emp as Record<string, unknown>).apprenticeshipOccupation as string | null ?? null,
+    apprenticeshipExternalCompany: (emp as Record<string, unknown>).apprenticeshipExternalCompany as string | null ?? null,
+    vocationalSchool: (emp as Record<string, unknown>).vocationalSchool as string | null ?? null,
+    receivesOldAgePension: (emp as Record<string, unknown>).receivesOldAgePension as boolean | null ?? null,
+    receivesDisabilityPension: (emp as Record<string, unknown>).receivesDisabilityPension as boolean | null ?? null,
+    receivesSurvivorPension: (emp as Record<string, unknown>).receivesSurvivorPension as boolean | null ?? null,
+    pensionStartDate: (emp as Record<string, unknown>).pensionStartDate as Date | null ?? null,
+    dateOfDeath: (emp as Record<string, unknown>).dateOfDeath as Date | null ?? null,
+    heirName: (emp as Record<string, unknown>).heirName as string | null ?? null,
+    heirIban: safeDecrypt((emp as Record<string, unknown>).heirIban as string | null),
+    receivesParentalAllowance: (emp as Record<string, unknown>).receivesParentalAllowance as boolean | null ?? null,
+    parentalAllowanceUntil: (emp as Record<string, unknown>).parentalAllowanceUntil as Date | null ?? null,
   }
 }
 
@@ -555,7 +746,7 @@ export const employeesRouter = createTRPCRouter({
     .input(listEmployeesInputSchema)
     .output(
       z.object({
-        items: z.array(employeeOutputSchema),
+        items: z.array(employeeListItemOutputSchema),
         total: z.number(),
       })
     )
@@ -572,7 +763,20 @@ export const employeesRouter = createTRPCRouter({
         )
 
         return {
-          items: employees.map(mapEmployeeToOutput),
+          items: employees.map((emp) => {
+            const base = mapEmployeeToOutput(emp)
+            const rel = emp as unknown as {
+              department?: { id: string; code: string; name: string } | null
+              location?: { id: string; code: string; name: string } | null
+              tariff?: { id: string; code: string; name: string } | null
+            }
+            return {
+              ...base,
+              department: rel.department ?? null,
+              location: rel.location ?? null,
+              tariff: rel.tariff ?? null,
+            }
+          }),
           total,
         }
       } catch (err) {
@@ -629,6 +833,20 @@ export const employeesRouter = createTRPCRouter({
                 name: employee.employmentType.name,
               }
             : null,
+          location: employee.location
+            ? {
+                id: employee.location.id,
+                code: employee.location.code,
+                name: employee.location.name,
+              }
+            : null,
+          tariff: employee.tariff
+            ? {
+                id: employee.tariff.id,
+                code: employee.tariff.code,
+                name: employee.tariff.name,
+              }
+            : null,
           contacts: employee.contacts.map((c) => ({
             id: c.id,
             employeeId: c.employeeId,
@@ -670,16 +888,26 @@ export const employeesRouter = createTRPCRouter({
    */
   create: tenantProcedure
     .use(requirePermission(EMPLOYEES_CREATE))
+    .use(applyDataScope())
     .input(createEmployeeInputSchema)
     .output(employeeOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
 
+        // H-006: Validate departmentId against data scope
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        if (dataScope.type === "department" && input.departmentId) {
+          if (!dataScope.departmentIds.includes(input.departmentId)) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Department outside data scope" })
+          }
+        }
+
         const employee = await employeesService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapEmployeeToOutput(employee)
@@ -710,7 +938,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapEmployeeToOutput(employee)
@@ -740,7 +969,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return { success: true }
@@ -759,16 +989,19 @@ export const employeesRouter = createTRPCRouter({
    */
   search: tenantProcedure
     .use(requirePermission(EMPLOYEES_VIEW))
-    .input(z.object({ query: z.string().min(1) }))
+    .use(applyDataScope())
+    .input(z.object({ query: z.string().min(1).max(255) }))
     .output(z.object({ items: z.array(employeeSearchOutputSchema) }))
     .query(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
         const employees = await employeesService.searchEmployees(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.query
+          input.query,
+          dataScope
         )
 
         return { items: employees }
@@ -789,7 +1022,7 @@ export const employeesRouter = createTRPCRouter({
     .use(applyDataScope())
     .input(
       z.object({
-        employeeIds: z.array(z.string()),
+        employeeIds: z.array(z.string()).min(1),
         tariffId: z.string().nullable(),
         clearTariff: z.boolean().optional(),
       })
@@ -804,7 +1037,8 @@ export const employeesRouter = createTRPCRouter({
           ctx.prisma as unknown as PrismaClient,
           tenantId,
           dataScope,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
       } catch (err) {
         handleServiceError(err)

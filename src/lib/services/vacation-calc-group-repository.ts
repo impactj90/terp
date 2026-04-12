@@ -96,15 +96,19 @@ export async function createWithLinks(
 
 export async function updateWithLinks(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>,
   specialCalculationIds?: string[]
 ) {
   await prisma.$transaction(async (tx) => {
-    await tx.vacationCalculationGroup.update({
-      where: { id },
+    const { count } = await tx.vacationCalculationGroup.updateMany({
+      where: { id, tenantId },
       data,
     })
+    if (count === 0) {
+      throw new Error("Vacation calculation group not found")
+    }
 
     // Replace junction entries if IDs provided
     if (specialCalculationIds !== undefined) {
@@ -123,27 +127,30 @@ export async function updateWithLinks(
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.vacationCalculationGroup.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.vacationCalculationGroup.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmploymentTypeUsage(
   prisma: PrismaClient,
+  tenantId: string,
   groupId: string
 ) {
   return prisma.employmentType.count({
-    where: { vacationCalcGroupId: groupId },
+    where: { tenantId, vacationCalcGroupId: groupId },
   })
 }
 
 export async function findSpecialCalculations(
   prisma: PrismaClient,
+  tenantId: string,
   ids: string[]
 ) {
   return prisma.vacationSpecialCalculation.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, tenantId },
     select: { id: true },
   })
 }

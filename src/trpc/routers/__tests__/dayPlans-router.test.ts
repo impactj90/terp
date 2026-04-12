@@ -234,9 +234,10 @@ describe("dayPlans.create", () => {
     const created = makeDayPlan()
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)      // findByCode duplicate check
+          .mockResolvedValueOnce(created),  // findByIdWithDetail re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -259,9 +260,10 @@ describe("dayPlans.create", () => {
     const created = makeDayPlan({ description: "Desc" })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)      // findByCode duplicate check
+          .mockResolvedValueOnce(created),  // findByIdWithDetail re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -333,9 +335,10 @@ describe("dayPlans.create", () => {
     const created = makeDayPlan({ planType: "flextime" })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)      // findByCode duplicate check
+          .mockResolvedValueOnce(created),  // findByIdWithDetail re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -360,9 +363,10 @@ describe("dayPlans.create", () => {
     })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(null)      // findByCode duplicate check
+          .mockResolvedValueOnce(created),  // findByIdWithDetail re-fetch
         create: vi.fn().mockResolvedValue(created),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(created),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -383,9 +387,12 @@ describe("dayPlans.update", () => {
     const updated = makeDayPlan({ name: "Updated" })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)  // findById existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithDetail re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -441,16 +448,19 @@ describe("dayPlans.update", () => {
     const updated = makeDayPlan({ code: "STD-1" })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)  // findByIdBasic existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithDetail re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: DAY_PLAN_ID, code: "STD-1" })
     expect(result.code).toBe("STD-1")
-    // findFirst should be called only once (existence check)
-    expect(mockPrisma.dayPlan.findFirst).toHaveBeenCalledTimes(1)
+    // findFirst: existence check + tenantScopedUpdate refetch + findByIdWithDetail
+    expect(mockPrisma.dayPlan.findFirst).toHaveBeenCalledTimes(3)
   })
 
   it("throws NOT_FOUND for missing day plan", async () => {
@@ -480,14 +490,17 @@ describe("dayPlans.update", () => {
     })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)  // findByIdBasic existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithDetail re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: DAY_PLAN_ID, planType: "flextime" })
-    const updateCall = mockPrisma.dayPlan.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.dayPlan.updateMany.mock.calls[0]![0]
     expect(updateCall.data.toleranceComePlus).toBe(0)
     expect(updateCall.data.toleranceGoMinus).toBe(0)
     expect(updateCall.data.variableWorkTime).toBe(false)
@@ -498,9 +511,12 @@ describe("dayPlans.update", () => {
     const updated = makeDayPlan({ comeFrom: null, comeTo: null })
     const mockPrisma = {
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)  // findByIdBasic existence check
+          .mockResolvedValueOnce(updated)   // tenantScopedUpdate refetch
+          .mockResolvedValueOnce(updated),  // findByIdWithDetail re-fetch
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -511,7 +527,7 @@ describe("dayPlans.update", () => {
     })
     expect(result.comeFrom).toBeNull()
     expect(result.comeTo).toBeNull()
-    const updateCall = mockPrisma.dayPlan.update.mock.calls[0]![0]
+    const updateCall = mockPrisma.dayPlan.updateMany.mock.calls[0]![0]
     expect(updateCall.data.comeFrom).toBeNull()
     expect(updateCall.data.comeTo).toBeNull()
   })
@@ -525,9 +541,9 @@ describe("dayPlans.delete", () => {
     const mockPrisma = {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 0 }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ count: 0 }]),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: DAY_PLAN_ID })
@@ -552,7 +568,7 @@ describe("dayPlans.delete", () => {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(existing),
       },
-      $queryRawUnsafe: vi.fn().mockResolvedValue([{ count: 2 }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ count: 2 }]),
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await expect(caller.delete({ id: DAY_PLAN_ID })).rejects.toThrow(
@@ -580,10 +596,10 @@ describe("dayPlans.copy", () => {
       dayPlan: {
         findFirst: vi
           .fn()
-          .mockResolvedValueOnce(original) // fetch original
-          .mockResolvedValueOnce(null), // code uniqueness check
+          .mockResolvedValueOnce(original)    // fetch original
+          .mockResolvedValueOnce(null)        // code uniqueness check
+          .mockResolvedValueOnce(copyResult), // findByIdWithDetail re-fetch
         create: vi.fn().mockResolvedValue({ ...copyResult, id: DAY_PLAN_B_ID }),
-        findUniqueOrThrow: vi.fn().mockResolvedValue(copyResult),
       },
       dayPlanBreak: {
         create: vi.fn().mockResolvedValue({}),
@@ -865,7 +881,7 @@ describe("dayPlans.createBonus", () => {
     expect(result.calculationType).toBe("per_minute")
   })
 
-  it("validates timeFrom < timeTo", async () => {
+  it("validates timeFrom !== timeTo", async () => {
     const mockPrisma = {
       dayPlan: {
         findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
@@ -876,12 +892,36 @@ describe("dayPlans.createBonus", () => {
       caller.createBonus({
         dayPlanId: DAY_PLAN_ID,
         accountId: ACCOUNT_ID,
-        timeFrom: 1440,
+        timeFrom: 1320,
         timeTo: 1320,
         calculationType: "per_minute",
         valueMinutes: 15,
       })
-    ).rejects.toThrow("Bonus time from must be before time to")
+    ).rejects.toThrow("Bonus time from and time to must not be equal")
+  })
+
+  it("allows overnight bonus (timeFrom > timeTo)", async () => {
+    const bonus = makeBonus({ timeFrom: 1320, timeTo: 360 })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        create: vi.fn().mockResolvedValue(bonus),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.createBonus({
+      dayPlanId: DAY_PLAN_ID,
+      accountId: ACCOUNT_ID,
+      timeFrom: 1320,
+      timeTo: 360,
+      calculationType: "per_minute",
+      valueMinutes: 15,
+    })
+    expect(result.id).toBe(BONUS_ID)
+    expect(result.timeFrom).toBe(1320)
+    expect(result.timeTo).toBe(360)
   })
 
   it("throws NOT_FOUND when parent day plan missing", async () => {

@@ -5,6 +5,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import { Prisma } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- List / Search ---
 
@@ -17,14 +18,20 @@ export async function findMany(
     take: number
   }
 ) {
+  const where = { tenantId, ...params.where }
   const [employees, total] = await Promise.all([
     prisma.employee.findMany({
-      where: params.where,
+      where,
       skip: params.skip,
       take: params.take,
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      include: {
+        department: { select: { id: true, name: true, code: true } },
+        location: { select: { id: true, name: true, code: true } },
+        tariff: { select: { id: true, name: true, code: true } },
+      },
     }),
-    prisma.employee.count({ where: params.where }),
+    prisma.employee.count({ where }),
   ])
   return { employees, total }
 }
@@ -56,12 +63,21 @@ export async function findByIdWithRelations(
       employmentType: {
         select: { id: true, code: true, name: true },
       },
+      location: {
+        select: { id: true, code: true, name: true },
+      },
+      tariff: {
+        select: { id: true, code: true, name: true },
+      },
       contacts: {
         orderBy: { createdAt: "asc" },
       },
       cards: {
         where: { isActive: true },
         orderBy: { createdAt: "desc" },
+      },
+      healthInsuranceProvider: {
+        select: { id: true, name: true, institutionCode: true },
       },
     },
   })
@@ -70,19 +86,27 @@ export async function findByIdWithRelations(
 export async function search(
   prisma: PrismaClient,
   tenantId: string,
-  query: string
+  query: string,
+  scopeWhere?: Record<string, unknown> | null
 ) {
+  const where: Record<string, unknown> = {
+    tenantId,
+    isActive: true,
+    deletedAt: null,
+    OR: [
+      { firstName: { contains: query, mode: "insensitive" } },
+      { lastName: { contains: query, mode: "insensitive" } },
+      { personnelNumber: { contains: query, mode: "insensitive" } },
+    ],
+  }
+
+  // Apply data scope filter
+  if (scopeWhere) {
+    Object.assign(where, scopeWhere)
+  }
+
   return prisma.employee.findMany({
-    where: {
-      tenantId,
-      isActive: true,
-      deletedAt: null,
-      OR: [
-        { firstName: { contains: query, mode: "insensitive" } },
-        { lastName: { contains: query, mode: "insensitive" } },
-        { personnelNumber: { contains: query, mode: "insensitive" } },
-      ],
-    },
+    where,
     select: {
       id: true,
       personnelNumber: true,
@@ -130,6 +154,18 @@ export async function findByPin(
   return prisma.employee.findFirst({ where })
 }
 
+// --- Auto-Personnel-Number ---
+
+export async function getNextPersonnelNumber(
+  prisma: PrismaClient,
+  tenantId: string
+): Promise<string> {
+  const result = await prisma.$queryRaw<[{ max_nr: string }]>(
+    Prisma.sql`SELECT COALESCE(MAX(personnel_number::integer), 0) + 1 as max_nr FROM employees WHERE tenant_id = ${tenantId}::uuid AND personnel_number ~ '^[0-9]+$' AND deleted_at IS NULL`
+  )
+  return String(result[0]?.max_nr ?? "1")
+}
+
 // --- Auto-PIN ---
 
 export async function getNextPin(
@@ -153,13 +189,11 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.employee.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.employee, { id, tenantId }, data, { entity: "Employee" })
 }
 
 // --- Day View Queries ---
@@ -186,21 +220,23 @@ export async function findBookingsForDay(
 
 export async function findDailyValue(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
-  return prisma.dailyValue.findUnique({
-    where: { employeeId_valueDate: { employeeId, valueDate: date } },
+  return prisma.dailyValue.findFirst({
+    where: { employeeId, valueDate: date, employee: { tenantId } },
   })
 }
 
 export async function findEmployeeDayPlan(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   date: Date
 ) {
-  return prisma.employeeDayPlan.findUnique({
-    where: { employeeId_planDate: { employeeId, planDate: date } },
+  return prisma.employeeDayPlan.findFirst({
+    where: { employeeId, planDate: date, employee: { tenantId } },
     include: {
       dayPlan: {
         select: { id: true, code: true, name: true, planType: true },

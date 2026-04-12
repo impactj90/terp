@@ -41,7 +41,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { UserFormSheet, UserDeleteDialog, ChangePasswordDialog } from '@/components/users'
+import { toast } from 'sonner'
+import {
+  UserFormSheet,
+  UserDeleteDialog,
+  ChangePasswordDialog,
+  WelcomeEmailFallbackDialog,
+} from '@/components/users'
 import type { AppRouter } from '@/trpc/routers/_app'
 import type { inferRouterOutputs } from '@trpc/server'
 
@@ -67,6 +73,12 @@ export default function AdminUsersPage() {
   const [editUser, setEditUser] = React.useState<User | null>(null)
   const [deleteUser, setDeleteUser] = React.useState<User | null>(null)
   const [passwordUser, setPasswordUser] = React.useState<User | null>(null)
+  // Phase 0: welcome-email fallback — populated only when the email
+  // could not be delivered and the admin needs to share the recovery
+  // link manually. `null` = dialog closed.
+  const [welcomeFallbackLink, setWelcomeFallbackLink] = React.useState<
+    string | null
+  >(null)
 
   const { data: usersData, isLoading } = useUsers({
     limit: 100,
@@ -289,10 +301,25 @@ export default function AdminUsersPage() {
           }
         }}
         user={editUser}
-        onSuccess={() => {
+        onSuccess={(welcomeEmail) => {
           setCreateOpen(false)
           setEditUser(null)
+          // Only on create (update passes no argument → undefined).
+          if (welcomeEmail) {
+            if (welcomeEmail.sent) {
+              toast.success(t('welcomeEmailSent'))
+            } else if (welcomeEmail.fallbackLink) {
+              setWelcomeFallbackLink(welcomeEmail.fallbackLink)
+            } else {
+              toast.error(t('welcomeEmailGenericError'))
+            }
+          }
         }}
+      />
+
+      <WelcomeEmailFallbackDialog
+        link={welcomeFallbackLink}
+        onClose={() => setWelcomeFallbackLink(null)}
       />
 
       <UserDeleteDialog

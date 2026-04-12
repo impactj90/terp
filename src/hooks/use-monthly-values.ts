@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 // Keep the existing MonthSummary interface (snake_case) for backward compatibility
 export interface MonthSummary {
@@ -130,6 +131,7 @@ export function useMonthlyValues(options: UseMonthlyValuesOptions = {}) {
       { employeeId: employeeId!, year: year!, month: month! },
       { enabled: enabled && !!employeeId && !!year && !!month }
     ),
+    refetchOnMount: 'always',
     select: (data) => ({
       data: [
         transformToLegacyMonthSummary(
@@ -155,6 +157,7 @@ export function useYearOverview(options: UseYearOverviewOptions = {}) {
       { employeeId: employeeId!, year: year! },
       { enabled: enabled && !!employeeId && !!year }
     ),
+    refetchOnMount: 'always',
     select: (data) => ({
       data: data.map((ms) =>
         transformToLegacyMonthSummary(ms as unknown as Record<string, unknown>)
@@ -183,6 +186,9 @@ export function useCloseMonth() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
     },
   })
 }
@@ -207,6 +213,9 @@ export function useReopenMonth() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
     },
   })
 }
@@ -218,6 +227,7 @@ export function useReopenMonth() {
 export function useRecalculateMonth() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return useMutation({
     ...trpc.monthlyValues.recalculate.mutationOptions(),
@@ -231,6 +241,11 @@ export function useRecalculateMonth() {
       queryClient.invalidateQueries({
         queryKey: trpc.monthlyValues.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.monthlyValues.getById.queryKey(),
+      })
+      // Recalculate affects daily values too — invalidate dayView, dailyValues
+      invalidateTimeData()
     },
   })
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { CalendarDays, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,9 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEmployeeDayView } from '@/hooks'
 import { formatDate, formatDisplayDate, isToday, isWeekend } from '@/lib/time-utils'
+import { QueryError } from '@/components/ui/query-error'
 import { BookingList } from './booking-list'
-import { DailySummary } from './daily-summary'
+import { ProgressSummary } from './progress-summary'
+import { TimelineBar, type TimelineSegment } from './timeline-bar'
 import { ErrorBadge } from './error-badge'
+import { groupBookingsIntoPairs } from './utils'
 
 interface DayViewProps {
   date: Date
@@ -42,6 +46,10 @@ export function DayView({
 
   const isLoading = dayView.isLoading
 
+  if (dayView.isError) {
+    return <QueryError message={t('loadFailed')} onRetry={() => dayView.refetch()} />
+  }
+
   // Transform bookings to the format expected by BookingList (snake_case interface)
   const transformedBookings = bookings.map((b) => ({
     id: b.id,
@@ -59,20 +67,81 @@ export function DayView({
     pair_id: b.pairId,
   }))
 
+  // Compute timeline segments from booking pairs
+  const timelineSegments = useMemo(() => {
+    if (transformedBookings.length === 0) return []
+
+    const pairs = groupBookingsIntoPairs(transformedBookings)
+    const segments: TimelineSegment[] = []
+    let prevOutTime: number | null = null
+
+    for (const pair of pairs) {
+      const inTime = pair.inBooking
+        ? (pair.inBooking.calculated_time ?? pair.inBooking.edited_time)
+        : null
+      const outTime = pair.outBooking
+        ? (pair.outBooking.calculated_time ?? pair.outBooking.edited_time)
+        : null
+
+      // Break gap between consecutive pairs
+      if (prevOutTime !== null && inTime !== null && inTime > prevOutTime) {
+        segments.push({
+          startMinutes: prevOutTime,
+          endMinutes: inTime,
+          type: 'break',
+          label: t('breaks'),
+        })
+      }
+
+      // Work segment
+      if (inTime !== null) {
+        const inName = pair.inBooking?.booking_type?.name ?? 'IN'
+        const outName = pair.outBooking?.booking_type?.name ?? ''
+        segments.push({
+          startMinutes: inTime,
+          endMinutes: outTime,
+          type: 'work',
+          label: outName ? `${inName} → ${outName}` : inName,
+          hasError: !pair.inBooking || !pair.outBooking,
+        })
+      } else if (outTime !== null) {
+        // Orphan OUT booking
+        segments.push({
+          startMinutes: outTime,
+          endMinutes: null,
+          type: 'work',
+          label: pair.outBooking?.booking_type?.name ?? 'OUT',
+          hasError: true,
+        })
+      }
+
+      if (outTime !== null) prevOutTime = outTime
+    }
+
+    return segments
+  }, [transformedBookings, t])
+
+  // Current time in minutes for "now" marker (only for today)
+  const currentTimeMinutes = useMemo(() => {
+    if (!today) return null
+    const now = new Date()
+    return now.getHours() * 60 + now.getMinutes()
+  }, [today])
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Day header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-muted-foreground" />
-          <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
             <h2 className={cn(
-              'text-lg font-semibold',
+              'text-base sm:text-lg font-semibold truncate',
               today && 'text-primary'
             )}>
               {formatDisplayDate(date, 'long')}
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {today && (
                 <Badge variant="default" className="text-xs">{t('today')}</Badge>
               )}
@@ -90,9 +159,8 @@ export function DayView({
           </div>
         </div>
 
-        {/* Day plan info */}
         {dayPlan && (
-          <div className="text-sm text-muted-foreground text-right">
+          <div className="text-sm text-muted-foreground sm:text-right pl-8 sm:pl-0 shrink-0">
             <div>{dayPlan.name}</div>
             {dailyValue?.targetTime !== undefined && dailyValue?.targetTime !== null && (
               <div className="text-xs">
@@ -103,9 +171,36 @@ export function DayView({
         )}
       </div>
 
+      {/* Progress summary — the most important info, now at the top */}
+      {dailyValue && (
+        <ProgressSummary
+          targetMinutes={dailyValue.targetTime}
+          grossMinutes={dailyValue.grossTime}
+          breakMinutes={dailyValue.breakTime}
+          netMinutes={dailyValue.netTime}
+          balanceMinutes={dailyValue.balanceMinutes}
+        />
+      )}
+
+      {/* Visual timeline */}
+      {timelineSegments.length > 0 && (
+        <TimelineBar
+          segments={timelineSegments}
+          currentTimeMinutes={currentTimeMinutes}
+        />
+      )}
+
+      {/* Loading placeholders for summary + timeline */}
+      {isLoading && !dailyValue && (
+        <div className="space-y-3">
+          <Skeleton className="h-[88px] w-full rounded-xl" />
+          <Skeleton className="h-7 w-full rounded-md" />
+        </div>
+      )}
+
       {/* Bookings list */}
       <div>
-        <h3 className="text-sm font-medium mb-3">{t('bookings')}</h3>
+        <h3 className="text-sm font-medium mb-2 text-muted-foreground">{t('bookings')}</h3>
         <BookingList
           bookings={transformedBookings}
           isLoading={isLoading}
@@ -116,31 +211,9 @@ export function DayView({
         />
       </div>
 
-      {/* Daily summary */}
+      {/* Status line */}
       {dailyValue && (
-        <div className="pt-4 border-t">
-          <h3 className="text-sm font-medium mb-3">{t('dailySummary')}</h3>
-          <DailySummary
-            targetMinutes={dailyValue.targetTime}
-            grossMinutes={dailyValue.grossTime}
-            breakMinutes={dailyValue.breakTime}
-            netMinutes={dailyValue.netTime}
-            balanceMinutes={dailyValue.balanceMinutes}
-            layout="horizontal"
-          />
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isLoading && !dailyValue && (
-        <div className="pt-4 border-t">
-          <Skeleton className="h-8 w-full" />
-        </div>
-      )}
-
-      {/* Status indicators */}
-      {dailyValue && (
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground/60">
           <span>{t('statusLabel')}: {dailyValue.status}</span>
           {dailyValue.calculatedAt && (
             <span>

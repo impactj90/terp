@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for system settings and cleanup operations.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- System Settings ---
 
@@ -25,13 +26,11 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.systemSetting.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.systemSetting, { id, tenantId }, data, { entity: "SystemSetting" })
 }
 
 // --- Booking Cleanup ---

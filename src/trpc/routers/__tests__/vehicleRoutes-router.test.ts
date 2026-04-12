@@ -258,8 +258,10 @@ describe("vehicleRoutes.update", () => {
     const updated = makeRoute({ name: "Updated Loop" })
     const mockPrisma = {
       vehicleRoute: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -276,14 +278,16 @@ describe("vehicleRoutes.update", () => {
     const updated = makeRoute({ distanceKm: 100.0 })
     const mockPrisma = {
       vehicleRoute: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: ROUTE_ID, distanceKm: 100.0 })
 
-    expect(mockPrisma.vehicleRoute.update).toHaveBeenCalledWith(
+    expect(mockPrisma.vehicleRoute.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           distanceKm: 100.0,
@@ -297,14 +301,16 @@ describe("vehicleRoutes.update", () => {
     const updated = makeRoute({ distanceKm: null })
     const mockPrisma = {
       vehicleRoute: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)   // existence check
+          .mockResolvedValueOnce(updated),   // refetch after updateMany
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     await caller.update({ id: ROUTE_ID, distanceKm: null })
 
-    expect(mockPrisma.vehicleRoute.update).toHaveBeenCalledWith(
+    expect(mockPrisma.vehicleRoute.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           distanceKm: null,
@@ -347,7 +353,7 @@ describe("vehicleRoutes.delete", () => {
     const mockPrisma = {
       vehicleRoute: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       tripRecord: {
         count: vi.fn().mockResolvedValue(0),
@@ -357,8 +363,8 @@ describe("vehicleRoutes.delete", () => {
     const result = await caller.delete({ id: ROUTE_ID })
 
     expect(result.success).toBe(true)
-    expect(mockPrisma.vehicleRoute.delete).toHaveBeenCalledWith({
-      where: { id: ROUTE_ID },
+    expect(mockPrisma.vehicleRoute.deleteMany).toHaveBeenCalledWith({
+      where: { id: ROUTE_ID, tenantId: TENANT_ID },
     })
   })
 

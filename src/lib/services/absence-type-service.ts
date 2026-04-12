@@ -6,6 +6,21 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./absence-type-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "category",
+  "portion",
+  "priority",
+  "isActive",
+  "deductsVacation",
+  "requiresApproval",
+]
 
 // --- Constants ---
 
@@ -91,7 +106,8 @@ export async function create(
     sortOrder: number
     absenceTypeGroupId?: string
     calculationRuleId?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -122,7 +138,7 @@ export async function create(
   // Trim description if provided
   const description = input.description?.trim() || null
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     code,
     name,
@@ -141,6 +157,22 @@ export async function create(
     absenceTypeGroupId: input.absenceTypeGroupId || undefined,
     calculationRuleId: input.calculationRuleId || undefined,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "absence_type",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -162,7 +194,8 @@ export async function update(
     isActive?: boolean
     absenceTypeGroupId?: string | null
     calculationRuleId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify type exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -225,13 +258,35 @@ export async function update(
   if (input.calculationRuleId !== undefined)
     data.calculationRuleId = input.calculationRuleId
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "absence_type",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify type exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -254,5 +309,19 @@ export async function remove(
     )
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "absence_type",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

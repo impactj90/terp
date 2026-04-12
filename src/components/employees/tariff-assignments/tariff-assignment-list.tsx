@@ -30,11 +30,11 @@ type ActiveFilter = 'all' | 'active' | 'inactive'
 function isCurrent(assignment: TariffAssignment): boolean {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const from = new Date(assignment.effective_from)
+  const from = new Date(assignment.effectiveFrom)
   from.setHours(0, 0, 0, 0)
   if (from > today) return false
-  if (assignment.effective_to) {
-    const to = new Date(assignment.effective_to)
+  if (assignment.effectiveTo) {
+    const to = new Date(assignment.effectiveTo)
     to.setHours(0, 0, 0, 0)
     if (to < today) return false
   }
@@ -142,9 +142,9 @@ function AssignmentCard({
     ? `${assignment.tariff.code} - ${assignment.tariff.name}`
     : assignment.tariffId
 
-  const dateRange = `${format(new Date(assignment.effective_from), 'dd.MM.yyyy')} - ${
-    assignment.effective_to
-      ? format(new Date(assignment.effective_to), 'dd.MM.yyyy')
+  const dateRange = `${format(new Date(assignment.effectiveFrom), 'dd.MM.yyyy')} - ${
+    assignment.effectiveTo
+      ? format(new Date(assignment.effectiveTo), 'dd.MM.yyyy')
       : t('openEnded')
   }`
 
@@ -173,7 +173,7 @@ function AssignmentCard({
 
         <div className="flex items-center gap-2 mt-1">
           <Badge variant="outline" className="text-xs">
-            {assignment.overwrite_behavior === 'overwrite'
+            {assignment.overwriteBehavior === 'overwrite'
               ? t('overwriteBehaviorOverwrite')
               : t('overwriteBehaviorPreserveManual')}
           </Badge>
@@ -188,6 +188,7 @@ function AssignmentCard({
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Aktionen</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

@@ -218,8 +218,10 @@ describe("accessProfiles.update", () => {
     const updated = makeProfile({ name: "Profile A Updated" })
     const mockPrisma = {
       accessProfile: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -229,8 +231,8 @@ describe("accessProfiles.update", () => {
     })
 
     expect(result.name).toBe("Profile A Updated")
-    expect(mockPrisma.accessProfile.update).toHaveBeenCalledWith({
-      where: { id: PROFILE_ID },
+    expect(mockPrisma.accessProfile.updateMany).toHaveBeenCalledWith({
+      where: { id: PROFILE_ID, tenantId: TENANT_ID },
       data: { name: "Profile A Updated" },
     })
   })
@@ -269,7 +271,7 @@ describe("accessProfiles.delete", () => {
     const mockPrisma = {
       accessProfile: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employeeAccessAssignment: {
         count: vi.fn().mockResolvedValue(0),
@@ -280,10 +282,10 @@ describe("accessProfiles.delete", () => {
 
     expect(result.success).toBe(true)
     expect(mockPrisma.employeeAccessAssignment.count).toHaveBeenCalledWith({
-      where: { accessProfileId: PROFILE_ID },
+      where: { tenantId: TENANT_ID, accessProfileId: PROFILE_ID },
     })
-    expect(mockPrisma.accessProfile.delete).toHaveBeenCalledWith({
-      where: { id: PROFILE_ID },
+    expect(mockPrisma.accessProfile.deleteMany).toHaveBeenCalledWith({
+      where: { id: PROFILE_ID, tenantId: TENANT_ID },
     })
   })
 

@@ -205,7 +205,8 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
         const group = await bookingTypeGroupService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(group as unknown as PrismaGroupWithMembers)
       } catch (err) {
@@ -233,7 +234,8 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
         const group = await bookingTypeGroupService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(group as unknown as PrismaGroupWithMembers)
       } catch (err) {
@@ -255,7 +257,7 @@ export const bookingTypeGroupsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await bookingTypeGroupService.remove(ctx.prisma, tenantId, input.id)
+        await bookingTypeGroupService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

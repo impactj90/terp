@@ -85,12 +85,9 @@ export function HolidayGenerateDialog({
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (generateMutation as any).mutateAsync({
-        body: {
-          year: selectedYear,
-          state,
-        },
+      await generateMutation.mutateAsync({
+        year: selectedYear,
+        state,
       })
       onOpenChange(false)
       onSuccess?.()

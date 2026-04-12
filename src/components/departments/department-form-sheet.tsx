@@ -30,9 +30,9 @@ import {
   useUpdateDepartment,
   useDepartments,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
+import type { DepartmentTreeNode } from '@/trpc/routers/departments'
 
-type Department = components['schemas']['Department']
+type Department = DepartmentTreeNode['department']
 
 interface DepartmentFormSheetProps {
   open: boolean
@@ -112,8 +112,8 @@ export function DepartmentFormSheet({
           name: department.name,
           code: department.code,
           description: department.description || '',
-          parentId: department.parent_id || '',
-          isActive: department.is_active ?? true,
+          parentId: department.parentId || '',
+          isActive: department.isActive ?? true,
         })
       } else {
         setForm({
@@ -180,7 +180,7 @@ export function DepartmentFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Basic Information */}
             <div className="space-y-4">

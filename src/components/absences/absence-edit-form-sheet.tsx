@@ -132,7 +132,7 @@ export function AbsenceEditFormSheet({
           <SheetDescription>{t('editDescription')}</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Read-only info section */}
             <div className="rounded-lg border p-4">

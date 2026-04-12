@@ -44,15 +44,15 @@ export function StatsCard({
 
   if (error) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {title}
           </span>
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <AlertCircle className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <p className="text-sm text-destructive">{t('failedToLoad')}</p>
+        <div className="mt-1.5 sm:mt-2">
+          <p className="text-xs text-destructive sm:text-sm">{t('failedToLoad')}</p>
         </div>
         {onRetry && (
           <Button
@@ -70,21 +70,21 @@ export function StatsCard({
   }
 
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">
           {title}
         </span>
         {Icon && (
-          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Icon className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
         )}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-2xl font-bold">{value}</span>
+      <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2 sm:gap-2">
+        <span className="text-xl font-bold sm:text-2xl">{value}</span>
         {trend && trendValue && (
           <span
             className={cn(
-              'text-sm font-medium',
+              'text-xs font-medium sm:text-sm',
               trend === 'up' && 'text-green-600 dark:text-green-500',
               trend === 'down' && 'text-red-600 dark:text-red-500',
               trend === 'neutral' && 'text-muted-foreground'
@@ -95,7 +95,7 @@ export function StatsCard({
         )}
       </div>
       {description && (
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{description}</p>
       )}
     </div>
   )
@@ -106,15 +106,15 @@ export function StatsCard({
  */
 export function StatsCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-3.5 w-16 sm:h-4 sm:w-24" />
+        <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </div>
-      <div className="mt-2">
-        <Skeleton className="h-8 w-20" />
+      <div className="mt-1.5 sm:mt-2">
+        <Skeleton className="h-6 w-14 sm:h-8 sm:w-20" />
       </div>
-      <Skeleton className="mt-2 h-3 w-32" />
+      <Skeleton className="mt-1.5 h-3 w-20 sm:mt-2 sm:w-32" />
     </div>
   )
 }

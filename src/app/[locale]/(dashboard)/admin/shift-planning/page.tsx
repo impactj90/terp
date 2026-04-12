@@ -21,9 +21,7 @@ import {
   ShiftDetailSheet,
   ShiftPlanningBoard,
 } from '@/components/shift-planning'
-import type { components } from '@/types/legacy-api-types'
-
-type Shift = components['schemas']['Shift']
+type Shift = NonNullable<ReturnType<typeof useShifts>['data']>['data'][number]
 type ShiftPlanningTab = 'shifts' | 'planning-board'
 
 export default function ShiftPlanningPage() {
@@ -196,7 +194,7 @@ export default function ShiftPlanningPage() {
                 <EmptyState hasFilters={hasFilters} onCreateClick={() => setCreateOpen(true)} />
               ) : (
                 <ShiftDataTable
-                  items={filteredItems as unknown as Shift[]}
+                  items={filteredItems}
                   isLoading={false}
                   onView={handleView}
                   onEdit={handleEdit}

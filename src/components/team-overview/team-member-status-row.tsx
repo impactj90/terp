@@ -2,15 +2,24 @@
 
 import { useState, type KeyboardEvent } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Clock, LogIn, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarBadge } from '@/components/ui/avatar'
 import { MemberRoleBadge } from '@/components/teams/member-role-badge'
 import { formatMinutes, formatTime } from '@/lib/time-utils'
 import { cn } from '@/lib/utils'
-import type { components } from '@/types/legacy-api-types'
-
-type TeamMember = components['schemas']['TeamMember']
+interface TeamMember {
+  teamId: string
+  employeeId: string
+  role: 'member' | 'lead' | 'deputy'
+  joinedAt: Date | string
+  employee?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DayViewData = Record<string, any> | null | undefined
@@ -31,40 +40,40 @@ type AttendanceStatus =
 
 interface StatusConfig {
   labelKey: string
+  badgeVariant: string
   dotClass: string
-  badgeClass: string
 }
 
 const statusConfigMap: Record<AttendanceStatus, StatusConfig> = {
   holiday: {
     labelKey: 'statusHoliday',
     dotClass: 'bg-gray-400',
-    badgeClass: '',
+    badgeVariant: '',
   },
   weekend: {
     labelKey: 'statusWeekend',
     dotClass: 'bg-gray-400',
-    badgeClass: '',
+    badgeVariant: '',
   },
   'on-leave': {
     labelKey: 'statusOnLeave',
-    dotClass: 'bg-yellow-400',
-    badgeClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    dotClass: 'bg-amber-400',
+    badgeVariant: 'amber',
   },
   'clocked-in': {
     labelKey: 'statusClockedIn',
-    dotClass: 'bg-green-400',
-    badgeClass: 'bg-green-500 text-white hover:bg-green-500',
+    dotClass: 'bg-emerald-500',
+    badgeVariant: 'green',
   },
   'clocked-out': {
     labelKey: 'statusClockedOut',
     dotClass: 'bg-gray-400',
-    badgeClass: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200',
+    badgeVariant: 'gray',
   },
   'not-yet-in': {
     labelKey: 'statusNotYetIn',
-    dotClass: 'bg-gray-300',
-    badgeClass: '',
+    dotClass: 'bg-gray-300 dark:bg-gray-600',
+    badgeVariant: '',
   },
 }
 
@@ -123,7 +132,7 @@ function getClockOutTime(dayView: DayViewData): string | null {
 
 /**
  * Single team member row showing attendance status for today.
- * Displays avatar, name, role, status badge, clock-in time, and net hours.
+ * Displays avatar with status dot, name, role, status badge, clock-in time, and net hours.
  */
 export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberStatusRowProps) {
   const t = useTranslations('teamOverview')
@@ -139,24 +148,23 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 p-3 rounded-md">
+      <div className="flex items-center gap-3 p-3">
         <Skeleton className="h-9 w-9 rounded-full" />
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-1.5">
           <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-20" />
         </div>
-        <Skeleton className="h-5 w-16" />
+        <Skeleton className="h-6 w-20 rounded-full" />
       </div>
     )
   }
 
-  const firstName = member.employee?.first_name ?? ''
-  const lastName = member.employee?.last_name ?? ''
+  const firstName = member.employee?.firstName ?? ''
+  const lastName = member.employee?.lastName ?? ''
   const initials = `${firstName[0] ?? '?'}${lastName[0] ?? '?'}`
   const fullName = member.employee
     ? `${firstName} ${lastName}`
     : t('unknownEmployee')
-  const department = member.employee?.department?.name ?? ''
 
   const status = getAttendanceStatus(dayView)
   const config = statusConfigMap[status]
@@ -169,64 +177,71 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
   const undertimeMinutes = dayView?.dailyValue?.undertime ?? 0
 
   return (
-    <div className="border-b last:border-b-0">
+    <div
+      className={cn(
+        'rounded-lg transition-colors',
+        expanded && 'bg-muted/40'
+      )}
+    >
       <div
-        className="flex items-center gap-3 p-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+        className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
         onClick={toggleExpanded}
         onKeyDown={handleKeyDown}
       >
-        {/* Avatar with status dot */}
-        <div className="relative">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
+        {/* Avatar with status indicator */}
+        <Avatar>
+          <AvatarFallback className="text-xs font-semibold">
             {initials}
-          </div>
-          <div
-            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${config.dotClass}`}
-          />
-        </div>
-
-        {/* Name and department */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{fullName}</p>
-          <div className="flex items-center gap-2">
-            {department && (
-              <p className="text-xs text-muted-foreground truncate">{department}</p>
+          </AvatarFallback>
+          <AvatarBadge
+            className={cn(
+              'ring-card',
+              config.dotClass,
+              status === 'clocked-in' && 'animate-pulse'
             )}
+          />
+        </Avatar>
+
+        {/* Name and role */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="text-sm font-medium truncate">{fullName}</p>
+            <MemberRoleBadge role={member.role} />
           </div>
+          {/* Time info inline */}
+          {clockInTime && (
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <LogIn className="h-3 w-3 shrink-0" />
+                {clockInTime}
+              </span>
+              {netMinutes > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/80">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  {formatMinutes(netMinutes)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Role badge */}
-        <MemberRoleBadge role={member.role} />
-
-        {/* Clock-in time */}
-        {clockInTime && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {clockInTime}
-          </span>
-        )}
-
-        {/* Net worked hours */}
-        {netMinutes > 0 && (
-          <span className="text-xs font-medium whitespace-nowrap">
-            {formatMinutes(netMinutes)}
-          </span>
-        )}
-
-        {/* Status badge */}
-        {config.badgeClass ? (
-          <Badge className={config.badgeClass}>
+        {/* Status badge — hidden on mobile (status already visible via avatar dot), shown on sm+ */}
+        {config.badgeVariant ? (
+          <Badge variant={config.badgeVariant as 'amber' | 'green' | 'gray'} className="text-[11px] font-medium shrink-0 hidden sm:inline-flex">
             {t(config.labelKey as Parameters<typeof t>[0])}
           </Badge>
         ) : (
-          <Badge variant="outline">{t(config.labelKey as Parameters<typeof t>[0])}</Badge>
+          <Badge variant="outline" className="text-[11px] shrink-0 hidden sm:inline-flex">
+            {t(config.labelKey as Parameters<typeof t>[0])}
+          </Badge>
         )}
 
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform',
+            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
             expanded && 'rotate-180'
           )}
         />
@@ -235,52 +250,99 @@ export function TeamMemberStatusRow({ member, dayView, isLoading }: TeamMemberSt
         </span>
       </div>
 
-      {expanded && (
-        <div className="px-3 pb-3 text-xs text-muted-foreground">
-          {workBookings.length === 0 && !dayView?.dailyValue ? (
-            <p>{t('noDetailsAvailable')}</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="flex items-center justify-between">
-                <span>{t('firstIn')}</span>
-                <span className="font-medium text-foreground">
-                  {clockInTime ?? '-'}
-                </span>
+      {/* Expanded detail panel */}
+      <div
+        className={cn(
+          'grid transition-all duration-200 ease-out',
+          expanded
+            ? 'grid-rows-[1fr] opacity-100'
+            : 'grid-rows-[0fr] opacity-0'
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="px-3 pb-3 pt-1">
+            {workBookings.length === 0 && !dayView?.dailyValue ? (
+              <p className="text-xs text-muted-foreground py-2">
+                {t('noDetailsAvailable')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-px rounded-lg border bg-border overflow-hidden sm:grid-cols-3">
+                <DetailCell
+                  icon={<LogIn className="h-3.5 w-3.5 text-emerald-500" />}
+                  label={t('firstIn')}
+                  value={clockInTime ?? '\u2013'}
+                />
+                <DetailCell
+                  icon={<LogOut className="h-3.5 w-3.5 text-gray-400" />}
+                  label={t('lastOut')}
+                  value={clockOutTime ?? '\u2013'}
+                />
+                <DetailCell
+                  icon={<Clock className="h-3.5 w-3.5 text-blue-500" />}
+                  label={t('netTime')}
+                  value={formatMinutes(netMinutes)}
+                />
+                <DetailCell
+                  icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                  label={t('targetTime')}
+                  value={formatMinutes(targetMinutes)}
+                />
+                <DetailCell
+                  icon={
+                    <span className="inline-block h-3.5 w-3.5 text-center text-xs font-bold text-emerald-500">
+                      +
+                    </span>
+                  }
+                  label={t('overtime')}
+                  value={formatMinutes(overtimeMinutes)}
+                  highlight={overtimeMinutes > 0 ? 'positive' : undefined}
+                />
+                <DetailCell
+                  icon={
+                    <span className="inline-block h-3.5 w-3.5 text-center text-xs font-bold text-rose-500">
+                      &minus;
+                    </span>
+                  }
+                  label={t('undertime')}
+                  value={formatMinutes(undertimeMinutes)}
+                  highlight={undertimeMinutes > 0 ? 'negative' : undefined}
+                />
               </div>
-              <div className="flex items-center justify-between">
-                <span>{t('lastOut')}</span>
-                <span className="font-medium text-foreground">
-                  {clockOutTime ?? '-'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>{t('netTime')}</span>
-                <span className="font-medium text-foreground">
-                  {formatMinutes(netMinutes)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>{t('targetTime')}</span>
-                <span className="font-medium text-foreground">
-                  {formatMinutes(targetMinutes)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>{t('overtime')}</span>
-                <span className="font-medium text-foreground">
-                  {formatMinutes(overtimeMinutes)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>{t('undertime')}</span>
-                <span className="font-medium text-foreground">
-                  {formatMinutes(undertimeMinutes)}
-                </span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
+
+function DetailCell({
+  icon,
+  label,
+  value,
+  highlight,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  highlight?: 'positive' | 'negative'
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 bg-card px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+      <span
+        className={cn(
+          'text-sm font-medium tabular-nums',
+          highlight === 'positive' && 'text-emerald-600 dark:text-emerald-400',
+          highlight === 'negative' && 'text-rose-600 dark:text-rose-400',
+          !highlight && 'text-foreground'
+        )}
+      >
+        {value}
+      </span>
     </div>
   )
 }

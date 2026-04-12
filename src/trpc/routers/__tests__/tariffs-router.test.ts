@@ -18,6 +18,7 @@ const TARIFF_ID = "a0000000-0000-4000-a000-000000000700"
 const TARIFF_B_ID = "a0000000-0000-4000-a000-000000000704"
 const WEEK_PLAN_ID = "a0000000-0000-4000-a000-000000000701"
 const WEEK_PLAN_B_ID = "a0000000-0000-4000-a000-000000000705"
+const WEEK_PLAN_C_ID = "a0000000-0000-4000-a000-000000000706"
 const DAY_PLAN_ID = "a0000000-0000-4000-a000-000000000702"
 const BREAK_ID = "a0000000-0000-4000-a000-000000000703"
 
@@ -585,10 +586,10 @@ describe("tariffs.create", () => {
           .mockResolvedValueOnce(created), // re-fetch
       },
       weekPlan: {
-        findFirst: vi.fn().mockResolvedValue({
-          id: WEEK_PLAN_ID,
-          tenantId: TENANT_ID,
-        }),
+        findMany: vi.fn().mockResolvedValue([
+          { id: WEEK_PLAN_ID },
+          { id: WEEK_PLAN_B_ID },
+        ]),
       },
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
@@ -619,6 +620,63 @@ describe("tariffs.create", () => {
     expect(txCreateManyCalled).toBe(true)
   })
 
+  it("creates tariff with rolling_weekly 3-week rotation (early/late/night)", async () => {
+    const created = makeTariff({
+      rhythmType: "rolling_weekly",
+      rhythmStartDate: new Date("2026-01-06"),
+    })
+    let createdData: { data: Array<{ weekPlanId: string; sequenceOrder: number }> } | undefined
+    const mockPrisma = {
+      tariff: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null) // code uniqueness
+          .mockResolvedValueOnce(created), // re-fetch
+      },
+      weekPlan: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: WEEK_PLAN_ID },
+          { id: WEEK_PLAN_B_ID },
+          { id: WEEK_PLAN_C_ID },
+        ]),
+      },
+      $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+        return fn({
+          tariff: {
+            create: vi.fn().mockResolvedValue(created),
+          },
+          tariffWeekPlan: {
+            createMany: vi.fn().mockImplementation(async (args: typeof createdData) => {
+              createdData = args
+              return { count: 3 }
+            }),
+          },
+          tariffDayPlan: {
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
+          },
+        })
+      }),
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.create({
+      code: "PROD-WS",
+      name: "Produktion Wechselschicht",
+      rhythmType: "rolling_weekly",
+      rhythmStartDate: "2026-01-06",
+      weekPlanIds: [WEEK_PLAN_ID, WEEK_PLAN_B_ID, WEEK_PLAN_C_ID],
+    })
+    expect(result.rhythmType).toBe("rolling_weekly")
+    expect(createdData).toBeDefined()
+    expect(createdData!.data).toHaveLength(3)
+    expect(createdData!.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ weekPlanId: WEEK_PLAN_ID, sequenceOrder: 1 }),
+        expect.objectContaining({ weekPlanId: WEEK_PLAN_B_ID, sequenceOrder: 2 }),
+        expect.objectContaining({ weekPlanId: WEEK_PLAN_C_ID, sequenceOrder: 3 }),
+      ])
+    )
+  })
+
   it("creates tariff with x_days rhythm + day plans", async () => {
     const created = makeTariff({
       rhythmType: "x_days",
@@ -634,10 +692,9 @@ describe("tariffs.create", () => {
           .mockResolvedValueOnce(created), // re-fetch
       },
       dayPlan: {
-        findFirst: vi.fn().mockResolvedValue({
-          id: DAY_PLAN_ID,
-          tenantId: TENANT_ID,
-        }),
+        findMany: vi.fn().mockResolvedValue([
+          { id: DAY_PLAN_ID },
+        ]),
       },
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
@@ -930,7 +987,7 @@ describe("tariffs.delete", () => {
     const mockPrisma = {
       tariff: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employeeTariffAssignment: {
         count: vi.fn().mockResolvedValue(0),
@@ -942,8 +999,8 @@ describe("tariffs.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: TARIFF_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.tariff.delete).toHaveBeenCalledWith({
-      where: { id: TARIFF_ID },
+    expect(mockPrisma.tariff.deleteMany).toHaveBeenCalledWith({
+      where: { id: TARIFF_ID, tenantId: TENANT_ID },
     })
   })
 

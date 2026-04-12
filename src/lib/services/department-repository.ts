@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Department model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -61,10 +62,11 @@ export async function findByCode(
 
 export async function findParentId(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.department.findUnique({
-    where: { id },
+  return prisma.department.findFirst({
+    where: { id, tenantId },
     select: { parentId: true },
   })
 }
@@ -86,35 +88,40 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.department.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.department, { id, tenantId }, data, { entity: "Department" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.department.delete({
-    where: { id },
+export async function deleteById(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  const { count } = await prisma.department.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countChildren(
   prisma: PrismaClient,
+  tenantId: string,
   parentId: string
 ) {
   return prisma.department.count({
-    where: { parentId },
+    where: { parentId, tenantId },
   })
 }
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   departmentId: string
 ) {
   return prisma.employee.count({
-    where: { departmentId },
+    where: { departmentId, tenantId },
   })
 }

@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Correction model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const correctionInclude = {
   employee: {
@@ -31,7 +32,8 @@ export async function findMany(
     toDate?: string
     correctionType?: string
     status?: string
-  }
+  },
+  dataScopeWhere?: Record<string, unknown> | null
 ) {
   const page = params?.page ?? 1
   const pageSize = params?.pageSize ?? 50
@@ -60,6 +62,18 @@ export async function findMany(
       correctionDate.lte = new Date(params.toDate)
     }
     where.correctionDate = correctionDate
+  }
+
+  // Apply data scope filter
+  if (dataScopeWhere) {
+    if (dataScopeWhere.employee && where.employee) {
+      where.employee = {
+        ...((where.employee as Record<string, unknown>) || {}),
+        ...((dataScopeWhere.employee as Record<string, unknown>) || {}),
+      }
+    } else {
+      Object.assign(where, dataScopeWhere)
+    }
   }
 
   const [items, total] = await Promise.all([
@@ -119,20 +133,43 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.correction.update({
-    where: { id },
+  return tenantScopedUpdate(prisma.correction, { id, tenantId }, data, {
+    include: correctionInclude,
+    entity: "Correction",
+  })
+}
+
+/**
+ * Atomically updates a correction only if it has the expected status.
+ * Returns the updated record, or null if the status didn't match (already changed).
+ */
+export async function updateIfStatus(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string,
+  expectedStatus: string,
+  data: Record<string, unknown>
+) {
+  const { count } = await prisma.correction.updateMany({
+    where: { id, tenantId, status: expectedStatus },
     data,
+  })
+  if (count === 0) return null
+  return prisma.correction.findFirst({
+    where: { id, tenantId },
     include: correctionInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.correction.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.correction.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function employeeExists(
@@ -144,6 +181,17 @@ export async function employeeExists(
     where: { id: employeeId, tenantId },
   })
   return !!employee
+}
+
+export async function findEmployee(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string
+) {
+  return prisma.employee.findFirst({
+    where: { id: employeeId, tenantId },
+    select: { id: true, departmentId: true },
+  })
 }
 
 export async function accountExists(

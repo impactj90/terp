@@ -6,6 +6,24 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./week-plan-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "code",
+  "description",
+  "mondayDayPlanId",
+  "tuesdayDayPlanId",
+  "wednesdayDayPlanId",
+  "thursdayDayPlanId",
+  "fridayDayPlanId",
+  "saturdayDayPlanId",
+  "sundayDayPlanId",
+  "isActive",
+]
 
 // --- Error Classes ---
 
@@ -37,13 +55,16 @@ async function validateDayPlanIds(
   tenantId: string,
   ids: (string | null | undefined)[]
 ): Promise<void> {
-  for (const id of ids) {
-    if (id) {
-      const plan = await repo.findDayPlan(prisma, tenantId, id)
-      if (!plan) {
-        throw new WeekPlanValidationError("Invalid day plan reference")
-      }
-    }
+  const nonNullIds = ids.filter((id): id is string => !!id)
+  if (nonNullIds.length === 0) return
+
+  const uniqueIds = [...new Set(nonNullIds)]
+  const found = await prisma.dayPlan.findMany({
+    where: { id: { in: uniqueIds }, tenantId },
+    select: { id: true },
+  })
+  if (found.length !== uniqueIds.length) {
+    throw new WeekPlanValidationError("Invalid day plan reference")
   }
 }
 
@@ -83,7 +104,8 @@ export async function create(
     fridayDayPlanId: string
     saturdayDayPlanId: string
     sundayDayPlanId: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Trim and validate code
   const code = input.code.trim()
@@ -133,7 +155,26 @@ export async function create(
   })
 
   // Re-fetch with include
-  return repo.findByIdWithInclude(prisma, created.id)
+  const result = await repo.findByIdWithInclude(prisma, tenantId, created.id)
+  if (!result) {
+    throw new WeekPlanNotFoundError()
+  }
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "week_plan",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return result
 }
 
 export async function update(
@@ -152,7 +193,8 @@ export async function update(
     saturdayDayPlanId?: string | null
     sundayDayPlanId?: string | null
     isActive?: boolean
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify week plan exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, input.id)
@@ -228,24 +270,51 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  await repo.update(prisma, input.id, data)
+  // Wrap update + completeness check in transaction for atomicity (Tier 3)
+  const updated = await prisma.$transaction(async (tx) => {
+    await repo.update(tx as unknown as PrismaClient, tenantId, input.id, data)
 
-  // Re-fetch with include to check completeness and return
-  const updated = await repo.findByIdWithInclude(prisma, input.id)
+    // Re-fetch with include to check completeness and return
+    const plan = await repo.findByIdWithInclude(tx as unknown as PrismaClient, tenantId, input.id)
+    if (!plan) {
+      throw new WeekPlanNotFoundError()
+    }
 
-  // Verify completeness: all 7 days must have plans
-  if (
-    !updated.mondayDayPlanId ||
-    !updated.tuesdayDayPlanId ||
-    !updated.wednesdayDayPlanId ||
-    !updated.thursdayDayPlanId ||
-    !updated.fridayDayPlanId ||
-    !updated.saturdayDayPlanId ||
-    !updated.sundayDayPlanId
-  ) {
-    throw new WeekPlanValidationError(
-      "Week plan must have a day plan assigned for all 7 days"
+    // Verify completeness: all 7 days must have plans
+    if (
+      !plan.mondayDayPlanId ||
+      !plan.tuesdayDayPlanId ||
+      !plan.wednesdayDayPlanId ||
+      !plan.thursdayDayPlanId ||
+      !plan.fridayDayPlanId ||
+      !plan.saturdayDayPlanId ||
+      !plan.sundayDayPlanId
+    ) {
+      throw new WeekPlanValidationError(
+        "Week plan must have a day plan assigned for all 7 days"
+      )
+    }
+
+    return plan
+  })
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
     )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "week_plan",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
   return updated
@@ -254,7 +323,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify week plan exists (tenant-scoped)
   const existing = await repo.findByIdSimple(prisma, tenantId, id)
@@ -263,5 +333,19 @@ export async function remove(
   }
 
   // Hard delete
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "week_plan",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }

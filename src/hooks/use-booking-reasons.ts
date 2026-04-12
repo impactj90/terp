@@ -50,6 +50,9 @@ export function useCreateBookingReason() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingReasons.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingReasons.getById.queryKey(),
+      })
     },
   })
 }
@@ -66,6 +69,9 @@ export function useUpdateBookingReason() {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingReasons.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingReasons.getById.queryKey(),
+      })
     },
   })
 }
@@ -81,6 +87,9 @@ export function useDeleteBookingReason() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.bookingReasons.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.bookingReasons.getById.queryKey(),
       })
     },
   })

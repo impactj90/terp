@@ -20,6 +20,18 @@ import type {
 import type { Session } from "@supabase/supabase-js"
 import { createClient } from "@supabase/supabase-js"
 import { clientEnv, serverEnv } from "@/lib/config"
+import {
+  impersonationStorage,
+  type ImpersonationContext,
+} from "@/lib/platform/impersonation-context"
+import { verify as verifyPlatformJwt } from "@/lib/platform/jwt"
+
+/**
+ * Sentinel user used for tenant-side writes originating from a platform
+ * operator impersonation. Created by migration 20260421200000.
+ */
+export const PLATFORM_SYSTEM_USER_ID =
+  "00000000-0000-0000-0000-00000000beef"
 
 /**
  * The user object stored in context after Supabase session resolution.
@@ -46,6 +58,15 @@ export type TRPCContext = {
   session: Session | null
   /** Tenant ID from X-Tenant-ID header. Null if not provided. */
   tenantId: string | null
+  /** Client IP address from X-Forwarded-For or X-Real-IP header. */
+  ipAddress: string | null
+  /** Client User-Agent header. */
+  userAgent: string | null
+  /**
+   * Populated when the request is a platform-operator impersonation into
+   * a tenant via an active SupportSession. Null for all normal requests.
+   */
+  impersonation: ImpersonationContext | null
 }
 
 /**
@@ -115,10 +136,124 @@ export async function createTRPCContext(
           } as Session
         }
       }
-    } catch {
+    } catch (err) {
       // Token validation failed — user remains null (unauthenticated)
+      console.error('[tRPC] Token validation error:', err)
     }
   }
+
+  // ----- Platform impersonation branch -----
+  //
+  // Runs ONLY if the tenant Supabase auth did not resolve a user. A normal
+  // tenant-authenticated request takes the same code path as before and is
+  // completely unaffected. An impersonation request carries:
+  //   - a `platform-session` cookie with a valid, MFA-verified platform JWT
+  //   - an `x-support-session-id` header naming an active SupportSession
+  //   - an `x-tenant-id` header matching that session's tenant
+  // When all of those line up, we synthesize a `ContextUser` based on the
+  // "Platform System" sentinel row so that the existing tenantProcedure and
+  // permission checks succeed without modification.
+  let impersonation: ImpersonationContext | null = null
+
+  if (!user && serverEnv.platformImpersonationEnabled) {
+    const cookieHeader = opts.req.headers.get("cookie") ?? ""
+    const platformJwt =
+      cookieHeader.match(/platform-session=([^;]+)/)?.[1] ?? null
+    const supportSessionId =
+      opts.req.headers.get("x-support-session-id") ??
+      (connParams?.["x-support-session-id"] as string | undefined) ??
+      null
+
+    if (platformJwt && supportSessionId && tenantId) {
+      try {
+        const verified = await verifyPlatformJwt(platformJwt)
+        if (verified.ok && verified.claims.mfaVerified) {
+          const supportSession = await prisma.supportSession.findFirst({
+            where: {
+              id: supportSessionId,
+              tenantId,
+              platformUserId: verified.claims.sub,
+              status: "active",
+              expiresAt: { gt: new Date() },
+            },
+          })
+
+          if (supportSession) {
+            const [tenant, platformSystemUser] = await Promise.all([
+              prisma.tenant.findUnique({ where: { id: tenantId } }),
+              prisma.user.findUnique({
+                where: { id: PLATFORM_SYSTEM_USER_ID },
+                include: {
+                  userGroup: true,
+                  userTenants: { include: { tenant: true } },
+                },
+              }),
+            ])
+
+            if (tenant && platformSystemUser) {
+              // Synthesize ContextUser: sentinel row augmented with a
+              // single synthetic user_tenants entry for the active tenant
+              // so the existing tenantProcedure scan at lines ~220-222
+              // succeeds without modification. userGroup.isAdmin=true
+              // ensures every requirePermission check passes.
+              user = {
+                ...platformSystemUser,
+                userGroup: {
+                  // Minimum shape needed by permission helpers: isAdmin
+                  // (triggers the bypass in isUserAdmin()). If the sentinel
+                  // already has a userGroup row, we spread it too.
+                  ...(platformSystemUser.userGroup ?? {
+                    id: "00000000-0000-0000-0000-000000000000",
+                    tenantId: null,
+                    name: "Platform System",
+                    code: "platform_system",
+                    description: null,
+                    permissions: [],
+                    isSystem: true,
+                    isActive: true,
+                    createdAt: supportSession.createdAt,
+                    updatedAt: supportSession.createdAt,
+                  }),
+                  isAdmin: true,
+                } as ContextUser["userGroup"],
+                userTenants: [
+                  {
+                    userId: platformSystemUser.id,
+                    tenantId: tenant.id,
+                    role: "support",
+                    createdAt: supportSession.createdAt,
+                    tenant,
+                  },
+                ],
+              } as ContextUser
+
+              session = {
+                access_token: "synthetic-platform-impersonation",
+                user: {
+                  id: platformSystemUser.id,
+                  email: platformSystemUser.email,
+                } as Session["user"],
+              } as Session
+
+              impersonation = {
+                platformUserId: verified.claims.sub,
+                supportSessionId: supportSession.id,
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[tRPC] Platform impersonation error:", err)
+      }
+    }
+  }
+
+  // Extract client info for audit logging
+  const ipAddress =
+    opts.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    opts.req.headers.get("x-real-ip") ??
+    null
+  const userAgent = opts.req.headers.get("user-agent") ?? null
 
   return {
     prisma,
@@ -126,6 +261,9 @@ export async function createTRPCContext(
     user,
     session,
     tenantId,
+    ipAddress,
+    userAgent,
+    impersonation,
   }
 }
 
@@ -159,16 +297,36 @@ export const createCallerFactory = t.createCallerFactory
 export const createMiddleware = t.middleware
 
 /**
+ * Impersonation boundary middleware.
+ *
+ * If `ctx.impersonation` is set, runs the procedure (and everything it
+ * awaits synchronously) inside the impersonation AsyncLocalStorage so that
+ * downstream code — notably `audit-logs-service.log()` — can detect the
+ * active support session and dual-write to `platform_audit_logs` without
+ * any caller changes.
+ */
+const impersonationBoundary = t.middleware(({ ctx, next }) => {
+  const c = ctx as TRPCContext
+  if (c.impersonation) {
+    return impersonationStorage.run(c.impersonation, () => next())
+  }
+  return next()
+})
+
+/**
  * Public procedure — no authentication required.
  * Available to anyone, including unauthenticated users.
+ *
+ * The impersonation boundary is applied at the foundation so every
+ * downstream procedure automatically inherits the store.
  */
-export const publicProcedure = t.procedure
+export const publicProcedure = t.procedure.use(impersonationBoundary)
 
 /**
  * Protected procedure — requires a valid Supabase session and resolved user.
  * Throws UNAUTHORIZED if no valid session/user is present.
  */
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = publicProcedure.use(async ({ ctx, next }) => {
   if (!ctx.user || !ctx.session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",

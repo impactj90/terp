@@ -22,20 +22,24 @@ function createPrismaMocks() {
   return {
     holiday: {
       findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     employeeDayPlan: {
       findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     booking: {
       findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     employee: {
       findFirst: vi.fn().mockResolvedValue(null),
     },
     dailyValue: {
       findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
       upsert: vi.fn().mockImplementation(async (args: { create: Record<string, unknown> }) => ({
         id: "dv-1",
         ...args.create,
@@ -519,9 +523,11 @@ describe("DailyCalcService", () => {
 
       // Mock $queryRaw calls in order:
       // 1. loadAbsenceDay (from resolveTargetHours in handleNoBookings)
-      // 2. user_tenants lookup (from notifyDailyCalcError)
+      // 2. loadAbsenceDay (from step 7.5 postAbsenceRuleValue)
+      // 3. user_tenants lookup (from notifyDailyCalcError)
       mocks.$queryRaw
-        .mockResolvedValueOnce([]) // absence_days query
+        .mockResolvedValueOnce([]) // absence_days query (resolveTargetHours)
+        .mockResolvedValueOnce([]) // absence_days query (step 7.5)
         .mockResolvedValueOnce([{ user_id: "u-1" }]) // user_tenants query
 
       await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
@@ -603,6 +609,107 @@ describe("DailyCalcService", () => {
       expect(upsertCall.create.warnings).toContain("WORKED_ON_HOLIDAY")
     })
 
+    it("posts absence_rule account value when absence has calculation rule", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      // Mock loadAbsenceDay ($queryRaw) to return absence with calculation rule
+      const absenceRow = {
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "K01",
+        cr_account_id: "acc-sick",
+        cr_value: 0,
+        cr_factor: "1.00",
+      }
+      mocks.$queryRaw.mockResolvedValue([absenceRow])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeDefined()
+      const create = (absenceRuleCall![0] as { create: Record<string, unknown> }).create
+      expect(create.accountId).toBe("acc-sick")
+      expect(create.valueMinutes).toBe(480) // targetTime * 1.0
+    })
+
+    it("does not post absence_rule when no calculation rule linked", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([{
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "U01",
+        cr_account_id: null,
+        cr_value: null,
+        cr_factor: null,
+      }])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeUndefined()
+    })
+
+    it("cleans up absence_rule posting when no absence", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const deleteCalls = mocks.dailyAccountValue.deleteMany.mock.calls
+      const absenceRuleDelete = deleteCalls.find(
+        (c: unknown[]) => (c[0] as { where: { source?: string } }).where.source === "absence_rule"
+      )
+      expect(absenceRuleDelete).toBeDefined()
+    })
+
+    it("uses fixed ruleValue when > 0 (ignores targetTime)", async () => {
+      mocks.employeeDayPlan.findFirst.mockResolvedValue(
+        makeEmpDayPlan({ noBookingBehavior: "adopt_target" })
+      )
+
+      mocks.$queryRaw.mockResolvedValue([{
+        id: "ad1",
+        status: "approved",
+        duration: "1.00",
+        at_portion: 1,
+        at_priority: 0,
+        at_code: "K01",
+        cr_account_id: "acc-sick",
+        cr_value: 120,
+        cr_factor: "1.50",
+      }])
+
+      await service.calculateDay(TENANT_ID, EMPLOYEE_ID, DATE)
+
+      const upsertCalls = mocks.dailyAccountValue.upsert.mock.calls
+      const absenceRuleCall = upsertCalls.find(
+        (c: unknown[]) => (c[0] as { create: { source: string } }).create.source === "absence_rule"
+      )
+      expect(absenceRuleCall).toBeDefined()
+      const create = (absenceRuleCall![0] as { create: Record<string, unknown> }).create
+      expect(create.valueMinutes).toBe(180) // 120 * 1.5
+    })
+
     it("cleans up account postings when no day plan", async () => {
       mocks.employeeDayPlan.findFirst.mockResolvedValue(null)
 
@@ -650,6 +757,48 @@ describe("DailyCalcService", () => {
 
       expect(count).toBe(1)
       expect(values.length).toBe(1)
+    })
+
+    it("batch-loads data and does not call per-day query methods", async () => {
+      const from = new Date("2026-03-01T00:00:00Z")
+      const to = new Date("2026-03-03T00:00:00Z")
+
+      await service.calculateDateRange(TENANT_ID, EMPLOYEE_ID, from, to)
+
+      // Batch-loading methods should be called once
+      expect(mocks.holiday.findMany).toHaveBeenCalledTimes(1)
+      expect(mocks.employeeDayPlan.findMany).toHaveBeenCalledTimes(1)
+      expect(mocks.dailyValue.findMany).toHaveBeenCalledTimes(1)
+      // booking.findMany called once (batch load for extended range)
+      expect(mocks.booking.findMany).toHaveBeenCalledTimes(1)
+
+      // Per-day query methods should NOT be called (context provides cached data)
+      expect(mocks.holiday.findFirst).not.toHaveBeenCalled()
+      expect(mocks.employeeDayPlan.findFirst).not.toHaveBeenCalled()
+      expect(mocks.dailyValue.findUnique).not.toHaveBeenCalled()
+      // systemSetting.findFirst is called exactly once by loadTenantCalcCache (not 3x per day)
+      expect(mocks.systemSetting.findFirst).toHaveBeenCalledTimes(1)
+    })
+
+    it("uses pre-loaded holiday data from context", async () => {
+      const from = new Date("2026-03-01T00:00:00Z")
+      const to = new Date("2026-03-01T00:00:00Z")
+
+      // Set up batch holiday data
+      mocks.holiday.findMany.mockResolvedValue([
+        { holidayDate: from, holidayCategory: 1, tenantId: TENANT_ID },
+      ])
+
+      const { values } = await service.calculateDateRange(
+        TENANT_ID,
+        EMPLOYEE_ID,
+        from,
+        to
+      )
+
+      expect(values.length).toBe(1)
+      // Off day (no day plan) but holiday data was loaded from batch
+      expect(mocks.holiday.findFirst).not.toHaveBeenCalled()
     })
   })
 })

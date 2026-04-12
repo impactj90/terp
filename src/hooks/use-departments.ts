@@ -111,6 +111,9 @@ export function useUpdateDepartment() {
       queryClient.invalidateQueries({
         queryKey: trpc.departments.getTree.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.departments.getById.queryKey(),
+      })
     },
   })
 }
@@ -135,6 +138,9 @@ export function useDeleteDepartment() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.departments.getTree.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.departments.getById.queryKey(),
       })
     },
   })

@@ -452,3 +452,17 @@ export function calculateAbsenceCredit(
 ): number {
   return Math.floor(regelarbeitszeit * getCreditMultiplier(portion) * duration)
 }
+
+/**
+ * Calculate value to post from a calculation rule.
+ * Formula: if ruleValue > 0 → ruleValue * factor, else targetTime * factor.
+ * Returns minutes (floored to integer).
+ */
+export function calculateAbsenceRuleValue(
+  targetTime: number,
+  ruleValue: number,
+  ruleFactor: number
+): number {
+  const base = ruleValue > 0 ? ruleValue : targetTime
+  return Math.floor(base * ruleFactor)
+}

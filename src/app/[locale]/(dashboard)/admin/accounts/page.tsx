@@ -73,8 +73,8 @@ type AccountGroup = {
 const TYPE_OPTIONS = [
   { value: 'all', labelKey: 'allTypes' },
   { value: 'bonus', labelKey: 'typeBonus' },
-  { value: 'tracking', labelKey: 'typeTracking' },
-  { value: 'balance', labelKey: 'typeBalance' },
+  { value: 'day', labelKey: 'typeTracking' },
+  { value: 'month', labelKey: 'typeBalance' },
 ] as const
 
 const STATUS_OPTIONS = [
@@ -104,7 +104,6 @@ export default function AccountsPage() {
   const [editItem, setEditItem] = React.useState<Account | null>(null)
   const [viewItem, setViewItem] = React.useState<Account | null>(null)
   const [deleteItem, setDeleteItem] = React.useState<Account | null>(null)
-
   // Groups state
   const [groupSearch, setGroupSearch] = React.useState('')
   const [createGroupOpen, setCreateGroupOpen] = React.useState(false)
@@ -184,6 +183,10 @@ export default function AccountsPage() {
     setViewItem(null)
   }
 
+  const handleViewPostings = (account: Account) => {
+    router.push(`/admin/accounts/${account.id}/postings`)
+  }
+
   const handleDelete = (account: Account) => {
     setDeleteItem(account)
   }
@@ -241,11 +244,11 @@ export default function AccountsPage() {
   const groupedAccounts = React.useMemo(() => {
     const groups: Record<string, Account[]> = {
       bonus: [],
-      tracking: [],
-      balance: [],
+      day: [],
+      month: [],
     }
     filteredAccounts.forEach((account) => {
-      const accountType = account.accountType || 'tracking'
+      const accountType = account.accountType || 'day'
       if (!groups[accountType]) groups[accountType] = []
       groups[accountType].push(account)
     })
@@ -254,8 +257,8 @@ export default function AccountsPage() {
 
   const accountTypeGroups = [
     { key: 'bonus', label: t('typeBonus') },
-    { key: 'tracking', label: t('typeTracking') },
-    { key: 'balance', label: t('typeBalance') },
+    { key: 'day', label: t('typeTracking') },
+    { key: 'month', label: t('typeBalance') },
   ]
 
   const clearFilters = () => {
@@ -383,6 +386,7 @@ export default function AccountsPage() {
                           accounts={accts}
                           isLoading={false}
                           onView={handleView}
+                          onViewPostings={handleViewPostings}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                           onToggleActive={handleToggleActive}

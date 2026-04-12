@@ -251,8 +251,11 @@ describe("locations.update", () => {
     })
     const mockPrisma = {
       location: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -315,14 +318,17 @@ describe("locations.update", () => {
     const updated = makeLocation({ code: "HQ" })
     const mockPrisma = {
       location: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: LOC_ID, code: "HQ" })
     expect(result.code).toBe("HQ")
-    expect(mockPrisma.location.findFirst).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.location.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing location", async () => {
@@ -346,14 +352,14 @@ describe("locations.delete", () => {
     const mockPrisma = {
       location: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: LOC_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.location.delete).toHaveBeenCalledWith({
-      where: { id: LOC_ID },
+    expect(mockPrisma.location.deleteMany).toHaveBeenCalledWith({
+      where: { id: LOC_ID, tenantId: TENANT_ID },
     })
   })
 

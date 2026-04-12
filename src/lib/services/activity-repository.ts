@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Activity model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(
   prisma: PrismaClient,
@@ -60,26 +61,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.activity.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.activity, { id, tenantId }, data, { entity: "Activity" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.activity.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.activity.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countEmployees(
   prisma: PrismaClient,
+  tenantId: string,
   activityId: string
 ) {
   return prisma.employee.count({
-    where: { defaultActivityId: activityId },
+    where: { tenantId, defaultActivityId: activityId },
   })
 }

@@ -11,7 +11,7 @@ import {
 
 // --- Constants ---
 
-const COST_CENTERS_MANAGE = permissionIdByKey("cost_centers.manage")!
+const DEPARTMENTS_MANAGE = permissionIdByKey("departments.manage")!
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
 const CC_ID = "a0000000-0000-4000-a000-000000000300"
@@ -50,7 +50,7 @@ function createTestContext(prisma: Record<string, unknown>) {
   return createMockContext({
     prisma: prisma as unknown as ReturnType<typeof createMockContext>["prisma"],
     authToken: "test-token",
-    user: createUserWithPermissions([COST_CENTERS_MANAGE], {
+    user: createUserWithPermissions([DEPARTMENTS_MANAGE], {
       userTenants: [createMockUserTenant(USER_ID, TENANT_ID)],
     }),
     session: createMockSession(),
@@ -211,8 +211,10 @@ describe("costCenters.update", () => {
     })
     const mockPrisma = {
       costCenter: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -272,14 +274,16 @@ describe("costCenters.update", () => {
     const updated = makeCostCenter({ code: "CC001" })
     const mockPrisma = {
       costCenter: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({ id: CC_ID, code: "CC001" })
     expect(result.code).toBe("CC001")
-    expect(mockPrisma.costCenter.findFirst).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.costCenter.findFirst).toHaveBeenCalledTimes(2)
   })
 
   it("throws NOT_FOUND for missing cost center", async () => {
@@ -303,7 +307,7 @@ describe("costCenters.delete", () => {
     const mockPrisma = {
       costCenter: {
         findFirst: vi.fn().mockResolvedValue(existing),
-        delete: vi.fn().mockResolvedValue(existing),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       employee: {
         count: vi.fn().mockResolvedValue(0),
@@ -312,8 +316,8 @@ describe("costCenters.delete", () => {
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.delete({ id: CC_ID })
     expect(result.success).toBe(true)
-    expect(mockPrisma.costCenter.delete).toHaveBeenCalledWith({
-      where: { id: CC_ID },
+    expect(mockPrisma.costCenter.deleteMany).toHaveBeenCalledWith({
+      where: { id: CC_ID, tenantId: TENANT_ID },
     })
   })
 

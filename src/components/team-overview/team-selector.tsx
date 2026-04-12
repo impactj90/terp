@@ -32,7 +32,7 @@ export function TeamSelector({ teams, selectedTeamId, onSelectTeam, isLoading }:
       onValueChange={onSelectTeam}
       disabled={isLoading}
     >
-      <SelectTrigger className="w-[280px]">
+      <SelectTrigger className="w-full sm:w-[280px]">
         <SelectValue placeholder={t('selectTeam')} />
       </SelectTrigger>
       <SelectContent>

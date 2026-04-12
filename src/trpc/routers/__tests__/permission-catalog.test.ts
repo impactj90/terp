@@ -18,8 +18,8 @@ describe("permission-catalog", () => {
     )
   })
 
-  it("contains exactly 53 permissions", () => {
-    expect(ALL_PERMISSIONS).toHaveLength(53)
+  it("contains exactly 146 permissions", () => {
+    expect(ALL_PERMISSIONS).toHaveLength(146)
   })
 
   it("all permissions have unique IDs", () => {

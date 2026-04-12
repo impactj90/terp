@@ -19,10 +19,24 @@
  */
 import { z } from "zod"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
-import { requirePermission } from "@/lib/auth/middleware"
+import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as reportsService from "@/lib/services/reports-service"
+
+// --- Data Scope Helper ---
+
+function dataScopeToEmployeeFilter(dataScope: DataScope): {
+  departmentIds?: string[]
+  employeeIds?: string[]
+} | undefined {
+  if (dataScope.type === "department") {
+    return { departmentIds: dataScope.departmentIds }
+  } else if (dataScope.type === "employee") {
+    return { employeeIds: dataScope.employeeIds }
+  }
+  return undefined
+}
 
 // --- Permission Constants ---
 
@@ -135,14 +149,15 @@ export const reportsRouter = createTRPCRouter({
    */
   generate: tenantProcedure
     .use(requirePermission(REPORTS_MANAGE))
+    .use(applyDataScope())
     .input(
       z.object({
         reportType: reportTypeEnum,
         format: reportFormatEnum,
         name: z.string().max(255).optional(),
         parameters: z.object({
-          fromDate: z.string().optional(),
-          toDate: z.string().optional(),
+          fromDate: z.string().date().optional(),
+          toDate: z.string().date().optional(),
           employeeIds: z.array(z.string()).optional(),
           departmentIds: z.array(z.string()).optional(),
           costCenterIds: z.array(z.string()).optional(),
@@ -153,13 +168,16 @@ export const reportsRouter = createTRPCRouter({
     .output(reportOutputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+        const scopeFilter = dataScopeToEmployeeFilter(dataScope)
         return await reportsService.generate(ctx.prisma, ctx.tenantId!, {
           reportType: input.reportType,
           format: input.format,
           name: input.name,
           parameters: input.parameters,
           createdBy: ctx.user?.id || null,
-        })
+        }, scopeFilter,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
       } catch (err) {
         handleServiceError(err)
       }
@@ -203,7 +221,8 @@ export const reportsRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await reportsService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await reportsService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

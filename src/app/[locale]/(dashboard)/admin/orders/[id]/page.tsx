@@ -16,6 +16,7 @@ import {
   useDeleteOrderBooking,
 } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -47,6 +48,7 @@ export default function OrderDetailPage() {
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['orders.manage'])
   const t = useTranslations('adminOrders')
+  const tc = useTranslations('common')
 
   const orderId = params.id
   const { data: order, isLoading } = useOrder(orderId, !authLoading && !permLoading && canAccess)
@@ -144,9 +146,14 @@ export default function OrderDetailPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/orders')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => router.push('/admin/orders')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tc('goBack')}</TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-4 flex-1">
           <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
             <Package className="h-6 w-6" />
@@ -165,9 +172,14 @@ export default function OrderDetailPage() {
               <Edit className="mr-2 h-4 w-4" />
               {t('edit')}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{tc('delete')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -218,7 +230,7 @@ export default function OrderDetailPage() {
                   />
                   <DetailRow
                     label={t('fieldCostCenter')}
-                    value={order.costCenter ? `${order.costCenter.code} - ${order.costCenter.name}` : undefined}
+                    value={order.costCenter ? `${order.costCenter.name} (${order.costCenter.code})` : undefined}
                   />
                 </div>
               </CardContent>

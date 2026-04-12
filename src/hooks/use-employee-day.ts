@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 interface UseEmployeeDayViewOptions {
   /** Whether the query is enabled */
@@ -56,18 +57,17 @@ export function useEmployeeDayView(
 export function useCalculateDay() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
 
   return useMutation({
     ...trpc.employees.calculateDay.mutationOptions(),
     onSuccess: () => {
-      // Invalidate day view queries so they refetch with new calculation
-      queryClient.invalidateQueries({
-        queryKey: trpc.employees.dayView.queryKey(),
-      })
       // Also invalidate bookings list (calculated times may have changed)
       queryClient.invalidateQueries({
         queryKey: trpc.bookings.list.queryKey(),
       })
+      // Invalidate recalc cascade (dayView → dailyValues → monthlyValues)
+      invalidateTimeData()
     },
   })
 }

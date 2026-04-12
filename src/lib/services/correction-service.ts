@@ -5,8 +5,19 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import type { DataScope } from "@/lib/auth/middleware"
+import {
+  buildRelatedEmployeeDataScopeWhere,
+  checkRelatedEmployeeDataScope,
+} from "@/lib/auth/data-scope"
 import { RecalcService } from "./recalc"
 import * as repo from "./correction-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit Log Config ---
+
+const TRACKED_FIELDS = ["valueMinutes", "reason", "status", "correctionType"]
 
 // --- Error Classes ---
 
@@ -47,7 +58,7 @@ async function triggerRecalc(
   correctionDate: Date
 ): Promise<void> {
   try {
-    const service = new RecalcService(prisma)
+    const service = new RecalcService(prisma, undefined, undefined, tenantId)
     await service.triggerRecalc(tenantId, employeeId, correctionDate)
   } catch (error) {
     console.error(
@@ -70,19 +81,28 @@ export async function list(
     toDate?: string
     correctionType?: string
     status?: string
-  }
+  },
+  dataScope?: DataScope
 ) {
-  return repo.findMany(prisma, tenantId, params)
+  const dataScopeWhere = dataScope ? buildRelatedEmployeeDataScopeWhere(dataScope) : null
+  return repo.findMany(prisma, tenantId, params, dataScopeWhere)
 }
 
 export async function getById(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  dataScope?: DataScope
 ) {
   const correction = await repo.findById(prisma, tenantId, id)
   if (!correction) {
     throw new CorrectionNotFoundError()
+  }
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, correction as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Correction")
   }
   return correction
 }
@@ -98,16 +118,20 @@ export async function create(
     valueMinutes: number
     reason: string
   },
-  userId: string
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  // Validate employee exists in tenant
-  const employeeFound = await repo.employeeExists(
-    prisma,
-    tenantId,
-    input.employeeId
-  )
-  if (!employeeFound) {
+  // Validate employee exists in tenant and is within data scope
+  const employee = await repo.findEmployee(prisma, tenantId, input.employeeId)
+  if (!employee) {
     throw new CorrectionNotFoundError("Employee not found")
+  }
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(
+      dataScope,
+      { employeeId: employee.id, employee: { departmentId: employee.departmentId } },
+      "Correction"
+    )
   }
 
   // Validate account exists in tenant (if provided)
@@ -122,17 +146,40 @@ export async function create(
     }
   }
 
-  return repo.create(prisma, {
+  // Validate correction date
+  const correctionDate = new Date(input.correctionDate)
+  if (isNaN(correctionDate.getTime())) {
+    throw new CorrectionValidationError("Invalid date: " + input.correctionDate)
+  }
+
+  const correction = await repo.create(prisma, {
     tenantId,
     employeeId: input.employeeId,
-    correctionDate: new Date(input.correctionDate),
+    correctionDate,
     correctionType: input.correctionType,
     accountId: input.accountId || null,
     valueMinutes: input.valueMinutes,
     reason: input.reason,
     status: "pending",
-    createdBy: userId,
+    createdBy: audit!.userId,
   })
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "correction",
+      entityId: (correction as unknown as Record<string, unknown>).id as string,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return correction
 }
 
 export async function update(
@@ -142,19 +189,20 @@ export async function update(
     id: string
     valueMinutes?: number
     reason?: string
-  }
+  },
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  // Fetch existing (tenant-scoped)
-  const existing = await repo.findByIdBasic(prisma, tenantId, input.id)
+  // Fetch existing (tenant-scoped) with employee for scope check
+  const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
-
-  // Check status is pending
-  if (existing.status !== "pending") {
-    throw new CorrectionValidationError(
-      "Can only update pending corrections"
-    )
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Correction")
   }
 
   // Build partial update data
@@ -168,54 +216,117 @@ export async function update(
     data.reason = input.reason
   }
 
-  return repo.update(prisma, input.id, data)
+  // Atomically update only if status is still pending (prevents concurrent approve + update)
+  const updated = await repo.updateIfStatus(prisma, tenantId, input.id, "pending", data)
+  if (!updated) {
+    throw new CorrectionValidationError(
+      "Can only update pending corrections"
+    )
+  }
+
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "correction",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  // Fetch existing (tenant-scoped)
-  const existing = await repo.findByIdBasic(prisma, tenantId, id)
+  // Fetch existing (tenant-scoped) with employee for scope check
+  const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Correction")
+  }
 
-  // Cannot delete approved corrections
-  if (existing.status === "approved") {
+  // Atomic status guard: only delete if NOT approved (prevents delete during concurrent approve)
+  const { count } = await prisma.correction.deleteMany({
+    where: { id, tenantId, status: { not: "approved" } },
+  })
+  if (count === 0) {
+    // Re-check: either it was deleted concurrently, or it was approved
+    const current = await repo.findById(prisma, tenantId, id)
+    if (!current) {
+      throw new CorrectionNotFoundError()
+    }
     throw new CorrectionForbiddenError("Cannot delete approved corrections")
   }
 
-  await repo.deleteById(prisma, id)
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function approve(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  userId: string
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  // Fetch existing (tenant-scoped)
-  const existing = await repo.findByIdBasic(prisma, tenantId, id)
+  // Fetch existing (tenant-scoped) with employee for scope check
+  const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Correction")
+  }
 
-  // Check status is pending
-  if (existing.status !== "pending") {
+  // Atomically update only if status is still pending (prevents double-approve)
+  const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
+    status: "approved",
+    approvedBy: audit?.userId ?? null,
+    approvedAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  if (!correction) {
     throw new CorrectionValidationError(
       "Correction is not in pending status"
     )
   }
-
-  // Update to approved
-  const correction = await repo.update(prisma, id, {
-    status: "approved",
-    approvedBy: userId,
-    approvedAt: new Date(),
-    updatedAt: new Date(),
-  })
 
   // Trigger recalculation for the correction date (best effort)
   await triggerRecalc(
@@ -225,6 +336,26 @@ export async function approve(
     existing.correctionDate
   )
 
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      correction as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "approve",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return correction
 }
 
@@ -232,26 +363,54 @@ export async function reject(
   prisma: PrismaClient,
   tenantId: string,
   id: string,
-  userId: string
+  dataScope?: DataScope,
+  audit?: AuditContext
 ) {
-  // Fetch existing (tenant-scoped)
-  const existing = await repo.findByIdBasic(prisma, tenantId, id)
+  // Fetch existing (tenant-scoped) with employee for scope check
+  const existing = await repo.findById(prisma, tenantId, id)
   if (!existing) {
     throw new CorrectionNotFoundError()
   }
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(dataScope, existing as unknown as {
+      employeeId: string
+      employee?: { departmentId: string | null } | null
+    }, "Correction")
+  }
 
-  // Check status is pending
-  if (existing.status !== "pending") {
+  // Atomically update only if status is still pending (prevents double-reject)
+  const correction = await repo.updateIfStatus(prisma, tenantId, id, "pending", {
+    status: "rejected",
+    approvedBy: audit?.userId ?? null,
+    approvedAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  if (!correction) {
     throw new CorrectionValidationError(
       "Correction is not in pending status"
     )
   }
 
-  // Update to rejected (Go uses approvedBy for rejector too)
-  return repo.update(prisma, id, {
-    status: "rejected",
-    approvedBy: userId,
-    approvedAt: new Date(),
-    updatedAt: new Date(),
-  })
+  // Never throws — audit failures must not block the actual operation
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      correction as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "reject",
+      entityType: "correction",
+      entityId: id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return correction
 }

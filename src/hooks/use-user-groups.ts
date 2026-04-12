@@ -54,6 +54,9 @@ export function useCreateUserGroup() {
       queryClient.invalidateQueries({
         queryKey: trpc.permissions.list.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.auth.permissions.queryKey(),
+      })
     },
   })
 }
@@ -66,6 +69,9 @@ export function useUpdateUserGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.userGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.permissions.list.queryKey(),
       })
       queryClient.invalidateQueries({
         queryKey: trpc.auth.permissions.queryKey(),
@@ -82,6 +88,9 @@ export function useDeleteUserGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: trpc.userGroups.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.permissions.list.queryKey(),
       })
       queryClient.invalidateQueries({
         queryKey: trpc.auth.permissions.queryKey(),

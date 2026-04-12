@@ -162,7 +162,8 @@ export const activitiesRouter = createTRPCRouter({
         const activity = await activityService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapActivityToOutput(activity)
       } catch (err) {
@@ -188,7 +189,8 @@ export const activitiesRouter = createTRPCRouter({
         const activity = await activityService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapActivityToOutput(activity)
       } catch (err) {
@@ -213,7 +215,8 @@ export const activitiesRouter = createTRPCRouter({
         await activityService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

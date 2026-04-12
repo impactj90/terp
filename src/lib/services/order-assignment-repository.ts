@@ -5,6 +5,7 @@
  * Includes relation preloads for order and employee.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 /** Prisma include for order and employee relation preloads */
 const assignmentInclude = {
@@ -90,27 +91,29 @@ export async function create(
 
 export async function findByIdWithIncludes(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.orderAssignment.findUniqueOrThrow({
-    where: { id },
+  return prisma.orderAssignment.findFirst({
+    where: { id, tenantId },
     include: assignmentInclude,
   })
 }
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.orderAssignment.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.orderAssignment, { id, tenantId }, data, {
+    entity: "OrderAssignment",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.orderAssignment.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.orderAssignment.deleteMany({
+    where: { id, order: { tenantId } },
   })
+  return count > 0
 }

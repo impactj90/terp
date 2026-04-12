@@ -60,6 +60,17 @@ model User {
   payrollExportsCreated      PayrollExport[]
   reportsCreated             Report[]
   scheduleExecutionsTriggers ScheduleExecution[]
+  enabledModules             TenantModule[] @relation("moduleEnabledBy")
+  demoTenantsCreated         Tenant[] @relation("DemoTenantCreatedBy")
+  emailSendLogs              EmailSendLog[]
+
+  // Inbound Invoices
+  inboundInvoicesSubmitted   InboundInvoice[] @relation("InboundInvoiceSubmitter")
+  inboundInvoicesDatev       InboundInvoice[] @relation("InboundInvoiceDatevExporter")
+  inboundInvoicesCreated     InboundInvoice[] @relation("InboundInvoiceCreator")
+  approvalPoliciesUser       InboundInvoiceApprovalPolicy[] @relation("ApprovalPolicyUser")
+  approvalStepsApprover      InboundInvoiceApproval[] @relation("ApprovalStepApprover")
+  approvalStepsDecider       InboundInvoiceApproval[] @relation("ApprovalStepDecider")
 
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
@@ -99,7 +110,16 @@ model Tenant {
   notes                 String?   @db.Text
   vacationBasis         String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
+  // Demo-Tenant fields (see plan 2026-04-09-demo-tenant-system.md)
+  isDemo                      Boolean   @default(false) @map("is_demo")
+  demoExpiresAt               DateTime? @map("demo_expires_at") @db.Timestamptz(6)
+  demoTemplate                String?   @map("demo_template") @db.VarChar(100)
+  demoCreatedById             String?   @map("demo_created_by") @db.Uuid
+  demoNotes                   String?   @map("demo_notes") @db.Text
+  demoCreatedByPlatformUserId String?   @map("demo_created_by_platform_user_id") @db.Uuid
+
   // Relations
+  demoCreatedBy               User?                    @relation("DemoTenantCreatedBy", fields: [demoCreatedById], references: [id], onDelete: SetNull)
   users                       User[]
   userGroups                  UserGroup[]
   userTenants                 UserTenant[]
@@ -168,15 +188,1013 @@ model Tenant {
   absenceDays                 AbsenceDay[]
   schedules                   Schedule[]
   scheduleExecutions          ScheduleExecution[]
+  cronCheckpoints             CronCheckpoint[]
   corrections                 Correction[]
   orderBookings               OrderBooking[]
   contactTypes                ContactType[]
   contactKinds                ContactKind[]
+  tenantModules               TenantModule[]
+  numberSequences             NumberSequence[]
+  crmAddresses                CrmAddress[]
+  crmContacts                 CrmContact[]
+  crmBankAccounts             CrmBankAccount[]
+  crmCorrespondences          CrmCorrespondence[]
+  crmCorrespondenceAttachments CrmCorrespondenceAttachment[]
+  crmInquiries                CrmInquiry[]
+  crmTasks                    CrmTask[]
+  billingDocuments            BillingDocument[]
+  billingDocumentTemplates    BillingDocumentTemplate[]
+  billingTenantConfig         BillingTenantConfig?
+  billingServiceCases         BillingServiceCase[]
+  billingPayments             BillingPayment[]
+  billingPriceLists           BillingPriceList[]
+  billingRecurringInvoices    BillingRecurringInvoice[]
+
+  // Warehouse
+  whArticleGroups             WhArticleGroup[]
+  whArticles                  WhArticle[]
+  whPurchaseOrders            WhPurchaseOrder[]
+  whStockMovements            WhStockMovement[]
+  whSupplierInvoices          WhSupplierInvoice[]
+  whSupplierPayments          WhSupplierPayment[]
+  whArticleImages             WhArticleImage[]
+  whCorrectionRuns            WhCorrectionRun[]
+  whCorrectionMessages        WhCorrectionMessage[]
+  whStockReservations         WhStockReservation[]
+  whStocktakes                WhStocktake[]
+
+  // HR Personnel File
+  hrPersonnelFileCategories   HrPersonnelFileCategory[]
+  hrPersonnelFileEntries      HrPersonnelFileEntry[]
+  hrPersonnelFileAttachments  HrPersonnelFileAttachment[]
+
+  // DSGVO
+  dsgvoRetentionRules         DsgvoRetentionRule[]
+  dsgvoDeleteLogs             DsgvoDeleteLog[]
+
+  // Email
+  tenantSmtpConfig            TenantSmtpConfig?
+  emailTemplates              EmailTemplate[]
+  emailDefaultAttachments     EmailDefaultAttachment[]
+  emailSendLogs               EmailSendLog[]
+
+  // Inbound Invoices
+  tenantImapConfig                TenantImapConfig?
+  inboundEmailLogs                InboundEmailLog[]
+  inboundInvoices                 InboundInvoice[]
+  inboundInvoiceApprovalPolicies  InboundInvoiceApprovalPolicy[]
+  inboundInvoiceApprovals         InboundInvoiceApproval[]
+
+  // Payroll master data
+  employeeChildren           EmployeeChild[]
+  employeeCompanyCars        EmployeeCompanyCar[]
+  employeeJobBikes           EmployeeJobBike[]
+  employeeMealAllowances     EmployeeMealAllowance[]
+  employeeVouchers           EmployeeVoucher[]
+  employeeJobTickets         EmployeeJobTicket[]
+  employeePensions           EmployeePension[]
+  employeeSavings            EmployeeSavings[]
+  employeeGarnishments       EmployeeGarnishment[]
+  employeeParentalLeaves     EmployeeParentalLeave[]
+  employeeMaternityLeaves    EmployeeMaternityLeave[]
+  employeeForeignAssignments EmployeeForeignAssignment[]
+  employeeOtherEmployments   EmployeeOtherEmployment[]
+
+  // Payroll export templates (Phase 2)
+  exportTemplates    ExportTemplate[]
+  tenantPayrollWages TenantPayrollWage[]
+
+  // Payroll salary history (Phase 3)
+  employeeSalaryHistory EmployeeSalaryHistory[]
+
+  // Template polish (Phase 4)
+  exportTemplateSnapshots ExportTemplateSnapshot[]
+  exportTemplateSchedules ExportTemplateSchedule[]
+
+  // Platform admin domain
+  supportSessions SupportSession[]
 
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
+  @@index([isDemo, demoExpiresAt], map: "idx_tenant_demo_expiration")
   @@map("tenants")
+}
+
+// -----------------------------------------------------------------------------
+// TenantModule
+// -----------------------------------------------------------------------------
+// Migration: 000090/000093
+//
+// Tracks which feature modules are enabled per tenant.
+// Available modules: "core", "crm", "orders", "warehouse"
+// "core" is always enabled and cannot be disabled.
+model TenantModule {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  module                  String   @db.VarChar(50)
+  enabledAt               DateTime @default(now()) @map("enabled_at") @db.Timestamptz(6)
+  enabledById             String?  @map("enabled_by_id") @db.Uuid
+  enabledByPlatformUserId String?  @map("enabled_by_platform_user_id") @db.Uuid
+  operatorNote            String?  @map("operator_note") @db.VarChar(255)
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabledBy   User?    @relation("moduleEnabledBy", fields: [enabledById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, module], map: "uq_tenant_modules_tenant_module")
+  @@index([tenantId], map: "idx_tenant_modules_tenant_id")
+  @@map("tenant_modules")
+}
+
+// -----------------------------------------------------------------------------
+// Platform Subscriptions (Phase 10a — dogfood billing bridge)
+// -----------------------------------------------------------------------------
+// Each row represents ONE contract between the platform operator and a
+// customer tenant for ONE module. Multiple rows per (tenant_id, module) are
+// expected — one per contract instance (active + historical).
+//
+// The bridge to the operator tenant's billing module lives in three ID
+// columns:
+//   - operator_crm_address_id → CrmAddress row inside the operator tenant
+//     that represents this customer. Set once on first subscription, reused
+//     for all subsequent subscriptions of the same customer.
+//   - billing_recurring_invoice_id → BillingRecurringInvoice inside the
+//     operator tenant. Set on subscription create. When the subscription is
+//     cancelled, the recurring invoice's endDate is set; the cron will stop
+//     generating at the next natural period boundary.
+//   - last_generated_invoice_id → most recently finalized BillingDocument
+//     generated from this subscription. Updated by the auto-finalize cron.
+//
+// IMPORTANT: These columns are plain UUID fields in Prisma — NO @relation
+// declarations. The foreign keys are defined at the SQL level only (via
+// REFERENCES in the migration). This keeps Terp-domain Prisma types
+// (CrmAddress, BillingRecurringInvoice, BillingDocument) untouched — they
+// do not gain a `platformSubscriptions` array field in their generated
+// TypeScript types. Platform code reads related rows via explicit
+// follow-up queries (two-query pattern).
+//
+// Referential integrity is still enforced by Postgres. ON DELETE SET NULL
+// on all three FKs means deleting a CrmAddress / recurring invoice / billing
+// document leaves the platform_subscription row intact as a historical
+// record with nulled-out pointers.
+model PlatformSubscription {
+  id                             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                       String    @map("tenant_id") @db.Uuid
+  module                         String    @db.VarChar(50)
+  status                         String    @db.VarChar(20)
+  billingCycle                   String    @map("billing_cycle") @db.VarChar(20)
+  unitPrice                      Float     @map("unit_price")
+  currency                       String    @default("EUR") @db.VarChar(3)
+  startDate                      DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate                        DateTime? @map("end_date") @db.Timestamptz(6)
+  actualEndDate                  DateTime? @map("actual_end_date") @db.Timestamptz(6)
+  operatorCrmAddressId           String?   @map("operator_crm_address_id") @db.Uuid
+  billingRecurringInvoiceId      String?   @map("billing_recurring_invoice_id") @db.Uuid
+  lastGeneratedInvoiceId         String?   @map("last_generated_invoice_id") @db.Uuid
+  createdAt                      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByPlatformUserId        String    @map("created_by_platform_user_id") @db.Uuid
+  cancelledAt                    DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByPlatformUserId      String?   @map("cancelled_by_platform_user_id") @db.Uuid
+  cancellationReason             String?   @map("cancellation_reason") @db.VarChar(500)
+
+  @@index([tenantId, status], map: "idx_platform_subscriptions_tenant_status")
+  @@index([status, endDate], map: "idx_platform_subscriptions_status_end_date")
+  @@index([billingRecurringInvoiceId], map: "idx_platform_subscriptions_billing_ri")
+  @@index([operatorCrmAddressId], map: "idx_platform_subscriptions_operator_crm_address")
+  @@map("platform_subscriptions")
+}
+
+// -----------------------------------------------------------------------------
+// DemoConvertRequest — platform-admin inbox for self-service convert requests.
+// See thoughts/shared/plans/2026-04-11-demo-tenant-platform-migration.md.
+// -----------------------------------------------------------------------------
+model DemoConvertRequest {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  requestedByUserId        String    @map("requested_by_user_id") @db.Uuid
+  requestedAt              DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  status                   String    @default("pending") @db.VarChar(20)
+  resolvedByPlatformUserId String?   @map("resolved_by_platform_user_id") @db.Uuid
+  resolvedAt               DateTime? @map("resolved_at") @db.Timestamptz(6)
+  resolutionNote           String?   @map("resolution_note") @db.Text
+
+  @@index([status, requestedAt(sort: Desc)], map: "idx_demo_convert_requests_status")
+  @@index([tenantId], map: "idx_demo_convert_requests_tenant")
+  @@map("demo_convert_requests")
+}
+
+// -----------------------------------------------------------------------------
+// CrmAddressType enum
+// -----------------------------------------------------------------------------
+enum CrmAddressType {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+
+  @@map("crm_address_type")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondenceDirection enum
+// -----------------------------------------------------------------------------
+enum CrmCorrespondenceDirection {
+  INCOMING
+  OUTGOING
+  INTERNAL
+
+  @@map("crm_correspondence_direction")
+}
+
+// -----------------------------------------------------------------------------
+// NumberSequence
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Shared utility model for auto-incrementing, tenant-scoped number sequences.
+// Used by CRM, Billing, and Warehouse modules.
+model NumberSequence {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String   @db.VarChar(50)
+  prefix    String   @default("") @db.VarChar(20)
+  nextValue Int      @default(1) @map("next_value")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key], map: "uq_number_sequences_tenant_key")
+  @@index([tenantId], map: "idx_number_sequences_tenant_id")
+  @@map("number_sequences")
+}
+
+// -----------------------------------------------------------------------------
+// CrmAddress
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Core CRM entity representing a customer, supplier, or both.
+model CrmAddress {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  number          String         @db.VarChar(50)
+  type            CrmAddressType @default(CUSTOMER)
+  company         String         @db.VarChar(255)
+  street          String?        @db.VarChar(255)
+  zip             String?        @db.VarChar(20)
+  city            String?        @db.VarChar(100)
+  country         String?        @default("DE") @db.VarChar(10)
+  phone           String?        @db.VarChar(50)
+  fax             String?        @db.VarChar(50)
+  email           String?        @db.VarChar(255)
+  website         String?        @db.VarChar(255)
+  taxNumber       String?        @map("tax_number") @db.VarChar(50)
+  vatId           String?        @map("vat_id") @db.VarChar(50)
+  leitwegId       String?        @map("leitweg_id") @db.VarChar(50)
+  matchCode       String?        @map("match_code") @db.VarChar(100)
+  notes           String?        @db.Text
+  paymentTermDays Int?           @map("payment_term_days")
+  discountPercent Float?         @map("discount_percent")
+  discountDays    Int?           @map("discount_days")
+  discountGroup   String?        @map("discount_group") @db.VarChar(50)
+  ourCustomerNumber String?      @map("our_customer_number") @db.VarChar(50)
+  salesPriceListId    String?    @map("sales_price_list_id") @db.Uuid
+  purchasePriceListId String?    @map("purchase_price_list_id") @db.Uuid
+  isActive        Boolean        @default(true) @map("is_active")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById     String?        @map("created_by_id") @db.Uuid
+  parentAddressId String?        @map("parent_address_id") @db.Uuid
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentAddress   CrmAddress?          @relation("AddressHierarchy", fields: [parentAddressId], references: [id], onDelete: SetNull)
+  childAddresses  CrmAddress[]         @relation("AddressHierarchy")
+  contacts        CrmContact[]
+  bankAccounts    CrmBankAccount[]
+  correspondences CrmCorrespondence[]
+  inquiries       CrmInquiry[]
+  tasks           CrmTask[]
+  billingDocuments         BillingDocument[]
+  billingDocumentsDelivery BillingDocument[] @relation("DeliveryAddress")
+  billingDocumentsInvoice  BillingDocument[] @relation("InvoiceAddress")
+  billingServiceCases      BillingServiceCase[]
+  billingRecurringInvoices BillingRecurringInvoice[]
+  salesPriceList           BillingPriceList?    @relation("SalesPriceList", fields: [salesPriceListId], references: [id])
+  purchasePriceList        BillingPriceList?    @relation("PurchasePriceList", fields: [purchasePriceListId], references: [id])
+  articleSuppliers         WhArticleSupplier[]
+  purchaseOrders           WhPurchaseOrder[]
+  supplierInvoices         WhSupplierInvoice[]
+  inboundInvoices          InboundInvoice[]
+
+  @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
+  @@index([tenantId], map: "idx_crm_addresses_tenant_id")
+  @@index([tenantId, type], map: "idx_crm_addresses_tenant_type")
+  @@index([tenantId, matchCode], map: "idx_crm_addresses_tenant_match_code")
+  @@index([tenantId, company], map: "idx_crm_addresses_tenant_company")
+  @@index([tenantId, parentAddressId], map: "idx_crm_addresses_parent_address")
+  @@map("crm_addresses")
+}
+
+// -----------------------------------------------------------------------------
+// CrmContact
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Contact person within a CRM address.
+model CrmContact {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  addressId  String   @map("address_id") @db.Uuid
+  firstName  String   @map("first_name") @db.VarChar(100)
+  lastName   String   @map("last_name") @db.VarChar(100)
+  salutation String?  @db.VarChar(20)
+  title      String?  @db.VarChar(50)
+  letterSalutation String? @map("letter_salutation") @db.VarChar(255)
+  position   String?  @db.VarChar(100)
+  department String?  @db.VarChar(100)
+  phone      String?  @db.VarChar(50)
+  email      String?  @db.VarChar(255)
+  notes      String?  @db.Text
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address         CrmAddress          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  correspondences CrmCorrespondence[]
+  inquiries       CrmInquiry[]
+  tasks           CrmTask[]
+  billingDocuments  BillingDocument[]
+  billingServiceCases BillingServiceCase[]
+  billingRecurringInvoices BillingRecurringInvoice[]
+  purchaseOrders           WhPurchaseOrder[]
+
+  @@index([addressId], map: "idx_crm_contacts_address_id")
+  @@index([tenantId], map: "idx_crm_contacts_tenant_id")
+  @@map("crm_contacts")
+}
+
+// -----------------------------------------------------------------------------
+// CrmBankAccount
+// -----------------------------------------------------------------------------
+// Migration: 000095
+//
+// Bank account information for a CRM address.
+model CrmBankAccount {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  addressId     String   @map("address_id") @db.Uuid
+  iban          String   @db.VarChar(34)
+  bic           String?  @db.VarChar(11)
+  bankName      String?  @map("bank_name") @db.VarChar(255)
+  accountHolder String?  @map("account_holder") @db.VarChar(255)
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@index([addressId], map: "idx_crm_bank_accounts_address_id")
+  @@index([tenantId], map: "idx_crm_bank_accounts_tenant_id")
+  @@map("crm_bank_accounts")
+}
+
+enum CrmInquiryStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  CANCELLED
+
+  @@map("crm_inquiry_status")
+}
+
+enum CrmTaskType {
+  TASK
+  MESSAGE
+
+  @@map("crm_task_type")
+}
+
+enum CrmTaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("crm_task_status")
+}
+
+// --- Billing Document Enums ---
+
+enum BillingDocumentType {
+  OFFER
+  ORDER_CONFIRMATION
+  DELIVERY_NOTE
+  SERVICE_NOTE
+  RETURN_DELIVERY
+  INVOICE
+  CREDIT_NOTE
+
+  @@map("billing_document_type")
+}
+
+enum BillingDocumentStatus {
+  DRAFT
+  PRINTED
+  PARTIALLY_FORWARDED
+  FORWARDED
+  CANCELLED
+
+  @@map("billing_document_status")
+}
+
+enum BillingPositionType {
+  ARTICLE
+  FREE
+  TEXT
+  PAGE_BREAK
+  SUBTOTAL
+
+  @@map("billing_position_type")
+}
+
+enum BillingPriceType {
+  STANDARD
+  ESTIMATE
+  BY_EFFORT
+
+  @@map("billing_price_type")
+}
+
+enum BillingRecurringInterval {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+
+  @@map("billing_recurring_interval")
+}
+
+enum BillingServiceCaseStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  INVOICED
+
+  @@map("billing_service_case_status")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondence
+// -----------------------------------------------------------------------------
+// Migration: 000096
+//
+// Correspondence log entry linked to a CRM address.
+model CrmCorrespondence {
+  id          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String                      @map("tenant_id") @db.Uuid
+  addressId   String                      @map("address_id") @db.Uuid
+  direction   CrmCorrespondenceDirection
+  type        String                      // "phone", "email", "letter", "fax", "visit"
+  date        DateTime                    @db.Timestamptz(6)
+  contactId   String?                     @map("contact_id") @db.Uuid
+  inquiryId   String?                     @map("inquiry_id") @db.Uuid
+  fromUser    String?                     @map("from_user")
+  toUser      String?                     @map("to_user")
+  subject     String
+  content     String?
+  createdAt   DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById String?                     @map("created_by_id") @db.Uuid
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address CrmAddress  @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry CrmInquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  correspondenceAttachments CrmCorrespondenceAttachment[]
+
+  @@index([tenantId, addressId])
+  @@index([tenantId, date])
+  @@index([tenantId, inquiryId])
+  @@map("crm_correspondences")
+}
+
+// -----------------------------------------------------------------------------
+// CrmCorrespondenceAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260403100000
+//
+// File attachment linked to a CRM correspondence entry. Stored in Supabase Storage.
+model CrmCorrespondenceAttachment {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correspondenceId  String   @map("correspondence_id") @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  filename          String   @db.Text
+  storagePath       String   @map("storage_path") @db.Text
+  mimeType          String   @map("mime_type") @db.Text
+  sizeBytes         Int      @map("size_bytes")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById       String?  @map("created_by_id") @db.Uuid
+
+  correspondence CrmCorrespondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([correspondenceId])
+  @@index([tenantId])
+  @@map("crm_correspondence_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// CrmInquiry
+// -----------------------------------------------------------------------------
+// Migration: 000097
+//
+// Inquiry / Vorgang — the overarching bracket for customer activities.
+// Status workflow: OPEN → IN_PROGRESS → CLOSED / CANCELLED
+// Closed inquiries are immutable.
+model CrmInquiry {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String           @map("tenant_id") @db.Uuid
+  number         String           @db.VarChar(50)
+  title          String           @db.VarChar(255)
+  addressId      String           @map("address_id") @db.Uuid
+  contactId      String?          @map("contact_id") @db.Uuid
+  status         CrmInquiryStatus @default(OPEN)
+  effort         String?          @db.VarChar(20)
+  creditRating   String?          @map("credit_rating") @db.VarChar(50)
+  notes          String?          @db.Text
+  orderId        String?          @map("order_id") @db.Uuid
+  closedAt       DateTime?        @map("closed_at") @db.Timestamptz(6)
+  closedById     String?          @map("closed_by_id") @db.Uuid
+  closingReason  String?          @map("closing_reason") @db.Text
+  closingRemarks String?          @map("closing_remarks") @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?          @map("created_by_id") @db.Uuid
+
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address         CrmAddress          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  contact         CrmContact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  correspondences CrmCorrespondence[]
+  tasks           CrmTask[]
+  billingDocuments    BillingDocument[]
+  billingServiceCases BillingServiceCase[]
+  purchaseOrders      WhPurchaseOrder[]
+
+  @@unique([tenantId, number], map: "uq_crm_inquiries_tenant_number")
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, orderId])
+  @@map("crm_inquiries")
+}
+
+// -----------------------------------------------------------------------------
+// CrmTask
+// -----------------------------------------------------------------------------
+// Migration: 000098
+//
+// Internal task or message for CRM. Can be linked to an address, contact,
+// or inquiry. Assignees are stored in CrmTaskAssignee (employees or teams).
+model CrmTask {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String        @map("tenant_id") @db.Uuid
+  type          CrmTaskType   @default(TASK)
+  subject       String        @db.VarChar(255)
+  description   String?       @db.Text
+  addressId     String?       @map("address_id") @db.Uuid
+  contactId     String?       @map("contact_id") @db.Uuid
+  inquiryId     String?       @map("inquiry_id") @db.Uuid
+  status        CrmTaskStatus @default(OPEN)
+  dueAt         DateTime?     @map("due_at") @db.Timestamptz(6)
+  dueTime       String?       @map("due_time") @db.VarChar(5)
+  durationMin   Int?          @map("duration_min")
+  attachments   Json?         @db.JsonB
+  completedAt   DateTime?     @map("completed_at") @db.Timestamptz(6)
+  completedById String?       @map("completed_by_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?       @map("created_by_id") @db.Uuid
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address   CrmAddress?        @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  contact   CrmContact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry   CrmInquiry?        @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  assignees CrmTaskAssignee[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, addressId])
+  @@index([tenantId, inquiryId])
+  @@map("crm_tasks")
+}
+
+// -----------------------------------------------------------------------------
+// CrmTaskAssignee
+// -----------------------------------------------------------------------------
+// Migration: 000098
+//
+// Join table linking a CrmTask to individual employees or entire teams.
+// readAt tracks when the assignee read/acknowledged the task.
+model CrmTaskAssignee {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId     String    @map("task_id") @db.Uuid
+  employeeId String?   @map("employee_id") @db.Uuid
+  teamId     String?   @map("team_id") @db.Uuid
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task     CrmTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, employeeId])
+  @@unique([taskId, teamId])
+  @@index([employeeId])
+  @@index([teamId])
+  @@map("crm_task_assignees")
+}
+
+// -----------------------------------------------------------------------------
+// BillingDocument
+// -----------------------------------------------------------------------------
+// Migration: 000099
+//
+// Commercial document in the billing chain (Belegkette).
+// Types: Offer, Order Confirmation, Delivery Note, Service Note,
+//        Return Delivery, Invoice, Credit Note.
+// Status workflow: DRAFT -> PRINTED -> FORWARDED (CANCELLED at any point).
+model BillingDocument {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                 @map("tenant_id") @db.Uuid
+  number              String                 @db.VarChar(50)
+  type                BillingDocumentType
+  status              BillingDocumentStatus  @default(DRAFT)
+
+  // Customer / Address
+  addressId           String                 @map("address_id") @db.Uuid
+  contactId           String?                @map("contact_id") @db.Uuid
+  deliveryAddressId   String?                @map("delivery_address_id") @db.Uuid
+  invoiceAddressId    String?                @map("invoice_address_id") @db.Uuid
+
+  // Links
+  inquiryId           String?                @map("inquiry_id") @db.Uuid
+  orderId             String?                @map("order_id") @db.Uuid
+  parentDocumentId    String?                @map("parent_document_id") @db.Uuid
+
+  // Dates
+  orderDate           DateTime?              @map("order_date") @db.Timestamptz(6)
+  documentDate        DateTime               @default(now()) @map("document_date") @db.Timestamptz(6)
+  deliveryDate        DateTime?              @map("delivery_date") @db.Timestamptz(6)
+
+  // Terms & Conditions
+  deliveryType        String?                @map("delivery_type")
+  deliveryTerms       String?                @map("delivery_terms")
+  paymentTermDays     Int?                   @map("payment_term_days")
+  discountPercent     Float?                 @map("discount_percent")
+  discountDays        Int?                   @map("discount_days")
+  discountPercent2    Float?                 @map("discount_percent_2")
+  discountDays2       Int?                   @map("discount_days_2")
+  shippingCostNet     Float?                 @map("shipping_cost_net")
+  shippingCostVatRate Float?                 @map("shipping_cost_vat_rate")
+
+  // Totals (computed, stored for performance)
+  subtotalNet         Float                  @default(0) @map("subtotal_net")
+  totalVat            Float                  @default(0) @map("total_vat")
+  totalGross          Float                  @default(0) @map("total_gross")
+
+  // Notes
+  notes               String?
+  internalNotes       String?                @map("internal_notes")
+
+  // Document text (WYSIWYG editor)
+  headerText          String?                @map("header_text")
+  footerText          String?                @map("footer_text")
+  pdfUrl              String?                @map("pdf_url")
+  eInvoiceXmlUrl      String?                @map("e_invoice_xml_url")
+
+  // Print state
+  printedAt           DateTime?              @map("printed_at") @db.Timestamptz(6)
+  printedById         String?                @map("printed_by_id") @db.Uuid
+
+  // Audit
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById         String?                @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address          CrmAddress                @relation(fields: [addressId], references: [id])
+  contact          CrmContact?               @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deliveryAddress  CrmAddress?               @relation("DeliveryAddress", fields: [deliveryAddressId], references: [id], onDelete: SetNull)
+  invoiceAddress   CrmAddress?               @relation("InvoiceAddress", fields: [invoiceAddressId], references: [id], onDelete: SetNull)
+  inquiry          CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  order            Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  parentDocument   BillingDocument?          @relation("DocumentChain", fields: [parentDocumentId], references: [id], onDelete: SetNull)
+  childDocuments      BillingDocument[]         @relation("DocumentChain")
+  positions           BillingDocumentPosition[]
+  billingServiceCases BillingServiceCase[]
+  payments            BillingPayment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, inquiryId])
+  @@index([tenantId, parentDocumentId])
+  @@index([tenantId, documentDate])
+  @@map("billing_documents")
+}
+
+// -----------------------------------------------------------------------------
+// BillingDocumentPosition
+// -----------------------------------------------------------------------------
+// Migration: 000099
+//
+// Line item within a billing document. Types: Article, Free text, Text-only,
+// Page break, Subtotal. Cascade-deleted with parent document.
+model BillingDocumentPosition {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId      String              @map("document_id") @db.Uuid
+  sortOrder       Int                 @map("sort_order")
+  type            BillingPositionType @default(FREE)
+  articleId       String?             @map("article_id") @db.Uuid
+  articleNumber   String?             @map("article_number") @db.VarChar(50)
+  description     String?
+  quantity        Float?
+  unit            String?             @db.VarChar(20)
+  unitPrice       Float?              @map("unit_price")
+  flatCosts       Float?              @map("flat_costs")
+  totalPrice      Float?              @map("total_price")
+  priceType       BillingPriceType?   @map("price_type")
+  vatRate         Float?              @map("vat_rate")
+  deliveryDate    DateTime?           @map("delivery_date") @db.Timestamptz(6)
+  confirmedDate   DateTime?           @map("confirmed_date") @db.Timestamptz(6)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  document BillingDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, sortOrder])
+  @@map("billing_document_positions")
+}
+
+// -----------------------------------------------------------------------------
+// BillingDocumentTemplate
+// -----------------------------------------------------------------------------
+// Migration: 000104
+//
+// Reusable text template for billing documents. Stores header/footer text
+// that can be applied to new documents. One default template per (tenant, type).
+model BillingDocumentTemplate {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String               @map("tenant_id") @db.Uuid
+  name         String               @db.VarChar(255)
+  documentType BillingDocumentType? @map("document_type")
+  headerText   String?              @map("header_text")
+  footerText   String?              @map("footer_text")
+  isDefault    Boolean              @default(false) @map("is_default")
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById  String?              @map("created_by_id") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, documentType])
+  @@map("billing_document_templates")
+}
+
+// -----------------------------------------------------------------------------
+// BillingTenantConfig
+// -----------------------------------------------------------------------------
+// Migration: 000104
+//
+// Tenant-level billing/letterhead configuration (Briefpapier).
+// One config per tenant (1:1). Stores company info, bank details, logo, Fußzeile.
+model BillingTenantConfig {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @unique @map("tenant_id") @db.Uuid
+  companyName        String?  @map("company_name") @db.VarChar(255)
+  companyAddress     String?  @map("company_address")
+  logoUrl            String?  @map("logo_url")
+  bankName           String?  @map("bank_name") @db.VarChar(255)
+  iban               String?  @db.VarChar(34)
+  bic                String?  @db.VarChar(11)
+  taxId              String?  @map("tax_id") @db.VarChar(50)
+  commercialRegister String?  @map("commercial_register") @db.VarChar(255)
+  managingDirector   String?  @map("managing_director") @db.VarChar(255)
+  footerHtml         String?  @map("footer_html")
+  phone              String?  @db.VarChar(50)
+  email              String?  @db.VarChar(255)
+  website            String?  @db.VarChar(255)
+  taxNumber          String?  @map("tax_number") @db.VarChar(50)
+  leitwegId          String?  @map("leitweg_id") @db.VarChar(50)
+  eInvoiceEnabled    Boolean  @default(false) @map("e_invoice_enabled")
+  companyStreet      String?  @map("company_street") @db.VarChar(255)
+  companyZip         String?  @map("company_zip") @db.VarChar(20)
+  companyCity        String?  @map("company_city") @db.VarChar(100)
+  companyCountry     String?  @default("DE") @map("company_country") @db.VarChar(10)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("billing_tenant_configs")
+}
+
+// -----------------------------------------------------------------------------
+// BillingServiceCase
+// -----------------------------------------------------------------------------
+// Migration: 000100
+//
+// Service case (Kundendienst) for maintenance, repair, or on-site jobs.
+// Workflow: OPEN -> IN_PROGRESS -> CLOSED -> INVOICED
+model BillingServiceCase {
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                     @map("tenant_id") @db.Uuid
+  number              String                     @db.VarChar(50)
+  title               String                     @db.VarChar(255)
+  addressId           String                     @map("address_id") @db.Uuid
+  contactId           String?                    @map("contact_id") @db.Uuid
+  inquiryId           String?                    @map("inquiry_id") @db.Uuid
+  status              BillingServiceCaseStatus   @default(OPEN)
+  reportedAt          DateTime                   @default(now()) @map("reported_at") @db.Timestamptz(6)
+  customerNotifiedCost Boolean                   @default(false) @map("customer_notified_cost")
+  assignedToId        String?                    @map("assigned_to_id") @db.Uuid
+  description         String?
+  closingReason       String?                    @map("closing_reason")
+  closedAt            DateTime?                  @map("closed_at") @db.Timestamptz(6)
+  closedById          String?                    @map("closed_by_id") @db.Uuid
+  orderId             String?                    @map("order_id") @db.Uuid
+  invoiceDocumentId   String?                    @map("invoice_document_id") @db.Uuid
+  createdAt           DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById         String?                    @map("created_by_id") @db.Uuid
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  address          CrmAddress       @relation(fields: [addressId], references: [id])
+  contact          CrmContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry          CrmInquiry?      @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  assignedTo       Employee?        @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  order            Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoiceDocument  BillingDocument? @relation(fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, addressId])
+  @@index([tenantId, assignedToId])
+  @@map("billing_service_cases")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPayment
+// -----------------------------------------------------------------------------
+// Migration: 000101
+//
+// Payment record against a billing document (INVOICE).
+// Types: CASH (bar), BANK (Überweisung).
+// Supports partial payments, discount (Skonto), and cancellation.
+
+enum BillingPaymentType {
+  CASH
+  BANK
+
+  @@map("billing_payment_type")
+}
+
+enum BillingPaymentStatus {
+  ACTIVE
+  CANCELLED
+
+  @@map("billing_payment_status")
+}
+
+model BillingPayment {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  documentId    String                @map("document_id") @db.Uuid
+  date          DateTime              @db.Timestamptz(6)
+  amount        Float
+  type          BillingPaymentType
+  status        BillingPaymentStatus  @default(ACTIVE)
+  isDiscount    Boolean               @default(false) @map("is_discount")
+  notes         String?
+  cancelledAt   DateTime?             @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById String?               @map("cancelled_by_id") @db.Uuid
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?               @map("created_by_id") @db.Uuid
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document BillingDocument @relation(fields: [documentId], references: [id])
+
+  @@index([tenantId, documentId])
+  @@index([tenantId, date])
+  @@map("billing_payments")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPriceList
+// -----------------------------------------------------------------------------
+// Migration: 000102
+model BillingPriceList {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  type        String   @default("sales") @db.VarChar(20)
+  isDefault   Boolean  @default(false) @map("is_default")
+  validFrom   DateTime? @map("valid_from") @db.Timestamptz(6)
+  validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById String?  @map("created_by_id") @db.Uuid
+
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries             BillingPriceListEntry[]
+  salesAddresses      CrmAddress[]           @relation("SalesPriceList")
+  purchaseAddresses   CrmAddress[]           @relation("PurchasePriceList")
+
+  @@index([tenantId, isDefault])
+  @@index([tenantId, isActive])
+  @@index([tenantId, type])
+  @@map("billing_price_lists")
+}
+
+// -----------------------------------------------------------------------------
+// BillingPriceListEntry
+// -----------------------------------------------------------------------------
+// Migration: 000102
+model BillingPriceListEntry {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  priceListId String    @map("price_list_id") @db.Uuid
+  articleId   String?   @map("article_id") @db.Uuid
+  itemKey     String?   @map("item_key")
+  description String?
+  unitPrice   Float     @map("unit_price")
+  minQuantity Float?    @map("min_quantity")
+  unit        String?
+  validFrom   DateTime? @map("valid_from") @db.Timestamptz(6)
+  validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  priceList BillingPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@index([priceListId, articleId])
+  @@index([priceListId, itemKey])
+  @@map("billing_price_list_entries")
+}
+
+// -----------------------------------------------------------------------------
+// BillingRecurringInvoice
+// -----------------------------------------------------------------------------
+// Migration: 000103
+//
+// Template for recurring invoice generation. Stores invoice header + positions
+// as JSONB. On each generation cycle, creates a BillingDocument of type INVOICE.
+model BillingRecurringInvoice {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String                   @map("tenant_id") @db.Uuid
+  name            String
+  addressId       String                   @map("address_id") @db.Uuid
+  contactId       String?                  @map("contact_id") @db.Uuid
+  interval        BillingRecurringInterval
+  startDate       DateTime                 @map("start_date") @db.Timestamptz(6)
+  endDate         DateTime?                @map("end_date") @db.Timestamptz(6)
+  nextDueDate     DateTime                 @map("next_due_date") @db.Timestamptz(6)
+  lastGeneratedAt DateTime?                @map("last_generated_at") @db.Timestamptz(6)
+  autoGenerate    Boolean                  @default(false) @map("auto_generate")
+  isActive        Boolean                  @default(true) @map("is_active")
+
+  // Invoice template fields
+  deliveryType    String?                  @map("delivery_type")
+  deliveryTerms   String?                  @map("delivery_terms")
+  paymentTermDays Int?                     @map("payment_term_days")
+  discountPercent Float?                   @map("discount_percent")
+  discountDays    Int?                     @map("discount_days")
+  notes           String?
+  internalNotes   String?                  @map("internal_notes")
+
+  // Position template as JSONB array
+  positionTemplate Json                    @map("position_template") @db.JsonB
+
+  // Audit
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById     String?                  @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant  Tenant      @relation(fields: [tenantId], references: [id])
+  address CrmAddress  @relation(fields: [addressId], references: [id])
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, nextDueDate])
+  @@map("billing_recurring_invoices")
 }
 
 // -----------------------------------------------------------------------------
@@ -207,6 +1225,10 @@ model UserGroup {
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users  User[]
 
+  // Inbound Invoices
+  approvalPolicies InboundInvoiceApprovalPolicy[] @relation("ApprovalPolicyGroup")
+  approvalSteps    InboundInvoiceApproval[]       @relation("ApprovalStepGroup")
+
   // Indexes
   @@index([tenantId], map: "idx_user_groups_tenant")
   @@map("user_groups")
@@ -232,6 +1254,85 @@ model UserTenant {
   // Composite primary key
   @@id([userId, tenantId])
   @@map("user_tenants")
+}
+
+// -----------------------------------------------------------------------------
+// Platform Admin Domain (separate from tenant auth)
+// -----------------------------------------------------------------------------
+// Migration: 20260421000000_create_platform_admin_tables
+
+model PlatformUser {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String    @map("password_hash") @db.Text
+  displayName   String    @map("display_name") @db.VarChar(255)
+  isActive      Boolean   @default(true) @map("is_active")
+  mfaSecret     String?   @map("mfa_secret") @db.Text
+  mfaEnrolledAt DateTime? @map("mfa_enrolled_at") @db.Timestamptz(6)
+  recoveryCodes Json?     @map("recovery_codes") @db.JsonB
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(6)
+  lastLoginIp   String?   @map("last_login_ip") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy     String?   @map("created_by") @db.Uuid
+
+  supportSessions SupportSession[]
+
+  @@map("platform_users")
+}
+
+model SupportSession {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  platformUserId    String?   @map("platform_user_id") @db.Uuid
+  requestedByUserId String    @map("requested_by_user_id") @db.Uuid
+  reason            String    @db.Text
+  consentReference  String?   @map("consent_reference") @db.VarChar(255)
+  status            String    @db.VarChar(20)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  activatedAt       DateTime? @map("activated_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platformUser PlatformUser? @relation(fields: [platformUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status], map: "idx_support_sessions_tenant_status")
+  @@index([platformUserId, status], map: "idx_support_sessions_platform_user_status")
+  @@index([status, expiresAt], map: "idx_support_sessions_status_expires")
+  @@map("support_sessions")
+}
+
+model PlatformAuditLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId   String?  @map("platform_user_id") @db.Uuid
+  action           String   @db.VarChar(50)
+  entityType       String?  @map("entity_type") @db.VarChar(100)
+  entityId         String?  @map("entity_id") @db.Uuid
+  targetTenantId   String?  @map("target_tenant_id") @db.Uuid
+  supportSessionId String?  @map("support_session_id") @db.Uuid
+  changes          Json?    @db.JsonB
+  metadata         Json?    @db.JsonB
+  ipAddress        String?  @map("ip_address") @db.Text
+  userAgent        String?  @map("user_agent") @db.Text
+  performedAt      DateTime @default(now()) @map("performed_at") @db.Timestamptz(6)
+
+  @@index([platformUserId, performedAt], map: "idx_platform_audit_logs_user_performed")
+  @@index([targetTenantId, performedAt], map: "idx_platform_audit_logs_tenant_performed")
+  @@index([action, performedAt], map: "idx_platform_audit_logs_action_performed")
+  @@map("platform_audit_logs")
+}
+
+model PlatformLoginAttempt {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String   @db.VarChar(255)
+  ipAddress   String   @map("ip_address") @db.Text
+  success     Boolean
+  failReason  String?  @map("fail_reason") @db.VarChar(50)
+  attemptedAt DateTime @default(now()) @map("attempted_at") @db.Timestamptz(6)
+
+  @@index([email, attemptedAt], map: "idx_platform_login_attempts_email")
+  @@index([ipAddress, attemptedAt], map: "idx_platform_login_attempts_ip")
+  @@map("platform_login_attempts")
 }
 
 // -----------------------------------------------------------------------------
@@ -283,7 +1384,8 @@ model Location {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  employees Employee[]
 
   // Indexes
   @@unique([tenantId, code], map: "locations_tenant_id_code_key")
@@ -490,8 +1592,9 @@ model Team {
   // Relations
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  leader     Employee?    @relation("TeamLeader", fields: [leaderEmployeeId], references: [id], onDelete: SetNull)
-  members    TeamMember[]
+  leader           Employee?          @relation("TeamLeader", fields: [leaderEmployeeId], references: [id], onDelete: SetNull)
+  members          TeamMember[]
+  crmTaskAssignees CrmTaskAssignee[]
 
   // Indexes
   @@unique([tenantId, name], map: "teams_tenant_id_name_key")
@@ -593,11 +1696,83 @@ model Employee {
   defaultOrderId    String? @map("default_order_id") @db.Uuid
   defaultActivityId String? @map("default_activity_id") @db.Uuid
 
+  // Added by migration 000091
+  locationId String? @map("location_id") @db.Uuid
+
+  // Payroll master data (migration 20260416100000)
+  // --- Tax ---
+  taxId                            String?  @map("tax_id") @db.Text
+  taxClass                         Int?     @map("tax_class") @db.SmallInt
+  taxFactor                        Decimal? @map("tax_factor") @db.Decimal(5, 4)
+  childTaxAllowance                Decimal? @map("child_tax_allowance") @db.Decimal(4, 2)
+  denomination                     String?  @db.VarChar(3)
+  spouseDenomination               String?  @map("spouse_denomination") @db.VarChar(3)
+  payrollTaxAllowance              Decimal? @map("payroll_tax_allowance") @db.Decimal(10, 2)
+  payrollTaxAddition               Decimal? @map("payroll_tax_addition") @db.Decimal(10, 2)
+  isPrimaryEmployer                Boolean? @default(true) @map("is_primary_employer")
+  // --- Social security ---
+  socialSecurityNumber             String?  @map("social_security_number") @db.Text
+  healthInsuranceProviderId        String?  @map("health_insurance_provider_id") @db.Uuid
+  healthInsuranceStatus            String?  @map("health_insurance_status") @db.VarChar(20)
+  privateHealthInsuranceContribution Decimal? @map("private_health_insurance_contribution") @db.Decimal(10, 2)
+  personnelGroupCode               String?  @map("personnel_group_code") @db.VarChar(3)
+  contributionGroupCode            String?  @map("contribution_group_code") @db.VarChar(4)
+  activityCode                     String?  @map("activity_code") @db.VarChar(9)
+  midijobFlag                      Int?     @default(0) @map("midijob_flag") @db.SmallInt
+  umlageU1                         Boolean? @default(true) @map("umlage_u1")
+  umlageU2                         Boolean? @default(true) @map("umlage_u2")
+  // --- Bank ---
+  iban                             String?  @db.Text
+  bic                              String?  @db.VarChar(11)
+  accountHolder                    String?  @map("account_holder") @db.VarChar(200)
+  // --- Personal (extension) ---
+  birthName                        String?  @map("birth_name") @db.VarChar(100)
+  houseNumber                      String?  @map("house_number") @db.VarChar(20)
+  // --- Compensation ---
+  grossSalary                      Decimal? @map("gross_salary") @db.Decimal(10, 2)
+  hourlyRate                       Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  paymentType                      String?  @map("payment_type") @db.VarChar(20)
+  salaryGroup                      String?  @map("salary_group") @db.VarChar(50)
+  // --- Contract (extension) ---
+  contractType                     String?  @map("contract_type") @db.VarChar(30)
+  probationMonths                  Int?     @map("probation_months") @db.SmallInt
+  noticePeriodEmployee             String?  @map("notice_period_employee") @db.VarChar(50)
+  noticePeriodEmployer             String?  @map("notice_period_employer") @db.VarChar(50)
+  // --- Disability ---
+  disabilityDegree                 Int?     @map("disability_degree") @db.SmallInt
+  disabilityEqualStatus            Boolean? @default(false) @map("disability_equal_status")
+  disabilityMarkers                String?  @map("disability_markers") @db.VarChar(20)
+  disabilityIdValidUntil           DateTime? @map("disability_id_valid_until") @db.Date
+  // --- Berufsgenossenschaft ---
+  bgInstitution                    String?  @map("bg_institution") @db.VarChar(200)
+  bgMembershipNumber               String?  @map("bg_membership_number") @db.VarChar(30)
+  bgHazardTariff                   String?  @map("bg_hazard_tariff") @db.VarChar(10)
+  // --- Student / apprentice ---
+  university                       String?  @db.VarChar(200)
+  studentId                        String?  @map("student_id") @db.VarChar(30)
+  fieldOfStudy                     String?  @map("field_of_study") @db.VarChar(100)
+  apprenticeshipOccupation         String?  @map("apprenticeship_occupation") @db.VarChar(200)
+  apprenticeshipExternalCompany    String?  @map("apprenticeship_external_company") @db.VarChar(200)
+  vocationalSchool                 String?  @map("vocational_school") @db.VarChar(200)
+  // --- Pension status ---
+  receivesOldAgePension            Boolean? @default(false) @map("receives_old_age_pension")
+  receivesDisabilityPension        Boolean? @default(false) @map("receives_disability_pension")
+  receivesSurvivorPension          Boolean? @default(false) @map("receives_survivor_pension")
+  pensionStartDate                 DateTime? @map("pension_start_date") @db.Date
+  // --- Death ---
+  dateOfDeath                      DateTime? @map("date_of_death") @db.Date
+  heirName                         String?  @map("heir_name") @db.VarChar(200)
+  heirIban                         String?  @map("heir_iban") @db.Text
+  // --- Parental allowance ---
+  receivesParentalAllowance        Boolean? @default(false) @map("receives_parental_allowance")
+  parentalAllowanceUntil           DateTime? @map("parental_allowance_until") @db.Date
+
   // Relations to models already in Prisma
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department     Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
   costCenter     CostCenter?     @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id], onDelete: SetNull)
+  location       Location?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Reverse relations (FK on other tables pointing to employees)
   user               User?
@@ -609,6 +1784,23 @@ model Employee {
   tariffAssignments  EmployeeTariffAssignment[]
 
   tariff Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+
+  // Payroll relations
+  healthInsuranceProvider HealthInsuranceProvider? @relation(fields: [healthInsuranceProviderId], references: [id], onDelete: SetNull)
+  children               EmployeeChild[]
+  companyCars            EmployeeCompanyCar[]
+  jobBikes               EmployeeJobBike[]
+  mealAllowances         EmployeeMealAllowance[]
+  vouchers               EmployeeVoucher[]
+  jobTickets             EmployeeJobTicket[]
+  pensions               EmployeePension[]
+  savings                EmployeeSavings[]
+  garnishments           EmployeeGarnishment[]
+  parentalLeaves         EmployeeParentalLeave[]
+  maternityLeaves        EmployeeMaternityLeave[]
+  foreignAssignments     EmployeeForeignAssignment[]
+  otherEmployments       EmployeeOtherEmployment[]
+  salaryHistory          EmployeeSalaryHistory[]
 
   // Relations to group/order/activity models
   employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
@@ -632,6 +1824,9 @@ model Employee {
   absenceDays         AbsenceDay[]
   corrections         Correction[]
   orderBookings       OrderBooking[]
+  crmTaskAssignees        CrmTaskAssignee[]
+  assignedServiceCases    BillingServiceCase[]
+  hrPersonnelFileEntries  HrPersonnelFileEntry[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -647,6 +1842,8 @@ model Employee {
   @@index([activityGroupId], map: "idx_employees_activity_group")
   @@index([defaultOrderId], map: "idx_employees_default_order")
   @@index([defaultActivityId], map: "idx_employees_default_activity")
+  @@index([locationId], map: "idx_employees_location")
+  @@index([healthInsuranceProviderId], map: "idx_employees_health_insurance_provider")
   @@map("employees")
 }
 
@@ -800,8 +1997,8 @@ model EmployeeTariffAssignment {
   @@index([tenantId], map: "idx_eta_tenant")
   @@index([employeeId], map: "idx_eta_employee")
   @@index([tariffId], map: "idx_eta_tariff")
-  @@index([employeeId, effectiveFrom, effectiveTo], map: "idx_eta_employee_dates")
-  @@index([employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_effective_lookup")
+  @@index([tenantId, employeeId, effectiveFrom, effectiveTo], map: "idx_eta_tenant_employee_dates")
+  @@index([tenantId, employeeId, effectiveFrom, effectiveTo, isActive], map: "idx_eta_tenant_effective_lookup")
   @@map("employee_tariff_assignments")
 }
 
@@ -932,6 +2129,9 @@ model Order {
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
+  crmInquiries        CrmInquiry[]
+  billingDocuments    BillingDocument[]
+  billingServiceCases BillingServiceCase[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")
@@ -1810,6 +3010,7 @@ model VacationBalance {
   @@unique([employeeId, year], map: "vacation_balances_employee_id_year_key")
   @@index([tenantId], map: "idx_vacation_balances_tenant")
   @@index([employeeId], map: "idx_vacation_balances_employee")
+  @@index([tenantId, employeeId, year], map: "idx_vacation_balances_tenant_employee_year")
   @@map("vacation_balances")
 }
 
@@ -1839,6 +3040,7 @@ model SystemSetting {
   serverAliveExpectedCompletionTime Int?     @map("server_alive_expected_completion_time")
   serverAliveThresholdMinutes       Int?     @default(30) @map("server_alive_threshold_minutes")
   serverAliveNotifyAdmins           Boolean  @default(true) @map("server_alive_notify_admins")
+  deliveryNoteStockMode             String   @default("MANUAL") @map("delivery_note_stock_mode") @db.VarChar(10)
   createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1881,6 +3083,7 @@ model AuditLog {
   @@index([entityType, entityId], map: "idx_audit_logs_entity")
   @@index([action], map: "idx_audit_logs_action")
   @@index([performedAt], map: "idx_audit_logs_performed_at")
+  @@index([tenantId, performedAt], map: "idx_audit_logs_tenant_performed_at")
   @@map("audit_logs")
 }
 
@@ -2005,6 +3208,7 @@ model ShiftAssignment {
   @@index([employeeId], map: "idx_shift_assignments_employee")
   @@index([shiftId], map: "idx_shift_assignments_shift")
   @@index([validFrom, validTo], map: "idx_shift_assignments_dates")
+  @@index([tenantId, employeeId], map: "idx_shift_assignments_tenant_employee")
   @@map("shift_assignments")
 }
 
@@ -2040,7 +3244,7 @@ model EmployeeDayPlan {
   // Constraints & indexes
   @@unique([employeeId, planDate])
   @@index([tenantId], map: "idx_employee_day_plans_tenant")
-  @@index([employeeId, planDate], map: "idx_employee_day_plans_employee_date")
+  @@index([tenantId, employeeId, planDate], map: "idx_employee_day_plans_tenant_employee_date")
   @@index([planDate], map: "idx_employee_day_plans_date")
   @@index([shiftId], map: "idx_employee_day_plans_shift")
   @@map("employee_day_plans")
@@ -2097,10 +3301,12 @@ model MacroAssignment {
   macroId      String   @map("macro_id") @db.Uuid
   tariffId     String?  @map("tariff_id") @db.Uuid
   employeeId   String?  @map("employee_id") @db.Uuid
-  executionDay Int      @map("execution_day")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  executionDay      Int       @map("execution_day")
+  isActive          Boolean   @default(true) @map("is_active")
+  lastExecutedAt    DateTime? @map("last_executed_at") @db.Timestamptz(6)
+  lastExecutedDate  DateTime? @map("last_executed_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2115,6 +3321,7 @@ model MacroAssignment {
   @@index([tariffId], map: "idx_macro_assignments_tariff")
   @@index([employeeId], map: "idx_macro_assignments_employee")
   @@index([tenantId, isActive], map: "idx_macro_assignments_active")
+  @@index([tenantId, lastExecutedDate], map: "idx_macro_assignments_tenant_last_executed")
   @@map("macro_assignments")
 }
 
@@ -2152,7 +3359,8 @@ model MacroExecution {
   @@index([tenantId], map: "idx_macro_executions_tenant")
   @@index([macroId], map: "idx_macro_executions_macro")
   @@index([status], map: "idx_macro_executions_status")
-  @@index([createdAt(sort: Desc)], map: "idx_macro_executions_created")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_macro_executions_tenant_created")
+  @@index([tenantId, status], map: "idx_macro_executions_tenant_status")
   @@map("macro_executions")
 }
 
@@ -2304,27 +3512,249 @@ model EmployeeAccessAssignment {
 // Defines an export interface for payroll system integration.
 // Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
 model ExportInterface {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @map("tenant_id") @db.Uuid
-  interfaceNumber Int      @map("interface_number")
-  name            String   @db.VarChar(255)
-  mandantNumber   String?  @map("mandant_number") @db.VarChar(50)
-  exportScript    String?  @map("export_script") @db.VarChar(255)
-  exportPath      String?  @map("export_path") @db.VarChar(500)
-  outputFilename  String?  @map("output_filename") @db.VarChar(255)
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  interfaceNumber   Int      @map("interface_number")
+  name              String   @db.VarChar(255)
+  mandantNumber     String?  @map("mandant_number") @db.VarChar(50)
+  beraterNr         String?  @map("berater_nr") @db.VarChar(7)
+  defaultTemplateId String?  @map("default_template_id") @db.Uuid
+  exportScript      String?  @map("export_script") @db.VarChar(255)
+  exportPath        String?  @map("export_path") @db.VarChar(500)
+  outputFilename    String?  @map("output_filename") @db.VarChar(255)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  accounts       ExportInterfaceAccount[]
-  payrollExports PayrollExport[]
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accounts        ExportInterfaceAccount[]
+  payrollExports  PayrollExport[]
+  defaultTemplate ExportTemplate?          @relation("DefaultTemplateForInterface", fields: [defaultTemplateId], references: [id], onDelete: SetNull)
 
   // Indexes
   @@unique([tenantId, interfaceNumber])
   @@index([tenantId], map: "idx_ei_tenant")
   @@map("export_interfaces")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplate (Phase 2)
+// -----------------------------------------------------------------------------
+// Per-tenant Liquid templates used by the export-engine to generate
+// DATEV LODAS, LuG, Lexware, SAGE, or generic CSV export files.
+model ExportTemplate {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String   @db.VarChar(200)
+  description      String?  @db.Text
+  targetSystem     String   @map("target_system") @db.VarChar(20)
+  templateBody     String   @map("template_body") @db.Text
+  outputFilename   String   @default("export_{{period.year}}{{period.monthPadded}}.txt") @map("output_filename") @db.VarChar(200)
+  encoding         String   @default("windows-1252") @db.VarChar(20)
+  lineEnding       String   @default("crlf") @map("line_ending") @db.VarChar(4)
+  fieldSeparator   String   @default(";") @map("field_separator") @db.VarChar(5)
+  decimalSeparator String   @default(",") @map("decimal_separator") @db.VarChar(1)
+  dateFormat       String   @default("TT.MM.JJJJ") @map("date_format") @db.VarChar(20)
+  version          Int      @default(1)
+  isActive         Boolean  @default(true) @map("is_active")
+  createdBy        String?  @map("created_by") @db.Uuid
+  updatedBy        String?  @map("updated_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions          ExportTemplateVersion[]
+  exportInterfaces  ExportInterface[]        @relation("DefaultTemplateForInterface")
+  snapshots         ExportTemplateSnapshot[]
+  schedules         ExportTemplateSchedule[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_export_templates_tenant")
+  @@map("export_templates")
+}
+
+model ExportTemplateVersion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId   String   @map("template_id") @db.Uuid
+  version      Int
+  templateBody String   @map("template_body") @db.Text
+  changedBy    String?  @map("changed_by") @db.Uuid
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId], map: "idx_export_template_versions_template")
+  @@map("export_template_versions")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplateSnapshot (Phase 4.2 — template test suite)
+// -----------------------------------------------------------------------------
+// Golden-file test: captures the encoded bytes of a template render at
+// snapshot time and records a SHA-256 hash. Subsequent verification
+// runs re-render with the same period and compare the hash — any
+// unintended template change is surfaced via `last_verified_status`.
+model ExportTemplateSnapshot {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  templateId          String    @map("template_id") @db.Uuid
+  name                String    @db.VarChar(200)
+  description         String?   @db.Text
+  periodYear          Int       @map("period_year")
+  periodMonth         Int       @map("period_month")
+  expectedHash        String    @map("expected_hash") @db.VarChar(64)
+  expectedBody        String    @map("expected_body") @db.Text
+  expectedByteSize    Int       @default(0) @map("expected_byte_size")
+  lastVerifiedAt      DateTime? @map("last_verified_at") @db.Timestamptz(6)
+  lastVerifiedStatus  String?   @map("last_verified_status") @db.VarChar(16)
+  lastVerifiedMessage String?   @map("last_verified_message") @db.Text
+  lastVerifiedHash    String?   @map("last_verified_hash") @db.VarChar(64)
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, name])
+  @@index([tenantId], map: "idx_export_template_snapshots_tenant")
+  @@index([templateId], map: "idx_export_template_snapshots_template")
+  @@map("export_template_snapshots")
+}
+
+// -----------------------------------------------------------------------------
+// ExportTemplateSchedule (Phase 4.4 — export scheduler)
+// -----------------------------------------------------------------------------
+// Cron-driven automatic exports. The `export-template-schedules` cron
+// route fires every 15 minutes; each run picks schedules where
+// `next_run_at <= now`, renders the template, emails the result to the
+// recipient list, and computes the next `next_run_at`.
+model ExportTemplateSchedule {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  templateId        String    @map("template_id") @db.Uuid
+  exportInterfaceId String?   @map("export_interface_id") @db.Uuid
+  name              String    @db.VarChar(200)
+  isActive          Boolean   @default(false) @map("is_active")
+  frequency         String    @db.VarChar(10)  // daily | weekly | monthly
+  dayOfWeek         Int?      @map("day_of_week")
+  dayOfMonth        Int?      @map("day_of_month")
+  hourOfDay         Int       @default(6) @map("hour_of_day")
+  dayPeriod         String    @default("previous_month") @map("day_period") @db.VarChar(20)
+  recipientEmails   String    @default("") @map("recipient_emails") @db.Text
+  lastRunAt         DateTime? @map("last_run_at") @db.Timestamptz(6)
+  lastRunStatus     String?   @map("last_run_status") @db.VarChar(16)
+  lastRunMessage    String?   @map("last_run_message") @db.Text
+  nextRunAt         DateTime? @map("next_run_at") @db.Timestamptz(6)
+  createdBy         String?   @map("created_by") @db.Uuid
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template ExportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId], map: "idx_export_template_schedules_tenant")
+  @@index([nextRunAt, isActive], map: "idx_export_template_schedules_due")
+  @@map("export_template_schedules")
+}
+
+// -----------------------------------------------------------------------------
+// PayrollWage (Phase 2)
+// -----------------------------------------------------------------------------
+// Default and tenant-specific Lohnart mapping (DATEV-Lohnart codes).
+// DefaultPayrollWage holds the global seed; TenantPayrollWage is the
+// per-tenant editable copy. Templates reference these via context.
+model DefaultPayrollWage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(10)
+  name        String   @db.VarChar(200)
+  terpSource  String   @map("terp_source") @db.VarChar(50)
+  category    String   @db.VarChar(30)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("default_payroll_wages")
+}
+
+model TenantPayrollWage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String   @db.VarChar(10)
+  name        String   @db.VarChar(200)
+  terpSource  String   @map("terp_source") @db.VarChar(50)
+  category    String   @db.VarChar(30)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId], map: "idx_tenant_payroll_wages_tenant")
+  @@map("tenant_payroll_wages")
+}
+
+// -----------------------------------------------------------------------------
+// SystemExportTemplate (Phase 3)
+// -----------------------------------------------------------------------------
+// Global, read-only standard templates shipped with Terp. The template
+// library UI lists these and offers "Als Vorlage verwenden" which copies
+// the row into the tenant-specific `export_templates`.
+model SystemExportTemplate {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String   @unique @db.VarChar(200)
+  description      String?  @db.Text
+  targetSystem     String   @map("target_system") @db.VarChar(20)
+  templateBody     String   @map("template_body") @db.Text
+  outputFilename   String   @map("output_filename") @db.VarChar(200)
+  encoding         String   @default("windows-1252") @db.VarChar(20)
+  lineEnding       String   @default("crlf") @map("line_ending") @db.VarChar(4)
+  fieldSeparator   String   @default(";") @map("field_separator") @db.VarChar(5)
+  decimalSeparator String   @default(",") @map("decimal_separator") @db.VarChar(1)
+  dateFormat       String   @default("TT.MM.JJJJ") @map("date_format") @db.VarChar(20)
+  version          Int      @default(1)
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_export_templates")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeSalaryHistory (Phase 3)
+// -----------------------------------------------------------------------------
+// Historical salary records per employee. The newest entry (valid_to IS NULL)
+// is synchronised with Employee.grossSalary / hourlyRate.
+model EmployeeSalaryHistory {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  employeeId   String    @map("employee_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  grossSalary  Decimal?  @map("gross_salary") @db.Decimal(10, 2)
+  hourlyRate   Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  paymentType  String    @map("payment_type") @db.VarChar(20)
+  changeReason String    @map("change_reason") @db.VarChar(50)
+  notes        String?   @db.Text
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_salary_history_employee")
+  @@index([tenantId], map: "idx_salary_history_tenant")
+  @@index([employeeId, validFrom, validTo], map: "idx_salary_history_valid")
+  @@map("employee_salary_history")
 }
 
 // -----------------------------------------------------------------------------
@@ -2393,6 +3823,7 @@ model PayrollExport {
   @@index([exportInterfaceId], map: "idx_pe_interface")
   @@index([tenantId, year, month], map: "idx_pe_period")
   @@index([status], map: "idx_pe_status")
+  @@index([tenantId, status], map: "idx_pe_tenant_status")
   @@map("payroll_exports")
 }
 
@@ -2431,6 +3862,7 @@ model Report {
   @@index([tenantId], map: "idx_reports_tenant")
   @@index([tenantId, reportType], map: "idx_reports_type")
   @@index([status], map: "idx_reports_status")
+  @@index([tenantId, status], map: "idx_reports_tenant_status")
   @@map("reports")
 }
 
@@ -2478,6 +3910,7 @@ model MonthlyValue {
   @@unique([employeeId, year, month])
   @@index([tenantId], map: "idx_mv_tenant")
   @@index([employeeId], map: "idx_mv_employee")
+  @@index([tenantId, year, month], map: "idx_mv_tenant_year_month")
   @@map("monthly_values")
 }
 
@@ -2512,6 +3945,7 @@ model ImportBatch {
   @@unique([tenantId, batchReference], map: "idx_import_batches_unique_ref")
   @@index([tenantId], map: "idx_import_batches_tenant")
   @@index([status], map: "idx_import_batches_status")
+  @@index([tenantId, status], map: "idx_import_batches_tenant_status")
   @@map("import_batches")
 }
 
@@ -2551,6 +3985,7 @@ model RawTerminalBooking {
   @@index([importBatchId], map: "idx_raw_terminal_bookings_batch")
   @@index([employeeId], map: "idx_raw_terminal_bookings_employee")
   @@index([tenantId, bookingDate], map: "idx_raw_terminal_bookings_date")
+  @@index([tenantId, status], map: "idx_raw_terminal_bookings_tenant_status")
   @@map("raw_terminal_bookings")
 }
 
@@ -2642,6 +4077,8 @@ model TripRecord {
   @@index([vehicleId], map: "idx_trip_records_vehicle")
   @@index([routeId], map: "idx_trip_records_route")
   @@index([tripDate], map: "idx_trip_records_date")
+  @@index([tenantId, vehicleId], map: "idx_trip_records_tenant_vehicle")
+  @@index([tenantId, tripDate], map: "idx_trip_records_tenant_date")
   @@map("trip_records")
 }
 
@@ -2866,8 +4303,8 @@ model Booking {
 
   // Indexes
   @@index([tenantId], map: "idx_bookings_tenant")
-  @@index([employeeId, bookingDate], map: "idx_bookings_employee_date")
   @@index([bookingDate], map: "idx_bookings_date")
+  @@index([tenantId, employeeId, bookingDate], map: "idx_bookings_tenant_employee_date")
   @@map("bookings")
 }
 
@@ -2932,6 +4369,7 @@ model DailyValue {
   @@index([valueDate], map: "idx_daily_values_date")
   @@index([employeeId, valueDate], map: "idx_daily_values_lookup")
   @@index([status], map: "idx_daily_values_status")
+  @@index([tenantId, valueDate], map: "idx_daily_values_tenant_value_date")
   @@map("daily_values")
 }
 
@@ -2974,6 +4412,8 @@ model DailyAccountValue {
   @@index([accountId], map: "idx_daily_account_values_account")
   @@index([valueDate], map: "idx_daily_account_values_date")
   @@index([employeeId, valueDate], map: "idx_daily_account_values_lookup")
+  @@index([tenantId, valueDate], map: "idx_daily_account_values_tenant_value_date")
+  @@index([tenantId, accountId, valueDate], map: "idx_daily_account_values_tenant_account_value_date")
   @@map("daily_account_values")
 }
 
@@ -3036,8 +4476,9 @@ model AbsenceDay {
   @@index([absenceDate], map: "idx_absence_days_date")
   @@index([absenceTypeId], map: "idx_absence_days_type")
   @@index([status], map: "idx_absence_days_status")
-  @@index([employeeId, absenceDate], map: "idx_absence_days_lookup")
-  @@index([employeeId, absenceDate, status], map: "idx_absence_days_range")
+  @@index([tenantId, employeeId, absenceDate], map: "idx_absence_days_tenant_employee_date")
+  @@index([tenantId, employeeId, absenceDate, status], map: "idx_absence_days_tenant_employee_date_status")
+  @@index([tenantId, status], map: "idx_absence_days_tenant_status")
   @@map("absence_days")
 }
 
@@ -3146,7 +4587,7 @@ model ScheduleExecution {
   @@index([tenantId], map: "idx_schedule_executions_tenant")
   @@index([scheduleId], map: "idx_schedule_executions_schedule")
   @@index([status], map: "idx_schedule_executions_status")
-  @@index([createdAt(sort: Desc)], map: "idx_schedule_executions_created")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_schedule_executions_tenant_created")
   @@map("schedule_executions")
 }
 
@@ -3180,6 +4621,32 @@ model ScheduleTaskExecution {
   @@index([executionId], map: "idx_ste_execution")
   @@index([executionId, sortOrder], map: "idx_ste_order")
   @@map("schedule_task_executions")
+}
+
+// -----------------------------------------------------------------------------
+// CronCheckpoint
+// -----------------------------------------------------------------------------
+// Migration: 000106
+//
+// Lightweight checkpoint table for cron job resume. When a cron run times out,
+// re-triggering the same run skips already-completed tenants.
+//
+model CronCheckpoint {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cronName   String   @map("cron_name") @db.VarChar(100)
+  runKey     String   @map("run_key") @db.VarChar(255)
+  tenantId   String   @map("tenant_id") @db.Uuid
+  status     String   @default("completed") @db.VarChar(20)
+  durationMs Int?     @map("duration_ms")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([cronName, runKey, tenantId])
+  @@index([cronName, runKey], map: "idx_cron_checkpoints_lookup")
+  @@map("cron_checkpoints")
 }
 
 // -----------------------------------------------------------------------------
@@ -3224,6 +4691,8 @@ model Correction {
   @@index([employeeId], map: "idx_corrections_employee_id")
   @@index([correctionDate], map: "idx_corrections_date")
   @@index([status], map: "idx_corrections_status")
+  @@index([tenantId, status], map: "idx_corrections_tenant_status")
+  @@index([tenantId, createdAt], map: "idx_corrections_tenant_created_at")
   @@map("corrections")
 }
 
@@ -3266,7 +4735,1385 @@ model OrderBooking {
   @@index([employeeId], map: "idx_order_bookings_employee")
   @@index([orderId], map: "idx_order_bookings_order")
   @@index([activityId], map: "idx_order_bookings_activity")
-  @@index([employeeId, bookingDate], map: "idx_order_bookings_employee_date")
-  @@index([orderId, bookingDate], map: "idx_order_bookings_order_date")
+  @@index([tenantId, employeeId, bookingDate], map: "idx_order_bookings_tenant_employee_date")
+  @@index([tenantId, orderId, bookingDate], map: "idx_order_bookings_tenant_order_date")
   @@map("order_bookings")
+}
+
+// =============================================================================
+// Warehouse Module
+// =============================================================================
+
+model WhArticleGroup {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   WhArticleGroup?  @relation("ArticleGroupTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children WhArticleGroup[] @relation("ArticleGroupTree")
+  articles WhArticle[]
+
+  @@index([tenantId, parentId])
+  @@map("wh_article_groups")
+}
+
+model WhArticle {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  number            String   @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  description       String?  @db.Text
+  descriptionAlt    String?  @map("description_alt") @db.Text
+  groupId           String?  @map("group_id") @db.Uuid
+  matchCode         String?  @map("match_code") @db.VarChar(100)
+  unit              String   @default("Stk") @db.VarChar(20)
+  vatRate           Float    @default(19.0) @map("vat_rate")
+  sellPrice         Float?   @map("sell_price")
+  buyPrice          Float?   @map("buy_price")
+  discountGroup     String?  @map("discount_group") @db.VarChar(50)
+  orderType         String?  @map("order_type") @db.VarChar(50)
+  stockTracking     Boolean  @default(false) @map("stock_tracking")
+  currentStock      Float    @default(0) @map("current_stock")
+  minStock          Float?   @map("min_stock")
+  warehouseLocation String?  @map("warehouse_location") @db.VarChar(255)
+  images            Json?    @db.JsonB
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?  @map("created_by_id") @db.Uuid
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  group     WhArticleGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  suppliers WhArticleSupplier[]
+  bomParent WhBillOfMaterial[] @relation("BomParent")
+  bomChild  WhBillOfMaterial[] @relation("BomChild")
+  purchaseOrderPositions WhPurchaseOrderPosition[]
+  stockMovements         WhStockMovement[]
+  articleImages          WhArticleImage[]
+  stockReservations      WhStockReservation[]
+
+  @@unique([tenantId, number], map: "uq_wh_articles_tenant_number")
+  @@index([tenantId, groupId])
+  @@index([tenantId, matchCode])
+  @@index([tenantId, name])
+  @@index([tenantId, isActive])
+  @@map("wh_articles")
+}
+
+model WhArticleImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  articleId     String   @map("article_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  filename      String   @db.Text
+  storagePath   String   @map("storage_path") @db.Text
+  thumbnailPath String?  @map("thumbnail_path") @db.Text
+  mimeType      String   @map("mime_type") @db.Text
+  sizeBytes     Int      @map("size_bytes")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById   String?  @map("created_by_id") @db.Uuid
+
+  article WhArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tenant  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, sortOrder])
+  @@index([tenantId])
+  @@map("wh_article_images")
+}
+
+model WhArticleSupplier {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  articleId             String   @map("article_id") @db.Uuid
+  supplierId            String   @map("supplier_id") @db.Uuid
+  supplierArticleNumber String?  @map("supplier_article_number") @db.VarChar(100)
+  supplierDescription   String?  @map("supplier_description") @db.Text
+  isPrimary             Boolean  @default(false) @map("is_primary")
+  orderUnit             String?  @map("order_unit") @db.VarChar(20)
+  leadTimeDays          Int?     @map("lead_time_days")
+  defaultOrderQty       Float?   @map("default_order_qty")
+  buyPrice              Float?   @map("buy_price")
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  article  WhArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  supplier CrmAddress @relation(fields: [supplierId], references: [id])
+
+  @@unique([articleId, supplierId], map: "uq_wh_article_suppliers_article_supplier")
+  @@index([supplierId])
+  @@map("wh_article_suppliers")
+}
+
+model WhBillOfMaterial {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentArticleId String   @map("parent_article_id") @db.Uuid
+  childArticleId  String   @map("child_article_id") @db.Uuid
+  quantity        Float    @default(1)
+  sortOrder       Int      @default(0) @map("sort_order")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  parentArticle WhArticle @relation("BomParent", fields: [parentArticleId], references: [id], onDelete: Cascade)
+  childArticle  WhArticle @relation("BomChild", fields: [childArticleId], references: [id], onDelete: Cascade)
+
+  @@unique([parentArticleId, childArticleId], map: "uq_wh_bom_parent_child")
+  @@map("wh_bill_of_materials")
+}
+
+// -----------------------------------------------------------------------------
+// WhPurchaseOrder
+// -----------------------------------------------------------------------------
+// Migration: 20260323120000
+//
+// Purchase orders sent to suppliers. Follows workflow:
+// DRAFT -> ORDERED -> PARTIALLY_RECEIVED -> RECEIVED (with CANCELLED)
+
+enum WhStockMovementType {
+  GOODS_RECEIPT
+  WITHDRAWAL
+  ADJUSTMENT
+  INVENTORY
+  RETURN
+  DELIVERY_NOTE
+
+  @@map("wh_stock_movement_type")
+}
+
+enum WhPurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+
+  @@map("wh_purchase_order_status")
+}
+
+enum WhPurchaseOrderMethod {
+  PHONE
+  EMAIL
+  FAX
+  PRINT
+
+  @@map("wh_purchase_order_method")
+}
+
+enum WhPurchaseOrderPositionType {
+  ARTICLE
+  FREETEXT
+  TEXT
+
+  @@map("wh_purchase_order_position_type")
+}
+
+model WhPurchaseOrder {
+  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                   @map("tenant_id") @db.Uuid
+  number              String                   @db.VarChar(50)
+  supplierId          String                   @map("supplier_id") @db.Uuid
+  contactId           String?                  @map("contact_id") @db.Uuid
+  inquiryId           String?                  @map("inquiry_id") @db.Uuid
+  status              WhPurchaseOrderStatus    @default(DRAFT)
+  orderDate           DateTime?                @map("order_date") @db.Timestamptz(6)
+  requestedDelivery   DateTime?                @map("requested_delivery") @db.Timestamptz(6)
+  confirmedDelivery   DateTime?                @map("confirmed_delivery") @db.Timestamptz(6)
+  orderMethod         WhPurchaseOrderMethod?   @map("order_method")
+  orderMethodNote     String?                  @map("order_method_note")
+  notes               String?
+  subtotalNet         Float                    @default(0) @map("subtotal_net")
+  totalVat            Float                    @default(0) @map("total_vat")
+  totalGross          Float                    @default(0) @map("total_gross")
+  printedAt           DateTime?                @map("printed_at") @db.Timestamptz(6)
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById         String?                  @map("created_by_id") @db.Uuid
+
+  tenant    Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier  CrmAddress                @relation(fields: [supplierId], references: [id])
+  contact   CrmContact?               @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  inquiry   CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  positions       WhPurchaseOrderPosition[]
+  stockMovements  WhStockMovement[]
+  supplierInvoices WhSupplierInvoice[]
+
+  @@unique([tenantId, number], map: "uq_wh_purchase_orders_tenant_number")
+  @@index([tenantId, status])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, requestedDelivery])
+  @@map("wh_purchase_orders")
+}
+
+model WhPurchaseOrderPosition {
+  id                    String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId       String                        @map("purchase_order_id") @db.Uuid
+  sortOrder             Int                           @map("sort_order")
+  positionType          WhPurchaseOrderPositionType   @default(ARTICLE) @map("position_type")
+  articleId             String?                       @map("article_id") @db.Uuid
+  freeText              String?                       @map("free_text")
+  supplierArticleNumber String?                       @map("supplier_article_number") @db.VarChar(100)
+  description           String?
+  quantity              Float?
+  receivedQuantity      Float                         @default(0) @map("received_quantity")
+  unit                  String?                       @db.VarChar(20)
+  unitPrice             Float?                        @map("unit_price")
+  flatCosts             Float?                        @map("flat_costs")
+  totalPrice            Float?                        @map("total_price")
+  vatRate               Float                         @default(19.0) @map("vat_rate")
+  requestedDelivery     DateTime?                     @map("requested_delivery") @db.Timestamptz(6)
+  confirmedDelivery     DateTime?                     @map("confirmed_delivery") @db.Timestamptz(6)
+  createdAt             DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  purchaseOrder WhPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  article       WhArticle?      @relation(fields: [articleId], references: [id])
+
+  @@index([purchaseOrderId, sortOrder])
+  @@map("wh_purchase_order_positions")
+}
+
+// -----------------------------------------------------------------------------
+// WhStockMovement
+// -----------------------------------------------------------------------------
+// Migration: 20260324120000
+//
+// Stock movements track all changes to article inventory: goods receipts,
+// withdrawals, adjustments, inventory counts, and returns.
+
+model WhStockMovement {
+  id                       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String              @map("tenant_id") @db.Uuid
+  articleId                String              @map("article_id") @db.Uuid
+  type                     WhStockMovementType
+  quantity                 Float
+  previousStock            Float               @map("previous_stock")
+  newStock                 Float               @map("new_stock")
+  date                     DateTime            @default(now()) @db.Timestamptz(6)
+
+  purchaseOrderId          String?             @map("purchase_order_id") @db.Uuid
+  purchaseOrderPositionId  String?             @map("purchase_order_position_id") @db.Uuid
+  documentId               String?             @map("document_id") @db.Uuid
+  orderId                  String?             @map("order_id") @db.Uuid
+  inventorySessionId       String?             @map("inventory_session_id") @db.Uuid
+  machineId                String?             @map("machine_id")
+
+  reason                   String?
+  notes                    String?
+  createdById              String?             @map("created_by_id") @db.Uuid
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  article       WhArticle        @relation(fields: [articleId], references: [id])
+  purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  stocktake     WhStocktake?     @relation(fields: [inventorySessionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, articleId])
+  @@index([tenantId, type])
+  @@index([tenantId, date])
+  @@index([tenantId, purchaseOrderId])
+  @@index([tenantId, machineId])
+  @@map("wh_stock_movements")
+}
+
+// -----------------------------------------------------------------------------
+// WhSupplierInvoice
+// -----------------------------------------------------------------------------
+// Migration: wh_supplier_invoices
+//
+// Supplier invoice linked to a purchase order. Tracks payment status,
+// payment terms with two-tier discount (Skonto), and partial payments.
+
+enum WhSupplierInvoiceStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+
+  @@map("wh_supplier_invoice_status")
+}
+
+model WhSupplierInvoice {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  number            String                    // Supplier's invoice number (entered manually)
+  supplierId        String                    @map("supplier_id") @db.Uuid
+  purchaseOrderId   String?                   @map("purchase_order_id") @db.Uuid
+  status            WhSupplierInvoiceStatus   @default(OPEN)
+  invoiceDate       DateTime                  @map("invoice_date") @db.Timestamptz(6)
+  receivedDate      DateTime                  @default(now()) @map("received_date") @db.Timestamptz(6)
+  totalNet          Float                     @map("total_net")
+  totalVat          Float                     @map("total_vat")
+  totalGross        Float                     @map("total_gross")
+
+  // Payment terms
+  paymentTermDays   Int?                      @map("payment_term_days")
+  dueDate           DateTime?                 @map("due_date") @db.Timestamptz(6)
+  discountPercent   Float?                    @map("discount_percent")
+  discountDays      Int?                      @map("discount_days")
+  discountPercent2  Float?                    @map("discount_percent_2")
+  discountDays2     Int?                      @map("discount_days_2")
+
+  notes             String?
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?                   @map("created_by_id") @db.Uuid
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier      CrmAddress       @relation(fields: [supplierId], references: [id])
+  purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  payments      WhSupplierPayment[]
+
+  @@index([tenantId, supplierId])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@map("wh_supplier_invoices")
+}
+
+// -----------------------------------------------------------------------------
+// WhSupplierPayment
+// -----------------------------------------------------------------------------
+// Migration: wh_supplier_invoices
+//
+// Payment record against a supplier invoice. Reuses BillingPaymentType
+// (CASH/BANK) and BillingPaymentStatus (ACTIVE/CANCELLED) enums.
+model WhSupplierPayment {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  invoiceId     String               @map("invoice_id") @db.Uuid
+  date          DateTime             @db.Timestamptz(6)
+  amount        Float
+  type          BillingPaymentType
+  isDiscount    Boolean              @default(false) @map("is_discount")
+  notes         String?
+  status        BillingPaymentStatus @default(ACTIVE)
+  cancelledAt   DateTime?            @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById String?              @map("cancelled_by_id") @db.Uuid
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById   String?              @map("created_by_id") @db.Uuid
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice WhSupplierInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([tenantId])
+  @@map("wh_supplier_payments")
+}
+
+// -----------------------------------------------------------------------------
+// WhCorrectionRun
+// -----------------------------------------------------------------------------
+// Migration: 20260325202500_wh_corrections
+//
+// Tracks each execution of warehouse correction checks.
+
+model WhCorrectionRun {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  startedAt     DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+  trigger       String    @db.VarChar(20)
+  checksRun     Int       @default(0) @map("checks_run")
+  issuesFound   Int       @default(0) @map("issues_found")
+  triggeredById String?   @map("triggered_by_id") @db.Uuid
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages WhCorrectionMessage[]
+
+  @@index([tenantId])
+  @@index([tenantId, startedAt])
+  @@map("wh_correction_runs")
+}
+
+// -----------------------------------------------------------------------------
+// WhCorrectionMessage
+// -----------------------------------------------------------------------------
+// Migration: 20260325202500_wh_corrections
+//
+// Individual issue detected by the warehouse correction assistant.
+// Has a status lifecycle: OPEN -> RESOLVED / DISMISSED / IGNORED.
+
+enum WhCorrectionSeverity {
+  ERROR
+  WARNING
+  INFO
+
+  @@map("wh_correction_severity")
+}
+
+enum WhCorrectionStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+  IGNORED
+
+  @@map("wh_correction_status")
+}
+
+model WhCorrectionMessage {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  runId         String?               @map("run_id") @db.Uuid
+  code          String                @db.VarChar(50)
+  severity      WhCorrectionSeverity
+  status        WhCorrectionStatus    @default(OPEN)
+  message       String                @db.Text
+  articleId     String?               @map("article_id") @db.Uuid
+  documentId    String?               @map("document_id") @db.Uuid
+  details       Json?                 @db.JsonB
+  resolvedAt    DateTime?             @map("resolved_at") @db.Timestamptz(6)
+  resolvedById  String?               @map("resolved_by_id") @db.Uuid
+  resolvedNote  String?               @map("resolved_note") @db.Text
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run    WhCorrectionRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, code])
+  @@index([tenantId, articleId])
+  @@map("wh_correction_messages")
+}
+
+model WhStockReservation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  articleId     String    @map("article_id") @db.Uuid
+  documentId    String    @map("document_id") @db.Uuid
+  positionId    String    @map("position_id") @db.Uuid
+  quantity      Float
+  status        String    @default("ACTIVE")
+  releasedAt    DateTime? @map("released_at") @db.Timestamptz(6)
+  releasedById  String?   @map("released_by_id") @db.Uuid
+  releaseReason String?   @map("release_reason")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?   @map("created_by_id") @db.Uuid
+
+  tenant  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  article WhArticle @relation(fields: [articleId], references: [id])
+
+  @@index([tenantId, articleId, status])
+  @@index([tenantId, documentId])
+  @@map("wh_stock_reservations")
+}
+
+// -----------------------------------------------------------------------------
+// WhStocktake (Inventur)
+// -----------------------------------------------------------------------------
+// Migration: 20260414100000
+//
+// Stocktake session. Freezes expected quantities at creation time.
+// Workflow: DRAFT -> IN_PROGRESS -> COMPLETED | CANCELLED
+
+enum WhStocktakeStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("wh_stocktake_status")
+}
+
+model WhStocktake {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  number         String             @db.VarChar(50)
+  name           String             @db.VarChar(255)
+  description    String?            @db.Text
+  status         WhStocktakeStatus  @default(DRAFT)
+  referenceDate  DateTime           @default(now()) @map("reference_date") @db.Timestamptz(6)
+  scope          String?            @db.VarChar(50)
+  scopeFilter    Json?              @map("scope_filter") @db.JsonB
+  notes          String?            @db.Text
+  printedAt      DateTime?          @map("printed_at") @db.Timestamptz(6)
+  completedAt    DateTime?          @map("completed_at") @db.Timestamptz(6)
+  cancelledAt    DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?            @map("created_by_id") @db.Uuid
+  completedById  String?            @map("completed_by_id") @db.Uuid
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  positions      WhStocktakePosition[]
+  stockMovements WhStockMovement[]
+
+  @@unique([tenantId, number], map: "uq_wh_stocktakes_tenant_number")
+  @@index([tenantId, status])
+  @@index([tenantId, referenceDate(sort: Desc)])
+  @@map("wh_stocktakes")
+}
+
+model WhStocktakePosition {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stocktakeId      String    @map("stocktake_id") @db.Uuid
+  articleId        String    @map("article_id") @db.Uuid
+  articleNumber    String    @map("article_number") @db.VarChar(50)
+  articleName      String    @map("article_name") @db.VarChar(255)
+  unit             String    @db.VarChar(20)
+  warehouseLocation String?  @map("warehouse_location") @db.VarChar(255)
+  expectedQuantity Float     @map("expected_quantity")
+  countedQuantity  Float?    @map("counted_quantity")
+  difference       Float?
+  valueDifference  Float?    @map("value_difference")
+  buyPrice         Float?    @map("buy_price")
+  note             String?   @db.Text
+  reviewed         Boolean   @default(false)
+  skipped          Boolean   @default(false)
+  skipReason       String?   @map("skip_reason") @db.Text
+  countedById      String?   @map("counted_by_id") @db.Uuid
+  countedAt        DateTime? @map("counted_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  stocktake WhStocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+
+  @@unique([stocktakeId, articleId], map: "uq_wh_stocktake_positions_article")
+  @@index([stocktakeId])
+  @@index([articleId])
+  @@map("wh_stocktake_positions")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileCategory
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  code        String   @db.VarChar(50)
+  description String?  @db.Text
+  color       String?  @db.VarChar(7)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  visibleToRoles String[] @default(["admin"]) @map("visible_to_roles")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries HrPersonnelFileEntry[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("hr_personnel_file_categories")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileEntry
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileEntry {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  categoryId     String    @map("category_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  description    String?   @db.Text
+  entryDate      DateTime  @map("entry_date") @db.Date
+  expiresAt      DateTime? @map("expires_at") @db.Date
+  reminderDate   DateTime? @map("reminder_date") @db.Date
+  reminderNote   String?   @map("reminder_note") @db.Text
+  isConfidential Boolean   @default(false) @map("is_confidential")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById    String?   @map("created_by_id") @db.Uuid
+
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  category    HrPersonnelFileCategory    @relation(fields: [categoryId], references: [id])
+  attachments HrPersonnelFileAttachment[]
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, reminderDate])
+  @@index([tenantId, expiresAt])
+  @@map("hr_personnel_file_entries")
+}
+
+// -----------------------------------------------------------------------------
+// HrPersonnelFileAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260408100000
+model HrPersonnelFileAttachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entryId     String   @map("entry_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  filename    String   @db.VarChar(255)
+  storagePath String   @map("storage_path") @db.Text
+  mimeType    String   @map("mime_type") @db.VarChar(100)
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById String?  @map("created_by_id") @db.Uuid
+
+  entry  HrPersonnelFileEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([tenantId])
+  @@map("hr_personnel_file_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// DsgvoRetentionRule
+// -----------------------------------------------------------------------------
+// Migration: 20260409100000
+//
+// Configurable data retention rules per tenant and data type.
+// Used by DSGVO cron job and manual execution.
+
+model DsgvoRetentionRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  dataType        String   @map("data_type") @db.VarChar(50)
+  retentionMonths Int      @map("retention_months") @db.Integer
+  action          String   @default("DELETE") @db.VarChar(20)
+  isActive        Boolean  @default(true) @map("is_active")
+  description     String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dataType])
+  @@index([tenantId])
+  @@map("dsgvo_retention_rules")
+}
+
+// -----------------------------------------------------------------------------
+// DsgvoDeleteLog
+// -----------------------------------------------------------------------------
+// Migration: 20260409100000
+//
+// Immutable audit log of all DSGVO retention executions.
+
+model DsgvoDeleteLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  dataType     String   @map("data_type") @db.VarChar(50)
+  action       String   @db.VarChar(20)
+  recordCount  Int      @map("record_count") @db.Integer
+  cutoffDate   DateTime @map("cutoff_date") @db.Date
+  executedAt   DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
+  executedBy   String?  @map("executed_by") @db.Uuid
+  durationMs   Int?     @map("duration_ms") @db.Integer
+  error        String?  @db.Text
+  details      Json?    @db.JsonB
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, executedAt])
+  @@map("dsgvo_delete_logs")
+}
+
+// -----------------------------------------------------------------------------
+// TenantSmtpConfig
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Per-tenant SMTP server configuration. One row per tenant.
+model TenantSmtpConfig {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @unique @map("tenant_id") @db.Uuid
+  host         String    @db.VarChar(255)
+  port         Int       @default(587)
+  username     String    @db.VarChar(255)
+  password     String    @db.VarChar(500)
+  encryption   String    @default("STARTTLS") @db.VarChar(10)
+  fromEmail    String    @map("from_email") @db.VarChar(255)
+  fromName     String?   @map("from_name") @db.VarChar(255)
+  replyToEmail String?   @map("reply_to_email") @db.VarChar(255)
+  isVerified   Boolean   @default(false) @map("is_verified")
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_smtp_configs")
+}
+
+// -----------------------------------------------------------------------------
+// EmailTemplate
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Per-tenant, per-document-type email templates with placeholder support.
+// Partial unique index ensures only one default template per tenant+type.
+model EmailTemplate {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  documentType String   @map("document_type") @db.VarChar(30)
+  name         String   @db.VarChar(255)
+  subject      String   @db.VarChar(500)
+  bodyHtml     String   @map("body_html") @db.Text
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  emailSendLogs EmailSendLog[]
+
+  @@index([tenantId, documentType])
+  @@map("email_templates")
+}
+
+// -----------------------------------------------------------------------------
+// EmailDefaultAttachment
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Configurable default attachments (e.g., AGB/terms PDF) per document type.
+// document_type NULL means attachment applies to all document types.
+model EmailDefaultAttachment {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  documentType  String?  @map("document_type") @db.VarChar(30)
+  fileName      String   @map("file_name") @db.VarChar(255)
+  filePath      String   @map("file_path") @db.Text
+  storageBucket String   @default("documents") @map("storage_bucket") @db.VarChar(100)
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("email_default_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// EmailSendLog
+// -----------------------------------------------------------------------------
+// Migration: 20260411100000
+//
+// Full audit trail for all sent emails. document_id is polymorphic
+// (billing_documents or wh_purchase_orders), disambiguated by document_type.
+model EmailSendLog {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  documentId   String?   @map("document_id") @db.Uuid
+  documentType String?   @map("document_type") @db.VarChar(30)
+  toEmail      String    @map("to_email") @db.VarChar(255)
+  ccEmails     String[]  @map("cc_emails") @db.Text
+  subject      String    @db.VarChar(500)
+  bodyHtml     String    @map("body_html") @db.Text
+  templateId   String?   @map("template_id") @db.Uuid
+  status       String    @default("pending") @db.VarChar(20)
+  errorMessage String?   @map("error_message") @db.Text
+  sentAt       DateTime? @map("sent_at") @db.Timestamptz(6)
+  retryCount   Int       @default(0) @map("retry_count")
+  nextRetryAt  DateTime? @map("next_retry_at") @db.Timestamptz(6)
+  sentBy       String?   @map("sent_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sender   User?          @relation(fields: [sentBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, documentId])
+  @@map("email_send_log")
+}
+
+// -----------------------------------------------------------------------------
+// TenantImapConfig
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Per-tenant IMAP server configuration for inbound invoice email receiving.
+// Stores IMAP credentials, polling state, and connection health.
+model TenantImapConfig {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @unique @map("tenant_id") @db.Uuid
+  host                 String    @db.VarChar(255)
+  port                 Int       @default(993)
+  username             String    @db.VarChar(255)
+  password             String    @db.VarChar(500)
+  encryption           String    @default("SSL") @db.VarChar(10)
+  mailbox              String    @default("INBOX") @db.VarChar(255)
+  isVerified           Boolean   @default(false) @map("is_verified")
+  verifiedAt           DateTime? @map("verified_at") @db.Timestamptz(6)
+  uidValidity          BigInt?   @map("uid_validity")
+  uidNext              Int?      @map("uid_next")
+  lastPollAt           DateTime? @map("last_poll_at") @db.Timestamptz(6)
+  lastPollError        String?   @map("last_poll_error") @db.Text
+  lastPollErrorAt      DateTime? @map("last_poll_error_at") @db.Timestamptz(6)
+  consecutiveFailures  Int       @default(0) @map("consecutive_failures")
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_imap_configs")
+}
+
+// -----------------------------------------------------------------------------
+// InboundEmailLog
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Log of all processed inbound emails from IMAP polling.
+model InboundEmailLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  messageId       String?   @map("message_id") @db.VarChar(500)
+  fromEmail       String?   @map("from_email") @db.VarChar(255)
+  subject         String?   @db.VarChar(500)
+  receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  uid             Int?
+  status          String    @default("pending") @db.VarChar(30)
+  errorMessage    String?   @map("error_message") @db.Text
+  attachmentCount Int       @default(0) @map("attachment_count")
+  invoiceId       String?   @map("invoice_id") @db.Uuid
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundInvoices InboundInvoice[]
+
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_inbound_email_log_tenant")
+  @@map("inbound_email_log")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoice
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Main inbound invoice table. Tracks invoice data, supplier matching,
+// ZUGFeRD parsing results, approval workflow, and DATEV export state.
+model InboundInvoice {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  number              String    @db.VarChar(50)
+  source              String    @default("manual") @db.VarChar(20)
+  sourceEmailLogId    String?   @map("source_email_log_id") @db.Uuid
+  sourceMessageId     String?   @map("source_message_id") @db.VarChar(500)
+  supplierId          String?   @map("supplier_id") @db.Uuid
+  supplierStatus      String    @default("matched") @map("supplier_status") @db.VarChar(20)
+  invoiceNumber       String?   @map("invoice_number") @db.VarChar(100)
+  invoiceDate         DateTime? @map("invoice_date") @db.Date
+  dueDate             DateTime? @map("due_date") @db.Date
+  totalNet            Decimal?  @map("total_net") @db.Decimal(12, 2)
+  totalVat            Decimal?  @map("total_vat") @db.Decimal(12, 2)
+  totalGross          Decimal?  @map("total_gross") @db.Decimal(12, 2)
+  currency            String    @default("EUR") @db.VarChar(3)
+  paymentTermDays     Int?      @map("payment_term_days")
+  sellerName          String?   @map("seller_name") @db.VarChar(255)
+  sellerVatId         String?   @map("seller_vat_id") @db.VarChar(50)
+  sellerTaxNumber     String?   @map("seller_tax_number") @db.VarChar(50)
+  sellerStreet        String?   @map("seller_street") @db.VarChar(255)
+  sellerZip           String?   @map("seller_zip") @db.VarChar(20)
+  sellerCity          String?   @map("seller_city") @db.VarChar(100)
+  sellerCountry       String?   @map("seller_country") @db.VarChar(5)
+  sellerIban          String?   @map("seller_iban") @db.VarChar(34)
+  sellerBic           String?   @map("seller_bic") @db.VarChar(11)
+  buyerName           String?   @map("buyer_name") @db.VarChar(255)
+  buyerVatId          String?   @map("buyer_vat_id") @db.VarChar(50)
+  buyerReference      String?   @map("buyer_reference") @db.VarChar(100)
+  zugferdProfile      String?   @map("zugferd_profile") @db.VarChar(30)
+  zugferdRawXml       String?   @map("zugferd_raw_xml") @db.Text
+  pdfStoragePath      String?   @map("pdf_storage_path") @db.Text
+  pdfOriginalFilename String?   @map("pdf_original_filename") @db.VarChar(255)
+  status              String    @default("DRAFT") @db.VarChar(30)
+  approvalVersion     Int       @default(1) @map("approval_version")
+  submittedBy         String?   @map("submitted_by") @db.Uuid
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(6)
+  datevExportedAt     DateTime? @map("datev_exported_at") @db.Timestamptz(6)
+  datevExportedBy     String?   @map("datev_exported_by") @db.Uuid
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy           String?   @map("created_by") @db.Uuid
+
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier         CrmAddress?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  sourceEmailLog   InboundEmailLog?          @relation(fields: [sourceEmailLogId], references: [id], onDelete: SetNull)
+  submitter        User?                     @relation("InboundInvoiceSubmitter", fields: [submittedBy], references: [id], onDelete: SetNull)
+  datevExporter    User?                     @relation("InboundInvoiceDatevExporter", fields: [datevExportedBy], references: [id], onDelete: SetNull)
+  createdByUser    User?                     @relation("InboundInvoiceCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  lineItems        InboundInvoiceLineItem[]
+  approvals        InboundInvoiceApproval[]
+
+  @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
+  @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
+  @@index([tenantId, invoiceDate(sort: Desc)], map: "idx_inbound_invoices_tenant_date")
+  @@map("inbound_invoices")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceLineItem
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Line items per inbound invoice. Populated from ZUGFeRD XML or manual entry.
+model InboundInvoiceLineItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId     String   @map("invoice_id") @db.Uuid
+  position      Int      @default(0)
+  articleNumber String?  @map("article_number") @db.VarChar(100)
+  description   String?  @db.Text
+  quantity      Decimal? @db.Decimal(12, 4)
+  unit          String?  @db.VarChar(20)
+  unitPriceNet  Decimal? @map("unit_price_net") @db.Decimal(12, 4)
+  totalNet      Decimal? @map("total_net") @db.Decimal(12, 2)
+  vatRate       Decimal? @map("vat_rate") @db.Decimal(5, 2)
+  vatAmount     Decimal? @map("vat_amount") @db.Decimal(12, 2)
+  totalGross    Decimal? @map("total_gross") @db.Decimal(12, 2)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice InboundInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId], map: "idx_inbound_invoice_line_items_invoice")
+  @@map("inbound_invoice_line_items")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceApprovalPolicy
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Configurable approval threshold rules. Determines how many approval steps
+// are required based on invoice gross amount.
+model InboundInvoiceApprovalPolicy {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  amountMin       Decimal   @default(0) @map("amount_min") @db.Decimal(12, 2)
+  amountMax       Decimal?  @map("amount_max") @db.Decimal(12, 2)
+  stepOrder       Int       @default(1) @map("step_order")
+  approverGroupId String?   @map("approver_group_id") @db.Uuid
+  approverUserId  String?   @map("approver_user_id") @db.Uuid
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approverGroup UserGroup? @relation("ApprovalPolicyGroup", fields: [approverGroupId], references: [id], onDelete: SetNull)
+  approverUser  User?      @relation("ApprovalPolicyUser", fields: [approverUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive, amountMin, amountMax], map: "idx_approval_policies_tenant")
+  @@map("inbound_invoice_approval_policies")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoiceApproval
+// -----------------------------------------------------------------------------
+// Migration: 20260413100000
+//
+// Individual approval step records. Tracks each approval decision in the
+// multi-step sequential workflow.
+model InboundInvoiceApproval {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId       String    @map("invoice_id") @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  stepOrder       Int       @map("step_order")
+  approvalVersion Int       @map("approval_version")
+  approverGroupId String?   @map("approver_group_id") @db.Uuid
+  approverUserId  String?   @map("approver_user_id") @db.Uuid
+  status          String    @default("PENDING") @db.VarChar(20)
+  decidedBy       String?   @map("decided_by") @db.Uuid
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(6)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  dueAt           DateTime? @map("due_at") @db.Timestamptz(6)
+  lastReminderAt  DateTime? @map("last_reminder_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice       InboundInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approverGroup UserGroup?     @relation("ApprovalStepGroup", fields: [approverGroupId], references: [id], onDelete: SetNull)
+  approverUser  User?          @relation("ApprovalStepApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  decider       User?          @relation("ApprovalStepDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, approvalVersion, stepOrder], map: "idx_approvals_invoice")
+  @@index([tenantId, status, dueAt], map: "idx_approvals_pending")
+  @@index([approverUserId, status], map: "idx_approvals_approver")
+  @@map("inbound_invoice_approvals")
+}
+
+// -----------------------------------------------------------------------------
+// HealthInsuranceProvider (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model HealthInsuranceProvider {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @db.VarChar(200)
+  institutionCode String   @unique @map("institution_code") @db.VarChar(9)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  employees Employee[]
+
+  @@map("health_insurance_providers")
+}
+
+// -----------------------------------------------------------------------------
+// PersonnelGroupCode (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model PersonnelGroupCode {
+  code        String  @id @db.VarChar(3)
+  description String  @db.Text
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("personnel_group_codes")
+}
+
+// -----------------------------------------------------------------------------
+// ActivityCodeKldb (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model ActivityCodeKldb {
+  code     String  @id @db.VarChar(5)
+  name     String  @db.VarChar(300)
+  category String? @db.VarChar(100)
+  isActive Boolean @default(true) @map("is_active")
+
+  @@map("activity_codes_kldb")
+}
+
+// -----------------------------------------------------------------------------
+// BgInstitution (Lookup)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model BgInstitution {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String  @db.VarChar(200)
+  abbreviation String  @db.VarChar(20)
+  isActive     Boolean @default(true) @map("is_active")
+
+  @@map("bg_institutions")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeChild
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeChild {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  firstName         String   @map("first_name") @db.VarChar(100)
+  lastName          String   @map("last_name") @db.VarChar(100)
+  birthDate         DateTime @map("birth_date") @db.Date
+  taxAllowanceShare Decimal  @default(0.5) @map("tax_allowance_share") @db.Decimal(3, 1)
+  livesInHousehold  Boolean  @default(true) @map("lives_in_household")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  parentalLeaves EmployeeParentalLeave[]
+
+  @@index([employeeId], map: "idx_employee_children_employee")
+  @@map("employee_children")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeCompanyCar
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeCompanyCar {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+  listPrice       Decimal   @map("list_price") @db.Decimal(10, 2)
+  propulsionType  String    @map("propulsion_type") @db.VarChar(20)
+  distanceToWorkKm Decimal  @map("distance_to_work_km") @db.Decimal(5, 1)
+  usageType       String    @map("usage_type") @db.VarChar(20)
+  licensePlate    String?   @map("license_plate") @db.VarChar(20)
+  makeModel       String?   @map("make_model") @db.VarChar(100)
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_company_cars_employee")
+  @@map("employee_company_cars")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeJobBike
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeJobBike {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  listPrice Decimal   @map("list_price") @db.Decimal(10, 2)
+  usageType String    @map("usage_type") @db.VarChar(30)
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_job_bikes_employee")
+  @@map("employee_job_bikes")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMealAllowance
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeMealAllowance {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  dailyAmount      Decimal   @map("daily_amount") @db.Decimal(6, 2)
+  workDaysPerMonth Decimal   @default(20.0) @map("work_days_per_month") @db.Decimal(3, 1)
+  startDate        DateTime  @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_meal_allowances_employee")
+  @@map("employee_meal_allowances")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeVoucher
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeVoucher {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  monthlyAmount Decimal   @map("monthly_amount") @db.Decimal(6, 2)
+  provider      String?   @db.VarChar(200)
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_vouchers_employee")
+  @@map("employee_vouchers")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeJobTicket
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeJobTicket {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  monthlyAmount Decimal   @map("monthly_amount") @db.Decimal(6, 2)
+  provider      String?   @db.VarChar(200)
+  isAdditional  Boolean   @default(true) @map("is_additional")
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_job_tickets_employee")
+  @@map("employee_job_tickets")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeePension (bAV)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeePension {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  employeeId               String    @map("employee_id") @db.Uuid
+  executionType            String    @map("execution_type") @db.VarChar(30)
+  providerName             String    @map("provider_name") @db.VarChar(200)
+  contractNumber           String?   @map("contract_number") @db.VarChar(50)
+  employeeContribution     Decimal   @default(0) @map("employee_contribution") @db.Decimal(10, 2)
+  employerContribution     Decimal   @default(0) @map("employer_contribution") @db.Decimal(10, 2)
+  mandatoryEmployerSubsidy Decimal   @default(0) @map("mandatory_employer_subsidy") @db.Decimal(10, 2)
+  startDate                DateTime  @map("start_date") @db.Date
+  endDate                  DateTime? @map("end_date") @db.Date
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_pensions_employee")
+  @@map("employee_pensions")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeSavings (VL)
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeSavings {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  investmentType String    @map("investment_type") @db.VarChar(50)
+  recipient      String    @db.VarChar(200)
+  recipientIban  String?   @map("recipient_iban") @db.Text
+  contractNumber String?   @map("contract_number") @db.VarChar(20)
+  monthlyAmount  Decimal   @map("monthly_amount") @db.Decimal(10, 2)
+  employerShare  Decimal   @default(0) @map("employer_share") @db.Decimal(10, 2)
+  employeeShare  Decimal   @default(0) @map("employee_share") @db.Decimal(10, 2)
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_savings_employee")
+  @@map("employee_savings")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeGarnishment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeGarnishment {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  employeeId            String    @map("employee_id") @db.Uuid
+  creditorName          String    @map("creditor_name") @db.Text
+  creditorAddress       String?   @map("creditor_address") @db.Text
+  fileReference         String?   @map("file_reference") @db.Text
+  garnishmentAmount     Decimal   @map("garnishment_amount") @db.Decimal(10, 2)
+  calculationMethod     String    @map("calculation_method") @db.VarChar(30)
+  dependentsCount       Int       @default(0) @map("dependents_count")
+  rank                  Int       @default(1)
+  isPAccount            Boolean   @default(false) @map("is_p_account")
+  maintenanceObligation Boolean   @default(false) @map("maintenance_obligation")
+  startDate             DateTime  @map("start_date") @db.Date
+  endDate               DateTime? @map("end_date") @db.Date
+  attachmentFileId      String?   @map("attachment_file_id") @db.Uuid
+  notes                 String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_garnishments_employee")
+  @@map("employee_garnishments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeParentalLeave
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeParentalLeave {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  employeeId      String    @map("employee_id") @db.Uuid
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  childId         String?   @map("child_id") @db.Uuid
+  isPartnerMonths Boolean   @default(false) @map("is_partner_months")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  child    EmployeeChild? @relation(fields: [childId], references: [id])
+
+  @@index([employeeId], map: "idx_employee_parental_leaves_employee")
+  @@map("employee_parental_leaves")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeMaternityLeave
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeMaternityLeave {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  employeeId        String    @map("employee_id") @db.Uuid
+  startDate         DateTime  @map("start_date") @db.Date
+  expectedBirthDate DateTime  @map("expected_birth_date") @db.Date
+  actualBirthDate   DateTime? @map("actual_birth_date") @db.Date
+  actualEndDate     DateTime? @map("actual_end_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_maternity_leaves_employee")
+  @@map("employee_maternity_leaves")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeForeignAssignment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeForeignAssignment {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                    String    @map("tenant_id") @db.Uuid
+  employeeId                  String    @map("employee_id") @db.Uuid
+  countryCode                 String    @map("country_code") @db.VarChar(2)
+  countryName                 String    @map("country_name") @db.VarChar(100)
+  startDate                   DateTime  @map("start_date") @db.Date
+  endDate                     DateTime? @map("end_date") @db.Date
+  a1CertificateNumber         String?   @map("a1_certificate_number") @db.VarChar(50)
+  a1ValidFrom                 DateTime? @map("a1_valid_from") @db.Date
+  a1ValidUntil                DateTime? @map("a1_valid_until") @db.Date
+  foreignActivityExemption    Boolean   @default(false) @map("foreign_activity_exemption")
+  notes                       String?   @db.Text
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_foreign_assignments_employee")
+  @@map("employee_foreign_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeOtherEmployment
+// -----------------------------------------------------------------------------
+// Migration: 20260416100000
+model EmployeeOtherEmployment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  employerName  String    @map("employer_name") @db.VarChar(200)
+  monthlyIncome Decimal?  @map("monthly_income") @db.Decimal(10, 2)
+  weeklyHours   Decimal?  @map("weekly_hours") @db.Decimal(5, 2)
+  isMinijob     Boolean   @default(false) @map("is_minijob")
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId], map: "idx_employee_other_employments_employee")
+  @@map("employee_other_employments")
 }

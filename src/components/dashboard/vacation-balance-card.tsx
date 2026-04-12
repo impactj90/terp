@@ -36,15 +36,15 @@ export function VacationBalanceCard({
 
   if (error) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('vacationDays')}
           </span>
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <AlertCircle className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <p className="text-sm text-destructive">{tc('failedToLoad')}</p>
+        <div className="mt-1.5 sm:mt-2">
+          <p className="text-xs text-destructive sm:text-sm">{tc('failedToLoad')}</p>
         </div>
         <Button
           variant="ghost"
@@ -62,24 +62,24 @@ export function VacationBalanceCard({
   // Handle case where no vacation balance exists
   if (!data) {
     return (
-      <div className={cn('rounded-lg border bg-card p-6', className)}>
+      <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground sm:text-sm">
             {t('vacationDays')}
           </span>
-          <Palmtree className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Palmtree className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
         </div>
-        <div className="mt-2">
-          <span className="text-2xl font-bold">--</span>
+        <div className="mt-1.5 sm:mt-2">
+          <span className="text-xl font-bold sm:text-2xl">--</span>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
           {t('noVacationData')}
         </p>
       </div>
     )
   }
 
-  const totalEntitlement = data.total_entitlement ?? 0
+  const totalEntitlement = data.total ?? data.total_entitlement ?? 0
   const remainingDays = data.available ?? 0
   const usedDays = data.taken ?? 0
   const plannedDays = 0
@@ -93,28 +93,28 @@ export function VacationBalanceCard({
     : 0
 
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground sm:text-sm">
           {t('vacationDays')}
         </span>
-        <Palmtree className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <Palmtree className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" aria-hidden="true" />
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-2xl font-bold">{remainingDays}</span>
-        <span className="text-sm text-muted-foreground">
+      <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2 sm:gap-2">
+        <span className="text-xl font-bold sm:text-2xl">{remainingDays}</span>
+        <span className="text-xs text-muted-foreground sm:text-sm">
           / {totalEntitlement}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
         {remainingDays === 1
           ? t('dayRemaining', { count: remainingDays })
           : t('daysRemaining', { count: remainingDays })}
       </p>
 
       {/* Stacked progress bar */}
-      <div className="mt-3">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="mt-2 sm:mt-3">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted sm:h-2">
           <div className="flex h-full">
             {/* Used portion (green) */}
             <div
@@ -128,7 +128,7 @@ export function VacationBalanceCard({
             />
           </div>
         </div>
-        <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground sm:text-xs">
           <span>{t('used', { count: usedDays })}</span>
           {plannedDays > 0 && (
             <span>{t('planned', { count: plannedDays })}</span>
@@ -144,21 +144,21 @@ export function VacationBalanceCard({
  */
 export function VacationBalanceCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6', className)}>
+    <div className={cn('rounded-lg border bg-card p-4 sm:p-6', className)}>
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-3.5 w-16 sm:h-4 sm:w-24" />
+        <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <Skeleton className="h-8 w-12" />
-        <Skeleton className="h-4 w-8" />
+      <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2 sm:gap-2">
+        <Skeleton className="h-6 w-8 sm:h-8 sm:w-12" />
+        <Skeleton className="h-3.5 w-6 sm:h-4 sm:w-8" />
       </div>
-      <Skeleton className="mt-2 h-3 w-24" />
-      <div className="mt-3">
-        <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="mt-1.5 h-3 w-20 sm:mt-2 sm:w-24" />
+      <div className="mt-2 sm:mt-3">
+        <Skeleton className="h-1.5 w-full rounded-full sm:h-2" />
         <div className="mt-1 flex justify-between">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-10 sm:w-12" />
+          <Skeleton className="h-3 w-12 sm:w-16" />
         </div>
       </div>
     </div>

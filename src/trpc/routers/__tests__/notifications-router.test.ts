@@ -185,8 +185,10 @@ describe("notifications.markRead", () => {
     const notification = makeNotification()
     const mockPrisma = {
       notification: {
-        findFirst: vi.fn().mockResolvedValue(notification),
-        update: vi.fn().mockResolvedValue({ ...notification, readAt: new Date() }),
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(notification)
+          .mockResolvedValueOnce({ ...notification, readAt: new Date() }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         count: vi.fn().mockResolvedValue(0),
       },
     }
@@ -197,8 +199,8 @@ describe("notifications.markRead", () => {
     expect(mockPrisma.notification.findFirst).toHaveBeenCalledWith({
       where: { id: NOTIFICATION_ID, tenantId: TENANT_ID, userId: USER_ID },
     })
-    expect(mockPrisma.notification.update).toHaveBeenCalledWith({
-      where: { id: NOTIFICATION_ID },
+    expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith({
+      where: { id: NOTIFICATION_ID, tenantId: TENANT_ID },
       data: { readAt: expect.any(Date) },
     })
   })

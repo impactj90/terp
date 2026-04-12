@@ -19,6 +19,8 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { handleServiceError } from "@/trpc/errors"
+import * as vacationCalcGroupService from "@/lib/services/vacation-calc-group-service"
 
 // --- Permission Constants ---
 
@@ -206,89 +208,18 @@ export const vacationCalcGroupsRouter = createTRPCRouter({
     .input(createVacationCalcGroupInputSchema)
     .output(vacationCalcGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      // Trim and validate code
-      const code = input.code.trim()
-      if (code.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Code is required",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const result = await vacationCalcGroupService.create(
+          ctx.prisma,
+          tenantId,
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+        return mapToOutput(result as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Trim and validate name
-      const name = input.name.trim()
-      if (name.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Name is required",
-        })
-      }
-
-      // Check code uniqueness
-      const existingByCode =
-        await ctx.prisma.vacationCalculationGroup.findFirst({
-          where: { tenantId, code },
-        })
-      if (existingByCode) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Calculation group code already exists",
-        })
-      }
-
-      // Validate special calculation IDs
-      if (input.specialCalculationIds && input.specialCalculationIds.length > 0) {
-        const found = await ctx.prisma.vacationSpecialCalculation.findMany({
-          where: { id: { in: input.specialCalculationIds } },
-          select: { id: true },
-        })
-        if (found.length !== input.specialCalculationIds.length) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "One or more special calculation IDs are invalid",
-          })
-        }
-      }
-
-      const description = input.description?.trim() || null
-
-      // Create group + junction entries in transaction
-      const group = await ctx.prisma.$transaction(async (tx) => {
-        const created = await tx.vacationCalculationGroup.create({
-          data: {
-            tenantId,
-            code,
-            name,
-            description,
-            basis: input.basis,
-            isActive: input.isActive,
-          },
-        })
-
-        if (
-          input.specialCalculationIds &&
-          input.specialCalculationIds.length > 0
-        ) {
-          await tx.vacationCalcGroupSpecialCalc.createMany({
-            data: input.specialCalculationIds.map((scId) => ({
-              groupId: created.id,
-              specialCalculationId: scId,
-            })),
-          })
-        }
-
-        return created
-      })
-
-      // Re-fetch with includes
-      const result = await ctx.prisma.vacationCalculationGroup.findFirst({
-        where: { id: group.id, tenantId },
-        include: calcGroupDetailInclude,
-      })
-
-      return mapToOutput(result as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -304,87 +235,18 @@ export const vacationCalcGroupsRouter = createTRPCRouter({
     .input(updateVacationCalcGroupInputSchema)
     .output(vacationCalcGroupOutputSchema)
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.vacationCalculationGroup.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation calculation group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        const result = await vacationCalcGroupService.update(
+          ctx.prisma,
+          tenantId,
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+        return mapToOutput(result as unknown as Record<string, unknown>)
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Build partial update data
-      const data: Record<string, unknown> = {}
-
-      if (input.name !== undefined) {
-        const name = input.name.trim()
-        if (name.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Name is required",
-          })
-        }
-        data.name = name
-      }
-
-      if (input.description !== undefined) {
-        data.description =
-          input.description === null ? null : input.description.trim()
-      }
-      if (input.basis !== undefined) data.basis = input.basis
-      if (input.isActive !== undefined) data.isActive = input.isActive
-
-      // Validate special calculation IDs if provided
-      if (
-        input.specialCalculationIds !== undefined &&
-        input.specialCalculationIds.length > 0
-      ) {
-        const found = await ctx.prisma.vacationSpecialCalculation.findMany({
-          where: { id: { in: input.specialCalculationIds } },
-          select: { id: true },
-        })
-        if (found.length !== input.specialCalculationIds.length) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "One or more special calculation IDs are invalid",
-          })
-        }
-      }
-
-      // Update group + replace junction entries in transaction
-      await ctx.prisma.$transaction(async (tx) => {
-        await tx.vacationCalculationGroup.update({
-          where: { id: input.id },
-          data,
-        })
-
-        // Replace junction entries if IDs provided
-        if (input.specialCalculationIds !== undefined) {
-          await tx.vacationCalcGroupSpecialCalc.deleteMany({
-            where: { groupId: input.id },
-          })
-          if (input.specialCalculationIds.length > 0) {
-            await tx.vacationCalcGroupSpecialCalc.createMany({
-              data: input.specialCalculationIds.map((scId) => ({
-                groupId: input.id,
-                specialCalculationId: scId,
-              })),
-            })
-          }
-        }
-      })
-
-      // Re-fetch with includes
-      const result = await ctx.prisma.vacationCalculationGroup.findFirst({
-        where: { id: input.id, tenantId },
-        include: calcGroupDetailInclude,
-      })
-
-      return mapToOutput(result as unknown as Record<string, unknown>)
     }),
 
   /**
@@ -399,35 +261,17 @@ export const vacationCalcGroupsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!
-
-      const existing =
-        await ctx.prisma.vacationCalculationGroup.findFirst({
-          where: { id: input.id, tenantId },
-        })
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Vacation calculation group not found",
-        })
+      try {
+        const tenantId = ctx.tenantId!
+        await vacationCalcGroupService.remove(
+          ctx.prisma,
+          tenantId,
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+        return { success: true }
+      } catch (err) {
+        handleServiceError(err)
       }
-
-      // Check usage in employment types
-      const usageCount = await ctx.prisma.employmentType.count({
-        where: { vacationCalcGroupId: input.id },
-      })
-      if (usageCount > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Cannot delete calculation group that is assigned to employment types",
-        })
-      }
-
-      await ctx.prisma.vacationCalculationGroup.delete({
-        where: { id: input.id },
-      })
-
-      return { success: true }
     }),
 })

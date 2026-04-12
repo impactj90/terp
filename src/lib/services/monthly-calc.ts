@@ -17,10 +17,12 @@
 
 import type {
   PrismaClient,
+  Employee,
   MonthlyValue,
   DailyValue,
   Tariff,
 } from "@/generated/prisma/client"
+import { mapWithConcurrency } from "@/lib/async"
 import { Decimal } from "@prisma/client/runtime/client"
 import { calculateMonth } from "@/lib/calculation/monthly"
 import type {
@@ -49,7 +51,7 @@ import {
 } from "./monthly-calc.types"
 
 export class MonthlyCalcService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient, private tenantId: string) {}
 
   // =========================================================================
   // Public Methods -- Orchestration (from monthlycalc.go)
@@ -121,9 +123,19 @@ export class MonthlyCalcService {
       return result
     }
 
-    for (const empId of employeeIds) {
+    // Pre-fetch all employees to avoid N individual findFirst calls
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        id: { in: employeeIds },
+        tenantId: this.tenantId,
+      },
+    })
+    const employeeMap = new Map(employees.map((e) => [e.id, e]))
+
+    await mapWithConcurrency(employeeIds, 5, async (empId) => {
       try {
-        await this.recalculateMonth(empId, year, month)
+        const employee = employeeMap.get(empId) ?? null
+        await this.recalculateMonth(empId, year, month, employee)
         result.processedMonths++
       } catch (err) {
         if (err instanceof Error && err.message === ERR_MONTH_CLOSED) {
@@ -138,7 +150,7 @@ export class MonthlyCalcService {
           })
         }
       }
-    }
+    })
 
     return result
   }
@@ -219,7 +231,7 @@ export class MonthlyCalcService {
       errors: [],
     }
 
-    for (const empId of employeeIds) {
+    await mapWithConcurrency(employeeIds, 5, async (empId) => {
       const empResult = await this.recalculateFromMonth(
         empId,
         startYear,
@@ -229,7 +241,7 @@ export class MonthlyCalcService {
       result.skippedMonths += empResult.skippedMonths
       result.failedMonths += empResult.failedMonths
       result.errors.push(...empResult.errors)
-    }
+    })
 
     return result
   }
@@ -266,21 +278,18 @@ export class MonthlyCalcService {
     employeeId: string,
     year: number,
     month: number,
+    prefetchedEmployee?: Employee | null,
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    // Get employee for tenant ID
-    const employee = await this.prisma.employee.findUnique({
-      where: { id: employeeId },
-    })
+    // Use pre-fetched employee if provided (batch path), otherwise fetch individually
+    const employee = prefetchedEmployee !== undefined
+      ? prefetchedEmployee
+      : await this.prisma.employee.findFirst({
+          where: { id: employeeId, tenantId: this.tenantId },
+        })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
-    }
-
-    // Check if month is closed
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing !== null && existing.isClosed) {
-      throw new Error(ERR_MONTH_CLOSED)
     }
 
     // Get date range for the month
@@ -290,35 +299,29 @@ export class MonthlyCalcService {
     const prevMonth = await this.getPreviousMonth(employeeId, year, month)
     const previousCarryover = prevMonth !== null ? prevMonth.flextimeEnd : 0
 
-    // Get daily values for the month
-    const dailyValues = await this.prisma.dailyValue.findMany({
-      where: {
-        employeeId,
-        valueDate: { gte: from, lte: to },
-      },
-    })
+    // Fetch daily values, absences, and tariff in parallel
+    const tariffPromise = employee.tariffId !== null
+      ? this.prisma.tariff.findFirst({ where: { id: employee.tariffId, tenantId: this.tenantId } }).catch(() => null)
+      : Promise.resolve(null)
 
-    // Get absences for the month
-    const absences = await this.prisma.absenceDay.findMany({
-      where: {
-        employeeId,
-        absenceDate: { gte: from, lte: to },
-      },
-      include: { absenceType: true },
-    })
-
-    // Fetch employee's tariff for evaluation rules
-    let tariff: Tariff | null = null
-    if (employee.tariffId !== null) {
-      try {
-        tariff = await this.prisma.tariff.findUnique({
-          where: { id: employee.tariffId },
-        })
-      } catch {
-        // Tariff might have been deleted -- continue with null
-        tariff = null
-      }
-    }
+    const [dailyValues, absences, tariff] = await Promise.all([
+      this.prisma.dailyValue.findMany({
+        where: {
+          employeeId,
+          tenantId: this.tenantId,
+          valueDate: { gte: from, lte: to },
+        },
+      }),
+      this.prisma.absenceDay.findMany({
+        where: {
+          employeeId,
+          tenantId: this.tenantId,
+          absenceDate: { gte: from, lte: to },
+        },
+        include: { absenceType: true },
+      }),
+      tariffPromise,
+    ])
 
     // Build calculation input
     const calcInput = this.buildMonthlyCalcInput(
@@ -334,27 +337,43 @@ export class MonthlyCalcService {
     // Build monthly value data
     const monthlyData = this.buildMonthlyValue(calcOutput)
 
-    // Upsert the monthly value
-    await this.prisma.monthlyValue.upsert({
+    // Atomic upsert: try to update only if not closed, then fall back to create
+    const updateResult = await this.prisma.monthlyValue.updateMany({
       where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
-      create: {
-        tenantId: employee.tenantId,
         employeeId,
         year,
         month,
-        ...monthlyData,
+        isClosed: false,
+        tenantId: this.tenantId,
       },
-      update: {
+      data: {
         ...monthlyData,
         // Does NOT update: isClosed, closedAt, closedBy, reopenedAt, reopenedBy
       },
     })
+
+    if (updateResult.count === 0) {
+      // Either record doesn't exist or it's closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing !== null && existing.isClosed) {
+        throw new Error(ERR_MONTH_CLOSED)
+      }
+      // Record doesn't exist -- create it
+      await this.prisma.monthlyValue.create({
+        data: {
+          tenantId: employee.tenantId,
+          employeeId,
+          year,
+          month,
+          ...monthlyData,
+        },
+      })
+    }
   }
 
   /**
    * Closes a month, preventing further modifications.
+   * Uses atomic updateMany with isClosed condition to avoid race conditions.
    */
   async closeMonth(
     employeeId: string,
@@ -364,28 +383,30 @@ export class MonthlyCalcService {
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing === null) {
-      throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
-    }
-    if (existing.isClosed) {
-      throw new Error(ERR_MONTH_CLOSED)
-    }
-
-    await this.prisma.monthlyValue.update({
-      where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
+    const result = await this.prisma.monthlyValue.updateMany({
+      where: { employeeId, year, month, isClosed: false, tenantId: this.tenantId },
       data: {
         isClosed: true,
         closedAt: new Date(),
         closedBy,
       },
     })
+
+    if (result.count === 0) {
+      // Either doesn't exist or already closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing === null) {
+        throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
+      }
+      if (existing.isClosed) {
+        throw new Error(ERR_MONTH_CLOSED)
+      }
+    }
   }
 
   /**
    * Reopens a closed month, allowing modifications.
+   * Uses atomic updateMany with isClosed condition to avoid race conditions.
    */
   async reopenMonth(
     employeeId: string,
@@ -395,24 +416,25 @@ export class MonthlyCalcService {
   ): Promise<void> {
     this.validateYearMonth(year, month)
 
-    const existing = await this.getByEmployeeMonth(employeeId, year, month)
-    if (existing === null) {
-      throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
-    }
-    if (!existing.isClosed) {
-      throw new Error(ERR_MONTH_NOT_CLOSED)
-    }
-
-    await this.prisma.monthlyValue.update({
-      where: {
-        employeeId_year_month: { employeeId, year, month },
-      },
+    const result = await this.prisma.monthlyValue.updateMany({
+      where: { employeeId, year, month, isClosed: true, tenantId: this.tenantId },
       data: {
         isClosed: false,
         reopenedAt: new Date(),
         reopenedBy,
       },
     })
+
+    if (result.count === 0) {
+      // Either doesn't exist or not closed -- check which
+      const existing = await this.getByEmployeeMonth(employeeId, year, month)
+      if (existing === null) {
+        throw new Error(ERR_MONTHLY_VALUE_NOT_FOUND)
+      }
+      if (!existing.isClosed) {
+        throw new Error(ERR_MONTH_NOT_CLOSED)
+      }
+    }
   }
 
   /**
@@ -427,7 +449,7 @@ export class MonthlyCalcService {
     }
 
     const values = await this.prisma.monthlyValue.findMany({
-      where: { employeeId, year },
+      where: { employeeId, year, tenantId: this.tenantId },
       orderBy: { month: "asc" },
     })
 
@@ -448,6 +470,7 @@ export class MonthlyCalcService {
     return this.prisma.dailyValue.findMany({
       where: {
         employeeId,
+        tenantId: this.tenantId,
         valueDate: { gte: from, lte: to },
       },
     })
@@ -522,46 +545,39 @@ export class MonthlyCalcService {
     year: number,
     month: number,
   ): Promise<MonthSummary> {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id: employeeId },
+    const { from, to } = this.monthDateRange(year, month)
+
+    // Load employee first (needed for tariffId), then parallelize the rest
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, tenantId: this.tenantId },
     })
     if (employee === null) {
       throw new Error(ERR_EMPLOYEE_NOT_FOUND)
     }
 
-    const { from, to } = this.monthDateRange(year, month)
-
-    // Get previous month carryover
-    const prevMonth = await this.getPreviousMonth(employeeId, year, month)
+    // All remaining queries are independent — run in parallel
+    const [prevMonth, dailyValues, absences, tariff] = await Promise.all([
+      this.getPreviousMonth(employeeId, year, month),
+      this.prisma.dailyValue.findMany({
+        where: {
+          employeeId,
+          tenantId: this.tenantId,
+          valueDate: { gte: from, lte: to },
+        },
+      }),
+      this.prisma.absenceDay.findMany({
+        where: {
+          employeeId,
+          tenantId: this.tenantId,
+          absenceDate: { gte: from, lte: to },
+        },
+        include: { absenceType: true },
+      }),
+      employee.tariffId !== null
+        ? this.prisma.tariff.findFirst({ where: { id: employee.tariffId, tenantId: this.tenantId } }).catch(() => null)
+        : Promise.resolve(null),
+    ])
     const previousCarryover = prevMonth !== null ? prevMonth.flextimeEnd : 0
-
-    // Get daily values and absences
-    const dailyValues = await this.prisma.dailyValue.findMany({
-      where: {
-        employeeId,
-        valueDate: { gte: from, lte: to },
-      },
-    })
-
-    const absences = await this.prisma.absenceDay.findMany({
-      where: {
-        employeeId,
-        absenceDate: { gte: from, lte: to },
-      },
-      include: { absenceType: true },
-    })
-
-    // Load tariff (optional)
-    let tariff: Tariff | null = null
-    if (employee.tariffId !== null) {
-      try {
-        tariff = await this.prisma.tariff.findUnique({
-          where: { id: employee.tariffId },
-        })
-      } catch {
-        tariff = null
-      }
-    }
 
     // Build and run calculation
     const calcInput = this.buildMonthlyCalcInput(

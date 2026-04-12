@@ -118,108 +118,160 @@ export function YearOverviewTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{t('month')}</TableHead>
-          <TableHead className="text-right">{t('workDays')}</TableHead>
-          <TableHead className="text-right">{t('target')}</TableHead>
-          <TableHead className="text-right">{t('worked')}</TableHead>
-          <TableHead className="text-right">{t('balance')}</TableHead>
-          <TableHead className="text-right">{t('status')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      {/* Mobile: month cards in 2-col grid */}
+      <div className="grid grid-cols-2 gap-2 sm:hidden">
         {monthNames.map((monthName, index) => {
           const month = index + 1
           const data = monthDataMap.get(month)
           const hasData = !!data
 
           return (
-            <TableRow
+            <div
               key={month}
               className={cn(
-                'cursor-pointer hover:bg-muted/50 transition-colors',
-                !hasData && 'text-muted-foreground'
+                'rounded-lg border p-3 transition-colors active:bg-muted/50 cursor-pointer',
+                !hasData && 'opacity-50',
               )}
+              role="button"
+              tabIndex={0}
               onClick={() => handleRowClick(month)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleRowClick(month)
+                }
+              }}
             >
-              <TableCell className="font-medium">{monthName}</TableCell>
-              <TableCell className="text-right">
-                {hasData ? (
-                  <span>
-                    {data.worked_days ?? 0}{' '}
-                    <span className="text-muted-foreground">
-                      / {data.working_days ?? 0}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {hasData ? (
-                  <TimeDisplay
-                    value={data.target_minutes ?? 0}
-                    format="duration"
-                  />
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {hasData ? (
-                  <TimeDisplay
-                    value={data.net_minutes ?? 0}
-                    format="duration"
-                  />
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {hasData ? (
-                  <TimeDisplay
-                    value={data.balance_minutes ?? 0}
-                    format="balance"
-                  />
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {hasData ? (
-                  getStatusBadge(data.status, t as unknown as (key: string) => string)
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    {t('noData')}
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">{monthName}</span>
+                {hasData && getStatusBadge(data.status, t as unknown as (key: string) => string)}
+              </div>
+              {hasData ? (
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>{t('worked')}</span>
+                    <TimeDisplay value={data.net_minutes ?? 0} format="duration" className="text-xs font-medium text-foreground" />
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('balance')}</span>
+                    <TimeDisplay value={data.balance_minutes ?? 0} format="balance" className="text-xs font-medium" />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t('noData')}</p>
+              )}
+            </div>
           )
         })}
-      </TableBody>
-      <TableFooter>
-        <TableRow className="font-medium">
-          <TableCell>{t('total')}</TableCell>
-          <TableCell className="text-right">
-            {totals.workedDays}{' '}
-            <span className="text-muted-foreground">/ {totals.workingDays}</span>
-          </TableCell>
-          <TableCell className="text-right">
-            <TimeDisplay value={totals.targetMinutes} format="duration" />
-          </TableCell>
-          <TableCell className="text-right">
-            <TimeDisplay value={totals.netMinutes} format="duration" />
-          </TableCell>
-          <TableCell className="text-right">
-            <TimeDisplay value={totals.balanceMinutes} format="balance" />
-          </TableCell>
-          <TableCell className="text-right" />
-        </TableRow>
-      </TableFooter>
-    </Table>
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('month')}</TableHead>
+              <TableHead className="text-right">{t('workDays')}</TableHead>
+              <TableHead className="text-right">{t('target')}</TableHead>
+              <TableHead className="text-right">{t('worked')}</TableHead>
+              <TableHead className="text-right">{t('balance')}</TableHead>
+              <TableHead className="text-right">{t('status')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {monthNames.map((monthName, index) => {
+              const month = index + 1
+              const data = monthDataMap.get(month)
+              const hasData = !!data
+
+              return (
+                <TableRow
+                  key={month}
+                  className={cn(
+                    'cursor-pointer hover:bg-muted/50 transition-colors',
+                    !hasData && 'text-muted-foreground'
+                  )}
+                  onClick={() => handleRowClick(month)}
+                >
+                  <TableCell className="font-medium">{monthName}</TableCell>
+                  <TableCell className="text-right">
+                    {hasData ? (
+                      <span>
+                        {data.worked_days ?? 0}{' '}
+                        <span className="text-muted-foreground">
+                          / {data.working_days ?? 0}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {hasData ? (
+                      <TimeDisplay
+                        value={data.target_minutes ?? 0}
+                        format="duration"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {hasData ? (
+                      <TimeDisplay
+                        value={data.net_minutes ?? 0}
+                        format="duration"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {hasData ? (
+                      <TimeDisplay
+                        value={data.balance_minutes ?? 0}
+                        format="balance"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {hasData ? (
+                      getStatusBadge(data.status, t as unknown as (key: string) => string)
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        {t('noData')}
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+          <TableFooter>
+            <TableRow className="font-medium">
+              <TableCell>{t('total')}</TableCell>
+              <TableCell className="text-right">
+                {totals.workedDays}{' '}
+                <span className="text-muted-foreground">/ {totals.workingDays}</span>
+              </TableCell>
+              <TableCell className="text-right">
+                <TimeDisplay value={totals.targetMinutes} format="duration" />
+              </TableCell>
+              <TableCell className="text-right">
+                <TimeDisplay value={totals.netMinutes} format="duration" />
+              </TableCell>
+              <TableCell className="text-right">
+                <TimeDisplay value={totals.balanceMinutes} format="balance" />
+              </TableCell>
+              <TableCell className="text-right" />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+    </>
   )
 }
 

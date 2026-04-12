@@ -22,7 +22,7 @@ export interface FlattenedCorrectionRow {
   valueDate: string
   code: string
   severity: 'error' | 'hint'
-  message: string
+  customText: string | null
   errorType: string
 }
 
@@ -81,7 +81,7 @@ export function CorrectionAssistantDataTable({
                 {t(`severity.${item.severity}` as 'severity.error' | 'severity.hint')}
               </Badge>
             </TableCell>
-            <TableCell className="max-w-md truncate">{item.message}</TableCell>
+            <TableCell className="max-w-md truncate">{item.customText || t(`errorCodes.${item.code}` as Parameters<typeof t>[0])}</TableCell>
           </TableRow>
         ))}
       </TableBody>

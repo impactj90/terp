@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useTimeDataInvalidation } from "./use-time-data-invalidation"
 
 interface UseCorrectionsOptions {
   employeeId?: string
@@ -59,6 +60,7 @@ export function useCorrection(id: string, enabled = true) {
 export function useCreateCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.create.mutationOptions(),
     onSuccess: () => {
@@ -71,6 +73,7 @@ export function useCreateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -81,6 +84,7 @@ export function useCreateCorrection() {
 export function useUpdateCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.update.mutationOptions(),
     onSuccess: () => {
@@ -93,6 +97,7 @@ export function useUpdateCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -103,6 +108,7 @@ export function useUpdateCorrection() {
 export function useDeleteCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.delete.mutationOptions(),
     onSuccess: () => {
@@ -115,6 +121,7 @@ export function useDeleteCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      invalidateTimeData()
     },
   })
 }
@@ -126,6 +133,7 @@ export function useDeleteCorrection() {
 export function useApproveCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.approve.mutationOptions(),
     onSuccess: () => {
@@ -138,10 +146,8 @@ export function useApproveCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
-      // Approve triggers recalc which changes daily values
-      queryClient.invalidateQueries({
-        queryKey: trpc.dailyValues.list.queryKey(),
-      })
+      // Approve triggers recalc — invalidate dayView, dailyValues, monthlyValues
+      invalidateTimeData()
     },
   })
 }
@@ -152,6 +158,7 @@ export function useApproveCorrection() {
 export function useRejectCorrection() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const invalidateTimeData = useTimeDataInvalidation()
   return useMutation({
     ...trpc.corrections.reject.mutationOptions(),
     onSuccess: () => {
@@ -164,6 +171,8 @@ export function useRejectCorrection() {
       queryClient.invalidateQueries({
         queryKey: trpc.correctionAssistant.listItems.queryKey(),
       })
+      // Reject may trigger recalc — invalidate dayView, dailyValues, monthlyValues
+      invalidateTimeData()
     },
   })
 }

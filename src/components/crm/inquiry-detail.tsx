@@ -1,0 +1,441 @@
+'use client'
+
+import * as React from 'react'
+import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Edit, X, RotateCcw, Link2, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import {
+  useCrmInquiryById,
+  useCancelCrmInquiry,
+  useReopenCrmInquiry,
+  useDeleteCrmInquiry,
+  useBillingDocuments,
+} from '@/hooks'
+import { DocumentTypeBadge } from '@/components/billing/document-type-badge'
+import { DocumentStatusBadge } from '@/components/billing/document-status-badge'
+import { InquiryStatusBadge } from './inquiry-status-badge'
+import { InquiryFormSheet } from './inquiry-form-sheet'
+import { InquiryCloseDialog } from './inquiry-close-dialog'
+import { InquiryLinkOrderDialog } from './inquiry-link-order-dialog'
+import { CorrespondenceList } from './correspondence-list'
+import { TaskList } from './task-list'
+
+interface InquiryDetailProps {
+  id: string
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between py-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-right">{value || '\u2014'}</span>
+    </div>
+  )
+}
+
+export function InquiryDetail({ id }: InquiryDetailProps) {
+  const t = useTranslations('crmInquiries')
+  const router = useRouter()
+
+  const { data: inquiry, isLoading } = useCrmInquiryById(id)
+
+  // Dialog state
+  const [editOpen, setEditOpen] = React.useState(false)
+  const [closeDialogOpen, setCloseDialogOpen] = React.useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false)
+  const [reopenDialogOpen, setReopenDialogOpen] = React.useState(false)
+  const [linkOrderOpen, setLinkOrderOpen] = React.useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+
+  const cancelMutation = useCancelCrmInquiry()
+  const reopenMutation = useReopenCrmInquiry()
+  const deleteMutation = useDeleteCrmInquiry()
+
+  const handleCancel = async () => {
+    try {
+      await cancelMutation.mutateAsync({ id, reason: undefined })
+      setCancelDialogOpen(false)
+      toast.success(t('statusCancelled'))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error')
+    }
+  }
+
+  const handleReopen = async () => {
+    try {
+      await reopenMutation.mutateAsync({ id })
+      setReopenDialogOpen(false)
+      toast.success(t('reopen'))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error')
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync({ id })
+      setDeleteDialogOpen(false)
+      toast.success(t('deleteTitle'))
+      router.push('/crm/inquiries')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    )
+  }
+
+  if (!inquiry) {
+    return <p className="text-muted-foreground">{t('noEntries')}</p>
+  }
+
+  const isClosed = inquiry.status === 'CLOSED'
+  const isCancelled = inquiry.status === 'CANCELLED'
+  const isTerminal = isClosed || isCancelled
+
+  const formatDate = (dateStr: string | Date | null) => {
+    if (!dateStr) return '\u2014'
+    const d = new Date(dateStr as string)
+    return d.toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const effortLabels: Record<string, string> = {
+    low: t('effortLow'),
+    medium: t('effortMedium'),
+    high: t('effortHigh'),
+  }
+
+  const address = inquiry.address as { id: string; company: string; tenantId: string } | null
+  const contact = inquiry.contact as { id: string; firstName: string; lastName: string } | null
+  const order = inquiry.order as { id: string; code: string; name: string } | null
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/crm/inquiries')}
+            className="mb-2"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t('title')}
+          </Button>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{inquiry.title}</h1>
+            <Badge variant="outline" className="font-mono">{inquiry.number}</Badge>
+            <InquiryStatusBadge status={inquiry.status} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {!isClosed && (
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Edit className="mr-2 h-4 w-4" />
+              {t('edit')}
+            </Button>
+          )}
+          {!isTerminal && (
+            <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
+              {t('close')}
+            </Button>
+          )}
+          {!isTerminal && (
+            <Button variant="outline" size="sm" onClick={() => setCancelDialogOpen(true)}>
+              <X className="mr-2 h-4 w-4" />
+              {t('cancel')}
+            </Button>
+          )}
+          {isTerminal && (
+            <Button variant="outline" size="sm" onClick={() => setReopenDialogOpen(true)}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('reopen')}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t('delete')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Immutable notice */}
+      {isClosed && (
+        <Alert>
+          <AlertDescription>{t('immutableNotice')}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Tabs */}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
+          <TabsTrigger value="correspondence">{t('correspondence')}</TabsTrigger>
+          <TabsTrigger value="tasks">Aufgaben</TabsTrigger>
+          <TabsTrigger value="documents">Belege</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t('basicData')}</CardTitle>
+              </CardHeader>
+              <CardContent className="divide-y">
+                <DetailRow label={t('number')} value={inquiry.number} />
+                <DetailRow label={t('inquiryTitle')} value={inquiry.title} />
+                <DetailRow
+                  label={t('address')}
+                  value={address ? (
+                    <a
+                      href={`/crm/addresses/${address.id}`}
+                      className="text-primary underline"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        router.push(`/crm/addresses/${address.id}`)
+                      }}
+                    >
+                      {address.company}
+                    </a>
+                  ) : null}
+                />
+                <DetailRow
+                  label={t('contact')}
+                  value={contact ? `${contact.firstName} ${contact.lastName}` : null}
+                />
+                <DetailRow
+                  label={t('effort')}
+                  value={inquiry.effort ? (effortLabels[inquiry.effort] || inquiry.effort) : null}
+                />
+                <DetailRow label={t('creditRating')} value={inquiry.creditRating} />
+                <DetailRow label={t('createdAt')} value={formatDate(inquiry.createdAt)} />
+              </CardContent>
+            </Card>
+
+            {/* Status & Order Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t('additionalInfo')}</CardTitle>
+              </CardHeader>
+              <CardContent className="divide-y">
+                <DetailRow label={t('status')} value={<InquiryStatusBadge status={inquiry.status} />} />
+
+                {/* Linked Order */}
+                <div className="flex items-start justify-between py-2">
+                  <span className="text-sm text-muted-foreground">{t('linkedOrder')}</span>
+                  <div className="text-sm font-medium text-right">
+                    {order ? (
+                      <span>{order.code} — {order.name}</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{t('noOrder')}</span>
+                        {!isTerminal && (
+                          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setLinkOrderOpen(true)}>
+                            <Link2 className="mr-1 h-3 w-3" />
+                            {t('linkOrder')}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Closing Info */}
+                {inquiry.closedAt && (
+                  <>
+                    <DetailRow label={t('closedAt')} value={formatDate(inquiry.closedAt)} />
+                    <DetailRow label={t('closingReason')} value={inquiry.closingReason} />
+                    <DetailRow label={t('closingRemarks')} value={inquiry.closingRemarks} />
+                  </>
+                )}
+
+                {/* Notes */}
+                {inquiry.notes && (
+                  <div className="py-2">
+                    <span className="text-sm text-muted-foreground">{t('notes')}</span>
+                    <p className="text-sm mt-1 whitespace-pre-wrap">{inquiry.notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Correspondence Tab */}
+        <TabsContent value="correspondence" className="mt-6">
+          {address && (
+            <CorrespondenceList addressId={address.id} tenantId={address.tenantId} />
+          )}
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="mt-6">
+          <TaskList inquiryId={id} />
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-6">
+          <InquiryDocumentsList inquiryId={id} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialogs */}
+      <InquiryFormSheet
+        open={editOpen}
+        onOpenChange={(open) => {
+          if (!open) setEditOpen(false)
+        }}
+        addressId={inquiry.addressId}
+        editItem={inquiry as unknown as Record<string, unknown>}
+      />
+
+      <InquiryCloseDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        inquiryId={id}
+        inquiryTitle={inquiry.title}
+        hasLinkedOrder={!!inquiry.orderId}
+      />
+
+      <InquiryLinkOrderDialog
+        open={linkOrderOpen}
+        onOpenChange={setLinkOrderOpen}
+        inquiryId={id}
+        inquiryTitle={inquiry.title}
+      />
+
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title={t('cancelTitle')}
+        description={t('cancelDescription', { title: inquiry.title })}
+        confirmLabel={t('confirm')}
+        onConfirm={handleCancel}
+        variant="destructive"
+      />
+
+      <ConfirmDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        title={t('reopenTitle')}
+        description={t('reopenDescription', { title: inquiry.title })}
+        confirmLabel={t('confirm')}
+        onConfirm={handleReopen}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={t('deleteTitle')}
+        description={t('deleteDescription', { title: inquiry.title })}
+        confirmLabel={t('confirm')}
+        onConfirm={handleDelete}
+        variant="destructive"
+      />
+    </div>
+  )
+}
+
+// --- Inline sub-component for the Belege tab ---
+
+function InquiryDocumentsList({ inquiryId }: { inquiryId: string }) {
+  const router = useRouter()
+  const { data, isLoading } = useBillingDocuments({ inquiryId, pageSize: 100 })
+
+  if (isLoading) {
+    return <Skeleton className="h-24 w-full" />
+  }
+
+  const items = data?.items ?? []
+
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          Keine Belege mit diesem Vorgang verknüpft.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
+
+  const formatDocDate = (date: string | Date) =>
+    new Intl.DateTimeFormat('de-DE').format(new Date(date))
+
+  // Sum only PRINTED/FORWARDED/PARTIALLY_FORWARDED (no DRAFTs, no CANCELLED)
+  const countableStatuses = new Set(['PRINTED', 'PARTIALLY_FORWARDED', 'FORWARDED'])
+  const totalGross = items
+    .filter((doc) => countableStatuses.has(doc.status))
+    .reduce((sum, doc) => sum + doc.totalGross, 0)
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="px-4 py-2 font-medium">Nummer</th>
+              <th className="px-4 py-2 font-medium">Typ</th>
+              <th className="px-4 py-2 font-medium">Datum</th>
+              <th className="px-4 py-2 font-medium text-right">Betrag</th>
+              <th className="px-4 py-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((doc) => (
+              <tr
+                key={doc.id}
+                className="border-b cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/orders/documents/${doc.id}`)}
+              >
+                <td className="px-4 py-2 font-mono">{doc.number}</td>
+                <td className="px-4 py-2">
+                  <DocumentTypeBadge type={doc.type} />
+                </td>
+                <td className="px-4 py-2">{formatDocDate(doc.documentDate)}</td>
+                <td className="px-4 py-2 text-right">{formatCurrency(doc.totalGross)}</td>
+                <td className="px-4 py-2">
+                  <DocumentStatusBadge status={doc.status} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          {totalGross > 0 && (
+            <tfoot>
+              <tr className="border-t font-semibold">
+                <td className="px-4 py-2" colSpan={3}>Gesamt (abgeschlossen)</td>
+                <td className="px-4 py-2 text-right">{formatCurrency(totalGross)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </CardContent>
+    </Card>
+  )
+}

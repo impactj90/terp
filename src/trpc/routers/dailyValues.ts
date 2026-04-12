@@ -14,6 +14,7 @@
  * @see apps/api/internal/repository/dailyvalue.go
  */
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import {
   requirePermission,
@@ -21,6 +22,7 @@ import {
   applyDataScope,
   type DataScope,
 } from "@/lib/auth/middleware"
+import { hasPermission } from "@/lib/auth/permissions"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as dailyValueService from "@/lib/services/daily-value-service"
@@ -205,10 +207,14 @@ export const dailyValuesRouter = createTRPCRouter({
    * Used by: admin approvals page.
    * Replaces: GET /daily-values
    *
-   * Requires: time_tracking.view_all permission
+   * Requires: time_tracking.view_all, or time_tracking.view_own with employeeId filter (team-scoped)
    */
   listAll: tenantProcedure
-    .use(requirePermission(TIME_TRACKING_VIEW_ALL))
+    .use(requireEmployeePermission(
+      (input) => (input as { employeeId?: string })?.employeeId ?? '',
+      TIME_TRACKING_VIEW_OWN,
+      TIME_TRACKING_VIEW_ALL,
+    ))
     .use(applyDataScope())
     .input(listAllInputSchema)
     .output(
@@ -265,6 +271,14 @@ export const dailyValuesRouter = createTRPCRouter({
           dataScope,
           input.id
         )
+
+        // If user only has VIEW_OWN, verify the daily value belongs to their employee
+        if (!hasPermission(ctx.user!, TIME_TRACKING_VIEW_ALL)) {
+          if ((dv as unknown as { employeeId: string }).employeeId !== ctx.user!.employeeId) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Daily value not found" })
+          }
+        }
+
         return mapDailyValueToOutput(dv as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
@@ -283,6 +297,7 @@ export const dailyValuesRouter = createTRPCRouter({
    */
   recalculate: tenantProcedure
     .use(requirePermission(permissionIdByKey("booking_overview.calculate_day")!))
+    .use(applyDataScope())
     .input(
       z.object({
         from: z.string().date(), // YYYY-MM-DD
@@ -298,6 +313,25 @@ export const dailyValuesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        // Validate employeeId against data scope when provided
+        if (input.employeeId) {
+          if (dataScope.type === "employee") {
+            if (!dataScope.employeeIds.includes(input.employeeId)) {
+              throw new TRPCError({ code: "FORBIDDEN", message: "Employee not within data scope" })
+            }
+          } else if (dataScope.type === "department") {
+            const employee = await ctx.prisma.employee.findFirst({
+              where: { id: input.employeeId, tenantId: ctx.tenantId! },
+              select: { departmentId: true },
+            })
+            if (!employee || !employee.departmentId || !dataScope.departmentIds.includes(employee.departmentId)) {
+              throw new TRPCError({ code: "FORBIDDEN", message: "Employee not within data scope" })
+            }
+          }
+        }
+
         return await dailyValueService.recalculate(
           ctx.prisma,
           ctx.tenantId!,
@@ -335,7 +369,8 @@ export const dailyValuesRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           dataScope,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
 
         return mapDailyValueToOutput(

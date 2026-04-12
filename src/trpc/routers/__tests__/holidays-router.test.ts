@@ -226,8 +226,11 @@ describe("holidays.update", () => {
     const updated = makeHoliday({ name: "Updated" })
     const mockPrisma = {
       holiday: {
-        findFirst: vi.fn().mockResolvedValue(existing),
-        update: vi.fn().mockResolvedValue(updated),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(updated),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -298,24 +301,25 @@ describe("holidays.generate", () => {
   }
 
   it("generates holidays for BY 2026", async () => {
-    let createCallCount = 0
+    // Generate service: findMany (existing) -> createMany -> findMany (created)
+    const generatedHolidays = Array.from({ length: 13 }, (_, i) => ({
+      id: makeGeneratedId(i + 1),
+      tenantId: TENANT_ID,
+      holidayDate: new Date(Date.UTC(2026, i % 12, 1)),
+      name: `Holiday ${i + 1}`,
+      holidayCategory: 1,
+      appliesToAll: true,
+      departmentId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }))
     const mockPrisma = {
       holiday: {
-        findMany: vi.fn().mockResolvedValue([]), // no existing
-        create: vi.fn().mockImplementation((args) => {
-          createCallCount++
-          return {
-            id: makeGeneratedId(createCallCount),
-            tenantId: TENANT_ID,
-            holidayDate: args.data.holidayDate,
-            name: args.data.name,
-            holidayCategory: args.data.holidayCategory,
-            appliesToAll: args.data.appliesToAll,
-            departmentId: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        }),
+        findMany: vi
+          .fn()
+          .mockResolvedValueOnce([]) // no existing
+          .mockResolvedValueOnce(generatedHolidays), // created records
+        createMany: vi.fn().mockResolvedValue({ count: 13 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -333,24 +337,25 @@ describe("holidays.generate", () => {
     const existingHoliday = makeHoliday({
       holidayDate: new Date(Date.UTC(2026, 0, 1)),
     })
-    let createCallCount = 0
+    // Generate service: findMany (existing) -> createMany -> findMany (created)
+    const generatedHolidays = Array.from({ length: 12 }, (_, i) => ({
+      id: makeGeneratedId(i + 1),
+      tenantId: TENANT_ID,
+      holidayDate: new Date(Date.UTC(2026, i + 1, 1)),
+      name: `Holiday ${i + 1}`,
+      holidayCategory: 1,
+      appliesToAll: true,
+      departmentId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }))
     const mockPrisma = {
       holiday: {
-        findMany: vi.fn().mockResolvedValue([existingHoliday]),
-        create: vi.fn().mockImplementation((args) => {
-          createCallCount++
-          return {
-            id: makeGeneratedId(createCallCount),
-            tenantId: TENANT_ID,
-            holidayDate: args.data.holidayDate,
-            name: args.data.name,
-            holidayCategory: args.data.holidayCategory,
-            appliesToAll: args.data.appliesToAll,
-            departmentId: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        }),
+        findMany: vi
+          .fn()
+          .mockResolvedValueOnce([existingHoliday]) // existing holidays
+          .mockResolvedValueOnce(generatedHolidays), // created records (12, Jan 1 skipped)
+        createMany: vi.fn().mockResolvedValue({ count: 12 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -398,27 +403,26 @@ describe("holidays.copy", () => {
         name: "1. Weihnachtstag",
       }),
     ]
-    let createCallCount = 0
+    const copiedHolidays = [
+      makeHoliday({
+        id: makeCopyId(1),
+        holidayDate: new Date(Date.UTC(2027, 0, 1)),
+        name: "Neujahr",
+      }),
+      makeHoliday({
+        id: makeCopyId(2),
+        holidayDate: new Date(Date.UTC(2027, 11, 25)),
+        name: "1. Weihnachtstag",
+      }),
+    ]
     const mockPrisma = {
       holiday: {
         findMany: vi
           .fn()
           .mockResolvedValueOnce(sourceHolidays) // source year
-          .mockResolvedValueOnce([]), // target year (empty)
-        create: vi.fn().mockImplementation((args) => {
-          createCallCount++
-          return {
-            id: makeCopyId(createCallCount),
-            tenantId: TENANT_ID,
-            holidayDate: args.data.holidayDate,
-            name: args.data.name,
-            holidayCategory: args.data.holidayCategory,
-            appliesToAll: args.data.appliesToAll,
-            departmentId: args.data.departmentId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        }),
+          .mockResolvedValueOnce([]) // target year (empty)
+          .mockResolvedValueOnce(copiedHolidays), // created records
+        createMany: vi.fn().mockResolvedValue({ count: 2 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -441,27 +445,22 @@ describe("holidays.copy", () => {
         holidayCategory: 1,
       }),
     ]
-    let createCallCount = 0
+    const copiedHolidays = [
+      makeHoliday({
+        id: makeCopyId(1),
+        holidayDate: new Date(Date.UTC(2027, 0, 1)),
+        name: "Neujahr",
+        holidayCategory: 3,
+      }),
+    ]
     const mockPrisma = {
       holiday: {
         findMany: vi
           .fn()
           .mockResolvedValueOnce(sourceHolidays)
-          .mockResolvedValueOnce([]),
-        create: vi.fn().mockImplementation((args) => {
-          createCallCount++
-          return {
-            id: makeCopyId(createCallCount),
-            tenantId: TENANT_ID,
-            holidayDate: args.data.holidayDate,
-            name: args.data.name,
-            holidayCategory: args.data.holidayCategory,
-            appliesToAll: args.data.appliesToAll,
-            departmentId: args.data.departmentId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        }),
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce(copiedHolidays),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -487,7 +486,7 @@ describe("holidays.copy", () => {
           .fn()
           .mockResolvedValueOnce(sourceHolidays)
           .mockResolvedValueOnce([]),
-        create: vi.fn(),
+        createMany: vi.fn(),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -496,7 +495,7 @@ describe("holidays.copy", () => {
       targetYear: 2025, // Not a leap year
     })
     expect(result.copied).toHaveLength(0)
-    expect(mockPrisma.holiday.create).not.toHaveBeenCalled()
+    expect(mockPrisma.holiday.createMany).not.toHaveBeenCalled()
   })
 
   it("skips existing when skipExisting is true", async () => {
@@ -518,7 +517,7 @@ describe("holidays.copy", () => {
           .fn()
           .mockResolvedValueOnce(sourceHolidays)
           .mockResolvedValueOnce(targetExisting),
-        create: vi.fn(),
+        createMany: vi.fn(),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))
@@ -528,7 +527,7 @@ describe("holidays.copy", () => {
       skipExisting: true,
     })
     expect(result.copied).toHaveLength(0)
-    expect(mockPrisma.holiday.create).not.toHaveBeenCalled()
+    expect(mockPrisma.holiday.createMany).not.toHaveBeenCalled()
   })
 
   it("rejects same year with BAD_REQUEST", async () => {
@@ -563,27 +562,22 @@ describe("holidays.copy", () => {
         departmentId: DEPT_ID,
       }),
     ]
-    let createCallCount = 0
+    const copiedHolidays = [
+      makeHoliday({
+        id: makeCopyId(1),
+        holidayDate: new Date(Date.UTC(2027, 0, 1)),
+        name: "Neujahr",
+        departmentId: DEPT_ID,
+      }),
+    ]
     const mockPrisma = {
       holiday: {
         findMany: vi
           .fn()
           .mockResolvedValueOnce(sourceHolidays)
-          .mockResolvedValueOnce([]),
-        create: vi.fn().mockImplementation((args) => {
-          createCallCount++
-          return {
-            id: makeCopyId(createCallCount),
-            tenantId: TENANT_ID,
-            holidayDate: args.data.holidayDate,
-            name: args.data.name,
-            holidayCategory: args.data.holidayCategory,
-            appliesToAll: args.data.appliesToAll,
-            departmentId: args.data.departmentId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        }),
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce(copiedHolidays),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const caller = createCaller(createTestContext(mockPrisma))

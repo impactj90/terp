@@ -126,7 +126,7 @@ export default function CorrectionAssistantPage() {
           valueDate: item.valueDate,
           code: err.code,
           severity: err.severity as 'error' | 'hint',
-          message: err.message,
+          customText: err.customText,
           errorType: err.errorType,
         })
       }

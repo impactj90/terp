@@ -221,6 +221,7 @@ export function formatElapsedTime(ms: number): string {
  * @example parseISODate("2026-01-25T00:00:00Z") => Date(2026, 0, 25)
  */
 export function parseISODate(dateString: string): Date {
+  if (!dateString) return new Date(1970, 0, 1)
   // Extract just the date part (before any 'T')
   const datePart = dateString.split('T')[0] ?? dateString
   const parts = datePart.split('-').map(Number)

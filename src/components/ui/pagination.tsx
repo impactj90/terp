@@ -77,8 +77,8 @@ export function Pagination({
         className
       )}
     >
-      {/* Results count */}
-      <p className="text-sm text-muted-foreground">
+      {/* Results count — full on sm+, compact on mobile */}
+      <p className="hidden text-sm text-muted-foreground sm:block">
         {total === 0 ? (
           'No results'
         ) : (
@@ -89,10 +89,23 @@ export function Pagination({
           </>
         )}
       </p>
+      <p className="text-sm text-muted-foreground sm:hidden">
+        {total === 0 ? (
+          '–'
+        ) : (
+          <>
+            <span className="font-medium">{startItem}</span>
+            –
+            <span className="font-medium">{endItem}</span>
+            {' / '}
+            <span className="font-medium">{total}</span>
+          </>
+        )}
+      </p>
 
       <div className="flex items-center gap-4">
-        {/* Page size selector */}
-        <div className="flex items-center gap-2">
+        {/* Page size selector — hidden on mobile */}
+        <div className="hidden items-center gap-2 sm:flex">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
             Rows per page
           </span>
@@ -116,10 +129,11 @@ export function Pagination({
 
         {/* Page navigation */}
         <div className="flex items-center gap-1">
-          {/* First page */}
+          {/* First page — hidden on mobile */}
           <Button
             variant="outline"
             size="icon-sm"
+            className="hidden sm:inline-flex"
             onClick={() => onPageChange(1)}
             disabled={disabled || !canGoPrevious}
           >
@@ -138,9 +152,12 @@ export function Pagination({
             <span className="sr-only">Previous page</span>
           </Button>
 
-          {/* Page indicator */}
-          <span className="px-3 text-sm text-muted-foreground whitespace-nowrap">
+          {/* Page indicator — compact on mobile */}
+          <span className="hidden px-3 text-sm text-muted-foreground whitespace-nowrap sm:inline">
             Page {page} of {totalPages || 1}
+          </span>
+          <span className="px-2 text-sm text-muted-foreground whitespace-nowrap sm:hidden">
+            {page}/{totalPages || 1}
           </span>
 
           {/* Next page */}
@@ -154,10 +171,11 @@ export function Pagination({
             <span className="sr-only">Next page</span>
           </Button>
 
-          {/* Last page */}
+          {/* Last page — hidden on mobile */}
           <Button
             variant="outline"
             size="icon-sm"
+            className="hidden sm:inline-flex"
             onClick={() => onPageChange(totalPages)}
             disabled={disabled || !canGoNext}
           >

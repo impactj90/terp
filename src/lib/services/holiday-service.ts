@@ -10,6 +10,16 @@ import {
   parseState,
 } from "./holiday-calendar"
 import * as repo from "./holiday-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "name",
+  "date",
+  "isHalfDay",
+]
 
 // --- Error Classes ---
 
@@ -105,7 +115,8 @@ export async function create(
     holidayCategory: number
     appliesToAll?: boolean
     departmentId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Parse and validate date
   const holidayDate = new Date(input.holidayDate)
@@ -130,7 +141,7 @@ export async function create(
     throw new HolidayConflictError("Holiday already exists on this date")
   }
 
-  return repo.create(prisma, {
+  const created = await repo.create(prisma, {
     tenantId,
     holidayDate: normalizedDate,
     name,
@@ -138,6 +149,22 @@ export async function create(
     appliesToAll: input.appliesToAll ?? true,
     departmentId: input.departmentId ?? null,
   })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "create",
+      entityType: "holiday",
+      entityId: created.id,
+      entityName: created.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return created
 }
 
 export async function update(
@@ -150,7 +177,8 @@ export async function update(
     holidayCategory?: number
     appliesToAll?: boolean
     departmentId?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify holiday exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -193,13 +221,35 @@ export async function update(
     data.departmentId = input.departmentId
   }
 
-  return repo.update(prisma, input.id, data)
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "holiday",
+      entityId: input.id,
+      entityName: updated.name ?? null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
 }
 
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify holiday exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -207,7 +257,21 @@ export async function remove(
     throw new HolidayNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "holiday",
+      entityId: id,
+      entityName: existing.name ?? null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 }
 
 export async function generate(
@@ -234,23 +298,33 @@ export async function generate(
   const existing = await repo.findByYearRange(prisma, tenantId, input.year)
   const existingByDate = new Set(existing.map((h) => dateKey(h.holidayDate)))
 
-  // Create holidays
-  const created = []
-  for (const def of definitions) {
-    const key = dateKey(def.date)
-    if (input.skipExisting && existingByDate.has(key)) {
-      continue
-    }
-
-    const holiday = await repo.create(prisma, {
+  // Build records to create
+  const records = definitions
+    .filter((def) => {
+      const key = dateKey(def.date)
+      return !(input.skipExisting && existingByDate.has(key))
+    })
+    .map((def) => ({
       tenantId,
       holidayDate: normalizeDate(def.date),
       name: def.name,
       holidayCategory: 1,
       appliesToAll: true,
-    })
-    created.push(holiday)
-  }
+    }))
+
+  if (records.length === 0) return []
+
+  await prisma.holiday.createMany({ data: records })
+
+  // Fetch the created records to return them
+  const createdDates = records.map((r) => r.holidayDate)
+  const created = await prisma.holiday.findMany({
+    where: {
+      tenantId,
+      holidayDate: { in: createdDates },
+    },
+    orderBy: { holidayDate: "asc" },
+  })
 
   return created
 }
@@ -299,8 +373,16 @@ export async function copy(
     existingTarget.map((h) => dateKey(h.holidayDate))
   )
 
-  // Copy holidays
-  const copied = []
+  // Build records to copy
+  const records: Array<{
+    tenantId: string
+    holidayDate: Date
+    name: string
+    holidayCategory: number
+    appliesToAll: boolean
+    departmentId: string | null
+  }> = []
+
   for (const src of source) {
     const targetDate = dateWithYear(input.targetYear, src.holidayDate)
     if (!targetDate) {
@@ -316,7 +398,7 @@ export async function copy(
     const monthDay = `${String(targetDate.getUTCMonth() + 1).padStart(2, "0")}-${String(targetDate.getUTCDate()).padStart(2, "0")}`
     const category = overrideMap.get(monthDay) ?? src.holidayCategory
 
-    const holiday = await repo.create(prisma, {
+    records.push({
       tenantId,
       holidayDate: normalizeDate(targetDate),
       name: src.name,
@@ -324,8 +406,21 @@ export async function copy(
       appliesToAll: src.appliesToAll,
       departmentId: src.departmentId,
     })
-    copied.push(holiday)
   }
+
+  if (records.length === 0) return []
+
+  await prisma.holiday.createMany({ data: records })
+
+  // Fetch the created records to return them
+  const createdDates = records.map((r) => r.holidayDate)
+  const copied = await prisma.holiday.findMany({
+    where: {
+      tenantId,
+      holidayDate: { in: createdDates },
+    },
+    orderBy: { holidayDate: "asc" },
+  })
 
   return copied
 }

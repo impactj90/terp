@@ -164,7 +164,8 @@ export const accountGroupsRouter = createTRPCRouter({
         const group = await accountGroupService.create(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAccountGroupToOutput(group)
       } catch (err) {
@@ -188,7 +189,8 @@ export const accountGroupsRouter = createTRPCRouter({
         const group = await accountGroupService.update(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapAccountGroupToOutput(group)
       } catch (err) {
@@ -212,7 +214,8 @@ export const accountGroupsRouter = createTRPCRouter({
         await accountGroupService.remove(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

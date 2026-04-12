@@ -3,7 +3,9 @@
  *
  * Pure Prisma data-access functions for the AbsenceDay model.
  */
+import { Prisma } from "@/generated/prisma/client"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Include Objects ---
 
@@ -197,6 +199,7 @@ export async function findActiveAbsenceType(
 
 export async function findEmployeeDayPlans(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   fromDate: Date,
   toDate: Date
@@ -205,6 +208,7 @@ export async function findEmployeeDayPlans(
     where: {
       employeeId,
       planDate: { gte: fromDate, lte: toDate },
+      employee: { tenantId },
     },
     select: {
       planDate: true,
@@ -215,6 +219,7 @@ export async function findEmployeeDayPlans(
 
 export async function findExistingAbsences(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   fromDate: Date,
   toDate: Date
@@ -224,6 +229,7 @@ export async function findExistingAbsences(
       employeeId,
       absenceDate: { gte: fromDate, lte: toDate },
       status: { not: "cancelled" },
+      employee: { tenantId },
     },
     select: { absenceDate: true },
   })
@@ -241,6 +247,8 @@ export async function createMany(
     status: string
     notes: string | null
     createdBy: string | null
+    approvedBy?: string | null
+    approvedAt?: Date | null
   }>
 ) {
   return prisma.absenceDay.createMany({ data })
@@ -248,23 +256,26 @@ export async function createMany(
 
 export async function findCreatedAbsences(
   prisma: PrismaClient,
+  tenantId: string,
   params: {
     employeeId: string
     absenceTypeId: string
     fromDate: Date
     toDate: Date
     createdBy: string | undefined
+    status?: string
   }
 ) {
   return prisma.absenceDay.findMany({
     where: {
+      tenantId,
       employeeId: params.employeeId,
       absenceTypeId: params.absenceTypeId,
       absenceDate: {
         gte: params.fromDate,
         lte: params.toDate,
       },
-      status: "pending",
+      status: params.status ?? "pending",
       createdBy: params.createdBy,
     },
     include: absenceDayListInclude,
@@ -274,18 +285,43 @@ export async function findCreatedAbsences(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.absenceDay.update({
-    where: { id },
+  return tenantScopedUpdate(prisma.absenceDay, { id, tenantId }, data, {
+    include: absenceDayListInclude,
+    entity: "AbsenceDay",
+  })
+}
+
+/**
+ * Atomically updates an absence only if it has the expected status.
+ * Returns the updated record, or null if the status didn't match (already changed).
+ */
+export async function updateIfStatus(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string,
+  expectedStatus: string,
+  data: Record<string, unknown>
+) {
+  const { count } = await prisma.absenceDay.updateMany({
+    where: { id, tenantId, status: expectedStatus },
     data,
+  })
+  if (count === 0) return null
+  return prisma.absenceDay.findFirst({
+    where: { id, tenantId },
     include: absenceDayListInclude,
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.absenceDay.delete({ where: { id } })
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.absenceDay.deleteMany({
+    where: { id, tenantId },
+  })
+  return count > 0
 }
 
 // --- Vacation Balance Queries ---
@@ -305,6 +341,7 @@ export async function findVacationDeductingTypes(
 
 export async function findApprovedAbsenceDaysForYear(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   typeIds: string[],
   yearStart: Date,
@@ -316,6 +353,7 @@ export async function findApprovedAbsenceDaysForYear(
       absenceTypeId: { in: typeIds },
       status: "approved",
       absenceDate: { gte: yearStart, lte: yearEnd },
+      employee: { tenantId },
     },
     select: {
       absenceDate: true,
@@ -326,6 +364,7 @@ export async function findApprovedAbsenceDaysForYear(
 
 export async function findEmployeeDayPlansWithVacationDeduction(
   prisma: PrismaClient,
+  tenantId: string,
   employeeId: string,
   yearStart: Date,
   yearEnd: Date
@@ -334,6 +373,7 @@ export async function findEmployeeDayPlansWithVacationDeduction(
     where: {
       employeeId,
       planDate: { gte: yearStart, lte: yearEnd },
+      employee: { tenantId },
     },
     include: {
       dayPlan: {
@@ -401,4 +441,27 @@ export async function createNotification(
   }
 ) {
   return prisma.notification.create({ data })
+}
+
+/**
+ * Find user IDs that have the absences.approve permission (or are admins)
+ * for a given tenant. Used to notify approvers when an absence is requested.
+ */
+export async function findApproverUserIds(
+  prisma: PrismaClient,
+  tenantId: string,
+  excludeUserId?: string
+): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ user_id: string }[]>`
+    SELECT DISTINCT u.id AS user_id
+    FROM users u
+    JOIN user_tenants ut ON ut.user_id = u.id AND ut.tenant_id = ${tenantId}::uuid
+    JOIN user_groups ug ON ug.id = u.user_group_id
+    WHERE (
+      ug.is_admin = true
+      OR ug.permissions @> '["absences.approve"]'::jsonb
+    )
+    ${excludeUserId ? Prisma.sql`AND u.id != ${excludeUserId}::uuid` : Prisma.empty}
+  `
+  return rows.map(r => r.user_id)
 }

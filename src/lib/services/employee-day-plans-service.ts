@@ -7,6 +7,17 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { EmployeeDayPlanGenerator } from "@/lib/services/employee-day-plan-generator"
 import * as repo from "./employee-day-plans-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+
+// --- Audit ---
+
+const TRACKED_FIELDS = [
+  "employeeId",
+  "dayPlanId",
+  "validFrom",
+  "validTo",
+]
 
 // --- Error Classes ---
 
@@ -102,7 +113,8 @@ function mapToOutput(record: Record<string, unknown>): EmployeeDayPlanOutput {
 export async function list(
   prisma: PrismaClient,
   tenantId: string,
-  input: { employeeId?: string; from: string; to: string }
+  input: { employeeId?: string; from: string; to: string },
+  scopeWhere?: Record<string, unknown> | null
 ) {
   if (input.from > input.to) {
     throw new EmployeeDayPlanValidationError(
@@ -110,7 +122,7 @@ export async function list(
     )
   }
 
-  const plans = await repo.findMany(prisma, tenantId, input)
+  const plans = await repo.findMany(prisma, tenantId, input, scopeWhere)
 
   return {
     data: plans.map((p) =>
@@ -184,7 +196,8 @@ export async function create(
     shiftId?: string
     source: string
     notes?: string
-  }
+  },
+  audit?: AuditContext
 ) {
   // Validate employee exists in tenant
   const employee = await repo.findEmployeeForTenant(
@@ -230,6 +243,20 @@ export async function create(
       notes: input.notes?.trim() || null,
     })
 
+    if (audit) {
+      await auditLog.log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "create",
+        entityType: "employee_day_plan",
+        entityId: plan.id,
+        entityName: null,
+        changes: null,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }).catch(err => console.error('[AuditLog] Failed:', err))
+    }
+
     return mapToOutput(plan as unknown as Record<string, unknown>)
   } catch (err: unknown) {
     // Handle unique constraint violation on [employeeId, planDate]
@@ -260,7 +287,8 @@ export async function update(
     shiftId?: string | null
     source?: string
     notes?: string | null
-  }
+  },
+  audit?: AuditContext
 ) {
   // Verify EDP exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, input.id)
@@ -320,7 +348,26 @@ export async function update(
     data.notes = input.notes === null ? null : input.notes.trim()
   }
 
-  const plan = await repo.update(prisma, input.id, data)
+  const plan = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      plan as unknown as Record<string, unknown>,
+      TRACKED_FIELDS
+    )
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "update",
+      entityType: "employee_day_plan",
+      entityId: input.id,
+      entityName: null,
+      changes,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
 
   return mapToOutput(plan as unknown as Record<string, unknown>)
 }
@@ -331,7 +378,8 @@ export async function update(
 export async function remove(
   prisma: PrismaClient,
   tenantId: string,
-  id: string
+  id: string,
+  audit?: AuditContext
 ) {
   // Verify EDP exists (tenant-scoped)
   const existing = await repo.findById(prisma, tenantId, id)
@@ -339,7 +387,22 @@ export async function remove(
     throw new EmployeeDayPlanNotFoundError()
   }
 
-  await repo.deleteById(prisma, id)
+  await repo.deleteById(prisma, tenantId, id)
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "delete",
+      entityType: "employee_day_plan",
+      entityId: id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
   return { success: true }
 }
 
@@ -361,72 +424,80 @@ export async function bulkCreate(
     }>
   }
 ) {
-  // Validate all entries first
+  // Collect unique IDs for batch validation
+  const uniqueEmployeeIds = [...new Set(input.entries.map((e) => e.employeeId))]
+  const uniqueShiftIds = [...new Set(
+    input.entries.map((e) => e.shiftId).filter((id): id is string => !!id)
+  )]
+  const uniqueDayPlanIds = [...new Set(
+    input.entries.map((e) => e.dayPlanId).filter((id): id is string => !!id)
+  )]
+
+  // Batch fetch all referenced entities
+  const [foundEmployees, foundShifts, foundDayPlans] = await Promise.all([
+    prisma.employee.findMany({
+      where: { id: { in: uniqueEmployeeIds }, tenantId },
+      select: { id: true },
+    }),
+    uniqueShiftIds.length > 0
+      ? prisma.shift.findMany({
+          where: { id: { in: uniqueShiftIds }, tenantId },
+          select: { id: true, dayPlanId: true },
+        })
+      : Promise.resolve([]),
+    uniqueDayPlanIds.length > 0
+      ? prisma.dayPlan.findMany({
+          where: { id: { in: uniqueDayPlanIds }, tenantId },
+          select: { id: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  // Build lookup sets/maps
+  const employeeIdSet = new Set(foundEmployees.map((e) => e.id))
+  const shiftMap = new Map(foundShifts.map((s) => [s.id, s]))
+  const dayPlanIdSet = new Set(foundDayPlans.map((d) => d.id))
+
+  // Validate all entries against the maps
   for (const entry of input.entries) {
-    // Validate employee
-    const employee = await repo.findEmployeeForTenant(
-      prisma,
-      tenantId,
-      entry.employeeId
-    )
-    if (!employee) {
+    if (!employeeIdSet.has(entry.employeeId)) {
       throw new EmployeeDayPlanValidationError(
         `Invalid employee reference: ${entry.employeeId}`
       )
     }
-
-    // Validate shift if provided
-    if (entry.shiftId) {
-      const shift = await repo.findShiftForTenant(
-        prisma,
-        tenantId,
-        entry.shiftId
+    if (entry.shiftId && !shiftMap.has(entry.shiftId)) {
+      throw new EmployeeDayPlanValidationError(
+        `Invalid shift reference: ${entry.shiftId}`
       )
-      if (!shift) {
-        throw new EmployeeDayPlanValidationError(
-          `Invalid shift reference: ${entry.shiftId}`
-        )
-      }
     }
-
-    // Validate dayPlan if provided
-    if (entry.dayPlanId) {
-      const dp = await repo.findDayPlanForTenant(
-        prisma,
-        tenantId,
-        entry.dayPlanId
+    if (entry.dayPlanId && !dayPlanIdSet.has(entry.dayPlanId)) {
+      throw new EmployeeDayPlanValidationError(
+        `Invalid day plan reference: ${entry.dayPlanId}`
       )
-      if (!dp) {
-        throw new EmployeeDayPlanValidationError(
-          `Invalid day plan reference: ${entry.dayPlanId}`
-        )
-      }
     }
   }
 
   // Resolve dayPlanId from shift for entries without explicit dayPlanId
-  const resolvedEntries = await Promise.all(
-    input.entries.map(async (entry) => {
-      let dayPlanId = entry.dayPlanId || null
-      const shiftId = entry.shiftId || null
+  const resolvedEntries = input.entries.map((entry) => {
+    let dayPlanId = entry.dayPlanId || null
+    const shiftId = entry.shiftId || null
 
-      if (shiftId && !dayPlanId) {
-        const shift = await repo.findShiftForTenant(prisma, tenantId, shiftId)
-        if (shift?.dayPlanId) {
-          dayPlanId = shift.dayPlanId
-        }
+    if (shiftId && !dayPlanId) {
+      const shift = shiftMap.get(shiftId)
+      if (shift?.dayPlanId) {
+        dayPlanId = shift.dayPlanId
       }
+    }
 
-      return {
-        employeeId: entry.employeeId,
-        planDate: entry.planDate,
-        dayPlanId,
-        shiftId,
-        source: entry.source,
-        notes: entry.notes,
-      }
-    })
-  )
+    return {
+      employeeId: entry.employeeId,
+      planDate: entry.planDate,
+      dayPlanId,
+      shiftId,
+      source: entry.source,
+      notes: entry.notes,
+    }
+  })
 
   // Bulk upsert in transaction
   await repo.bulkUpsert(prisma, tenantId, resolvedEntries)

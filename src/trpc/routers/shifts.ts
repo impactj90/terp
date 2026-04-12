@@ -158,7 +158,8 @@ export const shiftsRouter = createTRPCRouter({
         const shift = await shiftService.create(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapShift(shift)
       } catch (err) {
@@ -182,7 +183,8 @@ export const shiftsRouter = createTRPCRouter({
         const shift = await shiftService.update(
           ctx.prisma,
           ctx.tenantId!,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapShift(shift)
       } catch (err) {
@@ -204,7 +206,9 @@ export const shiftsRouter = createTRPCRouter({
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        await shiftService.remove(ctx.prisma, ctx.tenantId!, input.id)
+        await shiftService.remove(ctx.prisma, ctx.tenantId!, input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
         return { success: true }
       } catch (err) {
         handleServiceError(err)

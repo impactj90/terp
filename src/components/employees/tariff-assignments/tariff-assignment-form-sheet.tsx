@@ -29,6 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import {
   useTariffs,
@@ -76,6 +77,7 @@ export function TariffAssignmentFormSheet({
   onSuccess,
 }: TariffAssignmentFormSheetProps) {
   const t = useTranslations('employeeTariffAssignments')
+  const tc = useTranslations('common')
   const isEdit = !!assignment
 
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE)
@@ -187,7 +189,7 @@ export function TariffAssignmentFormSheet({
           <SheetDescription>{isEdit ? t('formEditDescription') : t('formCreateDescription')}</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Error display */}
             {(error || validationErrors.length > 0) && (
@@ -288,14 +290,19 @@ export function TariffAssignmentFormSheet({
                   </PopoverContent>
                 </Popover>
                 {form.effectiveTo && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setForm((prev) => ({ ...prev, effectiveTo: undefined }))}
-                    disabled={isSubmitting}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setForm((prev) => ({ ...prev, effectiveTo: undefined }))}
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tc('clearField')}</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{t('fieldEffectiveToHelp')}</p>

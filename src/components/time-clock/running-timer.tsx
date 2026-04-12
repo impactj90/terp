@@ -28,13 +28,14 @@ export function RunningTimer({
 
     const start =
       typeof startTime === 'string' ? new Date(startTime) : startTime
+    const startMs = start.getTime()
 
     // Calculate initial elapsed
-    setElapsed(Date.now() - start.getTime())
+    setElapsed(Math.max(0, Date.now() - startMs))
 
     // Update every second
     const interval = setInterval(() => {
-      setElapsed(Date.now() - start.getTime())
+      setElapsed(Math.max(0, Date.now() - startMs))
     }, 1000)
 
     return () => clearInterval(interval)

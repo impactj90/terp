@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the Team and TeamMember models.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 // --- Shared includes ---
 
@@ -34,6 +35,7 @@ export async function findMany(
     search?: string
     isActive?: boolean
     departmentId?: string
+    leaderEmployeeId?: string
   }
 ) {
   const page = params?.page ?? 1
@@ -47,6 +49,10 @@ export async function findMany(
 
   if (params?.departmentId !== undefined) {
     where.departmentId = params.departmentId
+  }
+
+  if (params?.leaderEmployeeId !== undefined) {
+    where.leaderEmployeeId = params.leaderEmployeeId
   }
 
   if (params?.search) {
@@ -118,20 +124,25 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.team.update({
-    where: { id },
-    data,
+  return tenantScopedUpdate(prisma.team, { id, tenantId }, data, {
     include: teamRelationsInclude,
+    entity: "Team",
   })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.team.delete({
-    where: { id },
+export async function deleteById(
+  prisma: PrismaClient,
+  tenantId: string,
+  id: string
+) {
+  const { count } = await prisma.team.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 // --- TeamMember Functions ---
@@ -202,10 +213,16 @@ export async function deleteMember(
 
 export async function findTeamsByEmployee(
   prisma: PrismaClient,
-  employeeId: string
+  tenantId: string,
+  employeeId: string,
+  isActive?: boolean
 ) {
+  const teamWhere: Record<string, unknown> = { tenantId }
+  if (isActive !== undefined) {
+    teamWhere.isActive = isActive
+  }
   return prisma.teamMember.findMany({
-    where: { employeeId },
+    where: { employeeId, team: teamWhere },
     include: {
       team: {
         include: teamRelationsInclude,

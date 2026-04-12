@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the WeekPlan model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const dayPlanSelect = {
   select: { id: true, code: true, name: true, planType: true },
@@ -103,27 +104,27 @@ export async function create(
 
 export async function findByIdWithInclude(
   prisma: PrismaClient,
+  tenantId: string,
   id: string
 ) {
-  return prisma.weekPlan.findUniqueOrThrow({
-    where: { id },
+  return prisma.weekPlan.findFirst({
+    where: { id, tenantId },
     include: weekPlanInclude,
   })
 }
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.weekPlan.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.weekPlan, { id, tenantId }, data, { entity: "WeekPlan" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.weekPlan.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.weekPlan.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }

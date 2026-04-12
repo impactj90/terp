@@ -216,12 +216,7 @@ export function CappingRulesTab() {
                     <TableCell>{item.name}</TableCell>
                     <TableCell>
                       <Badge
-                        variant="secondary"
-                        className={
-                          item.ruleType === 'year_end'
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                            : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
-                        }
+                        variant={item.ruleType === 'year_end' ? 'orange' : 'cyan'}
                       >
                         {item.ruleType === 'year_end' ? t('cappingRule.ruleTypeYearEnd') : t('cappingRule.ruleTypeMidYear')}
                       </Badge>
@@ -238,6 +233,7 @@ export function CappingRulesTab() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Aktionen</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

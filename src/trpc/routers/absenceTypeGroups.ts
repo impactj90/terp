@@ -161,7 +161,8 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
         const group = await absenceTypeGroupService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(group)
       } catch (err) {
@@ -187,7 +188,8 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
         const group = await absenceTypeGroupService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(group)
       } catch (err) {
@@ -207,7 +209,7 @@ export const absenceTypeGroupsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await absenceTypeGroupService.remove(ctx.prisma, tenantId, input.id)
+        await absenceTypeGroupService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

@@ -21,7 +21,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
 
-const COST_CENTERS_MANAGE = permissionIdByKey("cost_centers.manage")!
+const DEPARTMENTS_MANAGE = permissionIdByKey("departments.manage")!
 
 // --- Output Schemas ---
 
@@ -91,10 +91,10 @@ export const costCentersRouter = createTRPCRouter({
    * Supports optional filter: isActive.
    * Orders by code ASC.
    *
-   * Requires: cost_centers.manage permission
+   * Requires: departments.manage permission
    */
   list: tenantProcedure
-    .use(requirePermission(COST_CENTERS_MANAGE))
+    .use(requirePermission(DEPARTMENTS_MANAGE))
     .input(
       z
         .object({
@@ -124,10 +124,10 @@ export const costCentersRouter = createTRPCRouter({
    *
    * Tenant-scoped: only returns cost centers belonging to the current tenant.
    *
-   * Requires: cost_centers.manage permission
+   * Requires: departments.manage permission
    */
   getById: tenantProcedure
-    .use(requirePermission(COST_CENTERS_MANAGE))
+    .use(requirePermission(DEPARTMENTS_MANAGE))
     .input(z.object({ id: z.string() }))
     .output(costCenterOutputSchema)
     .query(async ({ ctx, input }) => {
@@ -150,10 +150,10 @@ export const costCentersRouter = createTRPCRouter({
    * Validates code and name are non-empty after trimming.
    * Checks code uniqueness within tenant.
    *
-   * Requires: cost_centers.manage permission
+   * Requires: departments.manage permission
    */
   create: tenantProcedure
-    .use(requirePermission(COST_CENTERS_MANAGE))
+    .use(requirePermission(DEPARTMENTS_MANAGE))
     .input(createCostCenterInputSchema)
     .output(costCenterOutputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -162,7 +162,8 @@ export const costCentersRouter = createTRPCRouter({
         const costCenter = await costCenterService.create(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapCostCenterToOutput(costCenter)
       } catch (err) {
@@ -175,10 +176,10 @@ export const costCentersRouter = createTRPCRouter({
    *
    * Supports partial updates. Validates code/name uniqueness when changed.
    *
-   * Requires: cost_centers.manage permission
+   * Requires: departments.manage permission
    */
   update: tenantProcedure
-    .use(requirePermission(COST_CENTERS_MANAGE))
+    .use(requirePermission(DEPARTMENTS_MANAGE))
     .input(updateCostCenterInputSchema)
     .output(costCenterOutputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -187,7 +188,8 @@ export const costCentersRouter = createTRPCRouter({
         const costCenter = await costCenterService.update(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapCostCenterToOutput(costCenter)
       } catch (err) {
@@ -200,10 +202,10 @@ export const costCentersRouter = createTRPCRouter({
    *
    * Prevents deletion when employees are assigned.
    *
-   * Requires: cost_centers.manage permission
+   * Requires: departments.manage permission
    */
   delete: tenantProcedure
-    .use(requirePermission(COST_CENTERS_MANAGE))
+    .use(requirePermission(DEPARTMENTS_MANAGE))
     .input(z.object({ id: z.string() }))
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
@@ -212,7 +214,8 @@ export const costCentersRouter = createTRPCRouter({
         await costCenterService.remove(
           ctx.prisma as unknown as PrismaClient,
           tenantId,
-          input.id
+          input.id,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return { success: true }
       } catch (err) {

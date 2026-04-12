@@ -72,7 +72,7 @@ const INITIAL_STATE: FormState = {
   code: '',
   name: '',
   description: '',
-  accountType: 'tracking',
+  accountType: 'day',
   unit: 'minutes',
   yearCarryover: true,
   isPayrollRelevant: false,
@@ -83,8 +83,8 @@ const INITIAL_STATE: FormState = {
 
 const ACCOUNT_TYPE_OPTIONS = [
   { value: 'bonus', labelKey: 'typeBonus' },
-  { value: 'tracking', labelKey: 'typeTracking' },
-  { value: 'balance', labelKey: 'typeBalance' },
+  { value: 'day', labelKey: 'typeTracking' },
+  { value: 'month', labelKey: 'typeBalance' },
 ] as const
 
 const UNIT_OPTIONS = [
@@ -117,7 +117,7 @@ export function AccountFormSheet({
           code: account.code || '',
           name: account.name || '',
           description: account.description || '',
-          accountType: account.accountType || 'tracking',
+          accountType: account.accountType || 'day',
           unit: account.unit || 'minutes',
           yearCarryover: account.yearCarryover ?? true,
           isPayrollRelevant: account.isPayrollRelevant ?? false,
@@ -200,7 +200,7 @@ export function AccountFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* System account warning */}
             {isSystem && (

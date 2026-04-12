@@ -37,6 +37,7 @@ import {
   useCostCenters,
   useEmploymentTypes,
   useTariffs,
+  useLocations,
 } from '@/hooks'
 import { cn } from '@/lib/utils'
 
@@ -56,7 +57,6 @@ interface EmployeeFormSheetProps {
 
 interface FormState {
   personnelNumber: string
-  pin: string
   firstName: string
   lastName: string
   email: string
@@ -66,6 +66,7 @@ interface FormState {
   departmentId: string
   costCenterId: string
   employmentTypeId: string
+  locationId: string
   tariffId: string
   weeklyHours: string
   vacationDaysPerYear: string
@@ -73,7 +74,6 @@ interface FormState {
 
 const INITIAL_STATE: FormState = {
   personnelNumber: '',
-  pin: '',
   firstName: '',
   lastName: '',
   email: '',
@@ -83,6 +83,7 @@ const INITIAL_STATE: FormState = {
   departmentId: '',
   costCenterId: '',
   employmentTypeId: '',
+  locationId: '',
   tariffId: '',
   weeklyHours: '',
   vacationDaysPerYear: '',
@@ -91,14 +92,7 @@ const INITIAL_STATE: FormState = {
 function validateForm(form: FormState, isEdit: boolean): string[] {
   const errorKeys: string[] = []
 
-  if (!isEdit) {
-    if (!form.personnelNumber.trim()) {
-      errorKeys.push('validationPersonnelNumberRequired')
-    }
-    if (!form.pin.trim()) {
-      errorKeys.push('validationPinRequired')
-    }
-  }
+  // personnelNumber and PIN are auto-generated if not provided
 
   if (!form.firstName.trim()) {
     errorKeys.push('validationFirstNameRequired')
@@ -151,11 +145,13 @@ export function EmployeeFormSheet({
   const { data: costCentersData, isLoading: loadingCostCenters } = useCostCenters({ enabled: open })
   const { data: employmentTypesData, isLoading: loadingEmploymentTypes } = useEmploymentTypes({ enabled: open })
   const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ isActive: true, enabled: open })
+  const { data: locationsData, isLoading: loadingLocations } = useLocations({ isActive: true, enabled: open })
 
   const departments = departmentsData?.data ?? []
   const costCenters = costCentersData?.data ?? []
   const employmentTypes = employmentTypesData?.data ?? []
   const tariffs = tariffsData?.data ?? []
+  const locations = locationsData?.data ?? []
 
   // Reset form when opening/closing or employee changes
   React.useEffect(() => {
@@ -165,7 +161,6 @@ export function EmployeeFormSheet({
         const exitDate = employee.exit_date ? new Date(employee.exit_date) : undefined
         setForm({
           personnelNumber: employee.personnelNumber,
-          pin: '', // Never show existing PIN
           firstName: employee.firstName,
           lastName: employee.lastName,
           email: employee.email || '',
@@ -175,6 +170,7 @@ export function EmployeeFormSheet({
           departmentId: employee.departmentId || '',
           costCenterId: employee.cost_center_id || '',
           employmentTypeId: employee.employment_type_id || '',
+          locationId: employee.locationId || '',
           tariffId: employee.tariffId || '',
           weeklyHours: employee.weekly_hours?.toString() || '',
           vacationDaysPerYear: employee.vacation_days_per_year?.toString() || '',
@@ -212,14 +208,14 @@ export function EmployeeFormSheet({
           departmentId: form.departmentId || undefined,
           costCenterId: form.costCenterId || undefined,
           employmentTypeId: form.employmentTypeId || undefined,
+          locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
         })
       } else {
         await createMutation.mutateAsync({
-          personnelNumber: form.personnelNumber.trim(),
-          pin: form.pin.trim(),
+          personnelNumber: form.personnelNumber.trim() || undefined,
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
           email: form.email.trim() || undefined,
@@ -228,6 +224,7 @@ export function EmployeeFormSheet({
           departmentId: form.departmentId || undefined,
           costCenterId: form.costCenterId || undefined,
           employmentTypeId: form.employmentTypeId || undefined,
+          locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
@@ -246,7 +243,7 @@ export function EmployeeFormSheet({
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
-  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes || loadingTariffs
+  const isLoadingReferenceData = loadingDepartments || loadingCostCenters || loadingEmploymentTypes || loadingTariffs || loadingLocations
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -260,13 +257,13 @@ export function EmployeeFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 -mx-4 px-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionPersonal')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">{t('fieldFirstName')}</Label>
                   <Input
@@ -318,37 +315,23 @@ export function EmployeeFormSheet({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionEmployment')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="personnelNumber">{t('fieldPersonnelNumber')}</Label>
-                  <Input
-                    id="personnelNumber"
-                    value={form.personnelNumber}
-                    onChange={(e) => setForm((prev) => ({ ...prev, personnelNumber: e.target.value }))}
-                    disabled={isEdit || isSubmitting}
-                    placeholder={t('placeholderPersonnelNumber')}
-                  />
-                  {isEdit && (
-                    <p className="text-xs text-muted-foreground">{t('cannotBeChanged')}</p>
-                  )}
-                </div>
-
-                {!isEdit && (
-                  <div className="space-y-2">
-                    <Label htmlFor="pin">{t('fieldPin')}</Label>
-                    <Input
-                      id="pin"
-                      type="password"
-                      value={form.pin}
-                      onChange={(e) => setForm((prev) => ({ ...prev, pin: e.target.value }))}
-                      disabled={isSubmitting}
-                      placeholder={t('placeholderPin')}
-                    />
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="personnelNumber">{t('fieldPersonnelNumber')}</Label>
+                <Input
+                  id="personnelNumber"
+                  value={form.personnelNumber}
+                  onChange={(e) => setForm((prev) => ({ ...prev, personnelNumber: e.target.value }))}
+                  disabled={isEdit || isSubmitting}
+                  placeholder={t('placeholderPersonnelNumber')}
+                />
+                {isEdit ? (
+                  <p className="text-xs text-muted-foreground">{t('cannotBeChanged')}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{t('autoGeneratedIfEmpty')}</p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label>{t('fieldEntryDate')}</Label>
                   <Popover>
@@ -441,6 +424,27 @@ export function EmployeeFormSheet({
               </div>
 
               <div className="space-y-2">
+                <Label>{t('fieldLocation')}</Label>
+                <Select
+                  value={form.locationId || '__none__'}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, locationId: value === '__none__' ? '' : value }))}
+                  disabled={isSubmitting || isLoadingReferenceData}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('none')}</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name} ({loc.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>{t('fieldCostCenter')}</Label>
                 <Select
                   value={form.costCenterId || '__none__'}
@@ -508,7 +512,7 @@ export function EmployeeFormSheet({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">{t('sectionContract')}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="weeklyHours">{t('fieldWeeklyHours')}</Label>
                   <Input

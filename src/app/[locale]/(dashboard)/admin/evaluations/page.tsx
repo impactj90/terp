@@ -5,7 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
-import { useDepartments, useEmployees } from '@/hooks'
+import { useDepartments, useEmployees, useLocations } from '@/hooks'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   EvaluationsSkeleton,
@@ -87,6 +87,8 @@ export default function EvaluationsPage() {
   })
   const [employeeId, setEmployeeId] = React.useState<string | null>(initialEmployeeId)
   const [departmentId, setDepartmentId] = React.useState<string | null>(initialDepartmentId)
+  const initialLocationId = searchParams.get('location_id')
+  const [locationId, setLocationId] = React.useState<string | null>(initialLocationId)
 
   // Detail sheet state
   const [detailEntry, setDetailEntry] = React.useState<DetailEntry | null>(null)
@@ -99,8 +101,8 @@ export default function EvaluationsPage() {
   }, [authLoading, permLoading, canAccess, router])
 
   // Sync state to URL - use a ref to avoid infinite loops from searchParams dependency
-  const stateRef = React.useRef({ activeTab, dateRange, employeeId, departmentId })
-  stateRef.current = { activeTab, dateRange, employeeId, departmentId }
+  const stateRef = React.useRef({ activeTab, dateRange, employeeId, departmentId, locationId })
+  stateRef.current = { activeTab, dateRange, employeeId, departmentId, locationId }
 
   const syncToUrl = React.useCallback(
     (overrides: Partial<typeof stateRef.current> = {}) => {
@@ -113,6 +115,7 @@ export default function EvaluationsPage() {
       if (toStr) params.set('to', toStr)
       if (state.employeeId) params.set('employee_id', state.employeeId)
       if (state.departmentId) params.set('department_id', state.departmentId)
+      if (state.locationId) params.set('location_id', state.locationId)
       router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     },
     [router, pathname]
@@ -125,6 +128,12 @@ export default function EvaluationsPage() {
   const departments = (departmentsData?.data ?? []).map((d: { id: string; name: string }) => ({
     id: d.id,
     name: d.name,
+  }))
+
+  const { data: locationsData, isLoading: locationsLoading } = useLocations({ isActive: true, enabled })
+  const locations = (locationsData?.data ?? []).map((l: { id: string; name: string }) => ({
+    id: l.id,
+    name: l.name,
   }))
 
   const { data: employeesData, isLoading: employeesLoading } = useEmployees({ pageSize: 500, enabled })
@@ -172,6 +181,14 @@ export default function EvaluationsPage() {
     [syncToUrl]
   )
 
+  const handleLocationChange = React.useCallback(
+    (id: string | null) => {
+      setLocationId(id)
+      syncToUrl({ locationId: id })
+    },
+    [syncToUrl]
+  )
+
   const handleTabChange = React.useCallback(
     (value: string) => {
       const tab = value as EvaluationTab
@@ -191,10 +208,11 @@ export default function EvaluationsPage() {
     setDateRange(range)
     setEmployeeId(null)
     setDepartmentId(null)
-    syncToUrl({ dateRange: range, employeeId: null, departmentId: null })
+    setLocationId(null)
+    syncToUrl({ dateRange: range, employeeId: null, departmentId: null, locationId: null })
   }, [syncToUrl])
 
-  const hasFilters = !!(employeeId || departmentId)
+  const hasFilters = !!(employeeId || departmentId || locationId)
 
   if (authLoading || permLoading) {
     return <EvaluationsSkeleton />
@@ -220,10 +238,14 @@ export default function EvaluationsPage() {
         onEmployeeChange={handleEmployeeChange}
         departmentId={departmentId}
         onDepartmentChange={handleDepartmentChange}
+        locationId={locationId}
+        onLocationChange={handleLocationChange}
         employees={employees}
         departments={departments}
+        locations={locations}
         isLoadingEmployees={employeesLoading}
         isLoadingDepartments={departmentsLoading}
+        isLoadingLocations={locationsLoading}
         onClearFilters={clearFilters}
         hasFilters={hasFilters}
       />

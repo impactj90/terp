@@ -31,10 +31,10 @@ interface VacationBalanceDataTableProps {
   onEdit: (balance: VacationBalance) => void
 }
 
-function getRemainingBadgeClass(remaining: number): string {
-  if (remaining > 5) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-  if (remaining >= 1) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-  return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+function getRemainingBadgeVariant(remaining: number): 'green' | 'yellow' | 'red' {
+  if (remaining > 5) return 'green'
+  if (remaining >= 1) return 'yellow'
+  return 'red'
 }
 
 function formatDecimal(value: number | undefined | null): string {
@@ -112,7 +112,7 @@ export function VacationBalanceDataTable({
               <TableCell className="text-right">{formatDecimal(balance.used_days)}</TableCell>
               <TableCell className="text-right">{formatDecimal(balance.planned_days)}</TableCell>
               <TableCell className="text-right">
-                <Badge variant="outline" className={getRemainingBadgeClass(remaining)}>
+                <Badge variant={getRemainingBadgeVariant(remaining)}>
                   {formatDecimal(remaining)}
                 </Badge>
               </TableCell>

@@ -151,7 +151,7 @@ export function MemberManagementSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 flex flex-col min-h-0 -mx-4 px-4">
+        <div className="flex-1 flex flex-col min-h-0 -mx-6 px-6">
           {/* Error */}
           {error && (
             <Alert variant="destructive" className="mb-4">
@@ -230,8 +230,8 @@ export function MemberManagementSheet({
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                          {employee.firstName[0]}
-                          {employee.lastName[0]}
+                          {employee.firstName?.[0] ?? '?'}
+                          {employee.lastName?.[0] ?? '?'}
                         </div>
                         <div>
                           <p className="text-sm font-medium">

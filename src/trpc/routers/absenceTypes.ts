@@ -154,10 +154,9 @@ export const absenceTypesRouter = createTRPCRouter({
    * Supports optional filters: isActive, category, includeSystem.
    * Orders by sortOrder ASC, code ASC.
    *
-   * Requires: absence_types.manage permission
+   * Requires: authenticated tenant user (read-only)
    */
   list: tenantProcedure
-    .use(requirePermission(ABSENCE_TYPES_MANAGE))
     .input(
       z
         .object({
@@ -227,7 +226,8 @@ export const absenceTypesRouter = createTRPCRouter({
         const type = await absenceTypeService.create(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(type)
       } catch (err) {
@@ -253,7 +253,8 @@ export const absenceTypesRouter = createTRPCRouter({
         const type = await absenceTypeService.update(
           ctx.prisma,
           tenantId,
-          input
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
         )
         return mapToOutput(type)
       } catch (err) {
@@ -276,7 +277,7 @@ export const absenceTypesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const tenantId = ctx.tenantId!
-        await absenceTypeService.remove(ctx.prisma, tenantId, input.id)
+        await absenceTypeService.remove(ctx.prisma, tenantId, input.id, { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent })
         return { success: true }
       } catch (err) {
         handleServiceError(err)

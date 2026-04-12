@@ -55,10 +55,11 @@ export async function createContact(
  */
 export async function findContactWithEmployee(
   prisma: PrismaClient,
+  tenantId: string,
   contactId: string
 ) {
-  return prisma.employeeContact.findUnique({
-    where: { id: contactId },
+  return prisma.employeeContact.findFirst({
+    where: { id: contactId, employee: { tenantId } },
     include: {
       employee: {
         select: { tenantId: true },
@@ -68,13 +69,15 @@ export async function findContactWithEmployee(
 }
 
 /**
- * Deletes a contact by ID.
+ * Deletes a contact by ID, scoped to tenant via employee relation.
  */
 export async function deleteContact(
   prisma: PrismaClient,
+  tenantId: string,
   contactId: string
 ) {
-  return prisma.employeeContact.delete({
-    where: { id: contactId },
+  const { count } = await prisma.employeeContact.deleteMany({
+    where: { id: contactId, employee: { tenantId } },
   })
+  return count > 0
 }

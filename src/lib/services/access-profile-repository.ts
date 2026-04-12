@@ -4,6 +4,7 @@
  * Pure Prisma data-access functions for the AccessProfile model.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 export async function findMany(prisma: PrismaClient, tenantId: string) {
   return prisma.accessProfile.findMany({
@@ -47,26 +48,26 @@ export async function create(
 
 export async function update(
   prisma: PrismaClient,
+  tenantId: string,
   id: string,
   data: Record<string, unknown>
 ) {
-  return prisma.accessProfile.update({
-    where: { id },
-    data,
-  })
+  return tenantScopedUpdate(prisma.accessProfile, { id, tenantId }, data, { entity: "AccessProfile" })
 }
 
-export async function deleteById(prisma: PrismaClient, id: string) {
-  return prisma.accessProfile.delete({
-    where: { id },
+export async function deleteById(prisma: PrismaClient, tenantId: string, id: string) {
+  const { count } = await prisma.accessProfile.deleteMany({
+    where: { id, tenantId },
   })
+  return count > 0
 }
 
 export async function countAssignments(
   prisma: PrismaClient,
+  tenantId: string,
   accessProfileId: string
 ) {
   return prisma.employeeAccessAssignment.count({
-    where: { accessProfileId },
+    where: { tenantId, accessProfileId },
   })
 }

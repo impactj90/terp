@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   getMonthDates,
   isToday,
@@ -193,25 +194,35 @@ export function Calendar({
     <div className={cn('p-3', className)}>
       {/* Header with month navigation */}
       <div className="flex items-center justify-between mb-4">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={handlePrevMonth}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">{t('previousMonth')}</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handlePrevMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="sr-only">{t('previousMonth')}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('previousMonth')}</TooltipContent>
+        </Tooltip>
         <h2 className="text-sm font-semibold">{monthLabel}</h2>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={handleNextMonth}
-        >
-          <ChevronRight className="h-4 w-4" />
-          <span className="sr-only">{t('nextMonth')}</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleNextMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+              <span className="sr-only">{t('nextMonth')}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('nextMonth')}</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Week day headers */}
