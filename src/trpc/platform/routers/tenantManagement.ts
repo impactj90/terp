@@ -183,12 +183,29 @@ export const platformTenantManagementRouter = createTRPCRouter({
               },
             })
 
+            // Create a per-tenant admin group so the initial user has full
+            // permissions (is_admin bypass). Without this, the first user
+            // cannot access the UI to manage permissions — chicken-and-egg.
+            const adminGroup = await tx.userGroup.create({
+              data: {
+                tenantId: tenant.id,
+                name: "Administratoren",
+                code: "ADMIN",
+                description: "Vollzugriff auf alle Module und Funktionen",
+                permissions: [],
+                isAdmin: true,
+                isSystem: false,
+                isActive: true,
+              },
+            })
+
             const { user: adminUser, welcomeEmail } = await createUserService(
               tx,
               tenant.id,
               {
                 email: input.initialAdminEmail,
                 displayName: input.initialAdminDisplayName,
+                userGroupId: adminGroup.id,
                 isActive: true,
                 isLocked: false,
               },
