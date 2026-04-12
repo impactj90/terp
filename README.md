@@ -99,6 +99,108 @@ pnpm db:push:staging    # push migrations
 pnpm seed:staging       # re-seed if needed
 ```
 
+### Production Deployment
+
+#### Infrastructure Overview
+
+| Role | Prod | Staging |
+|---|---|---|
+| Tenant App | `app.t-erp.de` | `app.staging.t-erp.de` |
+| Platform Admin | `admin.t-erp.de` | `admin.staging.t-erp.de` |
+| Supabase Project | separate prod project | separate staging project |
+| Vercel Environment | Production (branch: `master`) | Preview (branch: `staging`) |
+| Git Branch | `master` | `staging` |
+
+All four domains are CNAMEs to `cname.vercel-dns.com` (DNS at IONOS). Vercel provisions Let's Encrypt certificates automatically. The staging domains are assigned to the `staging` branch via Vercel's domain settings (Settings → Domains → Edit → Git Branch).
+
+`PLATFORM_COOKIE_DOMAIN` controls the admin subdomain rewrite in `src/proxy.ts:16` — requests hitting the admin host get rewritten from `/` to `/platform`. Without this var, the platform admin is served at `/platform/*` on the same host as the tenant app.
+
+#### Email Setup (IONOS)
+
+Three separate email channels exist. Only the first two need IONOS credentials:
+
+**1. Supabase Auth SMTP** (password reset, welcome, verify — configured per Supabase project in Dashboard → Authentication → Emails → SMTP Settings):
+
+| Field | Value |
+|---|---|
+| Sender email | `noreply@t-erp.de` |
+| Sender name | `Terp` (prod) / `Terp (Staging)` (staging) |
+| Host | `smtp.ionos.de` |
+| Port | `587` |
+| Username | `noreply@t-erp.de` |
+| Password | IONOS mailbox password |
+
+**2. Tenant SMTP/IMAP** (outgoing invoices + incoming invoice polling — configured per tenant in tenant UI → Settings → Email):
+
+| | SMTP (outgoing) | IMAP (incoming invoices) |
+|---|---|---|
+| Host | `smtp.ionos.de` | `imap.ionos.de` |
+| Port | `587` (STARTTLS) | `993` (SSL) |
+| Username | `noreply@t-erp.de` | `rechnung@t-erp.de` |
+| From / Reply-To | `noreply@t-erp.de` / `ops@t-erp.de` | — |
+
+**3. Demo convert notifications** — env var `DEMO_CONVERT_NOTIFICATION_EMAIL` (default `sales@terp.dev`), delivered via the demo tenant's own SMTP. Set to `ops@t-erp.de` in both environments.
+
+IONOS enforces `From:` = authenticated mailbox. Rate limit ~100-300 mails/day per mailbox.
+
+#### Syncing Env Files with Vercel
+
+The local `.env.production` and `.env.staging` files should mirror what's in Vercel. To sync:
+
+```bash
+# One-time: link Vercel CLI to the project
+npx vercel link
+
+# Pull env vars from Vercel into plaintext files
+npx vercel env pull .env.production --environment=production --yes
+npx vercel env pull .env.staging --environment=preview --yes
+
+# IMPORTANT: DATABASE_URL from Vercel may have sslmode=require.
+# Change it to sslmode=no-verify (see note in env var table below).
+
+# Re-encrypt for git
+scripts/encrypt-env.sh
+git add .env.production.vault .env.staging.vault
+git commit -m "Update env vaults"
+```
+
+For scripts that need prod/staging DB access (e.g. bootstrap):
+
+```bash
+pnpm tsx --env-file=.env.production scripts/bootstrap-platform-user.ts ...
+```
+
+The bootstrap script preserves an externally-provided `DATABASE_URL` even when `.env.local` is present (it saves the value before dotenv loads and restores it after).
+
+#### Pushing Migrations to Production
+
+```bash
+# Get the direct (non-pooling) DB URL from Vercel or .env.production
+SUPABASE_DB_URL='<POSTGRES_URL_NON_POOLING value>' pnpm db:push:prod
+```
+
+Always create a Supabase backup (Dashboard → Database → Backups) before running migrations against prod.
+
+#### New Tenant Checklist
+
+When creating a tenant via `admin.t-erp.de` → Tenants → Create:
+
+1. **Tenant + admin user are created automatically** — the admin gets a per-tenant "Administratoren" group with `is_admin=true` (full permissions, no explicit permission entries needed).
+2. **Welcome email** — if the tenant has no SMTP configured yet (new tenant), the dialog shows a manual setup link. Copy it, send it to the admin, they set their password via the link.
+3. **Enable modules** — Tenants → click tenant → Modules. Activate the modules the customer needs (CRM, Billing, Warehouse, etc.). The sidebar updates on next login.
+4. **Configure tenant email** — the tenant admin configures SMTP (outgoing) and IMAP (incoming invoices) in their own tenant UI under Settings → Email. This is per-tenant, not platform-level.
+
+#### Supabase Auth URL Configuration
+
+Each Supabase project needs the correct redirect URLs (Dashboard → Authentication → URL Configuration):
+
+| | Prod | Staging |
+|---|---|---|
+| Site URL | `https://app.t-erp.de` | `https://app.staging.t-erp.de` |
+| Redirect URLs | `https://app.t-erp.de/**` | `https://app.staging.t-erp.de/**` |
+
+Without this, password-reset and welcome-email links point to `localhost:3001`.
+
 ### Vercel Environment Variables
 
 | Variable | Description |
@@ -109,14 +211,14 @@ pnpm seed:staging       # re-seed if needed
 | `DATABASE_URL` | PostgreSQL connection URL (Supabase pooler) |
 | `CRON_SECRET` | Secret for cron job authentication |
 | `INTERNAL_API_KEY` | Secret for internal API authentication |
-| `NEXT_PUBLIC_ENV` | `development` (local/staging) or `production` |
+| `NEXT_PUBLIC_ENV` | `production` on both staging and prod. Only `development` for local dev (enables quick-login buttons on login page). |
 | `NEXT_PUBLIC_APP_NAME` | Application display name |
 | `NEXT_PUBLIC_APP_URL` | Base URL the app is served from. Used as the `redirectTo` target for Supabase recovery / welcome-email links. Must match `supabase/config.toml [auth] site_url` in local dev. Default: `http://127.0.0.1:3001`. |
 | `PLATFORM_JWT_SECRET` | **Required.** Secret used to sign platform-admin session JWTs (HS256). Generate with `openssl rand -base64 48`. See [Platform Admin System](#platform-admin-system) below. Must be rotated independently from Supabase secrets. |
 | `PLATFORM_COOKIE_DOMAIN` | Optional. Subdomain the platform-admin UI is served from (e.g. `admin.terp.de`) in prod. When set, the middleware rewrites `/` → `/platform` on that host and scopes the `platform-session` cookie to it. Leave empty in dev — platform is then served at `/platform/*` on the same host as the tenant app with a host-only cookie. |
 | `PLATFORM_OPERATOR_TENANT_ID` | Optional. UUID of the "house" tenant that acts as the billing backend for all subscription invoices (Phase 10a). When set, platform module bookings on other tenants automatically create `BillingRecurringInvoice` rows inside this tenant. Leave empty to disable subscription-billing features entirely — module toggles still work, they just don't produce contracts. See [Platform Subscription Billing](#platform-subscription-billing-phase-10a) below. |
 
-**Note:** When using the Supabase connection pooler (`pooler.supabase.com:6543`), the Prisma pg adapter is configured to accept Supabase's certificate chain (`ssl: { rejectUnauthorized: false }` in production). No special `DATABASE_URL` params are needed beyond `?sslmode=require&pgbouncer=true`.
+**Note:** When using the Supabase connection pooler (`pooler.supabase.com:6543`), `DATABASE_URL` **must** use `sslmode=no-verify` (not `sslmode=require`). The pooler (Supavisor) uses a self-signed certificate that Node.js's TLS rejects with `sslmode=require`. The connection is still encrypted — `no-verify` only skips certificate chain validation, which is safe for server-to-server connections within AWS. Example: `postgresql://...@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&pgbouncer=true`.
 
 ## Project Structure
 
