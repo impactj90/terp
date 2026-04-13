@@ -56,6 +56,7 @@ function buildDoc(
     addressId: string
     discountDays2: number | null
     discountPercent2: number | null
+    internalNotes: string | null
   }> = {}
 ) {
   return {
@@ -81,6 +82,7 @@ function buildDoc(
     addressId: overrides.addressId ?? "addr-1",
     discountDays2: overrides.discountDays2 ?? null,
     discountPercent2: overrides.discountPercent2 ?? null,
+    internalNotes: overrides.internalNotes ?? null,
   }
 }
 
@@ -148,6 +150,57 @@ describe("evaluateInvoice — D5 filter matrix", () => {
       7
     )
     expect(result.reason).toBe("customer_blocked")
+  })
+
+  it("internalNotes contains platform_subscription marker → not eligible (platform_subscription)", async () => {
+    const result = await evaluateInvoice(
+      prismaMock as never,
+      buildDoc({
+        internalNotes:
+          "[platform_subscription:00000000-0000-0000-0000-000000000001]",
+        paymentTermDays: 7,
+        documentDate: daysAgo(30),
+        totalGross: 100,
+      }),
+      defaultSettings,
+      NOW,
+      7
+    )
+    expect(result.reason).toBe("platform_subscription")
+  })
+
+  it("internalNotes contains multiple platform_subscription markers → still not eligible", async () => {
+    const result = await evaluateInvoice(
+      prismaMock as never,
+      buildDoc({
+        internalNotes:
+          "[platform_subscription:aaa] [platform_subscription:bbb]",
+        paymentTermDays: 7,
+        documentDate: daysAgo(30),
+        totalGross: 100,
+      }),
+      defaultSettings,
+      NOW,
+      7
+    )
+    expect(result.reason).toBe("platform_subscription")
+  })
+
+  it("internalNotes is free-text without marker → eligibility unchanged", async () => {
+    const result = await evaluateInvoice(
+      prismaMock as never,
+      buildDoc({
+        internalNotes:
+          "Vertragslaufzeit: unbefristet, 3 Monate Kündigungsfrist",
+        paymentTermDays: 7,
+        documentDate: daysAgo(30),
+        totalGross: 100,
+      }),
+      defaultSettings,
+      NOW,
+      7
+    )
+    expect(result.reason).toBe("ok")
   })
 
   it("daysOverdue < gracePeriod → in_grace_period", async () => {

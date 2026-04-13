@@ -287,6 +287,19 @@ export function platformSubscriptionMarker(subscriptionId: string): string {
   return `[platform_subscription:${subscriptionId}]`
 }
 
+export const PLATFORM_SUBSCRIPTION_MARKER_PREFIX = "[platform_subscription:"
+
+/**
+ * Checks whether a BillingDocument.internalNotes string contains ANY
+ * platform subscription marker, regardless of subscription id. Used by the
+ * dunning eligibility filter to exclude self-billed invoices from reminders.
+ */
+export function hasPlatformSubscriptionMarker(
+  notes: string | null | undefined,
+): boolean {
+  return (notes ?? "").includes(PLATFORM_SUBSCRIPTION_MARKER_PREFIX)
+}
+
 type PlatformPositionTemplateEntry = {
   type: "FREE"
   description: string

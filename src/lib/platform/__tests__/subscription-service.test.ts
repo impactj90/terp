@@ -16,6 +16,7 @@ import {
   appendMarker,
   removeMarker,
   platformSubscriptionMarker,
+  hasPlatformSubscriptionMarker,
 } from "../subscription-service"
 
 const OPERATOR_TENANT_ID = "10000000-0000-0000-0000-000000000001"
@@ -215,6 +216,37 @@ describe("platform subscription-service", () => {
     })
     it("removeMarker handles null input", () => {
       expect(removeMarker(null, "a")).toBe("")
+    })
+  })
+
+  describe("hasPlatformSubscriptionMarker", () => {
+    it("returns true for single marker", () => {
+      expect(
+        hasPlatformSubscriptionMarker("[platform_subscription:abc]"),
+      ).toBe(true)
+    })
+
+    it("returns true for multiple markers", () => {
+      expect(
+        hasPlatformSubscriptionMarker(
+          "[platform_subscription:a] [platform_subscription:b]",
+        ),
+      ).toBe(true)
+    })
+
+    it("returns false for free-text without marker", () => {
+      expect(
+        hasPlatformSubscriptionMarker("Vertragslaufzeit: unbefristet"),
+      ).toBe(false)
+    })
+
+    it("returns false for null and undefined", () => {
+      expect(hasPlatformSubscriptionMarker(null)).toBe(false)
+      expect(hasPlatformSubscriptionMarker(undefined)).toBe(false)
+    })
+
+    it("returns false for empty string", () => {
+      expect(hasPlatformSubscriptionMarker("")).toBe(false)
     })
   })
 

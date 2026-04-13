@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client"
+import { hasPlatformSubscriptionMarker } from "@/lib/platform/subscription-service"
 import { computeDueDate } from "./billing-payment-service"
 import { calculateInterest, feeForLevel } from "./dunning-interest-service"
 import { getCurrentDunningLevel } from "./reminder-level-helper"
@@ -23,6 +24,7 @@ export type EligibilityReason =
   | "fully_paid"
   | "invoice_blocked"
   | "customer_blocked"
+  | "platform_subscription"
   | "in_discount_period"
   | "max_level_reached"
   | "dunning_disabled"
@@ -175,6 +177,9 @@ export async function evaluateInvoice(
   if (doc.dunningBlocked) return makeIneligible(doc, "invoice_blocked")
   if (doc.address?.dunningBlocked) {
     return makeIneligible(doc, "customer_blocked")
+  }
+  if (hasPlatformSubscriptionMarker(doc.internalNotes)) {
+    return makeIneligible(doc, "platform_subscription")
   }
 
   const dueDate = computeDueDate(doc.documentDate, doc.paymentTermDays)
