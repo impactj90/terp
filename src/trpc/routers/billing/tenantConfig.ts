@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { requireModule } from "@/lib/modules"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as configService from "@/lib/services/billing-tenant-config-service"
+import { isValidCountryCode } from "@/lib/iso-countries"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Permission Constants ---
@@ -35,7 +36,14 @@ const upsertInput = z.object({
   companyStreet: z.string().max(255).nullable().optional(),
   companyZip: z.string().max(20).nullable().optional(),
   companyCity: z.string().max(100).nullable().optional(),
-  companyCountry: z.string().max(10).nullable().optional(),
+  companyCountry: z
+    .string()
+    .max(10)
+    .refine((v) => v === "" || isValidCountryCode(v), {
+      message: "Ungültiger ISO 3166-1 alpha-2 Länder-Code",
+    })
+    .nullable()
+    .optional(),
 })
 
 // --- Router ---
