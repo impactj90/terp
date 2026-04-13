@@ -190,6 +190,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [22.13 Status-Workflow](#2213-status-workflow)
     - [22.14 Berechtigungen](#2214-berechtigungen)
     - [22.15 Praxisbeispiele](#2215-praxisbeispiele)
+    - [22.16 Zahlungsläufe (SEPA)](#2216-zahlungsläufe-sepa)
 23. [Glossar](#23-glossar)
 
 ---
@@ -10632,6 +10633,156 @@ Das E-Mail-Log zeigt alle vom IMAP-Poller verarbeiteten E-Mails. Nützlich zur F
 
 ---
 
+### 22.16 Zahlungsläufe (SEPA)
+
+**Was ist ein Zahlungslauf?** Ein SEPA-Zahlungslauf ist eine Sammelüberweisung:
+Sie wählen freigegebene Eingangsrechnungen aus, Terp erzeugt eine XML-Datei im
+Format **pain.001.001.09** (ISO-20022 SEPA Credit Transfer), Sie laden die Datei
+im Online-Banking Ihrer Bank hoch, die Bank führt die Überweisungen aus.
+
+#### Voraussetzungen
+
+1. **Modul aktiv:** Das Modul `payment_runs` muss für den Mandanten aktiviert
+   sein (Platform-Admin → Module).
+2. **Eigene Bankdaten** unter 📍 **Einstellungen → Rechnungs-Konfiguration**:
+   IBAN, BIC, Firmenname, Stadt, Land müssen gesetzt sein. Fehlen diese, zeigt
+   Terp eine rote Warnung mit Direktlink.
+3. **Lieferanten-Bankdaten** im CRM: für jeden Lieferanten, den Sie per SEPA
+   bezahlen wollen, ein Bankkonto mit IBAN als Standard im Reiter „Bankkonten"
+   hinterlegen (📍 CRM → Adresse → Tab Bankkonten).
+4. **Berechtigungen:** `payment_runs.view` (Anzeigen) sowie
+   `payment_runs.create` / `payment_runs.export` / `payment_runs.book` /
+   `payment_runs.cancel` für die jeweiligen Aktionen. ADMIN und BUCHHALTUNG
+   haben standardmäßig alle fünf, VORGESETZTER nur Lesezugriff.
+
+#### Workflow
+
+**Schritt 1 — Vorschlag öffnen:** 📍 Sidebar `Rechnungen → Zahlungsläufe`. Terp
+zeigt automatisch alle freigegebenen Rechnungen mit Fälligkeit in den
+nächsten 7 Tagen, die in keinem aktiven Lauf enthalten sind. Filter: Datum-
+Range.
+
+**Schritt 2 — Status-Ampel prüfen:**
+- 🟢 **Grün „Bereit"**: Alle Daten vorhanden, Rechnung ist auswählbar.
+- 🟡 **Gelb „Konflikt"**: Die IBAN oder Adresse im CRM weicht von der auf der
+  Rechnung ab. Klappen Sie die Zeile auf und wählen Sie per Radio-Button
+  „Aus CRM verwenden" oder „Aus Rechnung verwenden".
+- 🔴 **Rot „Nicht exportierbar"**: Lieferant hat keine IBAN, keine Adresse,
+  die IBAN ist ungültig (MOD-97-Prüfung fällt durch) oder die Rechnung ist
+  noch nicht freigegeben. Ergänzen Sie die Daten im CRM (Link) und kehren Sie
+  zurück.
+
+**Schritt 3 — Rechnungen auswählen:** Haken setzen bei den Rechnungen, die
+bezahlt werden sollen. Im Footer erscheinen Anzahl und Summe.
+
+**Schritt 4 — Ausführungsdatum:** Standardmäßig morgen. Anpassbar.
+
+**Schritt 5 — Lauf erstellen:** Button **„Zahlungslauf erstellen"**. Terp legt
+den Lauf im Status **Entwurf** an (Nummer `PR-2026-001`) und navigiert zur
+Detailseite. Alle zahlungsrelevanten Felder (IBAN, Adresse, Betrag,
+Rechnungsnummer) werden als Snapshot eingefroren – spätere CRM-Änderungen
+beeinflussen den bereits erzeugten Lauf nicht mehr.
+
+**Schritt 6 — XML herunterladen:** Button **„XML herunterladen"**. Terp
+erzeugt die `pain.001.001.09`-Datei, legt sie im privaten Storage-Bucket
+`payment-runs` ab und bietet sie über eine Signed-URL als Download an.
+Nach dem ersten Download wechselt der Lauf in den Status **Exportiert**.
+Erneute Downloads desselben Laufs liefern bitgenau dieselbe Datei.
+
+**Schritt 7 — Bei der Bank hochladen:** Öffnen Sie Ihr Online-Banking,
+navigieren Sie zu „Sammelüberweisung / SEPA-Datei-Upload", laden Sie die
+heruntergeladene `PR-2026-001.xml` hoch, prüfen Sie die Vorschau,
+bestätigen Sie mit TAN.
+
+**Schritt 8 — Als gebucht markieren:** Zurück in Terp auf der Detail-Seite
+des Laufs, Button **„Als gebucht markieren"**. Ein Confirm-Dialog fragt, ob
+Sie die Datei wirklich bei der Bank hochgeladen haben. Nach Bestätigung
+wechselt der Status auf **Gebucht**. Die enthaltenen Rechnungen zählen
+ab jetzt als bezahlt (abrufbar über den internen `getPaymentStatus`-Helper,
+der die `PaymentRunItem`-Rows ausliest – **ohne** den Rechnungs-Status zu
+mutieren).
+
+#### Stornierung
+
+Solange ein Lauf nicht als gebucht markiert ist, können Sie ihn jederzeit
+stornieren (Button **„Lauf stornieren"**). Die enthaltenen Rechnungen werden
+wieder für neue Läufe verfügbar. Die XML-Datei bleibt im System als
+Audit-Spur erhalten.
+
+> ⚠️ **Ein bereits gebuchter Lauf kann nicht storniert werden.** Eine bei
+> der Bank ausgeführte Überweisung müsste per Rückholung bei der Bank
+> rückgängig gemacht werden; Terp spiegelt das nicht.
+
+#### Praxisbeispiele
+
+##### Beispiel 1: Wöchentlicher Standardlauf mit gemischten Status
+
+**Ausgangslage:** *Montag, 14. April.* Anna (Buchhalterin) sieht im Dashboard „3 Rechnungen fällig diese Woche" — eine grüne, eine mit IBAN-Konflikt und eine ohne IBAN im CRM.
+
+1. 📍 Seitenleiste → Rechnungen → Zahlungsläufe
+2. ✅ Vorschlag zeigt 3 Zeilen:
+   - „Lieferant A — 1.200,00 €" — 🟢 **Bereit**
+   - „Lieferant B — 450,00 €" — 🟡 **Konflikt** (IBAN weicht ab)
+   - „Lieferant C — 2.300,00 €" — 🔴 **Nicht exportierbar** (keine IBAN im CRM)
+3. 📍 Zeile „Lieferant B" anklicken → inline-Konfliktauflösung klappt auf
+4. ✅ Zwei IBANs stehen nebeneinander: `DE11 …9876` (CRM, alt) und `DE22 …5432` (Rechnung, neu)
+5. 📍 Radio-Button **„Aus Rechnung verwenden"** wählen (Anna erinnert sich an die Mail „neue Bankverbindung")
+6. ✅ Zeile wechselt auf 🟢 **Bereit**, Checkbox wird aktivierbar
+7. 📍 Zeile „Lieferant C" → Link **„Lieferant im CRM öffnen"** klicken
+8. 📍 CRM-Adresse → Tab **„Bankkonten"** → **„Neues Bankkonto"** → IBAN eintragen, **„Als Standard"** setzen → Speichern
+9. 📍 Browser-Back → Vorschlag neu laden → Lieferant C ist jetzt 🟢
+10. 📍 Alle 3 Checkboxen anhaken → Footer zeigt `3 Rechnungen • 3.950,00 €`
+11. 📍 Ausführungsdatum auf `15.04.2026` setzen → **„Zahlungslauf erstellen"**
+12. ✅ Navigation zur Detailseite `PR-2026-001`, Status **Entwurf**
+13. 📍 **„XML herunterladen"** → Browser startet Download von `PR-2026-001.xml`, Status wechselt auf **Exportiert**
+14. 📍 Online-Banking öffnen → „SEPA-Datei-Upload" → Datei hochladen → TAN bestätigen
+15. 📍 Zurück in Terp → **„Als gebucht markieren"** → Confirm-Dialog bestätigen
+16. ✅ Status wechselt auf **Gebucht**, die drei Rechnungen gelten in Terp als bezahlt
+
+##### Beispiel 2: Lauf stornieren, bevor die Bank ihn verarbeitet hat
+
+**Ausgangslage:** Buchhalter hat versehentlich eine Rechnung in den Lauf aufgenommen, die noch nicht final ist. Die XML wurde bereits heruntergeladen, aber **noch nicht** bei der Bank hochgeladen.
+
+1. 📍 Rechnungen → Zahlungsläufe → Lauf `PR-2026-002` (Status: **Exportiert**) öffnen
+2. ✅ Detailseite zeigt die Items-Tabelle mit der versehentlich enthaltenen Rechnung
+3. 📍 **„Lauf stornieren"** klicken
+4. ✅ Confirm-Dialog: „Die enthaltenen Rechnungen werden wieder für neue Läufe verfügbar. Die XML-Datei bleibt als Audit-Spur erhalten."
+5. 📍 **„Bestätigen"**
+6. ✅ Status wechselt auf **Storniert** (durchgestrichenes Badge)
+7. ✅ Rechnungen erscheinen im nächsten Vorschlag wieder als auswählbar
+8. 📍 Neuen Lauf `PR-2026-003` ohne die versehentliche Rechnung anlegen → herunterladen → hochladen → als gebucht markieren
+
+> ⚠️ **Nach dem Hochladen bei der Bank ist es zu spät für eine Stornierung:** Sobald Sie in Terp **„Als gebucht markieren"** geklickt haben, ist der Lauf endgültig. Terp lässt keine Stornierung mehr zu, weil eine bei der Bank ausgeführte Überweisung nur per Rückholung bei der Bank rückgängig gemacht werden könnte.
+
+##### Beispiel 3: XML nachträglich erneut herunterladen (Audit-Anforderung)
+
+**Ausgangslage:** Der Steuerberater fragt nach der pain.001-Datei eines bereits gebuchten Laufs aus dem letzten Monat, um die Überweisungen mit dem Bankkontoauszug abzugleichen.
+
+1. 📍 Rechnungen → Zahlungsläufe → Bestehende Läufe → `PR-2026-001` (Status: **Gebucht**) anklicken
+2. ✅ Detailseite zeigt alle Snapshot-Daten (Nummer, Ausführungsdatum, Debitor, Items)
+3. 📍 **„XML erneut herunterladen"** klicken
+4. ✅ Terp liefert **exakt dieselbe Datei**, die bei der Bank hochgeladen wurde (bitgenau — der Snapshot im Storage-Bucket wird nicht neu generiert)
+5. 📍 Datei dem Steuerberater per E-Mail weiterleiten
+
+> 💡 **Warum bitgenau?** Die XML wird beim ersten Download erzeugt, in Supabase Storage persistiert und beim zweiten Download nur noch ausgeliefert. Das garantiert Reproduzierbarkeit für Audit-Zwecke: auch wenn im CRM später die Lieferanten-IBAN geändert wurde, zeigt die heruntergeladene Datei den damals verwendeten Wert — weil `PaymentRunItem` alle zahlungsrelevanten Felder als eigene Spalten hält (IBAN, BIC, Adresse, Betrag, Empfängername).
+
+##### Beispiel 4: Vorschlag ist leer — was jetzt?
+
+**Ausgangslage:** Anna öffnet den Vorschlag, die Tabelle zeigt „Keine fälligen Rechnungen im gewählten Zeitraum."
+
+1. ✅ Terp filtert nur Rechnungen mit Status **Freigegeben** und Fälligkeit innerhalb des gewählten Zeitraums (Standard: heute + 7 Tage)
+2. 📍 Datums-Filter oben anpassen: „von" auf `01.04.2026`, „bis" auf `30.04.2026`
+3. ✅ Vorschlag lädt neu, zeigt jetzt alle Aprilrechnungen
+4. **Häufige Ursachen für einen leeren Vorschlag:**
+   - Rechnung ist noch im Status „Zur Freigabe" → 📍 Freigabeverlauf prüfen, ggf. erinnern
+   - Rechnung ist bereits in einem aktiven Lauf (Entwurf/Exportiert) → 📍 Bestehende Läufe-Sektion prüfen
+   - Rechnung hat kein Fälligkeitsdatum → 📍 Detailseite öffnen, `dueDate` nachtragen, speichern
+   - Rechnung ist bereits in einem Lauf, der als **Gebucht** markiert wurde → kein Handlungsbedarf, Rechnung ist bezahlt
+
+> 💡 **Hinweis:** Der Vorschlagsfilter schließt bereits verplante Rechnungen automatisch aus, damit keine Rechnung versehentlich zweimal überwiesen wird. Die DB-Trigger-basierte Unique-Constraint auf `payment_run_items` greift als Safety-Net, falls zwei Buchhalter gleichzeitig denselben Vorschlag bearbeiten.
+
+---
+
 ## 23. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -10648,6 +10799,11 @@ Das E-Mail-Log zeigt alle vom IMAP-Poller verarbeiteten E-Mails. Nützlich zur F
 | **Freigabeschritt** | Einzelne Genehmigungsstufe einer Eingangsrechnung. Wird aus Freigaberegeln erstellt, kann freigegeben oder abgelehnt werden | 📍 Rechnungen → Eingangsrechnungen → Detail → Freigabeverlauf |
 | **IMAP-Poller** | Automatischer Hintergrund-Job der alle 3 Minuten ein IMAP-Postfach auf neue Rechnungs-PDFs prüft | 📍 Rechnungen → Einstellungen → IMAP-Konfiguration |
 | **ZUGFeRD** | Deutscher E-Rechnungsstandard: Strukturierte XML-Daten in ein PDF eingebettet. Terp erkennt die Profile MINIMUM, BASIC, EN16931, EXTENDED und XRECHNUNG | 📍 Rechnungen → Eingangsrechnungen → Detail → ZUGFeRD-Badge |
+| **Zahlungslauf (PaymentRun)** | Sammelüberweisung, die mehrere freigegebene Eingangsrechnungen in einer einzigen SEPA-Datei (pain.001.001.09) bündelt. Status-Workflow: Entwurf → Exportiert → Gebucht (oder Storniert) | 📍 Rechnungen → Zahlungsläufe |
+| **pain.001.001.09** | ISO-20022-XML-Nachrichtentyp „Customer Credit Transfer Initiation", Version 9. Wird von Terp für SEPA-Sammelüberweisungen erzeugt und muss von der Bank als Upload akzeptiert werden | 📍 Rechnungen → Zahlungsläufe → Detail → „XML herunterladen" |
+| **SEPA (Single Euro Payments Area)** | Einheitlicher europäischer Zahlungsverkehrsraum. SEPA-Überweisungen sind in EUR innerhalb der teilnehmenden Länder kostenfrei und in der Regel innerhalb eines Bankarbeitstags möglich | 📍 Rechnungen → Zahlungsläufe |
+| **Gläubiger-ID (Creditor Identifier, CI)** | Für SEPA-Lastschriften (pain.008) erforderliche Kennung. **Für Terps Zahlungsläufe (pain.001, Überweisung) nicht relevant** | — |
+| **IBAN-Quelle (CRM/INVOICE)** | Zeigt, woher Terp die Empfänger-IBAN eines PaymentRunItems genommen hat: aus dem Bankkonto im CRM-Lieferanten oder aus dem `sellerIban`-Feld auf der Rechnung. Wird beim Erstellen des Laufs als Snapshot eingefroren | 📍 Rechnungen → Zahlungsläufe → Detail → Items-Tabelle |
 | **Bestellposition** | Einzelne Zeile in einer Bestellung. Drei Typen: Artikel (mit Artikelstamm), Freitext (ohne Artikelstamm, mit Preis) und Textzeile (nur Text, ohne Preis) | 📍 Lager → Bestellungen → Detail → Positionstabelle |
 | **Beleg** | Kaufmännisches Dokument in der Belegkette (Angebot, AB, Lieferschein, Rechnung etc.) | 📍 Aufträge → Belege |
 | **Belegkette** | Lückenlose Abfolge von Belegen: Angebot → AB → Lieferschein → Rechnung | 📍 Aufträge → Belege → Detail → Seitenleiste „Belegkette" |
@@ -10864,6 +11020,8 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/invoices/inbound/[id]` | Rechnungsliste → Zeile anklicken | inbound_invoices.view |
 | `/invoices/inbound/approvals` | Rechnungen → Freigaben | inbound_invoices.approve |
 | `/invoices/inbound/settings` | Rechnungen → Einstellungen (IMAP, Regeln, Log) | inbound_invoices.manage |
+| `/invoices/inbound/payment-runs` | Rechnungen → Zahlungsläufe | payment_runs.view |
+| `/invoices/inbound/payment-runs/[id]` | Zahlungsläufe → Zeile anklicken | payment_runs.view |
 
 ---
 

@@ -149,6 +149,7 @@
     "inboundInvoices": "Inbound Invoices",
     "inboundApprovals": "Approvals",
     "inboundSettings": "Settings",
+    "paymentRuns": "Payment Runs",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "warehouseArticles": "Articles",
@@ -8030,6 +8031,101 @@
       "show": "Show",
       "hide": "Hide",
       "confirmDelete": "Are you sure you want to delete?"
+    }
+  },
+  "paymentRuns": {
+    "common": {
+      "noPermission": "No permission for payment runs.",
+      "error": "Error loading data."
+    },
+    "pageTitle": "Payment Runs",
+    "preflight": {
+      "bannerTitle": "Bank details missing",
+      "bannerText": "Please configure your bank details in the billing configuration before creating payment runs.",
+      "goToBillingConfig": "Open billing configuration",
+      "blocker_NO_IBAN": "IBAN missing",
+      "blocker_NO_NAME": "Company name missing",
+      "blocker_NO_CITY": "City missing",
+      "blocker_NO_COUNTRY": "Country missing"
+    },
+    "proposal": {
+      "sectionTitle": "Proposal",
+      "emptyState": "No due invoices in the selected range.",
+      "filters": {
+        "dateRange": "Due between",
+        "supplier": "Supplier",
+        "amountRange": "Amount from/to"
+      },
+      "columns": {
+        "select": "",
+        "number": "No.",
+        "supplier": "Supplier",
+        "dueDate": "Due",
+        "amount": "Amount",
+        "iban": "IBAN",
+        "status": "Status"
+      },
+      "badge": {
+        "green": "Ready",
+        "yellow": "Conflict",
+        "red": "Not exportable"
+      },
+      "blocker": {
+        "NO_IBAN": "Supplier {name} has no IBAN — please add it in CRM",
+        "NO_ADDRESS": "Supplier {name} has no address — please add it in CRM",
+        "NO_SUPPLIER": "Invoice is not assigned to a supplier",
+        "IBAN_INVALID": "IBAN is invalid: {value}",
+        "IBAN_CONFLICT": "IBAN differs between CRM and invoice",
+        "ADDRESS_CONFLICT": "Address differs between CRM and invoice",
+        "NOT_APPROVED": "Invoice is not approved",
+        "ALREADY_IN_ACTIVE_RUN": "Invoice is already in an active payment run",
+        "openSupplier": "Open supplier in CRM"
+      },
+      "conflict": {
+        "useCrm": "Use from CRM",
+        "useInvoice": "Use from invoice"
+      },
+      "footer": {
+        "selected": "{count} invoices selected",
+        "totalAmount": "Total {amount}",
+        "executionDate": "Execution date",
+        "createButton": "Create payment run"
+      }
+    },
+    "existingRuns": {
+      "sectionTitle": "Existing runs",
+      "emptyState": "No payment runs created yet.",
+      "columns": {
+        "number": "No.",
+        "status": "Status",
+        "createdAt": "Created",
+        "itemCount": "Count",
+        "total": "Total",
+        "executionDate": "Execution"
+      }
+    },
+    "detail": {
+      "debtorTitle": "Debtor",
+      "itemsTitle": "Included invoices",
+      "actions": {
+        "download": "Download XML",
+        "downloadAgain": "Re-download XML",
+        "markBooked": "Mark as booked",
+        "cancel": "Cancel run"
+      },
+      "confirm": {
+        "bookTitle": "Mark payment run as booked?",
+        "bookText": "Have you uploaded the file to your bank and executed the transfer? This action cannot be undone.",
+        "cancelTitle": "Cancel payment run?",
+        "cancelText": "The included invoices will be available for new runs again. The XML file remains as audit trail.",
+        "reasonLabel": "Reason (optional)"
+      }
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "EXPORTED": "Exported",
+      "BOOKED": "Booked",
+      "CANCELLED": "Cancelled"
     }
   }
 }

@@ -149,6 +149,7 @@
     "inboundInvoices": "Eingangsrechnungen",
     "inboundApprovals": "Freigaben",
     "inboundSettings": "Einstellungen",
+    "paymentRuns": "Zahlungsläufe",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
     "warehouseArticles": "Artikel",
@@ -8030,6 +8031,101 @@
       "show": "Anzeigen",
       "hide": "Verbergen",
       "confirmDelete": "Wirklich löschen?"
+    }
+  },
+  "paymentRuns": {
+    "common": {
+      "noPermission": "Keine Berechtigung für Zahlungsläufe.",
+      "error": "Fehler beim Laden."
+    },
+    "pageTitle": "Zahlungsläufe",
+    "preflight": {
+      "bannerTitle": "Bankdaten fehlen",
+      "bannerText": "Bitte hinterlegen Sie zuerst Ihre Bankverbindung in der Rechnungs-Konfiguration, bevor Sie Zahlungsläufe erstellen.",
+      "goToBillingConfig": "Rechnungs-Konfiguration öffnen",
+      "blocker_NO_IBAN": "IBAN fehlt",
+      "blocker_NO_NAME": "Firmenname fehlt",
+      "blocker_NO_CITY": "Stadt fehlt",
+      "blocker_NO_COUNTRY": "Land fehlt"
+    },
+    "proposal": {
+      "sectionTitle": "Vorschlag",
+      "emptyState": "Keine fälligen Rechnungen im gewählten Zeitraum.",
+      "filters": {
+        "dateRange": "Fälligkeit zwischen",
+        "supplier": "Lieferant",
+        "amountRange": "Betrag von/bis"
+      },
+      "columns": {
+        "select": "",
+        "number": "Nr.",
+        "supplier": "Lieferant",
+        "dueDate": "Fällig",
+        "amount": "Betrag",
+        "iban": "IBAN",
+        "status": "Status"
+      },
+      "badge": {
+        "green": "Bereit",
+        "yellow": "Konflikt",
+        "red": "Nicht exportierbar"
+      },
+      "blocker": {
+        "NO_IBAN": "Lieferant {name} hat keine IBAN – bitte im CRM ergänzen",
+        "NO_ADDRESS": "Lieferant {name} hat keine Adresse – bitte im CRM ergänzen",
+        "NO_SUPPLIER": "Rechnung ist keinem Lieferanten zugeordnet",
+        "IBAN_INVALID": "IBAN ist ungültig: {value}",
+        "IBAN_CONFLICT": "IBAN unterschiedlich zwischen CRM und Rechnung",
+        "ADDRESS_CONFLICT": "Adresse unterschiedlich zwischen CRM und Rechnung",
+        "NOT_APPROVED": "Rechnung ist nicht freigegeben",
+        "ALREADY_IN_ACTIVE_RUN": "Rechnung ist bereits in einem aktiven Lauf",
+        "openSupplier": "Lieferant im CRM öffnen"
+      },
+      "conflict": {
+        "useCrm": "Aus CRM verwenden",
+        "useInvoice": "Aus Rechnung verwenden"
+      },
+      "footer": {
+        "selected": "{count} Rechnungen ausgewählt",
+        "totalAmount": "Summe {amount}",
+        "executionDate": "Ausführungsdatum",
+        "createButton": "Zahlungslauf erstellen"
+      }
+    },
+    "existingRuns": {
+      "sectionTitle": "Bestehende Läufe",
+      "emptyState": "Noch keine Zahlungsläufe angelegt.",
+      "columns": {
+        "number": "Nr.",
+        "status": "Status",
+        "createdAt": "Erstellt",
+        "itemCount": "Anzahl",
+        "total": "Summe",
+        "executionDate": "Ausführung"
+      }
+    },
+    "detail": {
+      "debtorTitle": "Auftraggeber",
+      "itemsTitle": "Enthaltene Rechnungen",
+      "actions": {
+        "download": "XML herunterladen",
+        "downloadAgain": "XML erneut herunterladen",
+        "markBooked": "Als gebucht markieren",
+        "cancel": "Lauf stornieren"
+      },
+      "confirm": {
+        "bookTitle": "Zahlungslauf als gebucht markieren?",
+        "bookText": "Haben Sie die Datei bei Ihrer Bank hochgeladen und die Überweisung ausgeführt? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "cancelTitle": "Zahlungslauf stornieren?",
+        "cancelText": "Die enthaltenen Rechnungen werden wieder für neue Läufe verfügbar. Die XML-Datei bleibt als Audit-Spur erhalten.",
+        "reasonLabel": "Grund (optional)"
+      }
+    },
+    "status": {
+      "DRAFT": "Entwurf",
+      "EXPORTED": "Exportiert",
+      "BOOKED": "Gebucht",
+      "CANCELLED": "Storniert"
     }
   }
 }

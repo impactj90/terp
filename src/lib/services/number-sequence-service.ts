@@ -54,6 +54,8 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   inbound_invoice: "ER-",
   // Warehouse stocktakes
   stocktake: "INV-",
+  // SEPA payment runs
+  payment_run: "PR-",
 }
 
 export async function getNextNumber(

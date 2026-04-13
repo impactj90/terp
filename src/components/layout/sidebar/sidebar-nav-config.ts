@@ -411,6 +411,13 @@ export const navConfig: NavSection[] = [
         module: 'inbound_invoices',
         permissions: ['inbound_invoices.manage'],
       },
+      {
+        titleKey: 'paymentRuns',
+        href: '/invoices/inbound/payment-runs',
+        icon: Landmark,
+        module: 'payment_runs',
+        permissions: ['payment_runs.view'],
+      },
     ],
   },
   {

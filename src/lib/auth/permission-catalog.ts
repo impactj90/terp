@@ -347,6 +347,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("inbound_invoices.export", "inbound_invoices", "export", "Export inbound invoices"),
   p("inbound_invoices.manage", "inbound_invoices", "manage", "Manage inbound invoices"),
 
+  // Payment Runs (SEPA pain.001.001.09)
+  p("payment_runs.view", "payment_runs", "view", "View SEPA payment runs"),
+  p("payment_runs.create", "payment_runs", "create", "Create SEPA payment runs"),
+  p("payment_runs.export", "payment_runs", "export", "Download SEPA XML files"),
+  p("payment_runs.book", "payment_runs", "book", "Mark payment run as booked"),
+  p("payment_runs.cancel", "payment_runs", "cancel", "Cancel payment runs"),
+
   // Email IMAP
   p("email_imap.view", "email_imap", "view", "View IMAP configuration"),
   p("email_imap.manage", "email_imap", "manage", "Manage IMAP configuration"),

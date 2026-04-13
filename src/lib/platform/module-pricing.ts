@@ -79,6 +79,12 @@ export const MODULE_PRICES: Record<ModuleId, ModulePricing> = {
     vatRate: 19,
     description: "Terp Eingangsrechnungen — Erfassung und Freigabe",
   },
+  payment_runs: {
+    monthly: 2,
+    annual: 20,
+    vatRate: 19,
+    description: "Terp Zahlungsläufe — SEPA-Sammelüberweisungen (pain.001)",
+  },
 }
 
 export function getModulePrice(

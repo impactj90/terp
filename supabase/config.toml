@@ -85,6 +85,11 @@ public = false
 file_size_limit = "20MiB"
 allowed_mime_types = ["application/pdf", "text/xml", "application/xml", "image/jpeg", "image/png"]
 
+[storage.buckets.payment-runs]
+public = false
+file_size_limit = "1MiB"
+allowed_mime_types = ["application/xml", "text/xml"]
+
 [auth]
 enabled = true
 # Base URL the app is served from. Used by auth.admin.generateLink() as the

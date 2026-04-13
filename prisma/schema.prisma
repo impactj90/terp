@@ -245,6 +245,9 @@ model Tenant {
   inboundInvoiceApprovalPolicies  InboundInvoiceApprovalPolicy[]
   inboundInvoiceApprovals         InboundInvoiceApproval[]
 
+  // Payment Runs (SEPA pain.001.001.09)
+  paymentRuns                     PaymentRun[]
+
   // Payroll master data
   employeeChildren           EmployeeChild[]
   employeeCompanyCars        EmployeeCompanyCar[]
@@ -5649,6 +5652,7 @@ model InboundInvoice {
   costCenter       CostCenter?               @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   lineItems        InboundInvoiceLineItem[]
   approvals        InboundInvoiceApproval[]
+  paymentRunItems  PaymentRunItem[]
 
   @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
   @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
@@ -6124,4 +6128,81 @@ model EmployeeOtherEmployment {
 
   @@index([employeeId], map: "idx_employee_other_employments_employee")
   @@map("employee_other_employments")
+}
+
+// -----------------------------------------------------------------------------
+// PaymentRun
+// -----------------------------------------------------------------------------
+// Migration: 20260423000000
+//
+// SEPA-Sammellauf (pain.001.001.09) für Eingangsrechnungen.
+// Lebt neben InboundInvoice; Bezahl-Lifecycle ist unabhängig vom DATEV-Export-Lifecycle.
+model PaymentRun {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  number           String    @db.VarChar(50)
+  status           String    @default("DRAFT") @db.VarChar(20)
+  executionDate    DateTime  @map("execution_date") @db.Date
+  debtorName       String    @map("debtor_name") @db.VarChar(70)
+  debtorIban       String    @map("debtor_iban") @db.VarChar(34)
+  debtorBic        String?   @map("debtor_bic") @db.VarChar(11)
+  totalAmountCents BigInt    @default(0) @map("total_amount_cents")
+  itemCount        Int       @default(0) @map("item_count")
+  xmlStoragePath   String?   @map("xml_storage_path") @db.Text
+  xmlGeneratedAt   DateTime? @map("xml_generated_at") @db.Timestamptz(6)
+  bookedAt         DateTime? @map("booked_at") @db.Timestamptz(6)
+  bookedBy         String?   @map("booked_by") @db.Uuid
+  cancelledAt      DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy      String?   @map("cancelled_by") @db.Uuid
+  cancelledReason  String?   @map("cancelled_reason") @db.Text
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy        String?   @map("created_by") @db.Uuid
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  PaymentRunItem[]
+
+  @@unique([tenantId, number], map: "payment_runs_number_unique")
+  @@index([tenantId, status], map: "idx_payment_runs_tenant_status")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_payment_runs_tenant_created")
+  @@map("payment_runs")
+}
+
+// -----------------------------------------------------------------------------
+// PaymentRunItem
+// -----------------------------------------------------------------------------
+// Migration: 20260423000000
+//
+// Snapshot der im Lauf enthaltenen Eingangsrechnungen. Alle zahlungsrelevanten
+// Felder werden hier eingefroren, damit die erzeugte XML reproduzierbar bleibt.
+model PaymentRunItem {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  paymentRunId            String   @map("payment_run_id") @db.Uuid
+  inboundInvoiceId        String   @map("inbound_invoice_id") @db.Uuid
+
+  effectiveCreditorName   String   @map("effective_creditor_name") @db.VarChar(70)
+  effectiveIban           String   @map("effective_iban") @db.VarChar(34)
+  effectiveBic            String?  @map("effective_bic") @db.VarChar(11)
+  effectiveStreet         String?  @map("effective_street") @db.VarChar(70)
+  effectiveZip            String?  @map("effective_zip") @db.VarChar(16)
+  effectiveCity           String   @map("effective_city") @db.VarChar(35)
+  effectiveCountry        String   @map("effective_country") @db.VarChar(2)
+  effectiveAmountCents    BigInt   @map("effective_amount_cents")
+  effectiveCurrency       String   @default("EUR") @map("effective_currency") @db.VarChar(3)
+  effectiveRemittanceInfo String   @map("effective_remittance_info") @db.VarChar(140)
+
+  ibanSource              String   @map("iban_source") @db.VarChar(10)
+  addressSource           String   @map("address_source") @db.VarChar(10)
+
+  endToEndId              String   @map("end_to_end_id") @db.VarChar(35)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  paymentRun     PaymentRun     @relation(fields: [paymentRunId], references: [id], onDelete: Cascade)
+  inboundInvoice InboundInvoice @relation(fields: [inboundInvoiceId], references: [id])
+
+  @@index([tenantId, paymentRunId], map: "idx_pri_tenant_run")
+  @@index([tenantId, inboundInvoiceId], map: "idx_pri_inbound_invoice")
+  @@map("payment_run_items")
 }
