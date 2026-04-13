@@ -97,9 +97,9 @@
     "liquidjs": "^10.25.4",
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.6",
-    "next": "^16.2.1",
+    "next": "^16.2.3",
     "next-intl": "^4.7.0",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^8.0.5",
     "openapi-fetch": "^0.17.0",
     "otpauth": "^9.3.4",
     "pdf-lib": "^1.17.1",
@@ -145,7 +145,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.53.1",
-    "vite": "^7.3.1",
+    "vite": "^7.3.2",
     "vitest": "^4.0.18"
   },
   "pnpm": {
