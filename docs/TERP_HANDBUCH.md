@@ -10783,6 +10783,301 @@ Audit-Spur erhalten.
 
 ---
 
+### 22.17 Mahnwesen
+
+**Was ist das Mahnwesen?** Wenn eine Ausgangsrechnung nach dem Fälligkeitstag unbezahlt bleibt, erzeugt Terp gestufte Mahnungen — vom freundlichen **„Zahlungserinnerung"** bis zur **„Letzten Mahnung"** — mit konfigurierbaren Mahngebühren und Verzugszinsen. Jede Mahnung wird als PDF generiert, per E-Mail versendet und als Korrespondenzeintrag auf dem Kunden protokolliert.
+
+**Wozu dient es?** Es ersetzt das manuelle Nachhalten überfälliger Rechnungen in Excel. Ein täglicher Cron-Job erkennt mahnfähige Rechnungen und benachrichtigt die Buchhaltung. Der Buchhalter überprüft den Vorschlag, wählt pro Kunde die zu mahnenden Rechnungen, verschickt die gebündelte Sammelmahnung mit **einem** Klick und dokumentiert den Vorgang automatisch auf Kunden- und Rechnungs-Ebene.
+
+**Wer kann es nutzen?** Benutzer mit den Berechtigungen `dunning.view/create/send/cancel/settings`. Administratoren haben alle fünf automatisch über den is-admin-Bypass.
+
+**Wichtig — kein Auto-Versand:** Jede Mahnung muss einzeln manuell freigegeben werden. Der Cron-Job erzeugt lediglich **Benachrichtigungen** — er versendet nichts selbständig. Das schützt vor irrtümlichen Mahnungen an Kunden, die in letzter Minute bezahlt haben.
+
+⚠️ Modul: Das Modul `billing` muss aktiviert sein (Mahnwesen ist Teil des Billing-Moduls, kein eigenes Modul).
+
+📍 Seitenleiste → **Fakturierung** → **Mahnwesen**
+
+---
+
+#### 22.17.1 Seitenstruktur
+
+Die Mahnwesen-Seite besteht aus vier Tabs:
+
+| Tab | Inhalt | Default |
+|---|---|---|
+| **Vorschlag** | Liste aller aktuell mahnfähigen Kunden mit ihren überfälligen Rechnungen | ✅ aktiv beim Öffnen |
+| **Mahnläufe** | Historie aller erstellten Mahnungen mit Status-Filter | — |
+| **Vorlagen** | Mahnvorlagen pro Stufe (Kopftext, Schlusstext, E-Mail) | — |
+| **Einstellungen** | Aktivierung, Stufen, Karenzzeiten, Gebühren, Zinssatz | — |
+
+Oben über den Tabs erscheint ein **Pre-Flight-Banner** (gelb) wenn eine Voraussetzung fehlt:
+- Mahnwesen ist deaktiviert → Button **„Zu den Einstellungen"**
+- Es gibt noch keine Vorlagen → Button **„Zu den Vorlagen"**
+
+---
+
+#### 22.17.2 Einstellungen
+
+📍 `Fakturierung → Mahnwesen → Tab "Einstellungen"`
+
+⚠️ Berechtigung: `dunning.settings`
+
+**Allgemein**
+- **Mahnwesen aktivieren** (Schalter): Beim Einschalten werden die drei Standard-Vorlagen (Stufe 1–3) automatisch angelegt, sofern noch keine existieren. Idempotent — zweite Aktivierung fügt nichts Doppeltes hinzu.
+- **Maximale Mahnstufe** (Dropdown 1–4): Wie viele Eskalationsstufen verwendet werden. Jede Stufe hat ihre eigene Karenzzeit, Gebühr und Vorlage.
+
+**Karenzzeiten**
+Anzahl Tage zwischen Fälligkeit/vorheriger Stufe und der nächsten Mahnung. Beispiel-Standardwerte bei 3 Stufen: `[7, 14, 21]`. Das heißt: die erste Mahnung wird 7 Tage **nach** Fälligkeit gezogen, die zweite weitere 14 Tage später, die dritte weitere 21 Tage später.
+
+**Mahngebühren**
+- **Mahngebühren berechnen** (Schalter)
+- **Gebühr pro Stufe**: Pauschalbetrag in EUR, typisch `[0, 2.50, 5.00]` — Stufe 1 gratis, Stufe 2 2,50 €, Stufe 3 5,00 €. Die Gebühr wird **einmal pro Mahnung** erhoben (nicht pro Rechnung).
+
+**Verzugszinsen**
+- **Verzugszinsen berechnen** (Schalter)
+- **Zinssatz pro Jahr**: Default 9 % p.a. (gesetzlicher Verzugszinssatz für B2B gemäß §288 Abs. 2 BGB; für B2C wäre 5 % p.a. korrekt).
+
+Die Zinsen werden je Rechnung tagesgenau berechnet: `Offener Betrag × (Zinssatz/100) × (Tage überfällig/365)`, intern in Cents, gerundet auf zwei Nachkommastellen.
+
+📍 Button **„Einstellungen speichern"** unten rechts.
+
+---
+
+#### 22.17.3 Vorlagen
+
+📍 `Fakturierung → Mahnwesen → Tab "Vorlagen"`
+
+⚠️ Berechtigung: `dunning.view` (lesen), `dunning.settings` (bearbeiten)
+
+**Was ist eine Mahnvorlage?** Eine Vorlage definiert den Kopf- und Schlusstext eines Mahnschreibens sowie den E-Mail-Betreff und -Text für eine bestimmte Mahnstufe. Beim Erstellen einer Mahnung wird **automatisch** die als Standard markierte Vorlage derjenigen Stufe gewählt.
+
+**Standard-Vorlagen (automatisch beim Aktivieren erzeugt):**
+1. *Zahlungserinnerung (Stufe 1)* — freundlich, „vielleicht ist es Ihrer Aufmerksamkeit entgangen"
+2. *Erste Mahnung (Stufe 2)* — bestimmt, „trotz unserer Zahlungserinnerung"
+3. *Letzte Mahnung (Stufe 3)* — förmlich, „rechtliche Schritte"
+
+**Eigene Vorlage anlegen:** Button **„Neue Vorlage"** → Sheet öffnet sich mit Feldern Name, Mahnstufe, Kopftext, Schlusstext, E-Mail-Betreff, E-Mail-Text, Checkbox „Als Standard für diese Mahnstufe verwenden".
+
+**Platzhalter:**
+- `{{briefanrede}}` → vollständige Briefanrede ("Sehr geehrter Herr Müller,")
+- `{{firma}}` → Firmenname des Kunden
+- `{{anrede}}` → Herr / Frau
+- `{{nachname}}` → Nachname der Kontaktperson
+
+Platzhalter werden beim Erstellen der Mahnung aufgelöst — nicht erst beim Senden. Der fertige Text landet als Snapshot auf dem Reminder und ist unveränderlich.
+
+> 💡 **Standardvorlagen wiederherstellen:** Wenn alle Vorlagen gelöscht wurden, erscheint der Button **„Standardvorlagen erzeugen"** oben rechts. Idempotent — erzeugt nur, wenn tatsächlich keine Vorlage existiert.
+
+---
+
+#### 22.17.4 Vorschlag
+
+📍 `Fakturierung → Mahnwesen → Tab "Vorschlag"` (Default-Tab beim Öffnen)
+
+⚠️ Berechtigung: `dunning.view` (lesen), `dunning.create` (Mahnlauf erstellen)
+
+**Was ist der Vorschlag?** Die Liste aller Kunden, deren überfällige Rechnungen die Karenzzeit überschritten haben und noch nicht auf ihrer maximalen Stufe gemahnt wurden. Terp gruppiert pro Kunde automatisch alle seine mahnfähigen Rechnungen zu einer **Sammelmahnung** — ein Anschreiben, eine E-Mail, aber mehrere Rechnungspositionen.
+
+**Filterregeln (welche Rechnung ist mahnfähig?):**
+- Typ `INVOICE` (Angebote, Auftragsbestätigungen, Lieferscheine werden nicht gemahnt)
+- Status `PRINTED`, `FORWARDED` oder `PARTIALLY_FORWARDED` (Entwürfe werden ignoriert)
+- Zahlungsziel gesetzt (Rechnungen ohne Zahlungsziel sind nicht mahnfähig — müssen manuell nachgetragen werden)
+- Tage überfällig ≥ Karenzzeit der Stufe 1
+- Noch nicht vollständig bezahlt
+- Kein aktiver Skonto-Tier-2 (solange die zweite Skontofrist läuft, wird nicht gemahnt)
+- Rechnung **nicht** mahngesperrt
+- Kunde **nicht** mahngesperrt
+- Aktuelle Mahnstufe der Rechnung < maximale konfigurierte Stufe
+
+**Pro Kundengruppe zeigt der Vorschlag:**
+- Checkbox **„Kunde in den Lauf aufnehmen"** (default ✅)
+- Kundenname
+- Stufe-Badge (die Gruppen-Zielstufe — höchste Einzel-Zielstufe aller enthaltenen Rechnungen)
+- Anzahl ausgewählter Rechnungen
+- Aufklapp-Button **„Details"**
+- Rechts: Gesamtsumme (Offen + Zinsen + Gebühr)
+
+**Im aufgeklappten Zustand** erscheint eine Rechnungstabelle mit:
+- Checkbox pro Rechnung (default alle ✅)
+- Rechnungsnr., Rechnungsdatum, Fälligkeit, offener Betrag, Tage überfällig, Zinsen dieser Rechnung
+
+**Dynamische Summenberechnung:** Wenn du eine einzelne Rechnung per Checkbox aus einer Sammelmahnung entfernst, aktualisiert sich die Gruppensumme rechts **live** im Browser — ohne Server-Roundtrip.
+
+**Button „Mahnungen erstellen"** oben rechts: erzeugt für jede ausgewählte Kundengruppe einen **Reminder im Status DRAFT**. Der Status-Tab wechselt automatisch zu **Mahnläufe**. Nichts wird bisher versendet — erst beim manuellen „Versenden" (siehe 22.17.5).
+
+---
+
+#### 22.17.5 Mahnläufe und Detail-Sheet
+
+📍 `Fakturierung → Mahnwesen → Tab "Mahnläufe"`
+
+⚠️ Berechtigung: `dunning.view` (lesen), `dunning.send` (versenden), `dunning.cancel` (stornieren)
+
+**Liste:** Tabelle aller jemals erstellten Mahnungen mit Spalten Nummer (`MA-2026-001`), Kunde, Stufe, Status-Badge (DRAFT/SENT/CANCELLED), Erstellt am, Versendet am, Gesamtbetrag. Filter oben: Status-Dropdown (Alle / Entwurf / Versendet / Storniert).
+
+**Zeile anklicken** öffnet das **Detail-Sheet** rechts:
+- Kopfdaten (Nummer, Kunde, Stufe, Status)
+- Erstellt am / Versendet am / Versandart / E-Mail-Empfänger
+- Tabelle der enthaltenen Rechnungspositionen
+- Summen-Block: Offener Betrag + Verzugszinsen + Mahngebühr = Gesamtsumme
+- Kopftext- und Schlusstext-Vorschau (falls vorhanden)
+
+**Actions je Status:**
+
+| Status | Verfügbare Actions |
+|---|---|
+| **DRAFT** | PDF-Vorschau · Per E-Mail versenden · Als Brief markieren · Entwurf verwerfen |
+| **SENT** | PDF öffnen · Stornieren |
+| **CANCELLED** | (read-only) |
+
+**Per E-Mail versenden** (nur bei DRAFT):
+1. Bestätigungsdialog mit Kunden-E-Mail-Adresse
+2. Terp generiert das PDF und legt es in Supabase Storage ab
+3. Die E-Mail wird versendet mit der Mahnung als PDF-Anhang
+4. Status wechselt auf **SENT**, `sentAt` wird gesetzt
+5. Im CRM wird automatisch ein **Korrespondenzeintrag** angelegt (Typ: `email`, Richtung: AUSGEHEND, Betreff: `Mahnung MA-2026-001 — Stufe 1`)
+
+**Als Brief markieren** (nur bei DRAFT): Wenn du die Mahnung selbst ausdruckst und per Post verschickst. Generiert auch das PDF, setzt Status auf SENT mit Versandart `letter` und legt einen Korrespondenzeintrag vom Typ `letter` an.
+
+**Stornieren** (bei SENT): Setzt Status auf CANCELLED und legt einen **zweiten Korrespondenzeintrag** als Notiz an (Typ: `note`, Betreff: "Mahnung MA-... storniert"). Die Rechnung wird wieder mahnfähig — **aber auf der ursprünglichen Stufe**, d. h. sie springt nicht auf Level 0 zurück, weil der stornierte Reminder nicht als „jemals versendet" gezählt wird, jedoch kann sie erneut auf dieselbe Stufe gezogen werden.
+
+> ⚠️ **PDF-Vorschau bei DRAFT:** Bei der ersten Vorschau wird das PDF live gerendert und in Storage abgelegt. Bei `SENT` öffnet der Button das bereits versendete PDF (bitgenau derselbe Download).
+
+---
+
+#### 22.17.6 Mahnsperre — Kunden oder einzelne Rechnungen ausschließen
+
+**Warum eine Mahnsperre?** In manchen Situationen soll ein Kunde oder eine einzelne Rechnung nicht gemahnt werden: laufende Verhandlung, strittige Rechnung, Insolvenzverfahren, Kulanz.
+
+**Kunden-Mahnsperre** — schließt **alle** Rechnungen des Kunden vom Mahnwesen aus:
+
+1. 📍 Seitenleiste → CRM → Adressen → Kunde anklicken
+2. 📍 Button **„Bearbeiten"** oben rechts → Edit-Sheet öffnet sich
+3. 📍 Runterscrollen zur Section **„Mahnsperre"**
+4. ✅ Checkbox **„Diesen Kunden von Mahnungen ausnehmen"** anhaken
+5. 📍 Begründung eintragen (optional, aber empfohlen — max. 500 Zeichen)
+6. 📍 **„Speichern"**
+7. ✅ Alle Rechnungen dieses Kunden verschwinden aus dem Mahnwesen-Vorschlag
+8. 💡 **Entfernen:** Dieselben Schritte, Checkbox wieder leeren → Rechnungen erscheinen im nächsten Vorschlag wieder
+
+**Rechnungs-Mahnsperre** — schließt **nur eine** Rechnung aus, andere Rechnungen desselben Kunden bleiben mahnfähig:
+
+1. 📍 Seitenleiste → Fakturierung → Belege → Rechnung anklicken (muss Typ `INVOICE` sein)
+2. 📍 Tab **„Übersicht"** (Default) → ganz unten Card **„Mahnsperre"**
+3. ✅ Checkbox **„Diese Rechnung von Mahnungen ausnehmen"** anhaken
+4. 📍 Begründung eintragen
+5. 📍 Button **„Speichern"** (erscheint nur bei Änderung)
+6. ✅ Rechnung verschwindet aus dem Mahnwesen-Vorschlag, Kunde bleibt jedoch für andere Rechnungen mahnfähig
+
+> ⚠️ **Mahnsperre ≠ Mahnstufe-Reset.** Eine Sperre unterbricht nur den aktuellen Vorschlag. Wenn die Sperre später entfernt wird und der Kunde noch immer überfällig ist, erscheint die Rechnung wieder auf ihrer bisherigen Stufe (oder eine Stufe höher). Um eine bereits versendete Mahnung rückgängig zu machen, muss der Reminder über das Detail-Sheet **storniert** werden.
+
+---
+
+#### 22.17.7 Cron-Job und Benachrichtigungen
+
+Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mahnwesen:
+
+1. ✅ Für jeden Mandanten wird der Mahnwesen-Vorschlag berechnet
+2. ✅ Wenn Kandidaten existieren, werden alle Benutzer mit `dunning.view`-Berechtigung (inkl. Administratoren) per **In-App-Notification** informiert
+3. ✅ Inhalt der Benachrichtigung: „N Kunden haben überfällige Rechnungen, die für eine Mahnung bereit sind." mit Link zu `/orders/dunning`
+4. ✅ **Dedupe:** Pro Benutzer und Tag wird maximal **eine** Benachrichtigung erstellt — egal wie oft sich der Vorschlag über den Tag ändert
+
+> 💡 **Warum keine E-Mail?** Der Cron löst nur Notifications aus, um Spam zu vermeiden. Die Buchhaltung sieht sie beim nächsten Login in der Glocke (🔔).
+
+---
+
+#### 22.17.8 Praxisbeispiele
+
+##### Beispiel 1: Ersteinrichtung — Mahnwesen aktivieren und den ersten Lauf durchführen
+
+**Ausgangslage:** *Montag, 20. April 2026.* Anna (Buchhalterin) übernimmt das Mahnwesen zum ersten Mal. Sie hat zwei überfällige Rechnungen bei Schmidt & Partner KG, die beide älter als 7 Tage überfällig sind: RE-7 (1.130,50 €, 32 Tage überfällig) und RE-2 (4.996,00 €, 45 Tage überfällig).
+
+1. 📍 Seitenleiste → Fakturierung → **Mahnwesen**
+2. ✅ Gelber Pre-Flight-Banner: „Mahnwesen ist nicht aktiviert"
+3. 📍 Button **„Zu den Einstellungen"** → Tab „Einstellungen"
+4. ✅ Formular zeigt Default-Werte
+5. 📍 Schalter **„Mahnwesen aktivieren"** einschalten
+6. 📍 **„Einstellungen speichern"**
+7. ✅ Toast „Einstellungen gespeichert", Banner verschwindet
+8. 📍 Tab **„Vorlagen"**
+9. ✅ Drei Vorlagen sind automatisch vorhanden: *Zahlungserinnerung (Stufe 1)*, *Erste Mahnung (Stufe 2)*, *Letzte Mahnung (Stufe 3)* — alle mit Stern-Badge „Standard"
+10. 📍 Tab **„Vorschlag"**
+11. ✅ Eine Kundengruppe erscheint: **Schmidt & Partner KG**, Stufe 1, „2 Rechnungen", Gesamtsumme ca. 6.200 € (inkl. Zinsen)
+12. 📍 Zeile anklicken → Aufklapp-Ansicht zeigt RE-7 und RE-2 beide mit Checkbox angehakt
+13. 📍 **„Mahnungen erstellen"** oben rechts
+14. ✅ Toast „1 Mahnung erstellt, 0 übersprungen", Tab wechselt zu **„Mahnläufe"**
+15. ✅ Neue Zeile `MA-2026-001`, Schmidt & Partner KG, Stufe 1, Status DRAFT
+16. 📍 Zeile anklicken → Detail-Sheet öffnet sich
+17. ✅ Beide Rechnungen als Positionen sichtbar, Summen stimmen
+18. 📍 Button **„PDF-Vorschau"** → PDF öffnet sich in neuem Tab, zeigt Anschreiben, Positionstabelle und Summen
+19. 📍 Zurück zum Sheet → **„Per E-Mail versenden"**
+20. 📍 Confirm-Dialog: „Mahnung MA-2026-001 per E-Mail an `buchhaltung@schmidt-partner.de` versenden?" → **„Bestätigen"**
+21. ✅ Status-Badge wechselt auf **SENT**, `sentAt` wird gesetzt
+22. 📍 Zum Gegencheck: CRM → Adressen → Schmidt & Partner KG → Tab **„Korrespondenz"**
+23. ✅ Neuer Eintrag: *Mahnung MA-2026-001 — Stufe 1*, Typ `email`, Richtung AUSGEHEND, Datum heute
+
+##### Beispiel 2: Eine einzelne Rechnung von der Sammelmahnung ausschließen
+
+**Ausgangslage:** Schmidt & Partner KG hat zwei überfällige Rechnungen. Die eine (RE-7) ist unstrittig und soll gemahnt werden. Bei der anderen (RE-2) gibt es eine offene Diskussion über eine Reklamation, die Anna erstmal nicht eskalieren will.
+
+1. 📍 Fakturierung → Mahnwesen → Tab „Vorschlag"
+2. ✅ Kundengruppe „Schmidt & Partner KG" mit 2 Rechnungen
+3. 📍 Button **„Details"** in der Gruppenzeile → Rechnungstabelle klappt auf
+4. 📍 Bei **RE-2** die Checkbox links ausschalten
+5. ✅ Gesamtsumme rechts in der Gruppenzeile aktualisiert sich **live** — nur noch RE-7-Beträge enthalten, Badge „1 Rechnung(en)" statt „2"
+6. 📍 **„Mahnungen erstellen"**
+7. ✅ Mahnlauf wird angelegt, enthält **nur** RE-7
+8. 📍 Im Detail-Sheet öffnen → bestätigen, dass nur eine Position zu sehen ist
+9. 📍 **„Per E-Mail versenden"** → Confirm → Status SENT
+10. 💡 **Alternative: Rechnungs-Mahnsperre** — wenn RE-2 dauerhaft gesperrt werden soll, nicht nur für diesen einen Lauf, dann die Sperre auf der Rechnungs-Detailseite setzen (siehe Abschnitt 22.17.6). Bei künftigen Vorschlägen fehlt sie dann komplett.
+
+##### Beispiel 3: Versendete Mahnung stornieren — Kunde hat am Tag des Versands bezahlt
+
+**Ausgangslage:** Anna hat morgens eine Mahnung an Weber Elektrotechnik AG versendet. Nachmittags sieht sie beim Kontoauszugs-Check, dass Weber denselben Tag noch bezahlt hat. Die Mahnung war überflüssig. Sie will den Vorgang in Terp sauber dokumentieren.
+
+1. 📍 Fakturierung → Mahnwesen → Tab **„Mahnläufe"**
+2. 📍 Status-Filter oben: **„Versendet"**
+3. ✅ Liste zeigt `MA-2026-002` Weber Elektrotechnik AG, Status SENT
+4. 📍 Zeile anklicken → Detail-Sheet öffnet sich
+5. 📍 Button **„Stornieren"** (unten rechts)
+6. 📍 Confirm-Dialog: „Mahnung MA-2026-002 stornieren? Es wird ein Korrespondenzeintrag erstellt." → **„Bestätigen"**
+7. ✅ Status-Badge wechselt auf **CANCELLED**
+8. 📍 Gegencheck: CRM → Adressen → Weber Elektrotechnik AG → Tab **„Korrespondenz"**
+9. ✅ Zwei Einträge sichtbar (beide mit Datum von heute):
+   - *Mahnung MA-2026-002 — Stufe 1* (Typ `email`, ausgehend) — der ursprüngliche Versand
+   - *Mahnung MA-2026-002 storniert* (Typ `note`) — die Stornonotiz
+10. 💡 **Warum beide Einträge bleiben:** Die CRM-Korrespondenz ist ein unveränderliches Audit-Log. Stornieren bedeutet *nicht* Löschen — der Versand hat stattgefunden und bleibt als Spur erhalten. Die Stornonotiz ist die zweite Spur, dass der Vorgang zurückgenommen wurde.
+
+##### Beispiel 4: Kunde in Insolvenz — Kunden-Mahnsperre setzen
+
+**Ausgangslage:** Bauer Logistik e.K. hat bei Anna drei überfällige Rechnungen über insgesamt 28.000 €. Der Kunde hat heute Insolvenz angemeldet — weitere Mahnungen sind sinnlos und würden nur Aufwand verursachen. Anna will alle Bauer-Rechnungen dauerhaft aus dem Mahnwesen ausschließen, bis das Insolvenzverfahren abgeschlossen ist.
+
+1. 📍 Seitenleiste → CRM → Adressen → Suchfeld „Bauer" → Zeile **„Bauer Logistik e.K."** anklicken
+2. ✅ Detailseite der Adresse
+3. 📍 Button **„Bearbeiten"** oben rechts → Edit-Sheet öffnet sich rechts
+4. 📍 Runterscrollen zur Section **„Mahnsperre"**
+5. ✅ Checkbox **„Diesen Kunden von Mahnungen ausnehmen"** anhaken
+6. 📍 Begründung eintragen: *„Insolvenzverfahren eröffnet am 20.04.2026, Aktenzeichen XYZ"*
+7. 📍 **„Speichern"** unten im Sheet
+8. ✅ Toast „Gespeichert"
+9. 📍 Gegencheck: Fakturierung → Mahnwesen → Tab „Vorschlag"
+10. ✅ Bauer Logistik e.K. taucht **nicht** mehr in der Liste auf, obwohl drei Rechnungen überfällig sind
+11. 💡 **Nach dem Insolvenzverfahren:** Wenn der Insolvenzverwalter eine Quote gezahlt hat und der Rest abgeschrieben wird, kann die Mahnsperre im Kunden-Edit wieder entfernt werden — in der Praxis werden Restrechnungen dann aber storniert, nicht gemahnt.
+
+##### Beispiel 5: Der Vorschlag ist leer — was jetzt?
+
+**Ausgangslage:** Anna öffnet den Vorschlag-Tab und sieht nur „Aktuell sind keine Rechnungen mahnfähig."
+
+1. 📍 **Schritt 1 — Ist das Mahnwesen überhaupt aktiv?** Tab „Einstellungen" → Schalter „Mahnwesen aktivieren" prüfen. Wenn aus, erscheint außerdem der gelbe Pre-Flight-Banner.
+2. 📍 **Schritt 2 — Karenzzeit zu hoch?** Eine Rechnung, die nur 3 Tage überfällig ist, ist bei 7 Tagen Karenzzeit noch nicht im Vorschlag. Option A: Warten. Option B: Einstellungen → Karenzzeit Stufe 1 auf 1 Tag setzen → speichern → Vorschlag neu laden.
+3. 📍 **Schritt 3 — Rechnung ohne Zahlungsziel?** Rechnungen ohne `paymentTermDays` sind grundsätzlich nicht mahnfähig. Öffne den Beleg (`/orders/documents/<id>`) und trage das Zahlungsziel nach.
+4. 📍 **Schritt 4 — Rechnung im Status DRAFT?** Nur Rechnungen im Status PRINTED/FORWARDED/PARTIALLY_FORWARDED werden berücksichtigt. Entwürfe müssen erst abgeschlossen werden.
+5. 📍 **Schritt 5 — Kunden- oder Rechnungssperre aktiv?** Prüfe die Mahnsperre auf Kunde (CRM → Adresse → Bearbeiten) und auf Rechnung (Belegdetail → Übersicht → Card „Mahnsperre").
+6. 📍 **Schritt 6 — Bereits auf höchster Stufe?** Wenn eine Rechnung bereits auf Stufe 3 (bei maxLevel=3) gemahnt wurde, ist sie nicht mehr mahnfähig. Der Vorschlag zeigt sie nicht mehr — nicht weil sie bezahlt ist, sondern weil Terp keine weitere Stufe kennt. Außerhalb Terps müssen dann weitere Schritte eingeleitet werden (Inkasso, gerichtliches Mahnverfahren).
+7. 📍 **Schritt 7 — Aktiver Skonto Tier 2?** Wenn die Rechnung noch in der zweiten Skontofrist ist (`discountDays2` nicht abgelaufen), wird sie bis zum Ablauf nicht gemahnt.
+
+---
+
 ## 23. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -10844,6 +11139,15 @@ Audit-Spur erhalten.
 | **Nummernkreis** | Auto-Zähler für Kunden-/Lieferantennummern mit konfigurierbarem Präfix | 📍 Administration → Einstellungen |
 | **Mengenstaffel** | Mehrere Preiseinträge für denselben Artikel mit unterschiedlichen Ab-Mengen für mengenabhängige Rabatte | 📍 Aufträge → Verkaufspreislisten → Detail |
 | **Offener Posten** | Unbezahlte oder teilbezahlte Rechnung mit Fälligkeitsdatum und Zahlungsstatus | 📍 Aufträge → Offene Posten |
+| **Mahnwesen** | Prozess zur systematischen Einforderung überfälliger Kundenrechnungen mit gestuften Mahnungen, Verzugszinsen und Mahngebühren | 📍 Fakturierung → Mahnwesen |
+| **Mahnstufe** | Gestufte Eskalation einer Mahnung (Stufe 1 = Zahlungserinnerung, 2 = Erste Mahnung, 3 = Letzte Mahnung, optional 4). Jede Stufe hat eigene Karenzzeit, Gebühr und Vorlage. Die aktuelle Stufe einer Rechnung leitet sich aus der höchsten `levelAtReminder` der versendeten Reminder ab | 📍 Fakturierung → Mahnwesen → Einstellungen |
+| **Mahnvorlage** | Textvorlage für Kopf-/Schlusstext und E-Mail-Inhalt einer Mahnung einer bestimmten Stufe. Unterstützt Platzhalter wie `{{briefanrede}}`, `{{firma}}`. Beim Aktivieren des Mahnwesens werden drei Standardvorlagen (Stufe 1–3) automatisch erzeugt | 📍 Fakturierung → Mahnwesen → Vorlagen |
+| **Mahnsperre** | Kennzeichen auf Kunden (CrmAddress) oder einzelner Rechnung (BillingDocument), das diese vom Mahn-Vorschlag ausschließt. Wird per Checkbox + optionaler Begründung gesetzt und lässt sich jederzeit wieder entfernen | 📍 CRM → Adresse → Bearbeiten / Belegdetail → Übersicht → Card Mahnsperre |
+| **Sammelmahnung** | Eine Mahnung, die mehrere offene Rechnungen desselben Kunden zusammenfasst. Terp gruppiert den Vorschlag automatisch pro Kunde, so dass ein Anschreiben mit mehreren Rechnungspositionen verschickt wird | 📍 Fakturierung → Mahnwesen → Vorschlag |
+| **Karenzzeit (gracePeriodDays)** | Anzahl Tage zwischen Fälligkeit (bzw. vorheriger Stufe) und der nächsten Mahnung. Konfigurierbar pro Mahnstufe, Standardwerte 7/14/21 Tage | 📍 Fakturierung → Mahnwesen → Einstellungen |
+| **Verzugszinsen (Mahnwesen)** | Gesetzliche Zinsen nach BGB §288 Abs. 2 (B2B: 9 % p.a. über Basiszinssatz, in Terp als 9 % p.a. als Standard hinterlegt). Tagesgenau berechnet auf den offenen Betrag einer Rechnung | 📍 Fakturierung → Mahnwesen → Einstellungen → Verzugszinsen |
+| **Mahngebühr** | Pauschalaufwandsentschädigung pro Mahnstufe, wird einmal pro Mahnung (nicht pro Rechnung) berechnet. Standardwerte `[0, 2.50, 5.00]` EUR | 📍 Fakturierung → Mahnwesen → Einstellungen → Gebühren |
+| **Reminder (Mahnung)** | Datensatz einer erstellten Mahnung mit Status DRAFT → SENT → (CANCELLED). Enthält die gerenderten Kopf-/Schlusstexte als Snapshot, eingefrorene Totals, und referenziert alle enthaltenen Rechnungen über ReminderItems | 📍 Fakturierung → Mahnwesen → Mahnläufe |
 | **Kontogruppe** | Logische Bündelung mehrerer Konten (z. B. alle Zuschlagskonten) | 📍 Verwaltung → Konten → Tab Gruppen |
 | **Personalnummer** | Eindeutige Kennung je Mitarbeiter im Mandanten | 📍 Verwaltung → Mitarbeiter |
 | **Preiseintrag** | Einzelne Preiszeile in einer Preisliste mit Artikel/Schlüssel, Einzelpreis und optionaler Mengenstaffel | 📍 Aufträge → Verkaufspreislisten → Detail |
@@ -11000,6 +11304,7 @@ Diese Tabelle listet alle Seiten der Anwendung mit ihrer URL und dem Menüpfad:
 | `/orders/recurring` | Auftraege → Wiederkehrende Rechnungen | billing_recurring.view |
 | `/orders/recurring/new` | Auftraege → Wiederkehrende Rechnungen → Neue Vorlage | billing_recurring.manage |
 | `/orders/recurring/[id]` | Wiederkehrende Rechnungen → Zeile anklicken | billing_recurring.view |
+| `/orders/dunning` | Fakturierung → Mahnwesen | dunning.view |
 | `/warehouse/articles` | Lager → Artikel | wh_articles.view |
 | `/warehouse/articles/[id]` | Artikelliste → Zeile anklicken | wh_articles.view |
 | `/warehouse/prices` | Lager → Einkaufspreislisten | billing_price_lists.view, wh_articles.view |

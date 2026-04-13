@@ -102,6 +102,28 @@ describe("isOverdue", () => {
     past.setDate(past.getDate() - 10)
     expect(isOverdue(past, "OVERPAID")).toBe(false)
   })
+
+  it("returns false on the due day itself (customer still has the day to pay)", () => {
+    // Regression: previously compared at millisecond granularity, so an
+    // invoice whose dueDate was created earlier in the day would flip to
+    // overdue as soon as the clock ticked past that time — e.g. docDate
+    // 14.03 10:00 + 30d = dueDate 13.04 10:00, and at 13.04 14:00 it
+    // would be marked overdue even though the customer still has the
+    // whole business day to pay.
+    const todayEarly = new Date()
+    todayEarly.setHours(6, 0, 0, 0)
+    expect(isOverdue(todayEarly, "UNPAID")).toBe(false)
+    const todayLate = new Date()
+    todayLate.setHours(23, 30, 0, 0)
+    expect(isOverdue(todayLate, "UNPAID")).toBe(false)
+  })
+
+  it("returns true starting the day after the due date", () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setHours(23, 59, 59, 999)
+    expect(isOverdue(yesterday, "UNPAID")).toBe(true)
+  })
 })
 
 // --- getApplicableDiscount ---

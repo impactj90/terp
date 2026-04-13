@@ -23,7 +23,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
-import { useCreateCrmAddress, useUpdateCrmAddress, useBillingPriceLists } from '@/hooks'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  useCreateCrmAddress,
+  useUpdateCrmAddress,
+  useBillingPriceLists,
+  useSetCustomerDunningBlock,
+} from '@/hooks'
 
 interface FormState {
   type: 'CUSTOMER' | 'SUPPLIER' | 'BOTH'
@@ -48,6 +54,8 @@ interface FormState {
   salesPriceListId: string
   purchasePriceListId: string
   notes: string
+  dunningBlocked: boolean
+  dunningBlockReason: string
 }
 
 const INITIAL_STATE: FormState = {
@@ -73,6 +81,8 @@ const INITIAL_STATE: FormState = {
   salesPriceListId: '',
   purchasePriceListId: '',
   notes: '',
+  dunningBlocked: false,
+  dunningBlockReason: '',
 }
 
 interface AddressFormSheetProps {
@@ -102,6 +112,8 @@ interface AddressFormSheetProps {
     salesPriceListId: string | null
     purchasePriceListId: string | null
     notes: string | null
+    dunningBlocked?: boolean | null
+    dunningBlockReason?: string | null
   } | null
   onSuccess?: () => void
 }
@@ -117,7 +129,11 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
 
   const createMutation = useCreateCrmAddress()
   const updateMutation = useUpdateCrmAddress()
-  const isSubmitting = createMutation.isPending || updateMutation.isPending
+  const setDunningBlockMutation = useSetCustomerDunningBlock()
+  const isSubmitting =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    setDunningBlockMutation.isPending
 
   React.useEffect(() => {
     if (open) {
@@ -146,6 +162,8 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           salesPriceListId: address.salesPriceListId || '',
           purchasePriceListId: address.purchasePriceListId || '',
           notes: address.notes || '',
+          dunningBlocked: address.dunningBlocked === true,
+          dunningBlockReason: address.dunningBlockReason || '',
         })
       } else {
         setForm(INITIAL_STATE)
@@ -198,6 +216,21 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
           salesPriceListId: form.salesPriceListId || null,
           purchasePriceListId: form.purchasePriceListId || null,
         })
+
+        const previousBlocked = address?.dunningBlocked === true
+        const previousReason = address?.dunningBlockReason ?? ''
+        const blockChanged =
+          previousBlocked !== form.dunningBlocked ||
+          (form.dunningBlocked && previousReason !== form.dunningBlockReason)
+        if (blockChanged) {
+          await setDunningBlockMutation.mutateAsync({
+            customerAddressId: address!.id,
+            blocked: form.dunningBlocked,
+            reason: form.dunningBlocked
+              ? form.dunningBlockReason.trim() || undefined
+              : undefined,
+          })
+        }
       } else {
         await createMutation.mutateAsync({
           ...payload,
@@ -516,6 +549,48 @@ export function AddressFormSheet({ open, onOpenChange, address, onSuccess }: Add
                 )}
               </div>
             ) : null}
+
+            {/* Dunning Block — only in edit mode (block toggles act on existing address) */}
+            {isEdit && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {t('sectionDunningBlock')}
+                </h3>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="dunningBlocked"
+                    checked={form.dunningBlocked}
+                    onCheckedChange={(v) => updateField('dunningBlocked', v === true)}
+                    disabled={isSubmitting}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="dunningBlocked" className="text-sm">
+                      {t('labelDunningBlocked')}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('hintDunningBlocked')}
+                    </p>
+                  </div>
+                </div>
+                {form.dunningBlocked && (
+                  <div className="space-y-2">
+                    <Label htmlFor="dunningBlockReason">
+                      {t('labelDunningBlockReason')}
+                    </Label>
+                    <Textarea
+                      id="dunningBlockReason"
+                      value={form.dunningBlockReason}
+                      onChange={(e) =>
+                        updateField('dunningBlockReason', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                      rows={2}
+                      maxLength={500}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-4">

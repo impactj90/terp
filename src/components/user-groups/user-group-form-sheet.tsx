@@ -85,6 +85,7 @@ const CATEGORY_DEFINITIONS = [
       'billing_price_lists',
       'billing_recurring',
       'documents',
+      'dunning',
     ],
   },
   {
@@ -232,6 +233,7 @@ export function UserGroupFormSheet({
       email_imap: t('resourceEmailImap'),
       hr_personnel_file: t('resourceHrPersonnelFile'),
       hr_personnel_file_categories: t('resourceHrPersonnelFileCategories'),
+      dunning: t('resourceDunning'),
     }),
     [t]
   )
@@ -261,6 +263,9 @@ export function UserGroupFormSheet({
       upload_image: t('actionUploadImage'),
       delete_image: t('actionDeleteImage'),
       view_confidential: t('actionViewConfidential'),
+      send: t('actionSend'),
+      cancel: t('actionCancel'),
+      settings: t('actionSettings'),
     }),
     [t]
   )

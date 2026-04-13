@@ -45,6 +45,7 @@ import {
   Tag,
   FileStack,
   Stamp,
+  AlertCircle,
   ShoppingCart,
   PackageCheck,
   PackageMinus,
@@ -376,6 +377,13 @@ export const navConfig: NavSection[] = [
         icon: Repeat,
         module: 'billing',
         permissions: ['billing_recurring.view'],
+      },
+      {
+        titleKey: 'billingDunning',
+        href: '/orders/dunning',
+        icon: AlertCircle,
+        module: 'billing',
+        permissions: ['dunning.view'],
       },
       {
         titleKey: 'billingTemplates',

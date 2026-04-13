@@ -273,6 +273,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("billing_recurring.manage", "billing_recurring", "manage", "Manage recurring invoice templates"),
   p("billing_recurring.generate", "billing_recurring", "generate", "Generate invoices from recurring templates"),
 
+  // Mahnwesen (Dunning)
+  p("dunning.view", "dunning", "view", "View dunning proposal, runs, history, settings"),
+  p("dunning.create", "dunning", "create", "Create dunning runs and edit draft reminders"),
+  p("dunning.send", "dunning", "send", "Finalize and send reminders (email or letter)"),
+  p("dunning.cancel", "dunning", "cancel", "Cancel reminders and manage dunning blocks"),
+  p("dunning.settings", "dunning", "settings", "Configure dunning levels, fees, interest, templates"),
+
   // Warehouse Articles
   p("wh_articles.view", "wh_articles", "view", "View warehouse articles"),
   p("wh_articles.create", "wh_articles", "create", "Create warehouse articles"),

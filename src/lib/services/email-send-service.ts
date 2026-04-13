@@ -287,3 +287,129 @@ export async function getSendLog(
 ) {
   return sendLogRepo.findByDocumentId(prisma, tenantId, documentId, pagination)
 }
+
+// --- Reminder Email Send ---
+
+export interface SendReminderEmailInput {
+  reminderId: string
+  toEmail: string
+  ccEmails?: string[]
+  subject: string
+  bodyHtml: string
+  pdfBuffer: Buffer
+  pdfFilename: string
+}
+
+/**
+ * Sends a reminder (Mahnung) email with the rendered PDF as attachment.
+ * Reuses the SMTP config + EmailSendLog infrastructure from the billing
+ * `send` flow but takes its inputs directly so it doesn't have to thread
+ * through the BillingDocument-shaped `getDocumentData` helper.
+ *
+ * The send log row stores `documentType="reminder"` and `documentId=<reminderId>`
+ * so the existing email-retry cron picks it up unchanged.
+ */
+export async function sendReminderEmail(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: SendReminderEmailInput,
+  sentBy: string
+): Promise<{ success: boolean; logId: string }> {
+  const smtpConfig = await smtpConfigService.get(prisma, tenantId)
+  if (!smtpConfig) throw new SmtpNotConfiguredError()
+
+  const renderedHtml = renderBaseEmail({
+    bodyHtml: input.bodyHtml,
+    companyName: smtpConfig.fromName ?? "",
+  })
+
+  const logEntry = await sendLogRepo.create(prisma, tenantId, {
+    documentId: input.reminderId,
+    documentType: "reminder",
+    toEmail: input.toEmail,
+    ccEmails: input.ccEmails,
+    subject: input.subject,
+    bodyHtml: input.bodyHtml,
+    status: "pending",
+    sentBy,
+  })
+
+  const transporter = smtpConfigService.createTransporter(smtpConfig)
+  const from = smtpConfig.fromName
+    ? `"${smtpConfig.fromName}" <${smtpConfig.fromEmail}>`
+    : smtpConfig.fromEmail
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: input.toEmail,
+      cc: input.ccEmails?.join(", "),
+      replyTo: smtpConfig.replyToEmail ?? undefined,
+      subject: input.subject,
+      html: renderedHtml,
+      attachments: [
+        {
+          filename: input.pdfFilename,
+          content: input.pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    })
+
+    await sendLogRepo.markSent(prisma, logEntry.id)
+
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: sentBy,
+      action: "email_sent",
+      entityType: "reminder",
+      entityId: input.reminderId,
+      metadata: {
+        to: input.toEmail,
+        cc: input.ccEmails ?? [],
+        subject: input.subject,
+        logId: logEntry.id,
+      },
+    }).catch((err) => console.error("[AuditLog] Failed:", err))
+
+    return { success: true, logId: logEntry.id }
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Unknown SMTP error"
+
+    if (logEntry.retryCount < MAX_RETRIES) {
+      await sendLogRepo.markRetrying(
+        prisma,
+        logEntry.id,
+        logEntry.retryCount + 1,
+        getNextRetryAt(logEntry.retryCount)
+      )
+    } else {
+      await sendLogRepo.markFailed(prisma, logEntry.id, errorMessage)
+    }
+
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: sentBy,
+      action: "email_failed",
+      entityType: "reminder",
+      entityId: input.reminderId,
+      metadata: {
+        to: input.toEmail,
+        error: errorMessage,
+        logId: logEntry.id,
+      },
+    }).catch((e) => console.error("[AuditLog] Failed:", e))
+
+    throw new ReminderEmailSendError(errorMessage, logEntry.id)
+  }
+}
+
+export class ReminderEmailSendError extends Error {
+  logId: string
+  constructor(message: string, logId: string) {
+    super(message)
+    this.name = "ReminderEmailSendError"
+    this.logId = logId
+  }
+}

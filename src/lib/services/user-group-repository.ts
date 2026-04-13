@@ -11,8 +11,14 @@ export async function findMany(
   tenantId: string,
   params?: { active?: boolean }
 ) {
+  // `DEMO_ADMIN` is an internal system-wide group that the demo-tenant
+  // platform flow assigns to demo admin users via a stable UUID. It must
+  // stay queryable by id (see demo-tenant-repository.findSystemDemoAdminGroup)
+  // but must not surface in any tenant-facing list — neither in the regular
+  // /admin/user-groups page nor in the user-create group dropdown.
   const where: Record<string, unknown> = {
     OR: [{ tenantId }, { tenantId: null }],
+    NOT: { code: "DEMO_ADMIN" },
   }
 
   if (params?.active !== undefined) {

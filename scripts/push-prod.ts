@@ -57,12 +57,23 @@ if (hostMatch) {
   projectRef = url.username.slice('postgres.'.length)
 }
 
+// --- Forward a whitelist of flags from process.argv to the underlying
+//     supabase CLI invocations. Today only --include-all is supported;
+//     add new entries here if you need to pass more flags through.
+const passthroughFlags: string[] = []
+if (process.argv.includes('--include-all')) {
+  passthroughFlags.push('--include-all')
+}
+
 console.log('==========================================')
 console.log('  Supabase → PRODUCTION migration push')
 console.log('==========================================')
 console.log(`Host:        ${url.hostname}:${url.port || '5432'}`)
 console.log(`DB:          ${url.pathname.replace(/^\//, '') || 'postgres'}`)
 console.log(`Project ref: ${projectRef ?? '(unknown)'}`)
+if (passthroughFlags.length > 0) {
+  console.log(`Extra flags: ${passthroughFlags.join(' ')}`)
+}
 console.log('')
 
 // --- Dry-run first so the operator sees what would happen -------------
@@ -70,7 +81,15 @@ console.log('[1/2] Running dry-run to show pending migrations…')
 console.log('')
 const dryRun = spawnSync(
   'npx',
-  ['supabase', 'db', 'push', '--db-url', cleanUrl, '--dry-run'],
+  [
+    'supabase',
+    'db',
+    'push',
+    '--db-url',
+    cleanUrl,
+    '--dry-run',
+    ...passthroughFlags,
+  ],
   { cwd: repoRoot, stdio: 'inherit' }
 )
 if (dryRun.status !== 0) {
@@ -107,10 +126,16 @@ if (answer.trim() !== expected) {
 console.log('')
 console.log('[2/2] Pushing migrations to production…')
 try {
-  execSync(
-    `npx supabase db push --db-url "${cleanUrl.replace(/"/g, '\\"')}"`,
-    { cwd: repoRoot, stdio: 'inherit' }
-  )
+  const applyCmd = [
+    'npx',
+    'supabase',
+    'db',
+    'push',
+    '--db-url',
+    `"${cleanUrl.replace(/"/g, '\\"')}"`,
+    ...passthroughFlags,
+  ].join(' ')
+  execSync(applyCmd, { cwd: repoRoot, stdio: 'inherit' })
   console.log('')
   console.log('✅  Production migrations applied successfully.')
 } catch (err) {

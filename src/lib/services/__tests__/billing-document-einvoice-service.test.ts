@@ -68,6 +68,8 @@ function makeAddress(overrides: Partial<CrmAddress> = {}): CrmAddress {
     ourCustomerNumber: null,
     createdById: null,
     parentAddressId: null,
+    dunningBlocked: false,
+    dunningBlockReason: null,
     ...overrides,
   }
 }
@@ -103,6 +105,8 @@ function makeDocument(overrides: Partial<BillingDocument> = {}): BillingDocument
     totalGross: 1190,
     notes: null,
     internalNotes: null,
+    dunningBlocked: false,
+    dunningBlockReason: null,
     headerText: null,
     footerText: null,
     pdfUrl: null,
