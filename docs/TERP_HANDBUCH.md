@@ -10973,7 +10973,21 @@ Platzhalter werden beim Erstellen der Mahnung aufgelöst — nicht erst beim Sen
 
 ---
 
-#### 22.17.7 Cron-Job und Benachrichtigungen
+#### 22.17.7 Automatisch ausgenommene Rechnungen
+
+Terp nimmt bestimmte Rechnungen automatisch aus dem Mahnwesen aus, ohne dass Sie manuell eine Mahnsperre setzen müssen. Aktuell betrifft das genau einen Fall: **Platform-Subscription-Rechnungen.**
+
+Wenn Sie Terp als Operator betreiben (House Tenant mit aktiviertem Platform-Subscription-Billing), erzeugt das System wiederkehrende Rechnungen für Ihre eigenen Modul-Bookings — also Rechnungen, die Sie quasi an sich selbst stellen, damit Ihre eigene Buchhaltung die Subscription-Umsätze sauber verbuchen kann. Diese Rechnungen tragen einen internen Marker (`[platform_subscription:<id>]` im Feld „Interne Notizen") und werden vom Mahnwesen-Vorschlag automatisch ausgeschlossen.
+
+**Warum?** Ohne diesen Ausschluss würde Terp sich selbst mahnen, sobald eine dieser Rechnungen überfällig ist — ein semantischer Unfall ohne Geschäftszweck. Eine automatisierte Mahnung an die eigene Firma kostet Zeit, verwirrt die Buchhaltung und erzeugt unnötige CRM-Korrespondenz-Einträge.
+
+**Wie erkennt man solche Rechnungen?** Im Rechnungsdetail unter „Interne Notizen" sehen Sie den Marker `[platform_subscription:<UUID>]`. Bei einer Rechnung, die mehrere Modul-Bookings zusammenfasst (Shared-Invoice-Modell), stehen mehrere Marker space-separiert hintereinander.
+
+**Kein Einfluss auf andere Mahnwesen-Funktionen.** Der Ausschluss betrifft ausschließlich den Mahnvorschlag. Platform-Subscription-Rechnungen sind in der Offene-Posten-Liste und in der normalen Beleg-Übersicht weiterhin sichtbar, können weiterhin manuell bezahlt werden, und der Platform-Billing-Cron arbeitet wie gewohnt. Der Filter wirkt nur als Ausschluss-Gate am Eingang des Mahnvorschlags.
+
+---
+
+#### 22.17.8 Cron-Job und Benachrichtigungen
 
 Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mahnwesen:
 
@@ -10986,7 +11000,7 @@ Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mah
 
 ---
 
-#### 22.17.8 Praxisbeispiele
+#### 22.17.9 Praxisbeispiele
 
 ##### Beispiel 1: Ersteinrichtung — Mahnwesen aktivieren und den ersten Lauf durchführen
 
