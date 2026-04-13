@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { CountryCombobox } from '@/components/ui/country-combobox'
 import { useBillingTenantConfig, useUpsertBillingTenantConfig } from '@/hooks'
 import { toast } from 'sonner'
 
@@ -226,7 +227,14 @@ export function TenantConfigForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company-country">Land</Label>
-                <Input id="company-country" value={companyCountry} onChange={(e) => setCompanyCountry(e.target.value)} placeholder="DE" />
+                <CountryCombobox
+                  id="company-country"
+                  value={companyCountry || null}
+                  onChange={(code) => setCompanyCountry(code ?? '')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  ISO 3166-1 alpha-2 Code — für XRechnung/ZUGFeRD erforderlich.
+                </p>
               </div>
             </div>
           </CardContent>
