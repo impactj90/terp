@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/platform-cleanup",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/dunning-candidates",
+      "schedule": "0 5 * * *"
     }
   ]
 }

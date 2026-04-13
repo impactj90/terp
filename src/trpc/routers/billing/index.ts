@@ -2,7 +2,7 @@
  * Billing Router
  *
  * Merges billing sub-routers: documents, documentTemplates, tenantConfig,
- * serviceCases, payments, priceLists, recurringInvoices.
+ * serviceCases, payments, priceLists, recurringInvoices, reminders.
  * All procedures are guarded by requireModule("billing").
  */
 import { createTRPCRouter } from "@/trpc/init"
@@ -13,6 +13,7 @@ import { billingServiceCasesRouter } from "./serviceCases"
 import { billingPaymentsRouter } from "./payments"
 import { billingPriceListsRouter } from "./priceLists"
 import { billingRecurringInvoicesRouter } from "./recurringInvoices"
+import { remindersRouter } from "./reminders"
 
 export const billingRouter = createTRPCRouter({
   documents: billingDocumentsRouter,
@@ -22,4 +23,5 @@ export const billingRouter = createTRPCRouter({
   payments: billingPaymentsRouter,
   priceLists: billingPriceListsRouter,
   recurringInvoices: billingRecurringInvoicesRouter,
+  reminders: remindersRouter,
 })

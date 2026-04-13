@@ -4,6 +4,11 @@ import * as eligibilityService from "./reminder-eligibility-service"
 import * as templateService from "./reminder-template-service"
 import { getSettings } from "./reminder-settings-service"
 import { feeForLevel } from "./dunning-interest-service"
+import * as reminderPdfService from "./reminder-pdf-service"
+import * as emailSendService from "./email-send-service"
+import * as crmCorrespondenceService from "./crm-correspondence-service"
+import * as auditLog from "./audit-logs-service"
+import { download } from "@/lib/supabase/storage"
 import {
   resolvePlaceholders,
   buildContactPlaceholders,
@@ -292,4 +297,445 @@ export async function markSent(
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100
+}
+
+// --- Send Flow ---
+
+export class ReminderSendError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ReminderSendError"
+  }
+}
+
+const REMINDER_BUCKET = "documents"
+
+/**
+ * Finalizes a draft reminder via email send. Orchestrates: PDF generation
+ * (idempotent on storage path), generic email send via email-send-service,
+ * status update, and CrmCorrespondence row creation. PDF + email are
+ * outside the DB transaction because both are external I/O — only the
+ * status update + correspondence row are atomic at the end.
+ *
+ * Throws ReminderSendError when the reminder is not in DRAFT, the customer
+ * has no email, every contained invoice has been paid since the proposal,
+ * or the underlying email send fails. PDF stays uploaded on email failure
+ * so retry doesn't re-render.
+ */
+export async function sendReminder(
+  prisma: PrismaClient,
+  tenantId: string,
+  reminderId: string,
+  sentById: string
+) {
+  const reminder = await prisma.reminder.findFirst({
+    where: { id: reminderId, tenantId },
+    include: {
+      items: { orderBy: { createdAt: "asc" } },
+      customerAddress: true,
+    },
+  })
+  if (!reminder) throw new ReminderNotFoundError(reminderId)
+  if (reminder.status !== "DRAFT") {
+    throw new ReminderValidationError(
+      "Nur DRAFT-Mahnungen können versendet werden"
+    )
+  }
+
+  const recipientEmail = reminder.customerAddress.email
+  if (!recipientEmail) {
+    throw new ReminderSendError(
+      "Kunde hat keine E-Mail-Adresse hinterlegt"
+    )
+  }
+
+  // Safety net: refuse the send if every included invoice has been
+  // paid in full since the DRAFT was created. Operators can cancel
+  // the draft and start over with the live proposal.
+  const stillOpen = await areAnyItemsStillOpen(prisma, tenantId, reminder.items)
+  if (!stillOpen) {
+    throw new ReminderSendError(
+      "Alle enthaltenen Rechnungen sind mittlerweile bezahlt"
+    )
+  }
+
+  // 1. Render + upload PDF (idempotent).
+  const pdfPath = await reminderPdfService.generateAndStorePdf(
+    prisma,
+    tenantId,
+    reminderId
+  )
+
+  // 2. Pull the rendered PDF back out of storage so we can attach it.
+  const pdfBlob = await download(REMINDER_BUCKET, pdfPath)
+  if (!pdfBlob) {
+    throw new ReminderSendError("Reminder PDF nicht im Storage gefunden")
+  }
+  const pdfBuffer = Buffer.from(await pdfBlob.arrayBuffer())
+  const pdfFilename = `${reminder.number.replace(/[/\\]/g, "_")}.pdf`
+
+  // 3. Resolve email subject/body from the level template, falling back
+  //    to a default when no template exists for that level.
+  const template = await templateService.getDefaultForLevel(
+    prisma,
+    tenantId,
+    reminder.level
+  )
+  const placeholderCtx = buildContactPlaceholders(
+    { company: reminder.customerAddress.company },
+    null
+  )
+  const subjectRaw =
+    template?.emailSubject && template.emailSubject.length > 0
+      ? template.emailSubject
+      : `Mahnung ${reminder.number}`
+  const bodyHtmlRaw =
+    template?.emailBody && template.emailBody.length > 0
+      ? template.emailBody
+      : "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie unsere Mahnung.\n\nMit freundlichen Grüßen"
+  const subject = resolvePlaceholders(subjectRaw, {
+    ...placeholderCtx,
+    rechnungsnummer: reminder.number,
+    mahnnummer: reminder.number,
+  })
+  const bodyHtml = resolvePlaceholders(bodyHtmlRaw, placeholderCtx).replace(
+    /\n/g,
+    "<br>"
+  )
+
+  // 4. Send the email. Throws ReminderEmailSendError on failure; we let
+  //    that propagate so the reminder stays DRAFT and the operator can
+  //    retry after fixing SMTP. The PDF stays uploaded.
+  await emailSendService.sendReminderEmail(
+    prisma,
+    tenantId,
+    {
+      reminderId,
+      toEmail: recipientEmail,
+      subject,
+      bodyHtml,
+      pdfBuffer,
+      pdfFilename,
+    },
+    sentById
+  )
+
+  // 5. Atomic: mark sent + create CrmCorrespondence row.
+  const sentReminder = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+    const updated = await txPrisma.reminder.update({
+      where: { id: reminderId },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+        sentById,
+        sendMethod: "email",
+        pdfStoragePath: pdfPath,
+      },
+    })
+    await crmCorrespondenceService.create(
+      txPrisma,
+      tenantId,
+      {
+        addressId: reminder.customerAddressId,
+        direction: "OUTGOING",
+        type: "email",
+        date: new Date(),
+        toUser: recipientEmail,
+        subject: `Mahnung ${reminder.number} — Stufe ${reminder.level}`,
+        content: bodyHtml,
+      },
+      sentById
+    )
+    return updated
+  })
+
+  // 6. Audit log fire-and-forget.
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: sentById,
+    action: "reminder_sent",
+    entityType: "reminder",
+    entityId: reminderId,
+    entityName: reminder.number,
+    metadata: { method: "email", level: reminder.level },
+  }).catch((err) => console.error("[AuditLog] reminder_sent failed:", err))
+
+  return sentReminder
+}
+
+/**
+ * Marks a draft reminder as sent without dispatching an email. Used for
+ * the "letter" / "manual" send methods where the operator hand-prints
+ * the PDF or otherwise delivers it offline. Still generates the PDF,
+ * still creates a CrmCorrespondence row (type=letter or note).
+ */
+export async function markSentManually(
+  prisma: PrismaClient,
+  tenantId: string,
+  reminderId: string,
+  method: "letter" | "manual",
+  sentById: string
+) {
+  const reminder = await prisma.reminder.findFirst({
+    where: { id: reminderId, tenantId },
+    include: {
+      items: { orderBy: { createdAt: "asc" } },
+      customerAddress: true,
+    },
+  })
+  if (!reminder) throw new ReminderNotFoundError(reminderId)
+  if (reminder.status !== "DRAFT") {
+    throw new ReminderValidationError(
+      "Nur DRAFT-Mahnungen können als versendet markiert werden"
+    )
+  }
+
+  const stillOpen = await areAnyItemsStillOpen(prisma, tenantId, reminder.items)
+  if (!stillOpen) {
+    throw new ReminderSendError(
+      "Alle enthaltenen Rechnungen sind mittlerweile bezahlt"
+    )
+  }
+
+  const pdfPath = await reminderPdfService.generateAndStorePdf(
+    prisma,
+    tenantId,
+    reminderId
+  )
+
+  const correspondenceType = method === "letter" ? "letter" : "note"
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+    const result = await txPrisma.reminder.update({
+      where: { id: reminderId },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+        sentById,
+        sendMethod: method,
+        pdfStoragePath: pdfPath,
+      },
+    })
+    await crmCorrespondenceService.create(
+      txPrisma,
+      tenantId,
+      {
+        addressId: reminder.customerAddressId,
+        direction: "OUTGOING",
+        type: correspondenceType,
+        date: new Date(),
+        subject: `Mahnung ${reminder.number} — Stufe ${reminder.level}`,
+        content:
+          method === "letter"
+            ? "Mahnung als Brief versendet."
+            : "Mahnung manuell als versendet markiert.",
+      },
+      sentById
+    )
+    return result
+  })
+
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: sentById,
+    action: "reminder_sent",
+    entityType: "reminder",
+    entityId: reminderId,
+    entityName: reminder.number,
+    metadata: { method, level: reminder.level },
+  }).catch((err) => console.error("[AuditLog] reminder_sent failed:", err))
+
+  return updated
+}
+
+/**
+ * Checks whether at least one item in the reminder still has a positive
+ * open amount. Used as a safety net before sending so a reminder that
+ * was paid between DRAFT and SEND doesn't go out.
+ */
+async function areAnyItemsStillOpen(
+  prisma: PrismaClient,
+  tenantId: string,
+  items: Array<{ billingDocumentId: string }>
+): Promise<boolean> {
+  if (items.length === 0) return false
+  const docs = await prisma.billingDocument.findMany({
+    where: {
+      tenantId,
+      id: { in: items.map((i) => i.billingDocumentId) },
+    },
+    include: { payments: true, childDocuments: true },
+  })
+  for (const doc of docs) {
+    const creditNoteReduction = (doc.childDocuments ?? []).reduce(
+      (sum, cn) => sum + cn.totalGross,
+      0
+    )
+    const effectiveTotalGross = doc.totalGross - creditNoteReduction
+    const paid = (doc.payments ?? [])
+      .filter((p) => p.status === "ACTIVE")
+      .reduce((sum, p) => sum + p.amount, 0)
+    if (effectiveTotalGross - paid > 0.005) return true
+  }
+  return false
+}
+
+// --- Dunning Blocks ---
+
+/**
+ * Sets or removes the dunning block on a billing document. Block flag
+ * lives directly on `billing_documents`; the eligibility filter chain
+ * picks it up automatically next time the proposal is queried.
+ */
+export async function setInvoiceBlock(
+  prisma: PrismaClient,
+  tenantId: string,
+  billingDocumentId: string,
+  blocked: boolean,
+  reason: string | null,
+  userId: string
+) {
+  const doc = await prisma.billingDocument.findFirst({
+    where: { id: billingDocumentId, tenantId },
+    select: { id: true },
+  })
+  if (!doc) {
+    throw new ReminderNotFoundError(billingDocumentId)
+  }
+
+  const updated = await prisma.billingDocument.update({
+    where: { id: billingDocumentId },
+    data: {
+      dunningBlocked: blocked,
+      dunningBlockReason: blocked ? reason : null,
+    },
+    select: {
+      id: true,
+      number: true,
+      dunningBlocked: true,
+      dunningBlockReason: true,
+    },
+  })
+
+  await auditLog.log(prisma, {
+    tenantId,
+    userId,
+    action: blocked ? "dunning_block_set" : "dunning_block_removed",
+    entityType: "billing_document",
+    entityId: billingDocumentId,
+    entityName: updated.number,
+    metadata: { reason },
+  }).catch((err) => console.error("[AuditLog] dunning_block failed:", err))
+
+  return updated
+}
+
+/**
+ * Sets or removes the dunning block on a customer address. Affects every
+ * invoice belonging to that customer.
+ */
+export async function setCustomerBlock(
+  prisma: PrismaClient,
+  tenantId: string,
+  customerAddressId: string,
+  blocked: boolean,
+  reason: string | null,
+  userId: string
+) {
+  const address = await prisma.crmAddress.findFirst({
+    where: { id: customerAddressId, tenantId },
+    select: { id: true },
+  })
+  if (!address) {
+    throw new ReminderNotFoundError(customerAddressId)
+  }
+
+  const updated = await prisma.crmAddress.update({
+    where: { id: customerAddressId },
+    data: {
+      dunningBlocked: blocked,
+      dunningBlockReason: blocked ? reason : null,
+    },
+    select: {
+      id: true,
+      company: true,
+      dunningBlocked: true,
+      dunningBlockReason: true,
+    },
+  })
+
+  await auditLog.log(prisma, {
+    tenantId,
+    userId,
+    action: blocked ? "dunning_block_set" : "dunning_block_removed",
+    entityType: "crm_address",
+    entityId: customerAddressId,
+    entityName: updated.company,
+    metadata: { reason },
+  }).catch((err) => console.error("[AuditLog] dunning_block failed:", err))
+
+  return updated
+}
+
+/**
+ * Cancels a SENT reminder and writes a follow-up CrmCorrespondence note
+ * documenting the storno. The plain `cancelReminder` (above) is the
+ * service-level primitive; this wrapper layers the side-effects the
+ * router needs in one place so both DRAFT-discard and SENT-storno paths
+ * can share an audit footprint.
+ */
+export async function cancelReminderWithSideEffects(
+  prisma: PrismaClient,
+  tenantId: string,
+  reminderId: string,
+  reason: string | null,
+  cancelledById: string
+) {
+  const reminder = await prisma.reminder.findFirst({
+    where: { id: reminderId, tenantId },
+  })
+  if (!reminder) throw new ReminderNotFoundError(reminderId)
+  if (reminder.status === "CANCELLED") {
+    throw new ReminderValidationError("Reminder is already cancelled")
+  }
+
+  const wasSent = reminder.status === "SENT"
+
+  const cancelled = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+    const result = await txPrisma.reminder.update({
+      where: { id: reminderId },
+      data: { status: "CANCELLED" },
+    })
+    if (wasSent) {
+      await crmCorrespondenceService.create(
+        txPrisma,
+        tenantId,
+        {
+          addressId: reminder.customerAddressId,
+          direction: "OUTGOING",
+          type: "note",
+          date: new Date(),
+          subject: `Mahnung ${reminder.number} storniert`,
+          content: reason ?? "Mahnung wurde storniert.",
+        },
+        cancelledById
+      )
+    }
+    return result
+  })
+
+  await auditLog.log(prisma, {
+    tenantId,
+    userId: cancelledById,
+    action: "reminder_cancelled",
+    entityType: "reminder",
+    entityId: reminderId,
+    entityName: reminder.number,
+    metadata: { previousStatus: reminder.status, reason },
+  }).catch((err) => console.error("[AuditLog] reminder_cancelled failed:", err))
+
+  return cancelled
 }

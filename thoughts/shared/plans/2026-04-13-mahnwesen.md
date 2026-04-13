@@ -1245,11 +1245,11 @@ Mocking: Der Email-Service wird via `vi.mock("@/lib/services/email-send-service"
 ### Success Criteria: Phase 2
 
 #### Automated Verification:
-- [ ] Type-Check grün: `pnpm typecheck`
-- [ ] Router-Tests grün: `pnpm test src/trpc/routers/__tests__/reminders-router.test.ts`
-- [ ] Bestehende Billing-Router-Tests grün: `pnpm test src/trpc/routers/__tests__/billingDocuments-router.test.ts src/trpc/routers/__tests__/billingPayments-router.test.ts`
-- [ ] Cron-Route-Test grün: `pnpm test src/app/api/cron/dunning-candidates/__tests__/route.test.ts` (neu, Pattern aus calculate-days)
-- [ ] Lint grün: `pnpm lint`
+- [x] Type-Check grün: `pnpm typecheck` (only pre-existing scanner-terminal TS2589 remains)
+- [x] Router-Tests grün: `pnpm test src/trpc/routers/__tests__/reminders-router.test.ts` (27/27)
+- [x] Bestehende Billing-Router-Tests grün: `pnpm test src/trpc/routers/__tests__/billingDocuments-router.test.ts src/trpc/routers/__tests__/billingPayments-router.test.ts` (35/35)
+- [x] Cron-Route-Test grün: `pnpm test src/app/api/cron/dunning-candidates/__tests__/route.test.ts` (9/9)
+- [x] Lint grün: `pnpm lint` (only pre-existing platform helpers `any` error remains)
 
 #### Manual Verification:
 - [ ] Via tRPC-DevTools oder Postman: `trpc.billing.reminders.updateSettings({ enabled: true })` → Settings aktiv, 3 Default-Templates existieren.
