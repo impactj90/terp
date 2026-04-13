@@ -10,45 +10,26 @@ import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 import * as systemSettingsService from "./system-settings-service"
 import * as reservationService from "./wh-reservation-service"
+import {
+  resolvePlaceholders,
+  buildContactPlaceholders,
+} from "@/lib/templates/placeholder-resolver"
 
 // --- Template Placeholder Resolution ---
 
 /**
  * Resolve template placeholders (e.g. {{briefanrede}}, {{letterSalutation}})
- * with contact and address data. Supports both German and English placeholder names.
+ * with contact and address data. Supports both German and English
+ * placeholder names. Thin wrapper around the shared resolver in
+ * `src/lib/templates/placeholder-resolver.ts`, which is also used by the
+ * Mahnwesen reminder templates.
  */
 export function resolveTemplatePlaceholders(
   html: string,
   address?: { company?: string | null } | null,
-  contact?: {
-    firstName?: string | null
-    lastName?: string | null
-    salutation?: string | null
-    title?: string | null
-    letterSalutation?: string | null
-  } | null,
+  contact?: Parameters<typeof buildContactPlaceholders>[1],
 ): string {
-  const placeholders: Record<string, string> = {
-    // German
-    briefanrede: contact?.letterSalutation || 'Sehr geehrte Damen und Herren,',
-    anrede: contact?.salutation ?? '',
-    titel: contact?.title ?? '',
-    vorname: contact?.firstName ?? '',
-    nachname: contact?.lastName ?? '',
-    firma: address?.company ?? '',
-    // English
-    lettersalutation: contact?.letterSalutation || 'Dear Sir or Madam,',
-    salutation: contact?.salutation ?? '',
-    title: contact?.title ?? '',
-    firstname: contact?.firstName ?? '',
-    lastname: contact?.lastName ?? '',
-    company: address?.company ?? '',
-  }
-
-  return html.replace(/\{\{(\w+)\}\}/gi, (_match, key: string) => {
-    const val = placeholders[key.toLowerCase()]
-    return val !== undefined ? val : _match
-  })
+  return resolvePlaceholders(html, buildContactPlaceholders(address, contact))
 }
 
 // --- Error Classes ---

@@ -56,6 +56,10 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   stocktake: "INV-",
   // SEPA payment runs
   payment_run: "PR-",
+  // Mahnwesen (Dunning) — base prefix; reminder-service builds yearly
+  // keys like "dunning_2026" with prefix "MA-2026-" so the counter
+  // resets each calendar year. This entry is kept for documentation.
+  dunning: "MA-",
 }
 
 export async function getNextNumber(

@@ -72,6 +72,11 @@ model User {
   approvalStepsApprover      InboundInvoiceApproval[] @relation("ApprovalStepApprover")
   approvalStepsDecider       InboundInvoiceApproval[] @relation("ApprovalStepDecider")
 
+  // Mahnwesen (Dunning)
+  reminderTemplatesCreated ReminderTemplate[] @relation("ReminderTemplateCreatedBy")
+  remindersCreated         Reminder[]         @relation("ReminderCreatedBy")
+  remindersSent            Reminder[]         @relation("ReminderSentBy")
+
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
   @@index([email], map: "idx_users_email")
@@ -250,6 +255,12 @@ model Tenant {
 
   // Payment Runs (SEPA pain.001.001.09)
   paymentRuns                     PaymentRun[]
+
+  // Mahnwesen (Dunning)
+  reminderSettings  ReminderSettings?
+  reminderTemplates ReminderTemplate[]
+  reminders         Reminder[]
+  reminderItems     ReminderItem[]
 
   // Payroll master data
   employeeChildren           EmployeeChild[]
@@ -466,6 +477,8 @@ model CrmAddress {
   ourCustomerNumber String?      @map("our_customer_number") @db.VarChar(50)
   salesPriceListId    String?    @map("sales_price_list_id") @db.Uuid
   purchasePriceListId String?    @map("purchase_price_list_id") @db.Uuid
+  dunningBlocked      Boolean    @default(false) @map("dunning_blocked")
+  dunningBlockReason  String?    @map("dunning_block_reason") @db.Text
   isActive        Boolean        @default(true) @map("is_active")
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -491,6 +504,7 @@ model CrmAddress {
   purchaseOrders           WhPurchaseOrder[]
   supplierInvoices         WhSupplierInvoice[]
   inboundInvoices          InboundInvoice[]
+  reminders                Reminder[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -874,6 +888,10 @@ model BillingDocument {
   notes               String?
   internalNotes       String?                @map("internal_notes")
 
+  // Mahnwesen
+  dunningBlocked      Boolean                @default(false) @map("dunning_blocked")
+  dunningBlockReason  String?                @map("dunning_block_reason")
+
   // Document text (WYSIWYG editor)
   headerText          String?                @map("header_text")
   footerText          String?                @map("footer_text")
@@ -902,6 +920,7 @@ model BillingDocument {
   positions           BillingDocumentPosition[]
   billingServiceCases BillingServiceCase[]
   payments            BillingPayment[]
+  reminderItems       ReminderItem[]
 
   @@unique([tenantId, number])
   @@index([tenantId, type])
@@ -1201,6 +1220,113 @@ model BillingRecurringInvoice {
   @@index([tenantId, isActive])
   @@index([tenantId, nextDueDate])
   @@map("billing_recurring_invoices")
+}
+
+// -----------------------------------------------------------------------------
+// Mahnwesen (Dunning) — Reminder models
+// -----------------------------------------------------------------------------
+// Plan: thoughts/shared/plans/2026-04-13-mahnwesen.md
+//
+// Four tables: settings (one per tenant), templates (one per level + tenant),
+// reminders (one letter per customer), reminder_items (one per invoice).
+// Reminder lifecycle: DRAFT -> SENT | CANCELLED.
+model ReminderSettings {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String   @unique @map("tenant_id") @db.Uuid
+  enabled             Boolean  @default(false)
+  maxLevel            Int      @default(3) @map("max_level")
+  gracePeriodDays     Int[]    @default([7, 14, 21]) @map("grace_period_days")
+  feeAmounts          Float[]  @default([0, 2.5, 5]) @map("fee_amounts")
+  interestEnabled     Boolean  @default(true) @map("interest_enabled")
+  interestRatePercent Float    @default(9) @map("interest_rate_percent")
+  feesEnabled         Boolean  @default(true) @map("fees_enabled")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_settings")
+}
+
+model ReminderTemplate {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  name         String   @db.VarChar(255)
+  level        Int
+  headerText   String   @default("") @map("header_text")
+  footerText   String   @default("") @map("footer_text")
+  emailSubject String   @default("") @map("email_subject") @db.VarChar(255)
+  emailBody    String   @default("") @map("email_body")
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById  String?  @map("created_by_id") @db.Uuid
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation("ReminderTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, level], map: "idx_reminder_templates_tenant_level")
+  @@map("reminder_templates")
+}
+
+model Reminder {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String         @map("tenant_id") @db.Uuid
+  number            String         @db.VarChar(50)
+  customerAddressId String         @map("customer_address_id") @db.Uuid
+  level             Int
+  status            String         @default("DRAFT") @db.VarChar(20)
+  sentAt            DateTime?      @map("sent_at") @db.Timestamptz(6)
+  sentById          String?        @map("sent_by_id") @db.Uuid
+  sendMethod        String?        @map("send_method") @db.VarChar(20)
+  pdfStoragePath    String?        @map("pdf_storage_path")
+  totalOpenAmount   Float          @default(0) @map("total_open_amount")
+  totalInterest     Float          @default(0) @map("total_interest")
+  totalFees         Float          @default(0) @map("total_fees")
+  totalDue          Float          @default(0) @map("total_due")
+  headerText        String         @default("") @map("header_text")
+  footerText        String         @default("") @map("footer_text")
+  notes             String?
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById       String?        @map("created_by_id") @db.Uuid
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerAddress CrmAddress     @relation(fields: [customerAddressId], references: [id], onDelete: Restrict)
+  items           ReminderItem[]
+  createdBy       User?          @relation("ReminderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  sentBy          User?          @relation("ReminderSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, number], map: "reminders_number_unique")
+  @@index([tenantId, status], map: "idx_reminders_tenant_status")
+  @@index([tenantId, customerAddressId], map: "idx_reminders_tenant_customer")
+  @@index([tenantId, sentAt], map: "idx_reminders_tenant_sent_at")
+  @@map("reminders")
+}
+
+model ReminderItem {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  reminderId           String   @map("reminder_id") @db.Uuid
+  billingDocumentId    String   @map("billing_document_id") @db.Uuid
+  invoiceNumber        String   @map("invoice_number") @db.VarChar(50)
+  invoiceDate          DateTime @map("invoice_date") @db.Timestamptz(6)
+  dueDate              DateTime @map("due_date") @db.Timestamptz(6)
+  originalAmount       Float    @map("original_amount")
+  openAmountAtReminder Float    @map("open_amount_at_reminder")
+  daysOverdue          Int      @map("days_overdue")
+  interestAmount       Float    @default(0) @map("interest_amount")
+  feeAmount            Float    @default(0) @map("fee_amount")
+  levelAtReminder      Int      @map("level_at_reminder")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reminder        Reminder        @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  billingDocument BillingDocument @relation(fields: [billingDocumentId], references: [id], onDelete: Restrict)
+
+  @@index([reminderId], map: "idx_reminder_items_reminder")
+  @@index([billingDocumentId], map: "idx_reminder_items_billing_document")
+  @@map("reminder_items")
 }
 
 // -----------------------------------------------------------------------------
