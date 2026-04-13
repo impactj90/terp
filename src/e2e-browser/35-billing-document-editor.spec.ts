@@ -119,14 +119,14 @@ test.describe.serial("UC-ORD-10: Document Editor (WYSIWYG A4 Layout)", () => {
   test("action buttons are visible for draft document", async ({ page }) => {
     await openDocument(page, /AG-/);
 
-    // Abschließen button should be visible (it's a draft)
+    // Abschließen is the primary action for a draft
     await expect(page.getByRole("button", { name: "Abschließen" })).toBeVisible({ timeout: 10000 });
 
-    // Stornieren button should be visible
-    await expect(page.getByRole("button", { name: "Stornieren" })).toBeVisible();
-
-    // Duplizieren button should be visible
-    await expect(page.getByRole("button", { name: "Duplizieren" })).toBeVisible();
+    // Secondary actions live inside the "Weitere Aktionen" dropdown
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(page.getByRole("menuitem", { name: "Stornieren" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Duplizieren" })).toBeVisible();
+    await page.keyboard.press("Escape");
   });
 
   // ── Verify Fußzeile placeholder ────────────────────────────────

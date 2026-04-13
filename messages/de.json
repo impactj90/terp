@@ -69,7 +69,8 @@
     "bold": "Fett",
     "italic": "Kursiv",
     "clearField": "Feld leeren",
-    "togglePanel": "Panel umschalten"
+    "togglePanel": "Panel umschalten",
+    "moreActions": "Weitere Aktionen"
   },
   "metadata": {
     "title": "Terp",
