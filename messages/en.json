@@ -7475,6 +7475,7 @@
       "noSupplier": "No supplier",
       "saveButton": "Save",
       "submitButton": "Submit for Approval",
+      "submitMissingSupplierTooltip": "Assign a supplier before submitting the invoice for approval.",
       "approveButton": "Approve",
       "selfApproveTooltip": "You cannot approve your own invoice",
       "rejectButton": "Reject",

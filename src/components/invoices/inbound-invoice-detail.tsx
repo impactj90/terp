@@ -244,9 +244,22 @@ export function InboundInvoiceDetail({ id }: Props) {
           </Button>
         )}
         {isEditable && (
-          <Button size="sm" variant="default" onClick={handleSubmit} disabled={submitMutation.isPending}>
-            <Send className="mr-1 h-3.5 w-3.5" /> {t('detail.submitButton')}
-          </Button>
+          <span
+            title={
+              !invoice.supplierId
+                ? t('detail.submitMissingSupplierTooltip')
+                : undefined
+            }
+          >
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSubmit}
+              disabled={submitMutation.isPending || !invoice.supplierId}
+            >
+              <Send className="mr-1 h-3.5 w-3.5" /> {t('detail.submitButton')}
+            </Button>
+          </span>
         )}
         {myPendingApproval && (
           <>
