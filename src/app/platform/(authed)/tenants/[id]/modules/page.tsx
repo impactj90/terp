@@ -151,6 +151,7 @@ export default function PlatformTenantModulesPage({
   }, [rows, search])
 
   const tenantName = detailQuery.data?.tenant.name
+  const tenant = detailQuery.data?.tenant
 
   return (
     <div className="space-y-6">
@@ -171,6 +172,15 @@ export default function PlatformTenantModulesPage({
           </p>
         ) : null}
       </div>
+
+      {tenant?.billingExempt ? (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+          <strong>Nicht fakturierbar:</strong> Dieser Tenant ist von
+          automatischer Fakturierung ausgenommen. Modul-Buchungen legen eine
+          CRM-Adresse im Operator-Tenant an, erzeugen aber keine Abos oder
+          wiederkehrenden Rechnungen.
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>

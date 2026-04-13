@@ -57,6 +57,22 @@ export class PlatformSubscriptionSelfBillError extends Error {
 }
 
 /**
+ * Refusal error: the customer tenant is billing-exempt. Thrown by
+ * createSubscription as defense-in-depth — callers should check the
+ * tenant's billingExempt flag first and skip the subscription block
+ * entirely. See plan 2026-04-13-platform-billing-exempt-tenants.md.
+ */
+export class PlatformSubscriptionBillingExemptError extends Error {
+  constructor(tenantId: string) {
+    super(
+      `Refusing to create a subscription for billing-exempt tenant ${tenantId}. ` +
+        `Callers must check tenants.billingExempt before invoking createSubscription.`,
+    )
+    this.name = "PlatformSubscriptionBillingExemptError"
+  }
+}
+
+/**
  * Returns the operator tenant id, or throws if unconfigured.
  */
 export function requireOperatorTenantId(): string {
@@ -363,6 +379,23 @@ export async function createSubscription(
     input.billingCycle === "MONTHLY" ? "MONTHLY" : "ANNUALLY"
 
   return await prisma.$transaction(async (tx) => {
+    // Defense-in-depth: refuse billing-exempt customers. Callers should
+    // filter these out before calling, but we fail loud rather than
+    // silently creating phantom subscriptions if the caller drifts.
+    const customerTenant = await tx.tenant.findUnique({
+      where: { id: input.customerTenantId },
+      select: { billingExempt: true },
+    })
+    if (!customerTenant) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Customer tenant ${input.customerTenantId} not found`,
+      })
+    }
+    if (customerTenant.billingExempt) {
+      throw new PlatformSubscriptionBillingExemptError(input.customerTenantId)
+    }
+
     const operatorCrmAddressId = await findOrCreateOperatorCrmAddress(
       tx,
       input.customerTenantId,

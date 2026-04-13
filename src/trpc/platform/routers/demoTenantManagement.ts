@@ -212,6 +212,7 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
         tenantId: tenantIdSchema,
         discardData: z.boolean(),
         billingCycle: z.enum(["MONTHLY", "ANNUALLY"]).default("MONTHLY"),
+        billingExempt: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -257,6 +258,17 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
         }
       }
 
+      // Step 2b: flag the tenant as billing-exempt if requested. Must run
+      // BEFORE the subscription bridge so createSubscription's defense guard
+      // (PlatformSubscriptionBillingExemptError) doesn't trip if the caller
+      // fails to skip.
+      if (input.billingExempt) {
+        await ctx.prisma.tenant.update({
+          where: { id: input.tenantId },
+          data: { billingExempt: true },
+        })
+      }
+
       // Step 3: subscription bridge — one createSubscription per module.
       const subscriptionIds: string[] = []
       const failedModules: Array<{ module: string; error: string }> = []
@@ -266,7 +278,8 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
 
       if (
         subscriptionService.isSubscriptionBillingEnabled() &&
-        !isHouseTenant
+        !isHouseTenant &&
+        !input.billingExempt
       ) {
         for (const moduleKey of convertResult.snapshottedModules) {
           try {
@@ -302,6 +315,21 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
             })
           }
         }
+      } else if (input.billingExempt && !isHouseTenant) {
+        // Exempt path: create the CRM address once so the customer is
+        // visible in the operator CRM, but skip all subscription creates.
+        // Non-fatal on failure — convert is already committed.
+        try {
+          await subscriptionService.findOrCreateOperatorCrmAddress(
+            ctx.prisma,
+            input.tenantId,
+          )
+        } catch (err) {
+          failedModules.push({
+            module: "__crm_address__",
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
       }
 
       // Step 4: audit (platform-side only)
@@ -317,6 +345,7 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
           discardData: input.discardData,
           originalTemplate: convertResult.originalTemplate,
           billingCycle: input.billingCycle,
+          billingExempt: input.billingExempt,
           moduleCount: convertResult.snapshottedModules.length,
           moduleKeys: convertResult.snapshottedModules,
           subscriptionIds,

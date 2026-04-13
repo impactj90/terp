@@ -150,6 +150,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
         addressZip: z.string().trim().min(1).max(20),
         addressCity: z.string().trim().min(1).max(100),
         addressCountry: z.string().trim().min(1).max(100),
+        billingExempt: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -180,6 +181,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
                 addressCity: input.addressCity,
                 addressCountry: input.addressCountry,
                 isActive: true,
+                billingExempt: input.billingExempt,
               },
             })
 
@@ -236,6 +238,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
             slug: result.tenant.slug,
             initialAdminEmail: input.initialAdminEmail,
             welcomeEmailSent: result.welcomeEmail.sent,
+            billingExempt: input.billingExempt,
           },
           ipAddress: ctx.ipAddress,
           userAgent: ctx.userAgent,
@@ -307,6 +310,64 @@ export const platformTenantManagementRouter = createTRPCRouter({
       })
 
       return updated
+    }),
+
+  setBillingExempt: platformAuthedProcedure
+    .input(
+      z.object({
+        id: tenantIdSchema,
+        billingExempt: z.boolean(),
+        reason: z.string().trim().min(3).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.tenant.findUnique({
+        where: { id: input.id },
+        select: { id: true, billingExempt: true, name: true },
+      })
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tenant not found" })
+      }
+      if (existing.billingExempt === input.billingExempt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Das Flag ist bereits auf diesem Wert",
+        })
+      }
+
+      // Defense: refuse to flip the operator tenant — it is implicitly
+      // exempt via the self-bill guard and should never appear in this UI,
+      // but we fail loud if the operator ever tries.
+      if (subscriptionService.isOperatorTenant(input.id)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Der Operator-Tenant kann nicht umgeschaltet werden",
+        })
+      }
+
+      await ctx.prisma.tenant.update({
+        where: { id: input.id },
+        data: { billingExempt: input.billingExempt },
+      })
+
+      await platformAudit.log(ctx.prisma, {
+        platformUserId: ctx.platformUser.id,
+        action: "tenant.billing_exempt_changed",
+        entityType: "tenant",
+        entityId: input.id,
+        targetTenantId: input.id,
+        changes: {
+          billingExempt: {
+            old: existing.billingExempt,
+            new: input.billingExempt,
+          },
+        },
+        metadata: { reason: input.reason },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      })
+
+      return { success: true }
     }),
 
   deactivate: platformAuthedProcedure
@@ -533,7 +594,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const tenant = await ctx.prisma.tenant.findUnique({
         where: { id: input.tenantId },
-        select: { id: true },
+        select: { id: true, billingExempt: true },
       })
       if (!tenant) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Tenant not found" })
@@ -563,17 +624,26 @@ export const platformTenantManagementRouter = createTRPCRouter({
       })
 
       // Phase 10a: also create a platform_subscription if billing is enabled.
-      // Two skip conditions:
+      // Skip conditions:
       //   1. Operator tenant booking modules on itself — the "house" is
       //      not billed (see subscription-service.isOperatorTenant +
       //      PlatformSubscriptionSelfBillError).
-      //   2. An active subscription already exists for (tenantId, module) —
+      //   2. Customer tenant is billing-exempt — CRM address still created
+      //      so the customer is visible in the operator CRM, but no abos
+      //      or recurring invoices (plan 2026-04-13-platform-billing-exempt-tenants).
+      //   3. An active subscription already exists for (tenantId, module) —
       //      that happens on a re-enable.
       let subscriptionResult:
         | Awaited<ReturnType<typeof subscriptionService.createSubscription>>
         | null = null
+      let operatorCrmAddressId: string | null = null
       const isHouseTenant = subscriptionService.isOperatorTenant(input.tenantId)
-      if (subscriptionService.isSubscriptionBillingEnabled() && !isHouseTenant) {
+      const shouldBill =
+        subscriptionService.isSubscriptionBillingEnabled() &&
+        !isHouseTenant &&
+        !tenant.billingExempt
+
+      if (shouldBill) {
         const existing = await ctx.prisma.platformSubscription.findFirst({
           where: {
             tenantId: input.tenantId,
@@ -592,7 +662,21 @@ export const platformTenantManagementRouter = createTRPCRouter({
             },
             ctx.platformUser.id,
           )
+          operatorCrmAddressId = subscriptionResult?.operatorCrmAddressId ?? null
         }
+      } else if (
+        tenant.billingExempt &&
+        subscriptionService.isSubscriptionBillingEnabled() &&
+        !isHouseTenant
+      ) {
+        // Exempt-Pfad: CRM-Adresse im Operator-Tenant anlegen, damit der
+        // Kunde im Operator-CRM sichtbar ist, auch wenn keine Abos laufen.
+        // findOrCreateOperatorCrmAddress ist idempotent.
+        operatorCrmAddressId =
+          await subscriptionService.findOrCreateOperatorCrmAddress(
+            ctx.prisma,
+            input.tenantId,
+          )
       }
 
       await platformAudit.log(ctx.prisma, {
@@ -608,6 +692,8 @@ export const platformTenantManagementRouter = createTRPCRouter({
           subscriptionId: subscriptionResult?.subscriptionId ?? null,
           billingRecurringInvoiceId:
             subscriptionResult?.billingRecurringInvoiceId ?? null,
+          operatorCrmAddressId,
+          billingExempt: tenant.billingExempt,
         },
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
@@ -632,6 +718,11 @@ export const platformTenantManagementRouter = createTRPCRouter({
         })
       }
 
+      const tenant = await ctx.prisma.tenant.findUnique({
+        where: { id: input.tenantId },
+        select: { billingExempt: true },
+      })
+
       const row = await ctx.prisma.tenantModule.findUnique({
         where: {
           tenantId_module: {
@@ -652,11 +743,15 @@ export const platformTenantManagementRouter = createTRPCRouter({
       })
 
       // Phase 10a: cancel the active subscription if billing is enabled.
-      // Skip for the operator tenant itself — the house never has
-      // subscriptions to cancel (mirrors the enableModule guard).
+      // Skip for the operator tenant itself (house) and for billing-exempt
+      // tenants (both have no subscription to cancel).
       let cancelledSubscriptionId: string | null = null
       const isHouseTenant = subscriptionService.isOperatorTenant(input.tenantId)
-      if (subscriptionService.isSubscriptionBillingEnabled() && !isHouseTenant) {
+      if (
+        subscriptionService.isSubscriptionBillingEnabled() &&
+        !isHouseTenant &&
+        !tenant?.billingExempt
+      ) {
         const activeSub = await ctx.prisma.platformSubscription.findFirst({
           where: {
             tenantId: input.tenantId,
@@ -689,6 +784,7 @@ export const platformTenantManagementRouter = createTRPCRouter({
           reason: input.reason ?? null,
           operatorNote: row.operatorNote,
           cancelledSubscriptionId,
+          billingExempt: tenant?.billingExempt ?? false,
         },
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,

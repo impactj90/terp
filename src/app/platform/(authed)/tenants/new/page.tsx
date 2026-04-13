@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -61,6 +62,7 @@ export default function PlatformNewTenantPage() {
   const [addressZip, setAddressZip] = useState("")
   const [addressCity, setAddressCity] = useState("")
   const [addressCountry, setAddressCountry] = useState("Deutschland")
+  const [billingExempt, setBillingExempt] = useState(false)
 
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [createdTenantId, setCreatedTenantId] = useState<string | null>(null)
@@ -100,6 +102,7 @@ export default function PlatformNewTenantPage() {
       addressZip: addressZip.trim(),
       addressCity: addressCity.trim(),
       addressCountry: addressCountry.trim(),
+      billingExempt,
     })
   }
 
@@ -255,6 +258,37 @@ export default function PlatformNewTenantPage() {
                   placeholder="Max Mustermann"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Abrechnung</CardTitle>
+              <CardDescription>
+                Steuert, ob dieser Tenant automatisch fakturiert wird.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <label
+                htmlFor="billingExempt"
+                className="flex cursor-pointer items-start gap-3"
+              >
+                <Checkbox
+                  id="billingExempt"
+                  checked={!billingExempt}
+                  onCheckedChange={(v) => setBillingExempt(!v)}
+                />
+                <div className="space-y-1">
+                  <div className="font-medium">Automatische Fakturierung</div>
+                  <p className="text-sm text-muted-foreground">
+                    Deaktivieren für Vertriebspartner und Sonderkunden, die die
+                    Applikation nutzen, aber nicht bezahlen. Die CRM-Adresse wird
+                    trotzdem beim ersten Modul angelegt; es werden aber keine
+                    automatischen Abos und Rechnungen erzeugt. Manuelle Rechnungen
+                    auf die CRM-Adresse bleiben jederzeit möglich.
+                  </p>
+                </div>
+              </label>
             </CardContent>
           </Card>
 

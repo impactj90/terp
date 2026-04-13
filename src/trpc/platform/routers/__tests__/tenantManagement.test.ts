@@ -28,6 +28,7 @@ vi.mock("@/lib/platform/subscription-service", async (importOriginal) => {
     ...actual,
     createSubscription: vi.fn(),
     cancelSubscription: vi.fn(),
+    findOrCreateOperatorCrmAddress: vi.fn(),
   }
 })
 
@@ -707,5 +708,270 @@ describe("tenantManagement.disableModule — subscription wiring (Phase 10a)", (
         }),
       }),
     )
+  })
+})
+
+describe("tenantManagement — billing-exempt tenants", () => {
+  const OPERATOR_TENANT_ID = "10000000-0000-0000-0000-000000000001"
+
+  beforeEach(() => {
+    vi.stubEnv("PLATFORM_OPERATOR_TENANT_ID", OPERATOR_TENANT_ID)
+    vi.mocked(subscriptionService.createSubscription).mockReset()
+    vi.mocked(subscriptionService.cancelSubscription).mockReset()
+    vi.mocked(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).mockReset()
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("create accepts billingExempt=true and persists it", async () => {
+    const tenantFindUnique = vi.fn().mockResolvedValue(null)
+    const tenantCreate = vi
+      .fn()
+      .mockResolvedValue(makeTenant({ billingExempt: true }))
+    const userGroupCreate = vi.fn().mockResolvedValue({
+      id: "g0000000-0000-4000-a000-000000000001",
+      tenantId: TENANT_ID,
+      name: "Administratoren",
+      code: "ADMIN",
+      isAdmin: true,
+    })
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique, create: tenantCreate },
+        userGroup: { create: userGroupCreate },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.create({
+      name: "Exempt GmbH",
+      slug: "exempt-gmbh",
+      contactEmail: "info@exempt.de",
+      initialAdminEmail: "admin@exempt.de",
+      initialAdminDisplayName: "Admin",
+      addressStreet: "Straße 1",
+      addressZip: "10115",
+      addressCity: "Berlin",
+      addressCountry: "Deutschland",
+      billingExempt: true,
+    })
+
+    expect(tenantCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ billingExempt: true }),
+      }),
+    )
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "tenant.created",
+          metadata: expect.objectContaining({ billingExempt: true }),
+        }),
+      }),
+    )
+  })
+
+  it("enableModule on exempt tenant creates CrmAddress but no subscription", async () => {
+    const tenantFindUnique = vi
+      .fn()
+      .mockResolvedValue({ id: TENANT_ID, billingExempt: true })
+    const upsert = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      enabledAt: new Date(),
+      enabledByPlatformUserId: OPERATOR_ID,
+      operatorNote: null,
+    })
+    const platformSubscriptionFindFirst = vi.fn()
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+    vi.mocked(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).mockResolvedValue("crm-addr-42")
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: { upsert },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.enableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+      billingCycle: "MONTHLY",
+    })
+
+    expect(upsert).toHaveBeenCalled()
+    expect(platformSubscriptionFindFirst).not.toHaveBeenCalled()
+    expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
+    expect(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).toHaveBeenCalledWith(expect.anything(), TENANT_ID)
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            billingExempt: true,
+            subscriptionId: null,
+            billingRecurringInvoiceId: null,
+            operatorCrmAddressId: "crm-addr-42",
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("disableModule on exempt tenant skips cancelSubscription", async () => {
+    const tenantFindUnique = vi
+      .fn()
+      .mockResolvedValue({ billingExempt: true })
+    const tenantModuleFindUnique = vi.fn().mockResolvedValue({
+      id: MODULE_ROW_ID,
+      tenantId: TENANT_ID,
+      module: "crm",
+      operatorNote: null,
+    })
+    const tenantModuleDelete = vi.fn().mockResolvedValue({ id: MODULE_ROW_ID })
+    const platformSubscriptionFindFirst = vi.fn()
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique: tenantFindUnique },
+        tenantModule: {
+          findUnique: tenantModuleFindUnique,
+          delete: tenantModuleDelete,
+        },
+        platformSubscription: { findFirst: platformSubscriptionFindFirst },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.disableModule({
+      tenantId: TENANT_ID,
+      moduleKey: "crm",
+    })
+
+    expect(tenantModuleDelete).toHaveBeenCalled()
+    expect(platformSubscriptionFindFirst).not.toHaveBeenCalled()
+    expect(subscriptionService.cancelSubscription).not.toHaveBeenCalled()
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            billingExempt: true,
+            cancelledSubscriptionId: null,
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("setBillingExempt writes audit with changes diff and reason", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      id: TENANT_ID,
+      name: "Test GmbH",
+      billingExempt: false,
+    })
+    const update = vi.fn().mockResolvedValue(makeTenant({ billingExempt: true }))
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique, update },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await caller.setBillingExempt({
+      id: TENANT_ID,
+      billingExempt: true,
+      reason: "Vertriebspartner lt. Rahmenvertrag",
+    })
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: TENANT_ID },
+        data: { billingExempt: true },
+      }),
+    )
+    expect(platformAuditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "tenant.billing_exempt_changed",
+          changes: expect.objectContaining({
+            billingExempt: { old: false, new: true },
+          }),
+          metadata: expect.objectContaining({
+            reason: "Vertriebspartner lt. Rahmenvertrag",
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("setBillingExempt rejects the operator tenant", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      id: OPERATOR_TENANT_ID,
+      name: "Operator",
+      billingExempt: false,
+    })
+    const update = vi.fn()
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique, update },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await expect(
+      caller.setBillingExempt({
+        id: OPERATOR_TENANT_ID,
+        billingExempt: true,
+        reason: "Nope",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it("setBillingExempt rejects a no-op toggle", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      id: TENANT_ID,
+      name: "Test",
+      billingExempt: true,
+    })
+    const update = vi.fn()
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { findUnique, update },
+      },
+    })
+    const caller = createCaller(ctx)
+
+    await expect(
+      caller.setBillingExempt({
+        id: TENANT_ID,
+        billingExempt: true,
+        reason: "duplicate",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(update).not.toHaveBeenCalled()
   })
 })

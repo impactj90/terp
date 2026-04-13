@@ -26,6 +26,15 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
@@ -71,6 +80,8 @@ export default function PlatformTenantDetailPage({
 
   const [name, setName] = useState("")
   const [contactEmail, setContactEmail] = useState("")
+  const [exemptDialogOpen, setExemptDialogOpen] = useState(false)
+  const [exemptReason, setExemptReason] = useState("")
 
   useEffect(() => {
     if (tenant) {
@@ -91,6 +102,22 @@ export default function PlatformTenantDetailPage({
       })
     },
     onError: (err) => toast.error(err.message ?? "Aktualisierung fehlgeschlagen"),
+  })
+
+  const setExemptMutation = useMutation({
+    ...trpc.tenantManagement.setBillingExempt.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenantManagement.getById.queryKey({ id }),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.auditLogs.list.queryKey(),
+      })
+      toast.success("Fakturierungs-Status aktualisiert")
+      setExemptDialogOpen(false)
+      setExemptReason("")
+    },
+    onError: (err) => toast.error(err.message ?? "Umschalten fehlgeschlagen"),
   })
 
   function handleUpdate(e: React.FormEvent) {
@@ -192,6 +219,19 @@ export default function PlatformTenantDetailPage({
                         </span>
                       </>
                     ) : null}
+                    {tenant.billingExempt ? (
+                      <>
+                        <span className="text-muted-foreground">Fakturierung</span>
+                        <span>
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500 text-amber-700"
+                          >
+                            Nicht fakturierbar
+                          </Badge>
+                        </span>
+                      </>
+                    ) : null}
                   </>
                 )}
               </CardContent>
@@ -229,7 +269,7 @@ export default function PlatformTenantDetailPage({
             </Card>
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-4">
+          <TabsContent value="settings" className="mt-4 space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Einstellungen bearbeiten</CardTitle>
@@ -266,6 +306,29 @@ export default function PlatformTenantDetailPage({
                 </form>
               </CardContent>
             </Card>
+
+            {tenant ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fakturierung</CardTitle>
+                  <CardDescription>
+                    {tenant.billingExempt
+                      ? "Dieser Tenant ist von automatischer Fakturierung ausgenommen. Modul-Buchungen erzeugen keine Abos oder Rechnungen."
+                      : "Modul-Buchungen auf diesem Tenant erzeugen automatisch Abos und wiederkehrende Rechnungen im Operator-Tenant."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant={tenant.billingExempt ? "default" : "outline"}
+                    onClick={() => setExemptDialogOpen(true)}
+                  >
+                    {tenant.billingExempt
+                      ? "Fakturierung aktivieren"
+                      : "Von Fakturierung ausnehmen"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="audit" className="mt-4">
@@ -325,6 +388,78 @@ export default function PlatformTenantDetailPage({
           </TabsContent>
         </Tabs>
       )}
+
+      {tenant ? (
+        <Dialog open={exemptDialogOpen} onOpenChange={setExemptDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {tenant.billingExempt
+                  ? "Fakturierung aktivieren?"
+                  : "Tenant von Fakturierung ausnehmen?"}
+              </DialogTitle>
+              <DialogDescription asChild>
+                <div>
+                  {tenant.billingExempt ? (
+                    <>
+                      Nach dem Umschalten werden zukünftige Modul-Aktivierungen
+                      wieder automatisch Abos erzeugen.{" "}
+                      <strong>
+                        Bereits aktive Module bekommen KEIN rückwirkendes Abo
+                      </strong>{" "}
+                      — dafür müssen die Module einmal deaktiviert und wieder
+                      aktiviert werden.
+                    </>
+                  ) : (
+                    <>
+                      Zukünftige Modul-Aktivierungen erzeugen keine Abos mehr.{" "}
+                      <strong>
+                        Bestehende aktive Abos werden NICHT automatisch gekündigt
+                      </strong>{" "}
+                      — diese müssen im Modul-Bereich manuell per Deaktivieren
+                      beendet werden.
+                    </>
+                  )}
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="exemptReason">Grund (Audit-Log)</Label>
+              <Textarea
+                id="exemptReason"
+                value={exemptReason}
+                onChange={(e) => setExemptReason(e.target.value)}
+                placeholder="Z. B. Vertriebspartner lt. Rahmenvertrag vom …"
+                required
+                minLength={3}
+                maxLength={500}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setExemptDialogOpen(false)}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={() =>
+                  setExemptMutation.mutate({
+                    id: tenant.id,
+                    billingExempt: !tenant.billingExempt,
+                    reason: exemptReason.trim(),
+                  })
+                }
+                disabled={
+                  exemptReason.trim().length < 3 || setExemptMutation.isPending
+                }
+              >
+                {setExemptMutation.isPending ? "Wird gespeichert…" : "Bestätigen"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   )
 }

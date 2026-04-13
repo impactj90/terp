@@ -42,6 +42,7 @@ vi.mock("@/lib/platform/subscription-service", async (importOriginal) => {
   return {
     ...actual,
     createSubscription: vi.fn(),
+    findOrCreateOperatorCrmAddress: vi.fn(),
     isOperatorTenant: vi.fn().mockReturnValue(false),
     isSubscriptionBillingEnabled: vi.fn().mockReturnValue(true),
   }
@@ -279,6 +280,53 @@ describe("demoTenantManagement.convert", () => {
 
     expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
     expect(result.subscriptionIds).toEqual([])
+  })
+
+  it("with billingExempt=true: skips subscription bridge, flags tenant, creates CrmAddress", async () => {
+    vi.mocked(demoService.convertDemo).mockResolvedValue({
+      snapshottedModules: ["core", "crm"],
+      originalTemplate: "industriedienstleister_150",
+      tenantName: "Exempt GmbH",
+    })
+    vi.mocked(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).mockResolvedValue("addr-exempt-1")
+
+    const tenantUpdate = vi.fn().mockResolvedValue({})
+    const tenantModuleUpsert = vi.fn().mockResolvedValue({})
+    const platformAuditCreate = vi.fn().mockResolvedValue(null)
+
+    const ctx = createMockPlatformContext({
+      prisma: {
+        tenant: { update: tenantUpdate },
+        tenantModule: { upsert: tenantModuleUpsert },
+        platformAuditLog: { create: platformAuditCreate },
+      },
+    })
+    const caller = createCaller(ctx)
+    const result = await caller.convert({
+      tenantId: TENANT_ID,
+      discardData: false,
+      billingCycle: "MONTHLY",
+      billingExempt: true,
+    })
+
+    expect(tenantUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: TENANT_ID },
+        data: { billingExempt: true },
+      }),
+    )
+    expect(subscriptionService.createSubscription).not.toHaveBeenCalled()
+    expect(
+      subscriptionService.findOrCreateOperatorCrmAddress,
+    ).toHaveBeenCalledTimes(1)
+    expect(result.subscriptionIds).toEqual([])
+    expect(result.failedModules).toEqual([])
+    const auditCall = platformAuditCreate.mock.calls[0]![0] as {
+      data: { metadata: Record<string, unknown> }
+    }
+    expect(auditCall.data.metadata.billingExempt).toBe(true)
   })
 
   it("skips subscription bridge when tenant is the operator tenant (house rule)", async () => {

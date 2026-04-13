@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
@@ -871,6 +872,7 @@ function ConvertDialog({
   const [billingCycle, setBillingCycle] = React.useState<"MONTHLY" | "ANNUALLY">(
     "MONTHLY",
   )
+  const [billingExempt, setBillingExempt] = React.useState(false)
 
   const convertMutation = useMutation({
     ...trpc.demoTenantManagement.convert.mutationOptions(),
@@ -897,6 +899,7 @@ function ConvertDialog({
     if (!target) {
       setDiscardData("keep")
       setBillingCycle("MONTHLY")
+      setBillingExempt(false)
     }
   }, [target])
 
@@ -958,6 +961,29 @@ function ConvertDialog({
             </p>
           </div>
 
+          <div className="space-y-2">
+            <label
+              htmlFor="convertBillingExempt"
+              className="flex cursor-pointer items-start gap-3"
+            >
+              <Checkbox
+                id="convertBillingExempt"
+                checked={billingExempt}
+                onCheckedChange={(v) => setBillingExempt(v === true)}
+              />
+              <div className="space-y-1">
+                <div className="text-sm font-medium">
+                  Von Fakturierung ausnehmen
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Tenant wird als „Nicht fakturierbar" markiert. Es werden
+                  keine Abos angelegt; die CRM-Adresse im Operator-Tenant wird
+                  trotzdem erzeugt.
+                </p>
+              </div>
+            </label>
+          </div>
+
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
             <div className="flex gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
@@ -986,6 +1012,7 @@ function ConvertDialog({
                 tenantId: target.id,
                 discardData: discardData === "discard",
                 billingCycle,
+                billingExempt,
               })
             }
             disabled={convertMutation.isPending}

@@ -341,6 +341,49 @@ describe("platform subscription-service", () => {
       expect(billingRecurringService.update).not.toHaveBeenCalled()
     })
 
+    it("throws PlatformSubscriptionBillingExemptError when customer is billing-exempt", async () => {
+      const prisma = createMockPrisma({
+        platformSubs: [],
+        customerTenant: { billingExempt: true },
+      })
+      await expect(
+        subscriptionService.createSubscription(
+          prisma,
+          {
+            customerTenantId: CUSTOMER_TENANT_ID,
+            module: "crm",
+            billingCycle: "MONTHLY",
+          },
+          PLATFORM_USER_ID,
+        ),
+      ).rejects.toBeInstanceOf(
+        subscriptionService.PlatformSubscriptionBillingExemptError,
+      )
+      expect(crmAddressService.create).not.toHaveBeenCalled()
+      expect(billingRecurringService.create).not.toHaveBeenCalled()
+      expect(billingRecurringService.update).not.toHaveBeenCalled()
+    })
+
+    it("throws NOT_FOUND when customer tenant doesn't exist", async () => {
+      const prisma = createMockPrisma({
+        platformSubs: [],
+        customerTenant: null,
+      })
+      await expect(
+        subscriptionService.createSubscription(
+          prisma,
+          {
+            customerTenantId: CUSTOMER_TENANT_ID,
+            module: "crm",
+            billingCycle: "MONTHLY",
+          },
+          PLATFORM_USER_ID,
+        ),
+      ).rejects.toThrow(/not found/)
+      expect(crmAddressService.create).not.toHaveBeenCalled()
+      expect(billingRecurringService.create).not.toHaveBeenCalled()
+    })
+
     it("JOINS existing recurring invoice with matching cycle", async () => {
       const existing = {
         id: RI_ID,

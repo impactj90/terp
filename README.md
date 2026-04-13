@@ -693,6 +693,51 @@ A hard rule enforced at two layers: **the house tenant is never billed for modul
 
 This prevents the footgun where an operator clicks "enable CRM for our own company" and unintentionally starts generating monthly self-invoices that have no legal or bookkeeping meaning.
 
+#### Billing-exempt tenants (non-paying customers)
+
+A per-tenant boolean flag `tenants.billing_exempt` (added in migration `20260423100000_add_tenant_billing_exempt.sql`) marks customers that **use the platform but are never automatically invoiced** — sales partners, pilot accounts, frame-contract exceptions, anyone the operator wants to keep in the CRM but bill manually (or not at all). It's **orthogonal** to `PLATFORM_OPERATOR_TENANT_ID`: the house tenant is always implicitly exempt via the self-bill guard above; the flag is for "we know this customer, we just don't want to charge them through the automatic bridge."
+
+**What a subscription ("Abo") actually is**: a `PlatformSubscription` row paired with a `BillingRecurringInvoice` inside the operator tenant. Together they mean "the nightly cron will generate a fresh `BillingDocument` every cycle for this customer." Toggling the exempt flag is the only way to enable module bookings **without** creating this pair — everything else (module availability, UI, tenant lifecycle) is untouched.
+
+**What happens on module enable for an exempt tenant**:
+
+| Action                                          | Normal customer | Exempt customer |
+| ------------------------------------------------ | --------------- | --------------- |
+| `tenant_modules` row upsert                      | ✅              | ✅              |
+| `CrmAddress` in operator tenant (first module)   | ✅              | ✅              |
+| `PlatformSubscription` row                       | ✅              | ❌              |
+| `BillingRecurringInvoice` row/join               | ✅              | ❌              |
+| Nightly DRAFT invoice generated                  | ✅              | ❌              |
+| Audit row in `platform_audit_logs`               | ✅              | ✅ (`billingExempt=true`) |
+
+The CrmAddress is still created because the operator needs to see the customer in their CRM ledger (for manual invoicing, support contacts, correspondence) even when nothing is auto-billed. `findOrCreateOperatorCrmAddress` is idempotent, so re-enabling modules doesn't duplicate it.
+
+**Defense-in-depth**: `subscriptionService.createSubscription` does a `SELECT billing_exempt FROM tenants WHERE id=?` inside its transaction and throws `PlatformSubscriptionBillingExemptError` if the flag is true. Direct service callers that forget the check fail loud instead of silently generating phantom recurring invoices.
+
+**UI touchpoints**:
+
+- **`/platform/tenants/new`** — checkbox "Automatische Fakturierung" (default on = normal billing). Unchecking creates the tenant with `billing_exempt=true` from the start.
+- **`/platform/tenants/<id>`** → Übersicht — amber `Nicht fakturierbar` badge next to the Demo badge when the flag is set.
+- **`/platform/tenants/<id>`** → Einstellungen → **Fakturierung** card — toggle button opens a confirmation dialog with a mandatory reason (3–500 chars). Each flip writes one `platform_audit_logs` row with `action="tenant.billing_exempt_changed"`, `changes={billingExempt:{old,new}}`, `metadata.reason`.
+- **`/platform/tenants/<id>/modules`** — amber info banner at the top of the modules list warning the operator that bookings on this tenant won't create subscriptions.
+- **`/platform/tenants/demo`** → convert dialog — new checkbox "Von Fakturierung ausnehmen" lets the operator convert a demo straight into the exempt state in one step (skips the subscription bridge, still creates the CrmAddress).
+
+**No retroactive changes** — by design, and surfaced in the dialog warnings:
+
+- **Normal → Exempt**: active subscriptions are **not auto-cancelled**. The operator must disable each active module manually if they want the existing recurring invoices to stop. Reasoning: cancellation is money-relevant and should never be a side-effect of a settings toggle.
+- **Exempt → Normal**: previously-booked modules do **not** retroactively get subscriptions. The operator must disable and re-enable each module to create the subscription. Reasoning: a bulk "create subscriptions for all currently-enabled modules" would silently start billing the customer without them seeing a new contract.
+
+**Operator tenant is not toggleable**: `setBillingExempt` rejects a flip on the tenant pointed at by `PLATFORM_OPERATOR_TENANT_ID` with `BAD_REQUEST "Der Operator-Tenant kann nicht umgeschaltet werden"`. The house rule already covers it; having two conflicting sources of truth for "is the operator exempt" would just confuse future debugging.
+
+**Key files**:
+
+- `supabase/migrations/20260423100000_add_tenant_billing_exempt.sql` — column + comment
+- `src/lib/platform/subscription-service.ts` — `PlatformSubscriptionBillingExemptError` + transaction-level guard
+- `src/trpc/platform/routers/tenantManagement.ts` — `create` input field, `setBillingExempt` mutation, exempt-path branches in `enableModule` / `disableModule`
+- `src/trpc/platform/routers/demoTenantManagement.ts` — `convert` input field + skip branch
+- `src/app/platform/(authed)/tenants/new/page.tsx`, `[id]/page.tsx`, `[id]/modules/page.tsx`, `demo/page.tsx` — UI
+- Plan: `thoughts/shared/plans/2026-04-13-platform-billing-exempt-tenants.md`
+
 #### Business workflow (step by step)
 
 The actual lifecycle of a customer, from prospect to long-term billing:

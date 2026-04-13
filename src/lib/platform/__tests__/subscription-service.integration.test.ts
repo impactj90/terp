@@ -552,4 +552,169 @@ describe.skipIf(!HAS_DB)("subscription-service integration", () => {
     expect(coreAfter!.status).toBe("active")
     expect(billingAfter!.status).toBe("active")
   })
+
+  // --------------------------------------------------------------------
+  // Billing-exempt tenants (plan 2026-04-13-platform-billing-exempt-tenants)
+  // --------------------------------------------------------------------
+  describe("billing-exempt tenants", () => {
+    beforeEach(async () => {
+      // Reset the flag on CUSTOMER_TENANT_ID before each test in this block.
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: false },
+      })
+    })
+
+    it("tenants.billing_exempt column defaults to false", async () => {
+      const t = await prisma.tenant.findUnique({
+        where: { id: CUSTOMER_TENANT_ID },
+        select: { billingExempt: true },
+      })
+      expect(t).not.toBeNull()
+      expect(t!.billingExempt).toBe(false)
+    })
+
+    it("createSubscription throws PlatformSubscriptionBillingExemptError for exempt customer", async () => {
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: true },
+      })
+
+      await expect(
+        subscriptionService.createSubscription(
+          prisma,
+          {
+            customerTenantId: CUSTOMER_TENANT_ID,
+            module: "crm",
+            billingCycle: "MONTHLY",
+          },
+          PLATFORM_SYSTEM_USER_ID,
+        ),
+      ).rejects.toBeInstanceOf(
+        subscriptionService.PlatformSubscriptionBillingExemptError,
+      )
+
+      // Defense-in-depth guarantee: NO side effects. The transaction
+      // must have rolled back — zero rows of any kind inside the
+      // operator tenant's billing scope for this customer.
+      const [subs, addrs, recurrings] = await Promise.all([
+        prisma.platformSubscription.findMany({
+          where: { tenantId: CUSTOMER_TENANT_ID },
+        }),
+        prisma.crmAddress.findMany({
+          where: {
+            tenantId: OPERATOR_TENANT_ID,
+            company: "IntegrationTest Customer GmbH",
+          },
+        }),
+        prisma.billingRecurringInvoice.findMany({
+          where: { tenantId: OPERATOR_TENANT_ID },
+        }),
+      ])
+      expect(subs).toHaveLength(0)
+      expect(addrs).toHaveLength(0)
+      expect(recurrings).toHaveLength(0)
+    })
+
+    it("findOrCreateOperatorCrmAddress works on an exempt tenant (exempt-path fallback)", async () => {
+      // The exempt path in enableModule skips createSubscription and
+      // instead calls findOrCreateOperatorCrmAddress directly to keep
+      // the customer visible in the operator's CRM. That call must
+      // succeed against the real DB even though no platform_subscriptions
+      // row exists yet for this customer.
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: true },
+      })
+
+      const addrId = await subscriptionService.findOrCreateOperatorCrmAddress(
+        prisma,
+        CUSTOMER_TENANT_ID,
+      )
+      expect(addrId).toBeTruthy()
+
+      const addr = await prisma.crmAddress.findUnique({ where: { id: addrId } })
+      expect(addr).not.toBeNull()
+      expect(addr!.tenantId).toBe(OPERATOR_TENANT_ID)
+      expect(addr!.company).toBe("IntegrationTest Customer GmbH")
+      expect(addr!.type).toBe("CUSTOMER")
+
+      // Still no subscription / recurring invoice — exempt means
+      // exempt, even after the CrmAddress is materialized.
+      const subs = await prisma.platformSubscription.findMany({
+        where: { tenantId: CUSTOMER_TENANT_ID },
+      })
+      expect(subs).toHaveLength(0)
+      const recurrings = await prisma.billingRecurringInvoice.findMany({
+        where: { tenantId: OPERATOR_TENANT_ID },
+      })
+      expect(recurrings).toHaveLength(0)
+    })
+
+    it("toggling billing_exempt from true to false does NOT retroactively create subscriptions", async () => {
+      // Start exempt, materialize the CrmAddress via the exempt-path
+      // helper, then flip back to normal billing. The flip alone must
+      // not create any subscriptions — that's the documented behavior.
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: true },
+      })
+      await subscriptionService.findOrCreateOperatorCrmAddress(
+        prisma,
+        CUSTOMER_TENANT_ID,
+      )
+
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: false },
+      })
+
+      const subs = await prisma.platformSubscription.findMany({
+        where: { tenantId: CUSTOMER_TENANT_ID },
+      })
+      expect(subs).toHaveLength(0)
+      const recurrings = await prisma.billingRecurringInvoice.findMany({
+        where: { tenantId: OPERATOR_TENANT_ID },
+      })
+      expect(recurrings).toHaveLength(0)
+    })
+
+    it("after flipping exempt→normal, a fresh createSubscription succeeds end-to-end", async () => {
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: true },
+      })
+      // Exempt-path: CrmAddress only.
+      await subscriptionService.findOrCreateOperatorCrmAddress(
+        prisma,
+        CUSTOMER_TENANT_ID,
+      )
+
+      await prisma.tenant.update({
+        where: { id: CUSTOMER_TENANT_ID },
+        data: { billingExempt: false },
+      })
+
+      // A normal createSubscription call should now succeed — the
+      // defense-in-depth guard re-reads billing_exempt inside its
+      // transaction, so the flip must be visible.
+      const result = await subscriptionService.createSubscription(
+        prisma,
+        {
+          customerTenantId: CUSTOMER_TENANT_ID,
+          module: "warehouse",
+          billingCycle: "MONTHLY",
+        },
+        PLATFORM_SYSTEM_USER_ID,
+      )
+      expect(result.subscriptionId).toBeTruthy()
+      expect(result.billingRecurringInvoiceId).toBeTruthy()
+
+      const addr = await prisma.crmAddress.findUnique({
+        where: { id: result.operatorCrmAddressId },
+      })
+      expect(addr).not.toBeNull()
+      expect(addr!.tenantId).toBe(OPERATOR_TENANT_ID)
+    })
+  })
 })

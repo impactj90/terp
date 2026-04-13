@@ -110,6 +110,9 @@ model Tenant {
   notes                 String?   @db.Text
   vacationBasis         String    @default("calendar_year") @map("vacation_basis") @db.VarChar(20)
 
+  // Platform billing control (plan 2026-04-13-platform-billing-exempt-tenants.md)
+  billingExempt         Boolean   @default(false) @map("billing_exempt")
+
   // Demo-Tenant fields (see plan 2026-04-09-demo-tenant-system.md)
   isDemo                      Boolean   @default(false) @map("is_demo")
   demoExpiresAt               DateTime? @map("demo_expires_at") @db.Timestamptz(6)
