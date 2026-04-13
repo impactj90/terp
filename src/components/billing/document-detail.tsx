@@ -20,6 +20,7 @@ import { DocumentForwardDialog } from './document-forward-dialog'
 import { DocumentFinalizeDialog } from './document-print-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DunningBlockCard } from './dunning/dunning-block-card'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -239,6 +240,21 @@ export function BillingDocumentDetail({ id }: BillingDocumentDetailProps) {
             totalVat={doc.totalVat}
             totalGross={doc.totalGross}
           />
+
+          {doc.type === 'INVOICE' && (
+            <DunningBlockCard
+              billingDocumentId={doc.id}
+              initialBlocked={
+                (doc as unknown as { dunningBlocked?: boolean | null })
+                  .dunningBlocked === true
+              }
+              initialReason={
+                (doc as unknown as { dunningBlockReason?: string | null })
+                  .dunningBlockReason ?? null
+              }
+              disabled={doc.status === 'CANCELLED'}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="positions" className="space-y-4">

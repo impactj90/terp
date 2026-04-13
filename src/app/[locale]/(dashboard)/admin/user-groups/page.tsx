@@ -131,6 +131,7 @@ const CATEGORY_DEFINITIONS = [
       'billing_payments',
       'billing_price_lists',
       'billing_recurring',
+      'dunning',
     ],
   },
   {
@@ -221,6 +222,7 @@ export default function UserGroupsPage() {
       settings: t('resourceSettings'),
       notifications: t('resourceNotifications'),
       reports: t('resourceReports'),
+      dunning: t('resourceDunning'),
     }),
     [t]
   )
@@ -240,6 +242,10 @@ export default function UserGroupsPage() {
       calculate_day: t('actionCalculateDay'),
       calculate_month: t('actionCalculateMonth'),
       delete_bookings: t('actionDeleteBookings'),
+      view: t('actionView'),
+      send: t('actionSend'),
+      cancel: t('actionCancel'),
+      settings: t('actionSettings'),
     }),
     [t]
   )

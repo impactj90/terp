@@ -58,7 +58,15 @@ export function isOverdue(
 ): boolean {
   if (!dueDate) return false
   if (paymentStatus === "PAID" || paymentStatus === "OVERPAID") return false
-  return dueDate < new Date()
+  // Compare at day granularity — an invoice is overdue starting the day
+  // AFTER its due date, not at the moment the clock ticks past 00:00. On
+  // the due date itself the customer still has the whole business day to
+  // pay (BGB §286: Verzug tritt nach Eintritt der Fälligkeit ein).
+  const dueDay = new Date(dueDate)
+  dueDay.setHours(0, 0, 0, 0)
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  return dueDay < todayStart
 }
 
 // --- Enrichment helpers ---

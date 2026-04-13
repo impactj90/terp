@@ -104,13 +104,26 @@ export async function getSignedDownloadUrl(
   })
   if (!reminder?.pdfStoragePath) return null
 
+  return await getSignedDownloadUrlForPath(reminder.pdfStoragePath, reminder.number)
+}
+
+/**
+ * Variant of getSignedDownloadUrl that works directly from a storage path
+ * without an intermediate DB lookup. Used by the preview flow where the
+ * PDF has just been generated but the pdfStoragePath column is still null
+ * (it only gets persisted by send/markSentManually).
+ */
+export async function getSignedDownloadUrlForPath(
+  path: string,
+  reminderNumber: string
+): Promise<{ signedUrl: string; filename: string } | null> {
   const signedUrl = await storage.createSignedReadUrl(
     BUCKET,
-    reminder.pdfStoragePath,
+    path,
     SIGNED_URL_EXPIRY_SECONDS
   )
   if (!signedUrl) return null
 
-  const filename = `${reminder.number.replace(/[/\\]/g, "_")}.pdf`
+  const filename = `${reminderNumber.replace(/[/\\]/g, "_")}.pdf`
   return { signedUrl, filename }
 }

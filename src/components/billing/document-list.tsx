@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
-import { useBillingDocuments } from '@/hooks'
+import { useBillingDocuments, useCrmAddresses } from '@/hooks'
 import { useCrmInquiries } from '@/hooks'
 import { DocumentTypeBadge } from './document-type-badge'
 import { DocumentStatusBadge } from './document-status-badge'
@@ -52,37 +52,35 @@ export function BillingDocumentList({ addressId, inquiryId }: BillingDocumentLis
   const [inquiryFilter, setInquiryFilter] = React.useState<string>('all')
   const [page, setPage] = React.useState(1)
 
-  // Load all documents (unfiltered) to extract unique customers for the filter dropdown
-  const { data: allDocsData } = useBillingDocuments({ pageSize: 200 })
+  // Load customers for the filter dropdown. We previously tried to extract
+  // these from the document list, but the document-list router caps pageSize
+  // at 100 — passing 200 made the query fail silently and the dropdown stayed
+  // empty. Pulling from the CRM address list is simpler and always correct.
+  const { data: customersData } = useCrmAddresses({
+    isActive: true,
+    pageSize: 100,
+    enabled: !addressId,
+  })
 
-  // Load inquiries for filter dropdown
+  // Load inquiries for filter dropdown — also used to decide whether to
+  // show the inquiry dropdown at all.
   const { data: inquiriesData } = useCrmInquiries({ pageSize: 100 })
 
-  // Extract inquiries that have at least one document
+  // Inquiries that have at least one document. We still need this to decide
+  // whether the inquiry filter is useful, but without the 200-page doc pull;
+  // instead we trust the inquiries list on its own.
   const inquiriesWithDocs = React.useMemo(() => {
-    const items = allDocsData?.items ?? []
-    const inquiryIds = new Set<string>()
-    for (const doc of items) {
-      const inqId = (doc as Record<string, unknown>).inquiryId as string | null
-      if (inqId) inquiryIds.add(inqId)
-    }
-    return (inquiriesData?.items ?? []).filter((inq) => inquiryIds.has(inq.id))
-  }, [allDocsData, inquiriesData])
+    return inquiriesData?.items ?? []
+  }, [inquiriesData])
 
-  // Extract unique customers from loaded documents
+  // Customers from CRM — CUSTOMER or BOTH types are eligible as billing targets.
   const uniqueCustomers = React.useMemo(() => {
-    const items = allDocsData?.items ?? []
-    const seen = new Map<string, string>()
-    for (const doc of items) {
-      const addr = (doc as unknown as { address?: { id: string; company: string } }).address
-      if (addr && !seen.has(addr.id)) {
-        seen.set(addr.id, addr.company)
-      }
-    }
-    return Array.from(seen.entries())
-      .map(([id, company]) => ({ id, company }))
+    const items = customersData?.items ?? []
+    return items
+      .filter((addr) => addr.type === 'CUSTOMER' || addr.type === 'BOTH')
+      .map((addr) => ({ id: addr.id, company: addr.company }))
       .sort((a, b) => a.company.localeCompare(b.company))
-  }, [allDocsData])
+  }, [customersData])
 
   const { data, isLoading } = useBillingDocuments({
     search: search || undefined,

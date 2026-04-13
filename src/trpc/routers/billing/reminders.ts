@@ -384,16 +384,24 @@ export const remindersRouter = createTRPCRouter({
     .input(idInput)
     .mutation(async ({ ctx, input }) => {
       try {
+        const prisma = ctx.prisma as unknown as PrismaClient
         const path = await reminderPdfService.generateAndStorePdf(
-          ctx.prisma as unknown as PrismaClient,
+          prisma,
           ctx.tenantId!,
           input.id
         )
-        return await reminderPdfService.getSignedDownloadUrl(
-          ctx.prisma as unknown as PrismaClient,
-          ctx.tenantId!,
-          input.id
-        ) ?? { signedUrl: null, filename: null, path }
+        // Draft reminders never persist pdfStoragePath — look the number up
+        // directly so the signed URL can be built without a DB roundtrip on
+        // the stored path.
+        const reminder = await prisma.reminder.findFirst({
+          where: { id: input.id, tenantId: ctx.tenantId! },
+          select: { number: true },
+        })
+        if (!reminder) return null
+        return await reminderPdfService.getSignedDownloadUrlForPath(
+          path,
+          reminder.number
+        )
       } catch (err) {
         handleServiceError(err)
       }

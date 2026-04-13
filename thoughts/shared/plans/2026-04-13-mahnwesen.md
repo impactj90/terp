@@ -1446,10 +1446,10 @@ Neuer Top-Level-Key `billingDunning` mit allen UI-Strings. Umfang ca. 40-60 Keys
 ### Success Criteria: Phase 3
 
 #### Automated Verification:
-- [ ] Type-Check grün: `pnpm typecheck`
-- [ ] Lint grün: `pnpm lint`
-- [ ] Build grün: `pnpm build`
-- [ ] i18n-Key-Consistency: beide messages-Dateien haben dieselben Keys unter `billingDunning` (Check via Script oder manuell)
+- [x] Type-Check grün: `pnpm typecheck` (clean — no errors)
+- [x] Lint grün: `pnpm lint` (only the pre-existing `src/trpc/platform/__tests__/helpers.ts` `any` error remains)
+- [x] Build grün: `pnpm build` (route `/[locale]/orders/dunning` registered)
+- [x] i18n-Key-Consistency: beide messages-Dateien haben dieselben Keys unter `billingDunning` (139/139 match)
 
 #### Manual Verification:
 - [ ] Sidebar-Eintrag "Mahnwesen" erscheint für User mit `dunning.view` in der Fakturierung-Gruppe.
