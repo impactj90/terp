@@ -11,7 +11,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   ArrowLeft, CheckCircle, Forward, XCircle, Copy, Lock, Mail,
   ChevronRight, ChevronLeft, FileDown, FileCode, FilePlus2, Loader2,
+  MoreHorizontal, FileText,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   useBillingDocumentById,
   useUpdateBillingDocument,
@@ -313,132 +325,200 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     toast.success(t('templateApplied', { name: tpl.name }))
   }
 
+  const canCancel = doc.status !== 'CANCELLED' && doc.status !== 'FORWARDED'
+  const hasXml = !!(doc as Record<string, unknown>).eInvoiceXmlUrl
+  const isInvoiceType = doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE'
+  const canDownloadXml = isImmutable && hasXml && isInvoiceType
+  const canGenerateEInvoice =
+    isImmutable && !hasXml && isInvoiceType && !!tenantConfig?.eInvoiceEnabled
+  const hasTemplates = isDraft && templates.length > 0
+
+  const handleDownloadPdf = async () => {
+    try {
+      const result = await downloadPdfMutation.mutateAsync({ id: doc.id })
+      if (result?.signedUrl) window.open(result.signedUrl, '_blank')
+    } catch {
+      toast.error(t('pdfDownloadFailed'))
+    }
+  }
+  const handleDownloadXml = async () => {
+    try {
+      const result = await downloadXmlMutation.mutateAsync({ id: doc.id })
+      if (result?.signedUrl) window.open(result.signedUrl, '_blank')
+    } catch {
+      toast.error(t('xmlDownloadFailed'))
+    }
+  }
+  const handleGenerateEInvoice = async () => {
+    try {
+      await generateEInvoiceMutation.mutateAsync({ id: doc.id })
+      toast.success(t('eInvoiceGenerated'))
+      await refetchDoc()
+    } catch {
+      toast.error(t('eInvoiceGenerationFailed'))
+    }
+  }
+
+  // Primary action adapts to current status — one clear CTA instead of many.
+  let primaryAction: React.ReactNode = null
+  if (isDraft) {
+    primaryAction = (
+      <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setShowFinalizeDialog(true)}>
+        <CheckCircle className="h-4 w-4 mr-1.5" />
+        {t('finalize')}
+      </Button>
+    )
+  } else if (isPrinted) {
+    primaryAction = (
+      <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setShowForwardDialog(true)}>
+        <Forward className="h-4 w-4 mr-1.5" />
+        {t('forward')}
+      </Button>
+    )
+  } else if (isImmutable) {
+    primaryAction = (
+      <Button
+        size="sm"
+        className="flex-1 sm:flex-none"
+        disabled={downloadPdfMutation.isPending}
+        onClick={handleDownloadPdf}
+      >
+        {downloadPdfMutation.isPending ? (
+          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+        ) : (
+          <FileDown className="h-4 w-4 mr-1.5" />
+        )}
+        {t('pdf')}
+      </Button>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-2 sm:gap-3 min-w-0">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => router.push('/orders/documents')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 -ml-2"
+                onClick={() => router.push('/orders/documents')}
+              >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{tc('goBack')}</TooltipContent>
           </Tooltip>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold">{doc.number}</h2>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="text-xl sm:text-2xl font-bold truncate">{doc.number}</h2>
               <DocumentTypeBadge type={doc.type} />
               <DocumentStatusBadge status={doc.status} />
             </div>
-            <p className="text-sm text-muted-foreground">
-              {address?.company}
-            </p>
+            {address?.company && (
+              <p className="text-sm text-muted-foreground truncate">{address.company}</p>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {isDraft && (
-            <Button onClick={() => setShowFinalizeDialog(true)}>
-              <CheckCircle className="h-4 w-4 mr-1" />
-              {t('finalize')}
-            </Button>
-          )}
-          {isPrinted && (
-            <Button onClick={() => setShowForwardDialog(true)}>
-              <Forward className="h-4 w-4 mr-1" />
-              {t('forward')}
-            </Button>
-          )}
-          {doc.status !== 'CANCELLED' && doc.status !== 'FORWARDED' && (
-            <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
-              <XCircle className="h-4 w-4 mr-1" />
-              {t('cancelDocument')}
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleDuplicate} disabled={duplicateMutation.isPending}>
-            <Copy className="h-4 w-4 mr-1" />
-            {t('duplicate')}
-          </Button>
-          {isDraft && templates.length > 0 && (
-            <Select onValueChange={handleApplyTemplate}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={t('applyTemplate')} />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((tpl) => (
-                  <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {isImmutable && (
-            <Button
-              variant="outline"
-              disabled={downloadPdfMutation.isPending}
-              onClick={async () => {
-                try {
-                  const result = await downloadPdfMutation.mutateAsync({ id: doc.id })
-                  if (result?.signedUrl) {
-                    window.open(result.signedUrl, '_blank')
-                  }
-                } catch {
-                  toast.error(t('pdfDownloadFailed'))
-                }
-              }}
-            >
-              <FileDown className="h-4 w-4 mr-1" />
-              {downloadPdfMutation.isPending ? t('loadingPdf') : t('pdfDownload')}
-            </Button>
-          )}
-          {isImmutable && (
-            <Button variant="outline" onClick={() => setShowEmailDialog(true)}>
-              <Mail className="h-4 w-4 mr-1" />
-              {tCompose('sendEmail')}
-            </Button>
-          )}
-          {isImmutable && !!(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
-            <Button
-              variant="outline"
-              disabled={downloadXmlMutation.isPending}
-              onClick={async () => {
-                try {
-                  const result = await downloadXmlMutation.mutateAsync({ id: doc.id })
-                  if (result?.signedUrl) {
-                    window.open(result.signedUrl, '_blank')
-                  }
-                } catch {
-                  toast.error(t('xmlDownloadFailed'))
-                }
-              }}
-            >
-              <FileCode className="h-4 w-4 mr-1" />
-              {downloadXmlMutation.isPending ? t('loadingXml') : t('eInvoiceXmlDownload')}
-            </Button>
-          )}
-          {isImmutable && !(doc as Record<string, unknown>).eInvoiceXmlUrl && (doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && tenantConfig?.eInvoiceEnabled && (
-            <Button
-              variant="outline"
-              disabled={generateEInvoiceMutation.isPending}
-              onClick={async () => {
-                try {
-                  await generateEInvoiceMutation.mutateAsync({ id: doc.id })
-                  toast.success(t('eInvoiceGenerated'))
-                  await refetchDoc()
-                } catch {
-                  toast.error(t('eInvoiceGenerationFailed'))
-                }
-              }}
-            >
-              {generateEInvoiceMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <FilePlus2 className="h-4 w-4 mr-1" />
+        <div className="flex items-center gap-2 shrink-0">
+          {primaryAction}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" aria-label={tc('moreActions')}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{tc('moreActions')}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>{tc('actions')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              {isPrinted && (
+                <DropdownMenuItem
+                  disabled={downloadPdfMutation.isPending}
+                  onSelect={handleDownloadPdf}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {t('pdfDownload')}
+                </DropdownMenuItem>
               )}
-              {generateEInvoiceMutation.isPending ? t('loadingXml') : t('generateEInvoice')}
-            </Button>
-          )}
+              {isImmutable && (
+                <DropdownMenuItem onSelect={() => setShowEmailDialog(true)}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  {tCompose('sendEmail')}
+                </DropdownMenuItem>
+              )}
+              {canDownloadXml && (
+                <DropdownMenuItem
+                  disabled={downloadXmlMutation.isPending}
+                  onSelect={handleDownloadXml}
+                >
+                  <FileCode className="h-4 w-4 mr-2" />
+                  {t('eInvoiceXmlDownload')}
+                </DropdownMenuItem>
+              )}
+              {canGenerateEInvoice && (
+                <DropdownMenuItem
+                  disabled={generateEInvoiceMutation.isPending}
+                  onSelect={handleGenerateEInvoice}
+                >
+                  {generateEInvoiceMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FilePlus2 className="h-4 w-4 mr-2" />
+                  )}
+                  {t('generateEInvoice')}
+                </DropdownMenuItem>
+              )}
+              {isImmutable && <DropdownMenuSeparator />}
+
+              {hasTemplates && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <FileText className="h-4 w-4 mr-2" />
+                    {t('applyTemplate')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-72 overflow-y-auto">
+                    {templates.map((tpl) => (
+                      <DropdownMenuItem
+                        key={tpl.id}
+                        onSelect={() => handleApplyTemplate(tpl.id)}
+                      >
+                        {tpl.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+              <DropdownMenuItem
+                onSelect={handleDuplicate}
+                disabled={duplicateMutation.isPending}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                {t('duplicate')}
+              </DropdownMenuItem>
+
+              {canCancel && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => setShowCancelDialog(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    {t('cancelDocument')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -453,11 +533,11 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       )}
 
       {/* Main content: A4 page + sidebar */}
-      <div className="flex gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* A4 Document Canvas */}
         <div className="flex-1 min-w-0 overflow-x-auto">
           <div
-            className="bg-muted/30 p-8 min-h-dvh"
+            className="bg-muted/30 p-4 sm:p-6 lg:p-8 min-h-dvh"
             data-testid="document-canvas"
           >
             <div
@@ -612,15 +692,19 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
           </div>
         </div>
 
-        {/* Sidebar (collapsible) */}
-        <div className={`shrink-0 transition-all duration-200 ${sidebarOpen ? 'w-80' : 'w-8'}`}>
-          <div className="sticky top-4">
+        {/* Sidebar (collapsible on desktop, stacks below canvas on mobile/tablet) */}
+        <div
+          className={`shrink-0 w-full transition-all duration-200 ${
+            sidebarOpen ? 'lg:w-80' : 'lg:w-8'
+          }`}
+        >
+          <div className="lg:sticky lg:top-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="mb-2"
+                  className="mb-2 hidden lg:inline-flex"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                 >
                   {sidebarOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

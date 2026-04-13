@@ -69,7 +69,8 @@
     "bold": "Bold",
     "italic": "Italic",
     "clearField": "Clear field",
-    "togglePanel": "Toggle panel"
+    "togglePanel": "Toggle panel",
+    "moreActions": "More actions"
   },
   "metadata": {
     "title": "Terp",
