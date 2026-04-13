@@ -13,8 +13,15 @@ export function handleServiceError(err: unknown): never {
   }
 
   if (err instanceof Error) {
+    // Use err.name (set explicitly via `this.name = "FooError"` in
+    // each service-error constructor) rather than err.constructor.name.
+    // Production minification mangles class names, so constructor.name
+    // becomes single-letter junk and every custom error falls through
+    // to the generic INTERNAL_SERVER_ERROR branch.
+    const name = err.name
+
     // NotFound errors
-    if (err.constructor.name.endsWith("NotFoundError")) {
+    if (name.endsWith("NotFoundError")) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: err.message,
@@ -23,10 +30,7 @@ export function handleServiceError(err: unknown): never {
     }
 
     // Validation errors
-    if (
-      err.constructor.name.endsWith("ValidationError") ||
-      err.constructor.name.endsWith("InvalidError")
-    ) {
+    if (name.endsWith("ValidationError") || name.endsWith("InvalidError")) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err.message,
@@ -35,10 +39,7 @@ export function handleServiceError(err: unknown): never {
     }
 
     // Conflict errors (e.g., duplicate)
-    if (
-      err.constructor.name.endsWith("ConflictError") ||
-      err.constructor.name.endsWith("DuplicateError")
-    ) {
+    if (name.endsWith("ConflictError") || name.endsWith("DuplicateError")) {
       throw new TRPCError({
         code: "CONFLICT",
         message: err.message,
@@ -47,10 +48,7 @@ export function handleServiceError(err: unknown): never {
     }
 
     // Permission / access errors
-    if (
-      err.constructor.name.endsWith("ForbiddenError") ||
-      err.constructor.name.endsWith("AccessDeniedError")
-    ) {
+    if (name.endsWith("ForbiddenError") || name.endsWith("AccessDeniedError")) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: err.message,

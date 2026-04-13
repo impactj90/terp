@@ -7475,6 +7475,7 @@
       "noSupplier": "Kein Lieferant",
       "saveButton": "Speichern",
       "submitButton": "Zur Freigabe",
+      "submitMissingSupplierTooltip": "Bitte zuerst einen Lieferanten zuweisen, bevor Sie die Rechnung zur Freigabe einreichen.",
       "approveButton": "Freigeben",
       "selfApproveTooltip": "Sie können Ihre eigene Rechnung nicht freigeben",
       "rejectButton": "Ablehnen",
