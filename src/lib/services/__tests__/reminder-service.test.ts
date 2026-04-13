@@ -286,3 +286,114 @@ describe("createRun", () => {
     ).rejects.toThrow(ReminderValidationError)
   })
 })
+
+// --- Race condition: parallel createRun for the same invoice ---
+
+/**
+ * Simulates two operators clicking "Mahnungen erstellen" simultaneously.
+ * The mock `$transaction` uses a Promise-chain mutex so both transaction
+ * callbacks run serially — this approximates PostgreSQL's behavior, where
+ * a second transaction touching the same shared state would block until
+ * the first commits. Under serialization, the second call's
+ * `hasDraftItemForInvoice` correctly observes the first call's insert
+ * and skips the invoice with `draft_already_exists`. Without this guard,
+ * two DRAFT reminders could collide for the same invoice.
+ *
+ * Full wall-clock parallelism (both calls racing at the storage level
+ * without any serialization) is not defended against by the application
+ * code — the plan documents this as an accepted limitation in Phase 1.11
+ * ("So verhindert das zweite parallele Call kein Doppel-Insert") because
+ * the common case is an operator double-click, which this mutex-serialized
+ * test models correctly.
+ */
+describe("createRun — parallel race", () => {
+  it("two Promise.all calls for the same invoice yield at most one DRAFT reminder", async () => {
+    const draftSet = new Set<string>()
+    let nextReminderId = 1
+
+    const reminderItemFindFirst = vi
+      .fn()
+      .mockImplementation(
+        async ({ where }: { where: { billingDocumentId: string } }) => {
+          return draftSet.has(where.billingDocumentId)
+            ? { id: "existing" }
+            : null
+        }
+      )
+    const reminderCreate = vi.fn().mockImplementation(async ({ data }) => {
+      for (const item of data.items?.create ?? []) {
+        draftSet.add(item.billingDocumentId)
+      }
+      const id = `reminder-${nextReminderId++}`
+      return { id, ...data, items: data.items?.create ?? [] }
+    })
+    const numberSequenceUpsert = vi
+      .fn()
+      .mockImplementation(async () => ({ nextValue: nextReminderId + 1 }))
+    const crmAddressFindUnique = vi
+      .fn()
+      .mockResolvedValue({ id: "addr-1", company: "Acme GmbH" })
+
+    // Mutex: the next $transaction awaits the previous one to finish.
+    // Models Postgres serializable isolation at the mock boundary.
+    let lock: Promise<void> = Promise.resolve()
+    const transactionImpl = vi
+      .fn()
+      .mockImplementation(async (fn: (tx: unknown) => unknown) => {
+        const prev = lock
+        let release: () => void = () => {}
+        lock = new Promise<void>((r) => {
+          release = r
+        })
+        await prev
+        try {
+          return await fn(prisma)
+        } finally {
+          release()
+        }
+      })
+
+    const prisma = {
+      $transaction: transactionImpl,
+      reminder: {
+        create: reminderCreate,
+        findFirst: vi.fn(),
+        update: vi.fn(),
+      },
+      reminderItem: { findFirst: reminderItemFindFirst },
+      numberSequence: { upsert: numberSequenceUpsert },
+      crmAddress: { findUnique: crmAddressFindUnique },
+    } as unknown as Parameters<typeof reminderService.createRun>[0]
+
+    vi.spyOn(eligibilityService, "listEligibleInvoices").mockResolvedValue([
+      liveGroup1,
+    ])
+
+    const input = {
+      groups: [
+        { customerAddressId: "addr-1", billingDocumentIds: ["doc-1"] },
+      ],
+    }
+
+    const [result1, result2] = await Promise.all([
+      reminderService.createRun(prisma, "t", input, "user-1"),
+      reminderService.createRun(prisma, "t", input, "user-2"),
+    ])
+
+    const totalCreated =
+      result1.reminderIds.length + result2.reminderIds.length
+    const totalSkipped =
+      result1.skippedInvoices.length + result2.skippedInvoices.length
+
+    expect(totalCreated).toBe(1)
+    expect(totalSkipped).toBe(1)
+    const allSkipReasons = [
+      ...result1.skippedInvoices,
+      ...result2.skippedInvoices,
+    ].map((s) => s.reason)
+    expect(allSkipReasons).toContain("draft_already_exists")
+    expect(reminderCreate).toHaveBeenCalledTimes(1)
+    expect(draftSet.size).toBe(1)
+    expect(draftSet.has("doc-1")).toBe(true)
+  })
+})

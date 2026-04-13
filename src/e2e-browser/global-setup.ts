@@ -111,6 +111,15 @@ DELETE FROM billing_recurring_invoices WHERE address_id IN (
   SELECT id FROM crm_addresses WHERE company LIKE 'E2E%'
 );
 
+-- Dunning records (spec 53 mahnwesen) — must come before billing docs cleanup.
+-- Wipes every reminder from the dev tenant, not just E2E-seeded ones, so
+-- leftover rows from prior manual testing cannot collide with the fresh
+-- reminder-number sequence on re-run.
+DELETE FROM reminder_items WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+DELETE FROM reminders WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+-- Reset dunning number sequences so each run starts from a clean state.
+DELETE FROM number_sequences WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND key LIKE 'dunning_%';
+
 -- Billing document records (spec 30, 31)
 DELETE FROM billing_document_positions WHERE document_id IN (
   SELECT bd.id FROM billing_documents bd
@@ -294,6 +303,92 @@ ON CONFLICT (id) DO NOTHING;
 -- Tenant B billing document
 INSERT INTO billing_documents (id, tenant_id, number, type, status, address_id, document_date, created_at, updated_at)
 VALUES ('e2e150ff-0000-4000-a000-000000000041', 'e2e150ff-0000-4000-a000-000000000001', 'ISO-RE-001', 'INVOICE', 'DRAFT', 'e2e150ff-0000-4000-a000-000000000061', '2026-03-01', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Mahnwesen happy-path seed (spec 53-mahnwesen-happy-path.spec.ts)
+-- Seeds a customer + two overdue invoices in the main dev tenant so the
+-- dunning proposal page has concrete data to render without the test having
+-- to drive the full billing document creation flow.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Clear any previous reminder settings / templates for the dev tenant so
+-- the run starts from a known configuration (enabled=true, 3 levels,
+-- 7/14/21 grace, 0/2.5/5 EUR fees, 9% interest).
+DELETE FROM reminder_templates WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND name LIKE 'E2E Mahn%';
+DELETE FROM reminder_settings WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+
+-- Enable dunning with default settings.
+INSERT INTO reminder_settings (
+  id, tenant_id, enabled, max_level, grace_period_days, fee_amounts,
+  interest_enabled, interest_rate_percent, fees_enabled, created_at, updated_at
+) VALUES (
+  gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+  true, 3, ARRAY[7,14,21]::int[], ARRAY[0, 2.5, 5]::double precision[],
+  true, 9, true, NOW(), NOW()
+);
+
+-- Default templates for levels 1-3 so createRun can resolve headers/footers.
+INSERT INTO reminder_templates (
+  id, tenant_id, name, level, header_text, footer_text,
+  email_subject, email_body, is_default, created_at, updated_at
+) VALUES
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   'E2E Mahn Stufe 1', 1,
+   'Sehr geehrte Damen und Herren, folgende Rechnungen sind offen.',
+   'Wir bitten um zeitnahen Ausgleich.',
+   'Zahlungserinnerung {{rechnungsnummer}}',
+   'Sehr geehrte Damen und Herren, anbei unsere Zahlungserinnerung.',
+   true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   'E2E Mahn Stufe 2', 2,
+   'Trotz unserer Erinnerung ist noch kein Zahlungseingang feststellbar.',
+   'Bitte begleichen Sie den Gesamtbetrag.',
+   'Mahnung {{rechnungsnummer}} Stufe 2',
+   'Sehr geehrte Damen und Herren, anbei unsere Mahnung Stufe 2.',
+   true, NOW(), NOW()),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   'E2E Mahn Stufe 3', 3,
+   'Trotz wiederholter Mahnungen sind folgende Rechnungen offen.',
+   'Letzte Zahlungsaufforderung.',
+   'Letzte Mahnung {{rechnungsnummer}}',
+   'Sehr geehrte Damen und Herren, anbei unsere letzte Mahnung.',
+   true, NOW(), NOW());
+
+-- Seeded customer for the happy path. UUID prefix e2e-mahn... keeps it
+-- distinct from the billing-documents spec customer and easy to clean up.
+INSERT INTO crm_addresses (
+  id, tenant_id, number, type, company, email, street, zip, city,
+  payment_term_days, dunning_blocked, is_active, created_at, updated_at
+) VALUES (
+  'e2e4ad00-0000-4000-a000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  'K-E2E-MAHN', 'CUSTOMER', 'E2E Mahnkunde GmbH',
+  'mahnkunde@e2e.local', 'Mahnweg 1', '12345', 'Teststadt',
+  7, false, true, NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- Two overdue invoices: document_date 30 days ago + 7-day term → due 23 days ago.
+-- Status PRINTED is one of the allowed statuses in the eligibility filter.
+INSERT INTO billing_documents (
+  id, tenant_id, number, type, status, address_id, document_date,
+  payment_term_days, subtotal_net, total_vat, total_gross,
+  dunning_blocked, created_at, updated_at
+) VALUES
+  ('e2e4ad00-0000-4000-a000-000000000101',
+   '10000000-0000-0000-0000-000000000001',
+   'E2E-MAHN-RE-001', 'INVOICE', 'PRINTED',
+   'e2e4ad00-0000-4000-a000-000000000001',
+   NOW() - INTERVAL '30 days',
+   7, 84.03, 15.97, 100.00,
+   false, NOW(), NOW()),
+  ('e2e4ad00-0000-4000-a000-000000000102',
+   '10000000-0000-0000-0000-000000000001',
+   'E2E-MAHN-RE-002', 'INVOICE', 'PRINTED',
+   'e2e4ad00-0000-4000-a000-000000000001',
+   NOW() - INTERVAL '45 days',
+   7, 168.07, 31.93, 200.00,
+   false, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 `;
 
