@@ -575,6 +575,8 @@ model CrmBankAccount {
   tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, iban], map: "crm_bank_accounts_tenant_iban_unique")
+  @@index([tenantId, iban], map: "idx_crm_bank_accounts_tenant_iban")
   @@index([addressId], map: "idx_crm_bank_accounts_address_id")
   @@index([tenantId], map: "idx_crm_bank_accounts_tenant_id")
   @@map("crm_bank_accounts")
