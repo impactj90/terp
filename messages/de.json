@@ -7625,6 +7625,7 @@
       "colDate": "Datum",
       "colAmount": "Betrag",
       "colStatus": "Status",
+      "colPaymentStatus": "Zahlstatus",
       "colSource": "Quelle",
       "deleteAction": "Löschen",
       "cancelAction": "Stornieren",
@@ -7852,6 +7853,33 @@
       "tabImap": "IMAP-Konfiguration",
       "tabApprovalRules": "Freigaberegeln",
       "tabEmailLog": "E-Mail-Log"
+    },
+    "paymentStatus": {
+      "unpaid": "Unbezahlt",
+      "partial": "Teilweise bezahlt",
+      "paid": "Bezahlt"
+    },
+    "payments": {
+      "cardTitle": "Zahlungen",
+      "recordPayment": "Zahlung erfassen",
+      "openAmount": "Offener Betrag",
+      "noPayments": "Keine Zahlungen erfasst",
+      "date": "Datum",
+      "amount": "Betrag",
+      "type": "Zahlungsart",
+      "typeBank": "Überweisung",
+      "typeCash": "Bar",
+      "notes": "Notizen",
+      "notesPlaceholder": "Optional",
+      "cancel": "Abbrechen",
+      "submitting": "Wird erfasst...",
+      "cancelPayment": "Stornieren",
+      "cancelConfirmTitle": "Zahlung stornieren?",
+      "cancelConfirmDescription": "Möchten Sie diese Zahlung wirklich stornieren?",
+      "toastCreated": "Zahlung erfasst",
+      "toastCreateFailed": "Fehler beim Erfassen der Zahlung",
+      "toastCancelled": "Zahlung storniert",
+      "toastCancelFailed": "Fehler beim Stornieren der Zahlung"
     }
   },
   "employeePayroll": {

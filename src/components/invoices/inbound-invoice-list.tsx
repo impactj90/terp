@@ -19,6 +19,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { InboundInvoiceStatusBadge } from './inbound-invoice-status-badge'
+import { InboundInvoicePaymentStatusBadge } from './inbound-invoice-payment-status-badge'
 import { InboundInvoiceUploadDialog } from './inbound-invoice-upload-dialog'
 import {
   useInboundInvoices, useCancelInboundInvoice, useRemoveInboundInvoice,
@@ -147,6 +148,7 @@ export function InboundInvoiceList() {
                 <TableHead>{t('list.colDate')}</TableHead>
                 <TableHead className="text-right">{t('list.colAmount')}</TableHead>
                 <TableHead>{t('list.colStatus')}</TableHead>
+                <TableHead>{t('list.colPaymentStatus')}</TableHead>
                 <TableHead>{t('list.colSource')}</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -164,6 +166,11 @@ export function InboundInvoiceList() {
                   <TableCell>{formatDate(inv.invoiceDate)}</TableCell>
                   <TableCell className="text-right">{formatPrice(inv.totalGross)}</TableCell>
                   <TableCell><InboundInvoiceStatusBadge status={inv.status} /></TableCell>
+                  <TableCell>
+                    <InboundInvoicePaymentStatusBadge
+                      status={(inv as { paymentStatus?: string }).paymentStatus ?? 'UNPAID'}
+                    />
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{inv.source}</TableCell>
                   <TableCell>
                     <DropdownMenu>

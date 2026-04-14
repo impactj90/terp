@@ -7625,6 +7625,7 @@
       "colDate": "Date",
       "colAmount": "Amount",
       "colStatus": "Status",
+      "colPaymentStatus": "Payment Status",
       "colSource": "Source",
       "deleteAction": "Delete",
       "cancelAction": "Cancel",
@@ -7852,6 +7853,33 @@
       "tabImap": "IMAP Configuration",
       "tabApprovalRules": "Approval Rules",
       "tabEmailLog": "Email Log"
+    },
+    "paymentStatus": {
+      "unpaid": "Unpaid",
+      "partial": "Partially paid",
+      "paid": "Paid"
+    },
+    "payments": {
+      "cardTitle": "Payments",
+      "recordPayment": "Record payment",
+      "openAmount": "Open amount",
+      "noPayments": "No payments recorded",
+      "date": "Date",
+      "amount": "Amount",
+      "type": "Payment type",
+      "typeBank": "Bank transfer",
+      "typeCash": "Cash",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional",
+      "cancel": "Cancel",
+      "submitting": "Recording...",
+      "cancelPayment": "Cancel",
+      "cancelConfirmTitle": "Cancel payment?",
+      "cancelConfirmDescription": "Are you sure you want to cancel this payment?",
+      "toastCreated": "Payment recorded",
+      "toastCreateFailed": "Failed to record payment",
+      "toastCancelled": "Payment cancelled",
+      "toastCancelFailed": "Failed to cancel payment"
     }
   },
   "employeePayroll": {
