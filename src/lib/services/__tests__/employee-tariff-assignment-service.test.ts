@@ -120,7 +120,7 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
   })
 
   describe("create()", () => {
-    it("triggers generateFromTariff and recalc with range [effectiveFrom, effectiveTo]", async () => {
+    it("triggers generateFromTariff with full assignment range and recalc with clamped window", async () => {
       vi.mocked(repo.findEmployeeById).mockResolvedValue({
         id: EMPLOYEE_ID,
         departmentId: null,
@@ -139,6 +139,7 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
         effectiveTo: new Date("2026-04-30T00:00:00.000Z"),
       })
 
+      // Generator gets the full assignment range (cheap createMany call).
       expect(generateFromTariffMock).toHaveBeenCalledOnce()
       const genArgs = generateFromTariffMock.mock.calls[0]![0]
       expect(genArgs.tenantId).toBe(TENANT_ID)
@@ -148,15 +149,24 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
       expect(genArgs.deleteOrphanedTariffPlansInRange).toBe(false)
       expect(genArgs.overwriteTariffSource).toBe(true)
 
+      // Recalc gets a clamped +/-14 day window around today, intersected
+      // with the assignment range. Exact clamp depends on the current
+      // wall clock, so we assert the window is at most 29 days wide and
+      // fully inside the assignment range.
       expect(triggerRecalcRangeMock).toHaveBeenCalledOnce()
-      const recalcArgs = triggerRecalcRangeMock.mock.calls[0]!
-      expect(recalcArgs[0]).toBe(TENANT_ID)
-      expect(recalcArgs[1]).toBe(EMPLOYEE_ID)
-      expect(recalcArgs[2]).toEqual(new Date("2026-04-01T00:00:00.000Z"))
-      expect(recalcArgs[3]).toEqual(new Date("2026-04-30T00:00:00.000Z"))
+      const [, , recalcFrom, recalcTo] = triggerRecalcRangeMock.mock.calls[0]!
+      const windowDays =
+        (recalcTo.getTime() - recalcFrom.getTime()) / (24 * 60 * 60 * 1000)
+      expect(windowDays).toBeLessThanOrEqual(29)
+      expect(recalcFrom.getTime()).toBeGreaterThanOrEqual(
+        new Date("2026-04-01T00:00:00.000Z").getTime(),
+      )
+      expect(recalcTo.getTime()).toBeLessThanOrEqual(
+        new Date("2026-04-30T00:00:00.000Z").getTime(),
+      )
     })
 
-    it("uses today+3mo as upper bound when effectiveTo is null", async () => {
+    it("passes full open-ended range to the generator when effectiveTo is null", async () => {
       vi.mocked(repo.findEmployeeById).mockResolvedValue({
         id: EMPLOYEE_ID,
         departmentId: null,
@@ -174,15 +184,16 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
         effectiveFrom: new Date("2026-04-01T00:00:00.000Z"),
       })
 
+      // Generator 'to' still uses the today+3mo upper bound for open-ended
+      // assignments (the generator call itself is cheap with createMany).
       const genArgs = generateFromTariffMock.mock.calls[0]![0]
       expect(genArgs.from).toEqual(new Date("2026-04-01T00:00:00.000Z"))
-      // Upper bound should be ~3 months from today
       const threeMonthsFromNow = new Date()
       threeMonthsFromNow.setUTCMonth(threeMonthsFromNow.getUTCMonth() + 3)
       const delta = Math.abs(
         genArgs.to.getTime() - threeMonthsFromNow.getTime(),
       )
-      expect(delta).toBeLessThan(24 * 60 * 60 * 1000) // within 1 day
+      expect(delta).toBeLessThan(24 * 60 * 60 * 1000)
     })
 
     it("assignment remains committed even if generateFromTariff throws", async () => {

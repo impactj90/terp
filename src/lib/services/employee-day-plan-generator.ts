@@ -489,34 +489,53 @@ export class EmployeeDayPlanGenerator {
       employeesProcessed++
     }
 
-    // Bulk upsert all plans in chunked transactions (max 500 per transaction
-    // to avoid Prisma timeout on very large batches)
-    const CHUNK_SIZE = 500
-    for (let i = 0; i < allPlansToUpsert.length; i += CHUNK_SIZE) {
-      const chunk = allPlansToUpsert.slice(i, i + CHUNK_SIZE)
-      await this.prisma.$transaction(
-        chunk.map((plan) =>
-          this.prisma.employeeDayPlan.upsert({
-            where: {
-              employeeId_planDate: {
-                employeeId: plan.employeeId,
-                planDate: plan.planDate,
-              },
-            },
-            create: {
-              tenantId,
-              employeeId: plan.employeeId,
-              planDate: plan.planDate,
-              dayPlanId: plan.dayPlanId,
-              source: "tariff",
-            },
-            update: {
-              dayPlanId: plan.dayPlanId,
-              source: "tariff",
-            },
-          }),
-        ),
-      )
+    // Bulk insert via a single createMany call instead of per-row upserts.
+    // This is orders of magnitude faster over a remote pooler because it
+    // avoids per-row round trips and sidesteps Prisma's default 5 s
+    // interactive-transaction timeout.
+    //
+    // Conflict handling:
+    //  - overwriteTariffSource=true: we already delete existing tariff-source
+    //    plans in the range for `overwriteTariffSource`, so we also delete
+    //    them here before inserting. Manual/holiday plans (source !== 'tariff')
+    //    are preserved and trigger skipDuplicates.
+    //  - overwriteTariffSource=false: leave existing tariff plans in place;
+    //    skipDuplicates still handles the unique constraint on
+    //    (employeeId, planDate).
+    if (allPlansToUpsert.length > 0) {
+      if (overwriteTariffSource && !deleteOrphaned) {
+        // deleteOrphaned already cleared the range above; without it we
+        // still need to drop existing tariff plans for the affected dates
+        // so createMany doesn't skip them as duplicates.
+        const affectedEmployeeIds = [
+          ...new Set(allPlansToUpsert.map((p) => p.employeeId)),
+        ]
+        const minDate = new Date(
+          Math.min(...allPlansToUpsert.map((p) => p.planDate.getTime())),
+        )
+        const maxDate = new Date(
+          Math.max(...allPlansToUpsert.map((p) => p.planDate.getTime())),
+        )
+        await this.prisma.employeeDayPlan.deleteMany({
+          where: {
+            tenantId,
+            employeeId: { in: affectedEmployeeIds },
+            source: "tariff",
+            planDate: { gte: minDate, lte: maxDate },
+          },
+        })
+      }
+
+      await this.prisma.employeeDayPlan.createMany({
+        data: allPlansToUpsert.map((plan) => ({
+          tenantId,
+          employeeId: plan.employeeId,
+          planDate: plan.planDate,
+          dayPlanId: plan.dayPlanId,
+          source: "tariff",
+        })),
+        skipDuplicates: true,
+      })
     }
 
     // Count created vs updated

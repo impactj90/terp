@@ -214,27 +214,46 @@ function createMockPrisma(state: FakeState): PrismaClient {
           return { count: before - state.existingPlans.length }
         },
       ),
-      upsert: vi.fn(
-        (args: {
-          where: { employeeId_planDate: { employeeId: string; planDate: Date } }
-          create: { dayPlanId: string | null; source: string }
-          update: { dayPlanId: string | null; source: string }
+      createMany: vi.fn(
+        async (args: {
+          data: Array<{
+            tenantId: string
+            employeeId: string
+            planDate: Date
+            dayPlanId: string | null
+            source: string
+          }>
+          skipDuplicates?: boolean
         }) => {
-          const key = args.where.employeeId_planDate
-          const existing = state.existingPlans.find(
-            (p) => p.employeeId === key.employeeId && p.planDate.getTime() === key.planDate.getTime(),
-          )
-          const isCreate = !existing
-          state.upserts.push({
-            employeeId: key.employeeId,
-            planDate: key.planDate,
-            dayPlanId: args.create.dayPlanId,
-            source: args.create.source,
-            isCreate,
-          })
-          return Promise.resolve({
-            id: `plan-${key.employeeId}-${key.planDate.toISOString()}`,
-          })
+          let inserted = 0
+          for (const row of args.data) {
+            const conflict = state.existingPlans.find(
+              (p) =>
+                p.employeeId === row.employeeId &&
+                p.planDate.getTime() === row.planDate.getTime(),
+            )
+            if (conflict && args.skipDuplicates) {
+              continue
+            }
+            state.upserts.push({
+              employeeId: row.employeeId,
+              planDate: row.planDate,
+              dayPlanId: row.dayPlanId,
+              source: row.source,
+              isCreate: !conflict,
+            })
+            if (!conflict) {
+              state.existingPlans.push({
+                tenantId: row.tenantId,
+                employeeId: row.employeeId,
+                planDate: row.planDate,
+                dayPlanId: row.dayPlanId,
+                source: row.source,
+              })
+              inserted++
+            }
+          }
+          return { count: inserted }
         },
       ),
     },

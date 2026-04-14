@@ -51,28 +51,26 @@ function computeRecalcRange(
   return { from: effectiveFrom, to }
 }
 
-// Clamp window for daily value recalc: how far back and forward from today
-// to synchronously recalculate when an assignment changes. A longer window
-// means a more complete immediate result; a shorter window means faster
-// mutations. 2 months on each side keeps the per-request cost bounded
-// (~120 calculateDay calls ≈ 1s) while still covering the common "fix
-// my timesheet for yesterday/last week/last month" case. DailyValue rows
-// outside this window stay stale until the user views them (cache miss
-// triggers fresh calc) or until the weekly cron.
-const RECALC_CLAMP_MONTHS = 2
+// Clamp window for daily value recalc: how far back and forward from
+// today to synchronously recalculate when an assignment changes. Kept
+// tight (+/- 14 days) because every day in the window triggers a full
+// `calculateDay` round trip. 28 days is enough to fix "yesterday" and
+// "last week" cases without blocking the save for seconds. Everything
+// outside this window stays stale until the user opens that date and
+// clicks "Tag neu berechnen", or until the Sunday cron.
+const RECALC_CLAMP_DAYS = 14
 
 function clampRecalcWindow(
   range: { from: Date; to: Date },
   today: Date = new Date(),
 ): { from: Date; to: Date } {
-  const minFrom = new Date(
+  const todayUtc = new Date(
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
   )
-  minFrom.setUTCMonth(minFrom.getUTCMonth() - RECALC_CLAMP_MONTHS)
-  const maxTo = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
-  )
-  maxTo.setUTCMonth(maxTo.getUTCMonth() + RECALC_CLAMP_MONTHS)
+  const minFrom = new Date(todayUtc.getTime())
+  minFrom.setUTCDate(minFrom.getUTCDate() - RECALC_CLAMP_DAYS)
+  const maxTo = new Date(todayUtc.getTime())
+  maxTo.setUTCDate(maxTo.getUTCDate() + RECALC_CLAMP_DAYS)
 
   const from =
     range.from.getTime() < minFrom.getTime() ? minFrom : range.from
@@ -110,8 +108,8 @@ async function runPostCommitSync(
     )
   }
 
-  // Clamp the recalc window to [today - 3mo, today + 3mo]. This keeps the
-  // synchronous side-effect bounded even for long-lived assignments.
+  // Clamp the recalc window to today +/- 14 days. Keeps the synchronous
+  // side-effect under a second even for long-lived assignments.
   const recalcWindow = clampRecalcWindow(range)
   if (recalcWindow.from.getTime() > recalcWindow.to.getTime()) {
     // Assignment is fully outside the clamp window (e.g. far future or
