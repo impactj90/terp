@@ -5,9 +5,14 @@ import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useDeleteEmployeeTariffAssignment } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
+interface TariffAssignment {
+  id: string
+  tariffId: string
+  effectiveFrom: Date | string
+  effectiveTo?: Date | string | null
+  tariff?: { code: string; name: string } | null
+}
 
 interface TariffAssignmentDeleteDialogProps {
   assignment: TariffAssignment | null
@@ -30,9 +35,9 @@ export function TariffAssignmentDeleteDialog({
     : ''
 
   const dateRange = assignment
-    ? `${format(new Date(assignment.effective_from), 'dd.MM.yyyy')} - ${
-        assignment.effective_to
-          ? format(new Date(assignment.effective_to), 'dd.MM.yyyy')
+    ? `${format(new Date(assignment.effectiveFrom), 'dd.MM.yyyy')} - ${
+        assignment.effectiveTo
+          ? format(new Date(assignment.effectiveTo), 'dd.MM.yyyy')
           : t('openEnded')
       }`
     : ''

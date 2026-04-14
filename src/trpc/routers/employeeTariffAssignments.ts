@@ -16,7 +16,6 @@
  */
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import type { PrismaClient } from "@/generated/prisma/client"
 import { createTRPCRouter, tenantProcedure } from "@/trpc/init"
 import { requirePermission, applyDataScope, type DataScope } from "@/lib/auth/middleware"
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
@@ -88,44 +87,6 @@ function mapAssignmentToOutput(a: {
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
   }
-}
-
-/**
- * Checks whether a new/updated assignment overlaps with existing active assignments.
- * Ported from Go repository/employeetariffassignment.go:149-172.
- *
- * Overlap logic: A.start <= B.end AND A.end >= B.start (NULL end = infinity).
- */
-async function hasOverlap(
-  prisma: PrismaClient,
-  employeeId: string,
-  effectiveFrom: Date,
-  effectiveTo: Date | null,
-  excludeId?: string
-): Promise<boolean> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = {
-    employeeId,
-    isActive: true,
-  }
-
-  // Overlap condition: existing.start <= new.end AND existing.end >= new.start
-  // When effectiveTo is null (infinity), we only need existing.end >= new.start
-  if (effectiveTo) {
-    where.effectiveFrom = { lte: effectiveTo }
-  }
-
-  where.OR = [
-    { effectiveTo: null }, // existing has no end date (infinite)
-    { effectiveTo: { gte: effectiveFrom } }, // existing end >= new start
-  ]
-
-  if (excludeId) {
-    where.NOT = { id: excludeId }
-  }
-
-  const count = await prisma.employeeTariffAssignment.count({ where })
-  return count > 0
 }
 
 // --- Router ---
@@ -255,12 +216,11 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
   /**
    * employeeTariffAssignments.create -- Creates a new tariff assignment.
    *
-   * Validates dates, checks for overlapping assignments.
-   * Defaults overwriteBehavior to "preserve_manual".
+   * Delegates to the service, which performs an atomic overlap check +
+   * create and then post-commit regenerates EmployeeDayPlan rows and
+   * triggers daily value recalculation for the affected range.
    *
    * Requires: employees.edit permission
-   *
-   * NOTE: Day plan sync and vacation recalculation are deferred (depend on Tariff model).
    */
   create: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
@@ -281,59 +241,17 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
         const tenantId = ctx.tenantId!
         const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
 
-        // Verify employee exists and belongs to tenant
-        const employee = await ctx.prisma.employee.findFirst({
-          where: { id: input.employeeId, tenantId, deletedAt: null },
-          select: { id: true, departmentId: true },
-        })
-        if (!employee) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Employee not found",
-          })
-        }
-        checkRelatedEmployeeDataScope(dataScope, {
-          employeeId: employee.id,
-          employee: { departmentId: employee.departmentId },
-        }, "EmployeeTariffAssignment")
-
-        // Validate date range
-        const effectiveTo = input.effectiveTo ?? null
-        if (effectiveTo && effectiveTo < input.effectiveFrom) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Effective to date cannot be before effective from date",
-          })
-        }
-
-        // Use transaction for atomic overlap check + create
-        const assignment = await ctx.prisma.$transaction(async (tx) => {
-          const overlap = await hasOverlap(
-            tx as unknown as PrismaClient,
-            input.employeeId,
-            input.effectiveFrom,
-            effectiveTo
-          )
-          if (overlap) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Overlapping tariff assignment exists",
-            })
-          }
-
-          return tx.employeeTariffAssignment.create({
-            data: {
-              tenantId,
-              employeeId: input.employeeId,
-              tariffId: input.tariffId,
-              effectiveFrom: input.effectiveFrom,
-              effectiveTo,
-              overwriteBehavior: input.overwriteBehavior?.trim() || "preserve_manual",
-              notes: input.notes?.trim() || null,
-              isActive: true,
-            },
-          })
-        })
+        const assignment = await employeeTariffAssignmentService.create(
+          ctx.prisma,
+          tenantId,
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          dataScope,
+        )
 
         return mapAssignmentToOutput(assignment)
       } catch (err) {
@@ -344,11 +262,12 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
   /**
    * employeeTariffAssignments.update -- Updates a tariff assignment.
    *
-   * Supports partial updates. Re-checks overlap when dates change (excluding self).
+   * Supports partial updates. Re-checks overlap when dates change
+   * (excluding self). If date fields change, post-commit regenerates day
+   * plans and triggers daily value recalculation for the union of the old
+   * and new ranges.
    *
    * Requires: employees.edit permission
-   *
-   * NOTE: Day plan resync is deferred.
    */
   update: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))
@@ -392,10 +311,10 @@ export const employeeTariffAssignmentsRouter = createTRPCRouter({
    * employeeTariffAssignments.delete -- Hard deletes a tariff assignment.
    *
    * Verifies the assignment belongs to the correct employee and tenant.
+   * Post-commit cleans up tariff-source day plans for the removed
+   * assignment's range and recalculates daily values.
    *
    * Requires: employees.edit permission
-   *
-   * NOTE: Day plan resync is deferred.
    */
   delete: tenantProcedure
     .use(requirePermission(EMPLOYEES_EDIT))

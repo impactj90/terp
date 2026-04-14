@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { createAdminCaller, prisma, SEED } from "../helpers"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 type Caller = Awaited<ReturnType<typeof createAdminCaller>>
 
@@ -49,6 +50,39 @@ describe("Phase 1: Grundeinrichtung", () => {
         },
       })
       .catch(() => {})
+
+    // Clean up leftover test users from previous runs (fixed emails in UC-003)
+    // This removes both the DB row and the Supabase auth record so re-runs
+    // don't hit "email already registered" errors.
+    const leftoverEmails = [
+      "e2e-test-user@example.com",
+      "e2e-admin-user@example.com",
+    ]
+    const leftoverUsers = await prisma.user.findMany({
+      where: { email: { in: leftoverEmails } },
+      select: { id: true },
+    })
+    if (leftoverUsers.length > 0) {
+      const ids = leftoverUsers.map((u) => u.id)
+      await prisma.userTenant
+        .deleteMany({ where: { userId: { in: ids } } })
+        .catch(() => {})
+      await prisma.user
+        .deleteMany({ where: { id: { in: ids } } })
+        .catch(() => {})
+    }
+    const adminClient = createAdminClient()
+    for (const email of leftoverEmails) {
+      try {
+        const { data } = await adminClient.auth.admin.listUsers()
+        const match = data.users.find((u) => u.email === email)
+        if (match) {
+          await adminClient.auth.admin.deleteUser(match.id)
+        }
+      } catch {
+        // best-effort cleanup
+      }
+    }
   })
 
   afterAll(async () => {
@@ -72,7 +106,7 @@ describe("Phase 1: Grundeinrichtung", () => {
       }
     }
 
-    // Users need user_tenants cleaned up first
+    // Users need user_tenants cleaned up first, then auth users
     if (created.userIds.length > 0) {
       await prisma.userTenant
         .deleteMany({ where: { userId: { in: created.userIds } } })
@@ -80,6 +114,14 @@ describe("Phase 1: Grundeinrichtung", () => {
       await prisma.user
         .deleteMany({ where: { id: { in: created.userIds } } })
         .catch(() => {})
+      const adminClient = createAdminClient()
+      for (const userId of created.userIds) {
+        try {
+          await adminClient.auth.admin.deleteUser(userId)
+        } catch {
+          // best-effort — user row may not exist in auth if create failed
+        }
+      }
     }
 
     if (created.userGroupIds.length > 0) {

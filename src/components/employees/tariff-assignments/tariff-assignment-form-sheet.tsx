@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { CalendarIcon, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -36,9 +36,15 @@ import {
   useCreateEmployeeTariffAssignment,
   useUpdateEmployeeTariffAssignment,
 } from '@/hooks'
-import type { components } from '@/types/legacy-api-types'
 
-type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
+interface TariffAssignment {
+  id: string
+  tariffId: string
+  effectiveFrom: Date | string
+  effectiveTo?: Date | string | null
+  overwriteBehavior: string
+  notes?: string | null
+}
 
 interface FormState {
   tariffId: string
@@ -97,13 +103,18 @@ export function TariffAssignmentFormSheet({
   React.useEffect(() => {
     if (open) {
       if (assignment) {
-        const from = parseISO(assignment.effective_from)
-        const to = assignment.effective_to ? parseISO(assignment.effective_to) : undefined
+        const from = new Date(assignment.effectiveFrom)
+        const to = assignment.effectiveTo
+          ? new Date(assignment.effectiveTo)
+          : undefined
         setForm({
-          tariffId: assignment.tariff_id,
+          tariffId: assignment.tariffId,
           effectiveFrom: from,
           effectiveTo: to,
-          overwriteBehavior: assignment.overwrite_behavior,
+          overwriteBehavior:
+            (assignment.overwriteBehavior as
+              | 'overwrite'
+              | 'preserve_manual') ?? 'preserve_manual',
           notes: assignment.notes ?? '',
         })
         setFromMonth(from)

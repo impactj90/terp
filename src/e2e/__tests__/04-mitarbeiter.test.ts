@@ -377,22 +377,29 @@ describe("Phase 4: Mitarbeiter", () => {
     const TARIFF_40H = "00000000-0000-0000-0000-000000000701"
     const TARIFF_20H = "00000000-0000-0000-0000-000000000704"
 
-    it("should create a tariff assignment for the employee", async () => {
-      const result = await caller.employeeTariffAssignments.create({
-        employeeId: state.employeeId!,
-        tariffId: TARIFF_40H,
-        effectiveFrom: new Date("2025-01-01"),
-        notes: "E2E test assignment",
-      })
+    it(
+      "should create a tariff assignment for the employee",
+      async () => {
+        const result = await caller.employeeTariffAssignments.create({
+          employeeId: state.employeeId!,
+          tariffId: TARIFF_40H,
+          effectiveFrom: new Date("2025-01-01"),
+          notes: "E2E test assignment",
+        })
 
-      expect(result.id).toBeDefined()
-      expect(result.employeeId).toBe(state.employeeId!)
-      expect(result.tariffId).toBe(TARIFF_40H)
-      expect(result.isActive).toBe(true)
-      expect(result.overwriteBehavior).toBe("preserve_manual")
-      state.tariffAssignmentId = result.id
-      created.tariffAssignmentIds.push(result.id)
-    })
+        expect(result.id).toBeDefined()
+        expect(result.employeeId).toBe(state.employeeId!)
+        expect(result.tariffId).toBe(TARIFF_40H)
+        expect(result.isActive).toBe(true)
+        expect(result.overwriteBehavior).toBe("preserve_manual")
+        state.tariffAssignmentId = result.id
+        created.tariffAssignmentIds.push(result.id)
+      },
+      // Extended timeout: assignment create triggers post-commit sync
+      // (generateFromTariff + triggerRecalcRange) which can take several
+      // seconds when the DB cache is cold.
+      30_000,
+    )
 
     it("should reject overlapping tariff assignments", async () => {
       await expect(
@@ -449,27 +456,31 @@ describe("Phase 4: Mitarbeiter", () => {
       ).rejects.toThrow()
     })
 
-    it("should allow a non-overlapping assignment after closing the first", async () => {
-      // End the first assignment
-      await caller.employeeTariffAssignments.update({
-        employeeId: state.employeeId!,
-        id: state.tariffAssignmentId!,
-        effectiveTo: new Date("2025-12-31"),
-      })
+    it(
+      "should allow a non-overlapping assignment after closing the first",
+      async () => {
+        // End the first assignment
+        await caller.employeeTariffAssignments.update({
+          employeeId: state.employeeId!,
+          id: state.tariffAssignmentId!,
+          effectiveTo: new Date("2025-12-31"),
+        })
 
-      // Create a new assignment starting after the first ends
-      const result = await caller.employeeTariffAssignments.create({
-        employeeId: state.employeeId!,
-        tariffId: TARIFF_20H,
-        effectiveFrom: new Date("2026-01-01"),
-        notes: "E2E test assignment",
-      })
+        // Create a new assignment starting after the first ends
+        const result = await caller.employeeTariffAssignments.create({
+          employeeId: state.employeeId!,
+          tariffId: TARIFF_20H,
+          effectiveFrom: new Date("2026-01-01"),
+          notes: "E2E test assignment",
+        })
 
-      expect(result.id).toBeDefined()
-      expect(result.tariffId).toBe(TARIFF_20H)
-      state.tariffAssignment2Id = result.id
-      created.tariffAssignmentIds.push(result.id)
-    })
+        expect(result.id).toBeDefined()
+        expect(result.tariffId).toBe(TARIFF_20H)
+        state.tariffAssignment2Id = result.id
+        created.tariffAssignmentIds.push(result.id)
+      },
+      30_000,
+    )
 
     it("should resolve effective tariff to the newer assignment for a date in its range", async () => {
       const result = await caller.employeeTariffAssignments.effective({
@@ -613,7 +624,9 @@ describe("Phase 4: Mitarbeiter", () => {
     })
 
     it("should update a user to link with the E2E employee", async () => {
-      // Clean up any leftover user from previous test runs
+      // Clean up any leftover user from previous test runs.
+      // Must also delete the Supabase auth row — otherwise users.create
+      // fails with "email already registered".
       const existingUser = await prisma.user.findFirst({
         where: { email: "e2e-link-test@test.local" },
       })
@@ -624,6 +637,19 @@ describe("Phase 4: Mitarbeiter", () => {
         await prisma.user
           .deleteMany({ where: { id: existingUser.id } })
           .catch(() => {})
+      }
+      try {
+        const { createAdminClient } = await import("@/lib/supabase/admin")
+        const adminClient = createAdminClient()
+        const { data } = await adminClient.auth.admin.listUsers()
+        const authMatch = data.users.find(
+          (u) => u.email === "e2e-link-test@test.local",
+        )
+        if (authMatch) {
+          await adminClient.auth.admin.deleteUser(authMatch.id)
+        }
+      } catch {
+        // best-effort
       }
 
       // Create a test user first
@@ -649,15 +675,21 @@ describe("Phase 4: Mitarbeiter", () => {
       expect(verified.employee).toBeDefined()
       expect(verified.employee!.firstName).toBe("E2E")
 
-      // Clean up: delete user
+      // Clean up: delete user (DB + auth)
       await caller.users.delete({ id: newUser.id })
-      // Also clean up user_tenants
       await prisma.userTenant
         .deleteMany({ where: { userId: newUser.id } })
         .catch(() => {})
       await prisma.user
         .deleteMany({ where: { id: newUser.id } })
         .catch(() => {})
+      try {
+        const { createAdminClient } = await import("@/lib/supabase/admin")
+        const adminClient = createAdminClient()
+        await adminClient.auth.admin.deleteUser(newUser.id)
+      } catch {
+        // best-effort
+      }
     })
   })
 

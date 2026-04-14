@@ -22,6 +22,14 @@ export interface GenerateFromTariffInput {
   from?: Date
   to?: Date
   overwriteTariffSource?: boolean
+  /**
+   * If true, deletes all existing `source='tariff'` EmployeeDayPlan rows
+   * within the range before generating new ones. Used by the tariff
+   * assignment delete/update paths so that orphaned plans from removed
+   * assignments are cleaned up. Preserves manual/holiday plans
+   * (source != 'tariff').
+   */
+  deleteOrphanedTariffPlansInRange?: boolean
 }
 
 export interface GenerateFromTariffResult {
@@ -63,6 +71,11 @@ export interface TariffForGenerate {
 
 export interface EmployeeForGenerate {
   id: string
+  /**
+   * Legacy field, preserved for backwards compatibility with tests/callers
+   * that still seed `employee.tariffId` directly. The generator itself
+   * ignores this field and resolves tariffs via `EmployeeTariffAssignment`.
+   */
   tariffId: string | null
   entryDate: Date
   exitDate: Date | null
@@ -252,8 +265,15 @@ export class EmployeeDayPlanGenerator {
       )
 
     const overwriteTariffSource = input.overwriteTariffSource ?? true
+    const deleteOrphaned = input.deleteOrphanedTariffPlansInRange ?? false
 
     // Get employees to process
+    const employeeSelect = {
+      id: true,
+      entryDate: true,
+      exitDate: true,
+    } as const
+
     let employees: EmployeeForGenerate[]
 
     if (input.employeeIds && input.employeeIds.length > 0) {
@@ -262,14 +282,9 @@ export class EmployeeDayPlanGenerator {
           id: { in: input.employeeIds },
           tenantId,
         },
-        select: {
-          id: true,
-          tariffId: true,
-          entryDate: true,
-          exitDate: true,
-        },
+        select: employeeSelect,
       })
-      employees = fetched
+      employees = fetched.map((e) => ({ ...e, tariffId: null }))
     } else {
       const fetched = await this.prisma.employee.findMany({
         where: {
@@ -277,14 +292,9 @@ export class EmployeeDayPlanGenerator {
           isActive: true,
           deletedAt: null,
         },
-        select: {
-          id: true,
-          tariffId: true,
-          entryDate: true,
-          exitDate: true,
-        },
+        select: employeeSelect,
       })
-      employees = fetched
+      employees = fetched.map((e) => ({ ...e, tariffId: null }))
     }
 
     // Initialize result counters
@@ -293,15 +303,52 @@ export class EmployeeDayPlanGenerator {
     let plansUpdated = 0
     let employeesSkipped = 0
 
-    // Batch-load tariffs: collect unique tariffIds, fetch all at once
-    const tariffIds = [
-      ...new Set(
-        employees
-          .map((e) => e.tariffId)
-          .filter((id): id is string => id !== null),
-      ),
-    ]
+    // Optional: delete orphaned tariff-source plans in the range for these
+    // employees before generating. Used by delete/update paths to clean up
+    // plans from removed or shifted assignments. Preserves manual/holiday
+    // plans (source != 'tariff').
+    if (deleteOrphaned && employees.length > 0) {
+      await this.prisma.employeeDayPlan.deleteMany({
+        where: {
+          tenantId,
+          employeeId: { in: employees.map((e) => e.id) },
+          source: "tariff",
+          planDate: { gte: fromDate, lte: toDate },
+        },
+      })
+    }
 
+    // Load all active tariff assignments overlapping the input range for
+    // these employees. Each assignment defines a segment [effectiveFrom,
+    // effectiveTo ?? +inf] → tariffId that the generator will use.
+    const assignments = await this.prisma.employeeTariffAssignment.findMany({
+      where: {
+        tenantId,
+        employeeId: { in: employees.map((e) => e.id) },
+        isActive: true,
+        effectiveFrom: { lte: toDate },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: fromDate } }],
+      },
+      orderBy: [{ employeeId: "asc" }, { effectiveFrom: "asc" }],
+      select: {
+        id: true,
+        employeeId: true,
+        tariffId: true,
+        effectiveFrom: true,
+        effectiveTo: true,
+      },
+    })
+
+    // Group assignments by employeeId
+    const assignmentsByEmployee = new Map<string, typeof assignments>()
+    for (const a of assignments) {
+      const list = assignmentsByEmployee.get(a.employeeId) ?? []
+      list.push(a)
+      assignmentsByEmployee.set(a.employeeId, list)
+    }
+
+    // Batch-load referenced tariffs
+    const tariffIds = [...new Set(assignments.map((a) => a.tariffId))]
     const tariffRows =
       tariffIds.length > 0
         ? await this.prisma.tariff.findMany({
@@ -309,20 +356,19 @@ export class EmployeeDayPlanGenerator {
             include: tariffGenerateInclude,
           })
         : []
-
     const tariffMap = new Map(tariffRows.map((t) => [t.id, t]))
 
     // Batch-load existing plans for all employees in the date range
-    const employeeIdsWithTariff = employees
-      .filter((e) => e.tariffId !== null)
-      .map((e) => e.id)
+    const employeeIdsWithAssignments = [
+      ...new Set(assignments.map((a) => a.employeeId)),
+    ]
 
     const allExistingPlans =
-      employeeIdsWithTariff.length > 0
+      employeeIdsWithAssignments.length > 0
         ? await this.prisma.employeeDayPlan.findMany({
             where: {
               tenantId,
-              employeeId: { in: employeeIdsWithTariff },
+              employeeId: { in: employeeIdsWithAssignments },
               planDate: { gte: fromDate, lte: toDate },
             },
           })
@@ -344,78 +390,100 @@ export class EmployeeDayPlanGenerator {
       isUpdate: boolean
     }> = []
 
-    // Process each employee (no more per-employee DB queries)
+    // Process each employee
     for (const employee of employees) {
-      // Skip if no tariffId
-      if (!employee.tariffId) {
+      const empAssignments = assignmentsByEmployee.get(employee.id) ?? []
+      if (empAssignments.length === 0) {
         employeesSkipped++
         continue
       }
 
-      const tariff = tariffMap.get(employee.tariffId)
-      if (!tariff) {
+      // Build segments: one per assignment, intersected with employee
+      // entry/exit, tariff validity, and input range.
+      const segments: Array<{
+        tariff: TariffForGenerate
+        start: Date
+        end: Date
+      }> = []
+
+      for (const assignment of empAssignments) {
+        const tariff = tariffMap.get(assignment.tariffId)
+        if (!tariff) continue
+
+        // Clip assignment [effectiveFrom, effectiveTo ?? toDate] to input range
+        const assignmentStart =
+          assignment.effectiveFrom.getTime() > fromDate.getTime()
+            ? assignment.effectiveFrom
+            : fromDate
+        const assignmentEnd =
+          assignment.effectiveTo === null ||
+          assignment.effectiveTo.getTime() > toDate.getTime()
+            ? toDate
+            : assignment.effectiveTo
+
+        // Further constrain by employee entry/exit and tariff validity
+        const window = getTariffSyncWindow(
+          employee,
+          tariff as unknown as TariffForGenerate,
+          assignmentStart,
+          assignmentEnd,
+        )
+        if (!window) continue
+
+        segments.push({
+          tariff: tariff as unknown as TariffForGenerate,
+          start: window.start,
+          end: window.end,
+        })
+      }
+
+      if (segments.length === 0) {
         employeesSkipped++
         continue
       }
 
-      // Calculate sync window
-      const window = getTariffSyncWindow(
-        employee,
-        tariff as unknown as TariffForGenerate,
-        fromDate,
-        toDate,
-      )
-      if (!window) {
-        employeesSkipped++
-        continue
-      }
-
-      // Use pre-loaded existing plans, filtered to sync window
-      const existingPlans = (
-        existingPlansByEmployee.get(employee.id) ?? []
-      ).filter(
-        (p) =>
-          p.planDate.getTime() >= window.start.getTime() &&
-          p.planDate.getTime() <= window.end.getTime(),
-      )
-
-      // Build skip map: dates to skip based on source
-      const skipDates = new Set<string>()
-      const existingDateKeys = new Set<string>()
+      // Pre-compute existing plan state across the employee's entire range
+      const existingPlans = existingPlansByEmployee.get(employee.id) ?? []
+      const existingByDateKey = new Map<string, (typeof existingPlans)[number]>()
       for (const plan of existingPlans) {
         const dateKey = plan.planDate.toISOString().split("T")[0]!
-        existingDateKeys.add(dateKey)
-        if (plan.source !== "tariff") {
-          // Always skip manual/holiday plans
-          skipDates.add(dateKey)
-        } else if (!overwriteTariffSource) {
-          // Skip existing tariff plans if overwrite is false
-          skipDates.add(dateKey)
-        }
+        existingByDateKey.set(dateKey, plan)
       }
 
-      // Generate plans for each day in window
-      const current = new Date(window.start.getTime())
-      while (current.getTime() <= window.end.getTime()) {
-        const dateKey = current.toISOString().split("T")[0]!
+      // Expand each segment day-by-day
+      for (const segment of segments) {
+        const current = new Date(segment.start.getTime())
+        while (current.getTime() <= segment.end.getTime()) {
+          const dateKey = current.toISOString().split("T")[0]!
+          const existing = existingByDateKey.get(dateKey)
 
-        if (!skipDates.has(dateKey)) {
-          const dayPlanId = getDayPlanIdForDate(
-            tariff as unknown as TariffForGenerate,
-            current,
-          )
-
-          if (dayPlanId !== null) {
-            allPlansToUpsert.push({
-              employeeId: employee.id,
-              planDate: new Date(current.getTime()),
-              dayPlanId,
-              isUpdate: existingDateKeys.has(dateKey),
-            })
+          let skip = false
+          if (existing) {
+            if (existing.source !== "tariff") {
+              // Always preserve manual/holiday plans
+              skip = true
+            } else if (!overwriteTariffSource) {
+              // Preserve existing tariff plans if overwrite disabled
+              skip = true
+            }
           }
-        }
 
-        current.setUTCDate(current.getUTCDate() + 1)
+          if (!skip) {
+            const dayPlanId = getDayPlanIdForDate(segment.tariff, current)
+            if (dayPlanId !== null) {
+              allPlansToUpsert.push({
+                employeeId: employee.id,
+                planDate: new Date(current.getTime()),
+                dayPlanId,
+                // After deleteOrphaned, existing map is stale for source=tariff
+                // rows, so we only treat non-deleted entries as updates.
+                isUpdate: existing !== undefined && !deleteOrphaned,
+              })
+            }
+          }
+
+          current.setUTCDate(current.getUTCDate() + 1)
+        }
       }
 
       employeesProcessed++

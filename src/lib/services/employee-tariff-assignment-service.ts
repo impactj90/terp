@@ -10,15 +10,135 @@ import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import type { DataScope } from "@/lib/auth/middleware"
+import { EmployeeDayPlanGenerator } from "./employee-day-plan-generator"
+import { RecalcService } from "./recalc"
 
 // --- Audit ---
 
 const TRACKED_FIELDS = [
   "employeeId",
   "tariffId",
-  "validFrom",
-  "validTo",
+  "effectiveFrom",
+  "effectiveTo",
+  "overwriteBehavior",
+  "notes",
+  "isActive",
 ]
+
+// --- Post-Commit Sync Helpers ---
+
+/**
+ * Computes the date range that needs to be regenerated/recalculated after
+ * an assignment lifecycle event. When effectiveTo is null (open-ended),
+ * uses today+3 months as a pragmatic upper bound that matches the default
+ * range used by the generator and weekly cron.
+ */
+function computeRecalcRange(
+  effectiveFrom: Date,
+  effectiveTo: Date | null,
+  today: Date = new Date(),
+): { from: Date; to: Date } {
+  let to: Date
+  if (effectiveTo) {
+    to = effectiveTo
+  } else {
+    const upperBound = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+    )
+    upperBound.setUTCMonth(upperBound.getUTCMonth() + 3)
+    to = upperBound
+  }
+  return { from: effectiveFrom, to }
+}
+
+// Clamp window for daily value recalc: how far back and forward from today
+// to synchronously recalculate when an assignment changes. A longer window
+// means a more complete immediate result; a shorter window means faster
+// mutations. 2 months on each side keeps the per-request cost bounded
+// (~120 calculateDay calls ≈ 1s) while still covering the common "fix
+// my timesheet for yesterday/last week/last month" case. DailyValue rows
+// outside this window stay stale until the user views them (cache miss
+// triggers fresh calc) or until the weekly cron.
+const RECALC_CLAMP_MONTHS = 2
+
+function clampRecalcWindow(
+  range: { from: Date; to: Date },
+  today: Date = new Date(),
+): { from: Date; to: Date } {
+  const minFrom = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  )
+  minFrom.setUTCMonth(minFrom.getUTCMonth() - RECALC_CLAMP_MONTHS)
+  const maxTo = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  )
+  maxTo.setUTCMonth(maxTo.getUTCMonth() + RECALC_CLAMP_MONTHS)
+
+  const from =
+    range.from.getTime() < minFrom.getTime() ? minFrom : range.from
+  const to = range.to.getTime() > maxTo.getTime() ? maxTo : range.to
+  return { from, to }
+}
+
+/**
+ * Post-commit side effects for assignment create/update/remove.
+ * Regenerates EmployeeDayPlan rows for the affected range and triggers
+ * daily value recalculation. Best-effort: errors are logged but not thrown,
+ * so the assignment operation itself remains committed.
+ */
+async function runPostCommitSync(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  range: { from: Date; to: Date },
+  opts: { deleteOrphaned: boolean },
+): Promise<void> {
+  try {
+    const generator = new EmployeeDayPlanGenerator(prisma)
+    await generator.generateFromTariff({
+      tenantId,
+      employeeIds: [employeeId],
+      from: range.from,
+      to: range.to,
+      overwriteTariffSource: true,
+      deleteOrphanedTariffPlansInRange: opts.deleteOrphaned,
+    })
+  } catch (err) {
+    console.error(
+      "[employee-tariff-assignment-service] generateFromTariff failed",
+      { tenantId, employeeId, range, err },
+    )
+  }
+
+  // Clamp the recalc window to [today - 3mo, today + 3mo]. This keeps the
+  // synchronous side-effect bounded even for long-lived assignments.
+  const recalcWindow = clampRecalcWindow(range)
+  if (recalcWindow.from.getTime() > recalcWindow.to.getTime()) {
+    // Assignment is fully outside the clamp window (e.g. far future or
+    // distant past): nothing meaningful to recalc synchronously.
+    return
+  }
+
+  try {
+    const recalcService = new RecalcService(
+      prisma,
+      undefined,
+      undefined,
+      tenantId,
+    )
+    await recalcService.triggerRecalcRange(
+      tenantId,
+      employeeId,
+      recalcWindow.from,
+      recalcWindow.to,
+    )
+  } catch (err) {
+    console.error(
+      "[employee-tariff-assignment-service] triggerRecalcRange failed",
+      { tenantId, employeeId, range: recalcWindow, err },
+    )
+  }
+}
 
 // --- Error Classes ---
 
@@ -92,20 +212,38 @@ export async function create(
     employeeId: string
     tariffId: string
     effectiveFrom: Date
-    effectiveTo?: Date
+    effectiveTo?: Date | null
     overwriteBehavior?: string
     notes?: string
   },
-  audit?: AuditContext
+  audit?: AuditContext,
+  dataScope?: DataScope,
 ) {
   // Verify employee exists and belongs to tenant
   const employee = await repo.findEmployeeById(
     prisma,
     tenantId,
-    input.employeeId
+    input.employeeId,
+    { id: true, departmentId: true },
   )
   if (!employee) {
     throw new EmployeeNotFoundError()
+  }
+
+  // Check data scope if provided
+  if (dataScope) {
+    checkRelatedEmployeeDataScope(
+      dataScope,
+      {
+        employeeId: input.employeeId,
+        employee: {
+          departmentId: (employee as unknown as {
+            departmentId: string | null
+          }).departmentId,
+        },
+      },
+      "EmployeeTariffAssignment",
+    )
   }
 
   // Validate date range
@@ -116,29 +254,31 @@ export async function create(
     )
   }
 
-  // Check for overlapping assignments
-  const overlap = await repo.hasOverlap(
-    prisma,
-    input.employeeId,
-    input.effectiveFrom,
-    effectiveTo
-  )
-  if (overlap) {
-    throw new EmployeeTariffAssignmentConflictError(
-      "Overlapping tariff assignment exists"
+  // Atomic overlap check + create in a single transaction
+  const created = await prisma.$transaction(async (tx) => {
+    const overlap = await repo.hasOverlap(
+      tx as unknown as PrismaClient,
+      input.employeeId,
+      input.effectiveFrom,
+      effectiveTo
     )
-  }
+    if (overlap) {
+      throw new EmployeeTariffAssignmentConflictError(
+        "Overlapping tariff assignment exists"
+      )
+    }
 
-  const created = await repo.create(prisma, {
-    tenantId,
-    employeeId: input.employeeId,
-    tariffId: input.tariffId,
-    effectiveFrom: input.effectiveFrom,
-    effectiveTo,
-    overwriteBehavior:
-      input.overwriteBehavior?.trim() || "preserve_manual",
-    notes: input.notes?.trim() || null,
-    isActive: true,
+    return repo.create(tx as unknown as PrismaClient, {
+      tenantId,
+      employeeId: input.employeeId,
+      tariffId: input.tariffId,
+      effectiveFrom: input.effectiveFrom,
+      effectiveTo,
+      overwriteBehavior:
+        input.overwriteBehavior?.trim() || "preserve_manual",
+      notes: input.notes?.trim() || null,
+      isActive: true,
+    })
   })
 
   if (audit) {
@@ -154,6 +294,14 @@ export async function create(
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
   }
+
+  // Post-commit: regenerate day plans + recalculate daily values for the
+  // affected range. Best-effort — failures are logged but do not roll back
+  // the assignment.
+  const range = computeRecalcRange(created.effectiveFrom, created.effectiveTo)
+  await runPostCommitSync(prisma, tenantId, created.employeeId, range, {
+    deleteOrphaned: false,
+  })
 
   return created
 }
@@ -272,6 +420,41 @@ export async function update(
     }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
+  // Post-commit: always regenerate day plans + recalc daily values for the
+  // union of the old and new ranges. Runs even when the user only edits
+  // notes or clicks save without changes — this doubles as a manual
+  // "re-sync" escape hatch for assignments that were created before this
+  // sync existed or for which an earlier sync errored out. Idempotent
+  // (upserts) and clamped to +/-2 months, so the cost is bounded.
+  const today = new Date()
+  const oldRange = computeRecalcRange(
+    existing.effectiveFrom,
+    existing.effectiveTo,
+    today,
+  )
+  const newRange = computeRecalcRange(
+    updated.effectiveFrom,
+    updated.effectiveTo,
+    today,
+  )
+  const unionRange = {
+    from:
+      oldRange.from.getTime() < newRange.from.getTime()
+        ? oldRange.from
+        : newRange.from,
+    to:
+      oldRange.to.getTime() > newRange.to.getTime()
+        ? oldRange.to
+        : newRange.to,
+  }
+  await runPostCommitSync(
+    prisma,
+    tenantId,
+    existing.employeeId,
+    unionRange,
+    { deleteOrphaned: true },
+  )
+
   return updated
 }
 
@@ -315,6 +498,18 @@ export async function remove(
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
   }
+
+  // Post-commit: clean up tariff-source day plans left over from the
+  // removed assignment, regenerate from any remaining assignments, then
+  // recalc daily values. Dates/days no longer covered by any assignment
+  // will be recalculated as OFF_DAY by `triggerRecalcRange`.
+  const range = computeRecalcRange(
+    existing.effectiveFrom,
+    existing.effectiveTo,
+  )
+  await runPostCommitSync(prisma, tenantId, existing.employeeId, range, {
+    deleteOrphaned: true,
+  })
 }
 
 export async function getEffective(

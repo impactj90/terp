@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { createCallerFactory } from "@/trpc/init"
 import { employeeTariffAssignmentsRouter } from "../employeeTariffAssignments"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
@@ -11,6 +11,7 @@ import {
 import * as employeeTariffAssignmentService from "@/lib/services/employee-tariff-assignment-service"
 
 vi.mock("@/lib/services/employee-tariff-assignment-service", () => ({
+  create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   EmployeeTariffAssignmentNotFoundError: class EmployeeTariffAssignmentNotFoundError extends Error {
@@ -31,6 +32,12 @@ vi.mock("@/lib/services/employee-tariff-assignment-service", () => ({
       this.name = "EmployeeTariffAssignmentValidationError"
     }
   },
+  EmployeeNotFoundError: class EmployeeNotFoundError extends Error {
+    constructor(message = "Employee not found") {
+      super(message)
+      this.name = "EmployeeNotFoundError"
+    }
+  },
 }))
 vi.mock("@/lib/services/audit-logs-service", () => ({
   log: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +55,12 @@ const ASSIGN_ID = "a0000000-0000-4000-a000-000000000800"
 const TARIFF_ID = "a0000000-0000-4000-a000-000000000900"
 
 const createCaller = createCallerFactory(employeeTariffAssignmentsRouter)
+
+beforeEach(() => {
+  vi.mocked(employeeTariffAssignmentService.create).mockReset()
+  vi.mocked(employeeTariffAssignmentService.update).mockReset()
+  vi.mocked(employeeTariffAssignmentService.remove).mockReset()
+})
 
 // --- Helpers ---
 
@@ -180,18 +193,12 @@ describe("employeeTariffAssignments.getById", () => {
 // --- employeeTariffAssignments.create tests ---
 
 describe("employeeTariffAssignments.create", () => {
-  it("creates assignment successfully", async () => {
+  it("creates assignment successfully via service", async () => {
     const created = makeAssignment()
-    const mockPrisma = {
-      employee: {
-        findFirst: vi.fn().mockResolvedValue({ id: EMP_ID }),
-      },
-      employeeTariffAssignment: {
-        count: vi.fn().mockResolvedValue(0), // no overlap
-        create: vi.fn().mockResolvedValue(created),
-      },
-    }
-    const caller = createCaller(createTestContext(mockPrisma))
+    vi.mocked(employeeTariffAssignmentService.create).mockResolvedValue(
+      created as ReturnType<typeof makeAssignment>,
+    )
+    const caller = createCaller(createTestContext({}))
     const result = await caller.create({
       employeeId: EMP_ID,
       tariffId: TARIFF_ID,
@@ -199,81 +206,63 @@ describe("employeeTariffAssignments.create", () => {
     })
     expect(result.tariffId).toBe(TARIFF_ID)
     expect(result.overwriteBehavior).toBe("preserve_manual")
+    expect(employeeTariffAssignmentService.create).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        employeeId: EMP_ID,
+        tariffId: TARIFF_ID,
+        effectiveFrom: expect.any(Date),
+      }),
+      expect.objectContaining({ userId: expect.any(String) }),
+      expect.anything(), // dataScope
+    )
   })
 
-  it("rejects overlapping assignments", async () => {
-    const mockPrisma = {
-      employee: {
-        findFirst: vi.fn().mockResolvedValue({ id: EMP_ID }),
-      },
-      employeeTariffAssignment: {
-        count: vi.fn().mockResolvedValue(1), // overlap found
-      },
-    }
-    const caller = createCaller(createTestContext(mockPrisma))
+  it("rejects overlapping assignments from service error", async () => {
+    vi.mocked(employeeTariffAssignmentService.create).mockRejectedValue(
+      new employeeTariffAssignmentService.EmployeeTariffAssignmentConflictError(
+        "Overlapping tariff assignment exists",
+      ),
+    )
+    const caller = createCaller(createTestContext({}))
     await expect(
       caller.create({
         employeeId: EMP_ID,
         tariffId: TARIFF_ID,
         effectiveFrom: new Date("2025-01-01"),
-      })
+      }),
     ).rejects.toThrow("Overlapping tariff assignment exists")
   })
 
-  it("validates dates (effectiveTo >= effectiveFrom)", async () => {
-    const mockPrisma = {
-      employee: {
-        findFirst: vi.fn().mockResolvedValue({ id: EMP_ID }),
-      },
-    }
-    const caller = createCaller(createTestContext(mockPrisma))
+  it("rejects invalid date range from service error", async () => {
+    vi.mocked(employeeTariffAssignmentService.create).mockRejectedValue(
+      new employeeTariffAssignmentService.EmployeeTariffAssignmentValidationError(
+        "Effective to date cannot be before effective from date",
+      ),
+    )
+    const caller = createCaller(createTestContext({}))
     await expect(
       caller.create({
         employeeId: EMP_ID,
         tariffId: TARIFF_ID,
         effectiveFrom: new Date("2025-06-01"),
         effectiveTo: new Date("2025-01-01"),
-      })
-    ).rejects.toThrow(
-      "Effective to date cannot be before effective from date"
+      }),
+    ).rejects.toThrow("Effective to date cannot be before effective from date")
+  })
+
+  it("propagates employee-not-found error from service", async () => {
+    vi.mocked(employeeTariffAssignmentService.create).mockRejectedValue(
+      new employeeTariffAssignmentService.EmployeeNotFoundError(),
     )
-  })
-
-  it("defaults overwriteBehavior to preserve_manual", async () => {
-    const created = makeAssignment()
-    const mockPrisma = {
-      employee: {
-        findFirst: vi.fn().mockResolvedValue({ id: EMP_ID }),
-      },
-      employeeTariffAssignment: {
-        count: vi.fn().mockResolvedValue(0),
-        create: vi.fn().mockResolvedValue(created),
-      },
-    }
-    const caller = createCaller(createTestContext(mockPrisma))
-    await caller.create({
-      employeeId: EMP_ID,
-      tariffId: TARIFF_ID,
-      effectiveFrom: new Date("2025-01-01"),
-    })
-    const createCall =
-      mockPrisma.employeeTariffAssignment.create.mock.calls[0]![0]
-    expect(createCall.data.overwriteBehavior).toBe("preserve_manual")
-  })
-
-  it("verifies employee belongs to tenant", async () => {
-    const mockPrisma = {
-      employee: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-    }
-    const caller = createCaller(createTestContext(mockPrisma))
+    const caller = createCaller(createTestContext({}))
     await expect(
       caller.create({
         employeeId: EMP_ID,
         tariffId: TARIFF_ID,
         effectiveFrom: new Date("2025-01-01"),
-      })
+      }),
     ).rejects.toThrow("Employee not found")
   })
 })

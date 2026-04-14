@@ -20,7 +20,14 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
 
 describe("AVAILABLE_MODULES", () => {
   it("contains expected module keys", () => {
-    expect(AVAILABLE_MODULES).toEqual(["core", "crm", "billing", "warehouse", "inbound_invoices"])
+    expect(AVAILABLE_MODULES).toEqual([
+      "core",
+      "crm",
+      "billing",
+      "warehouse",
+      "inbound_invoices",
+      "payment_runs",
+    ])
   })
 })
 

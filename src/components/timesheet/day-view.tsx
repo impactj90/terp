@@ -2,11 +2,13 @@
 
 import { useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { CalendarDays, Sun } from 'lucide-react'
+import { CalendarDays, Sun, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEmployeeDayView } from '@/hooks'
+import { useEmployeeDayView, useCalculateDay } from '@/hooks'
 import { formatDate, formatDisplayDate, isToday, isWeekend } from '@/lib/time-utils'
 import { QueryError } from '@/components/ui/query-error'
 import { BookingList } from './booking-list'
@@ -43,6 +45,17 @@ export function DayView({
   const dailyValue = dayView.data?.dailyValue ?? null
   const dayPlan = dayView.data?.dayPlan ?? null
   const errors = dayView.data?.errors ?? null
+
+  const calculateDayMutation = useCalculateDay()
+  const handleRecalculate = async () => {
+    if (!employeeId) return
+    try {
+      await calculateDayMutation.mutateAsync({ employeeId, date: dateString })
+      toast.success(t('recalculateSuccess'))
+    } catch {
+      toast.error(t('recalculateError'))
+    }
+  }
 
   const isLoading = dayView.isLoading
 
@@ -159,16 +172,31 @@ export function DayView({
           </div>
         </div>
 
-        {dayPlan && (
-          <div className="text-sm text-muted-foreground sm:text-right pl-8 sm:pl-0 shrink-0">
-            <div>{dayPlan.name}</div>
-            {dailyValue?.targetTime !== undefined && dailyValue?.targetTime !== null && (
-              <div className="text-xs">
-                {t('targetLabel')} {Math.floor((dailyValue.targetTime ?? 0) / 60)}:{((dailyValue.targetTime ?? 0) % 60).toString().padStart(2, '0')}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-3 pl-8 sm:pl-0 shrink-0">
+          {dayPlan && (
+            <div className="text-sm text-muted-foreground sm:text-right">
+              <div>{dayPlan.name}</div>
+              {dailyValue?.targetTime !== undefined && dailyValue?.targetTime !== null && (
+                <div className="text-xs">
+                  {t('targetLabel')} {Math.floor((dailyValue.targetTime ?? 0) / 60)}:{((dailyValue.targetTime ?? 0) % 60).toString().padStart(2, '0')}
+                </div>
+              )}
+            </div>
+          )}
+          {isEditable && employeeId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRecalculate}
+              disabled={calculateDayMutation.isPending}
+              title={t('buttonRecalculate')}
+            >
+              <RefreshCw className={cn('h-4 w-4', calculateDayMutation.isPending && 'animate-spin')} />
+              <span className="sr-only">{t('buttonRecalculate')}</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Progress summary — the most important info, now at the top */}

@@ -380,10 +380,13 @@ describe("weekPlans.update", () => {
   })
 
   it("allows clearing a weekday to represent an off day", async () => {
-    vi.mocked(weekPlanService.update).mockResolvedValue({
-      id: WEEK_PLAN_ID,
+    const cleared = makeWeekPlan({
       mondayDayPlanId: null,
-    } as unknown as Awaited<ReturnType<typeof weekPlanService.update>>)
+      mondayDayPlan: null,
+    })
+    vi.mocked(weekPlanService.update).mockResolvedValue(
+      cleared as unknown as Awaited<ReturnType<typeof weekPlanService.update>>,
+    )
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
     const result = await caller.update({
