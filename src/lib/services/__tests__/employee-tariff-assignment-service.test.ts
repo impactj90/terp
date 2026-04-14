@@ -240,7 +240,7 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
       expect(genArgs.deleteOrphanedTariffPlansInRange).toBe(true)
     })
 
-    it("does NOT trigger sync when only notes change", async () => {
+    it("triggers sync even when only notes change (acts as re-sync escape hatch)", async () => {
       const existing = buildAssignment()
       const updated = buildAssignment({ notes: "Updated notes" })
       vi.mocked(repo.findById).mockResolvedValue(existing as Awaited<ReturnType<typeof repo.findById>>)
@@ -252,8 +252,11 @@ describe("employee-tariff-assignment-service post-commit sync", () => {
         notes: "Updated notes",
       })
 
-      expect(generateFromTariffMock).not.toHaveBeenCalled()
-      expect(triggerRecalcRangeMock).not.toHaveBeenCalled()
+      expect(generateFromTariffMock).toHaveBeenCalledOnce()
+      expect(triggerRecalcRangeMock).toHaveBeenCalledOnce()
+      // deleteOrphaned=true so a re-save cleans up stale plans
+      const genArgs = generateFromTariffMock.mock.calls[0]![0]
+      expect(genArgs.deleteOrphanedTariffPlansInRange).toBe(true)
     })
 
     it("triggers sync when effectiveTo changes from date to null", async () => {

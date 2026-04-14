@@ -420,47 +420,40 @@ export async function update(
     }).catch(err => console.error('[AuditLog] Failed:', err))
   }
 
-  // Post-commit: if date fields or the tariffId changed, regenerate day
-  // plans + recalc daily values for the union of the old and new ranges.
-  // Changes to notes/overwriteBehavior/isActive alone don't affect the
-  // generated plans, so skip the sync in that case.
-  const datesChanged =
-    (input.effectiveFrom !== undefined &&
-      +input.effectiveFrom !== +existing.effectiveFrom) ||
-    (input.effectiveTo !== undefined &&
-      (input.effectiveTo?.getTime() ?? null) !==
-        (existing.effectiveTo?.getTime() ?? null))
-
-  if (datesChanged) {
-    const today = new Date()
-    const oldRange = computeRecalcRange(
-      existing.effectiveFrom,
-      existing.effectiveTo,
-      today,
-    )
-    const newRange = computeRecalcRange(
-      updated.effectiveFrom,
-      updated.effectiveTo,
-      today,
-    )
-    const unionRange = {
-      from:
-        oldRange.from.getTime() < newRange.from.getTime()
-          ? oldRange.from
-          : newRange.from,
-      to:
-        oldRange.to.getTime() > newRange.to.getTime()
-          ? oldRange.to
-          : newRange.to,
-    }
-    await runPostCommitSync(
-      prisma,
-      tenantId,
-      existing.employeeId,
-      unionRange,
-      { deleteOrphaned: true },
-    )
+  // Post-commit: always regenerate day plans + recalc daily values for the
+  // union of the old and new ranges. Runs even when the user only edits
+  // notes or clicks save without changes — this doubles as a manual
+  // "re-sync" escape hatch for assignments that were created before this
+  // sync existed or for which an earlier sync errored out. Idempotent
+  // (upserts) and clamped to +/-2 months, so the cost is bounded.
+  const today = new Date()
+  const oldRange = computeRecalcRange(
+    existing.effectiveFrom,
+    existing.effectiveTo,
+    today,
+  )
+  const newRange = computeRecalcRange(
+    updated.effectiveFrom,
+    updated.effectiveTo,
+    today,
+  )
+  const unionRange = {
+    from:
+      oldRange.from.getTime() < newRange.from.getTime()
+        ? oldRange.from
+        : newRange.from,
+    to:
+      oldRange.to.getTime() > newRange.to.getTime()
+        ? oldRange.to
+        : newRange.to,
   }
+  await runPostCommitSync(
+    prisma,
+    tenantId,
+    existing.employeeId,
+    unionRange,
+    { deleteOrphaned: true },
+  )
 
   return updated
 }
