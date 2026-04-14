@@ -252,6 +252,7 @@ model Tenant {
   inboundInvoices                 InboundInvoice[]
   inboundInvoiceApprovalPolicies  InboundInvoiceApprovalPolicy[]
   inboundInvoiceApprovals         InboundInvoiceApproval[]
+  inboundInvoicePayments          InboundInvoicePayment[]
 
   // Payment Runs (SEPA pain.001.001.09)
   paymentRuns                     PaymentRun[]
@@ -575,6 +576,8 @@ model CrmBankAccount {
   tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   address CrmAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, iban], map: "crm_bank_accounts_tenant_iban_unique")
+  @@index([tenantId, iban], map: "idx_crm_bank_accounts_tenant_iban")
   @@index([addressId], map: "idx_crm_bank_accounts_address_id")
   @@index([tenantId], map: "idx_crm_bank_accounts_tenant_id")
   @@map("crm_bank_accounts")
@@ -1118,6 +1121,60 @@ model BillingPayment {
   @@index([tenantId, documentId])
   @@index([tenantId, date])
   @@map("billing_payments")
+}
+
+// -----------------------------------------------------------------------------
+// InboundInvoicePayment
+// -----------------------------------------------------------------------------
+// Migration: 20260426000000
+//
+// Payment record against an InboundInvoice (supplier side). Analog zu
+// BillingPayment, ohne isDiscount. Plan:
+// thoughts/shared/plans/2026-04-14-camt-preflight-items.md Phase 3a.
+
+enum InboundInvoicePaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+
+  @@map("inbound_invoice_payment_status")
+}
+
+enum InboundInvoicePaymentType {
+  CASH
+  BANK
+
+  @@map("inbound_invoice_payment_type")
+}
+
+enum InboundInvoicePaymentRowStatus {
+  ACTIVE
+  CANCELLED
+
+  @@map("inbound_invoice_payment_row_status")
+}
+
+model InboundInvoicePayment {
+  id            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String                         @map("tenant_id") @db.Uuid
+  invoiceId     String                         @map("invoice_id") @db.Uuid
+  date          DateTime                       @db.Timestamptz(6)
+  amount        Float
+  type          InboundInvoicePaymentType
+  status        InboundInvoicePaymentRowStatus @default(ACTIVE)
+  notes         String?
+  cancelledAt   DateTime?                      @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById String?                        @map("cancelled_by_id") @db.Uuid
+  createdAt     DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById   String?                        @map("created_by_id") @db.Uuid
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice InboundInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, date])
+  @@map("inbound_invoice_payments")
 }
 
 // -----------------------------------------------------------------------------
@@ -5767,6 +5824,9 @@ model InboundInvoice {
   notes               String?   @db.Text
   orderId             String?   @map("order_id") @db.Uuid
   costCenterId        String?   @map("cost_center_id") @db.Uuid
+  paymentStatus       InboundInvoicePaymentStatus @default(UNPAID) @map("payment_status")
+  paidAt              DateTime? @map("paid_at") @db.Timestamptz(6)
+  paidAmount          Float     @default(0) @map("paid_amount")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdBy           String?   @map("created_by") @db.Uuid
@@ -5782,12 +5842,14 @@ model InboundInvoice {
   lineItems        InboundInvoiceLineItem[]
   approvals        InboundInvoiceApproval[]
   paymentRunItems  PaymentRunItem[]
+  inboundPayments  InboundInvoicePayment[]
 
   @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
   @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
   @@index([tenantId, invoiceDate(sort: Desc)], map: "idx_inbound_invoices_tenant_date")
   @@index([tenantId, orderId], map: "idx_inbound_invoices_order")
   @@index([tenantId, costCenterId], map: "idx_inbound_invoices_cost_center")
+  @@index([tenantId, paymentStatus], map: "idx_inbound_invoices_tenant_payment_status")
   @@map("inbound_invoices")
 }
 

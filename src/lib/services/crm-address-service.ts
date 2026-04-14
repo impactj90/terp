@@ -1,4 +1,5 @@
 import type { PrismaClient, CrmAddressType } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
 import * as repo from "./crm-address-repository"
 import * as numberSeqService from "./number-sequence-service"
 import * as auditLog from "./audit-logs-service"
@@ -102,6 +103,39 @@ export class CrmBankAccountNotFoundError extends Error {
     super(message)
     this.name = "CrmBankAccountNotFoundError"
   }
+}
+
+export class CrmBankAccountDuplicateIbanError extends Error {
+  constructor(iban: string) {
+    super(`IBAN ${iban} ist bereits für eine andere Bankverbindung im selben Mandanten vergeben`)
+    this.name = "CrmBankAccountConflictError"
+  }
+}
+
+function isIbanUniqueViolation(err: Prisma.PrismaClientKnownRequestError): boolean {
+  const meta = err.meta as Record<string, unknown> | undefined
+  if (!meta) return false
+
+  const target = meta.target
+  if (typeof target === "string" && target.toLowerCase().includes("iban")) return true
+  if (Array.isArray(target) && target.some((t) => typeof t === "string" && t.toLowerCase().includes("iban"))) {
+    return true
+  }
+
+  // Prisma 7 with driver adapter surfaces the violation under meta.driverAdapterError.
+  const driverError = meta.driverAdapterError as Record<string, unknown> | undefined
+  const cause = driverError?.cause as Record<string, unknown> | undefined
+  const constraint = cause?.constraint as Record<string, unknown> | undefined
+  const fields = constraint?.fields
+  if (Array.isArray(fields) && fields.some((f) => typeof f === "string" && f.toLowerCase().includes("iban"))) {
+    return true
+  }
+  const originalMessage = cause?.originalMessage
+  if (typeof originalMessage === "string" && originalMessage.includes("crm_bank_accounts_tenant_iban_unique")) {
+    return true
+  }
+
+  return err.message.includes("crm_bank_accounts_tenant_iban_unique")
 }
 
 // --- Address Service Functions ---
@@ -756,15 +790,23 @@ export async function createBankAccount(
     throw new CrmAddressValidationError("IBAN is required")
   }
 
-  const created = await repo.createBankAccount(prisma, {
-    tenantId,
-    addressId: input.addressId,
-    iban,
-    bic: input.bic || null,
-    bankName: input.bankName || null,
-    accountHolder: input.accountHolder || null,
-    isDefault: input.isDefault ?? false,
-  })
+  let created
+  try {
+    created = await repo.createBankAccount(prisma, {
+      tenantId,
+      addressId: input.addressId,
+      iban,
+      bic: input.bic || null,
+      bankName: input.bankName || null,
+      accountHolder: input.accountHolder || null,
+      isDefault: input.isDefault ?? false,
+    })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && isIbanUniqueViolation(err)) {
+      throw new CrmBankAccountDuplicateIbanError(iban)
+    }
+    throw err
+  }
 
   if (audit) {
     await auditLog.log(prisma, {
@@ -812,7 +854,17 @@ export async function updateBankAccount(
     }
   }
 
-  const updated = await repo.updateBankAccount(prisma, tenantId, input.id, data)
+  let updated
+  try {
+    updated = await repo.updateBankAccount(prisma, tenantId, input.id, data)
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && isIbanUniqueViolation(err)) {
+      throw new CrmBankAccountDuplicateIbanError(
+        typeof data.iban === "string" ? data.iban : existing.iban
+      )
+    }
+    throw err
+  }
 
   if (audit) {
     const changes = auditLog.computeChanges(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, BANK_ACCOUNT_TRACKED_FIELDS)

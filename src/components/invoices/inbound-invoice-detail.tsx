@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { ArrowLeft, Save, Send, ChevronRight, ChevronLeft, Check, X, Download } from 'lucide-react'
+import { ArrowLeft, Save, Send, ChevronRight, ChevronLeft, Check, X, Download, Plus, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { InboundInvoiceStatusBadge } from './inbound-invoice-status-badge'
+import { InboundInvoicePaymentStatusBadge } from './inbound-invoice-payment-status-badge'
+import { InboundInvoicePaymentFormDialog } from './inbound-invoice-payment-form-dialog'
 import { InboundInvoiceLineItems, type LineItem } from './inbound-invoice-line-items'
 import { SupplierAssignmentDialog } from './supplier-assignment-dialog'
 import { InboundApprovalTimeline } from './inbound-approval-timeline'
@@ -32,6 +34,10 @@ import {
   usePendingApprovals,
   useExportDatev,
 } from '@/hooks/useInboundInvoices'
+import {
+  useInboundInvoicePayments,
+  useCancelInboundInvoicePayment,
+} from '@/hooks'
 
 interface Props {
   id: string
@@ -62,6 +68,11 @@ export function InboundInvoiceDetail({ id }: Props) {
   const [approveDialogOpen, setApproveDialogOpen] = React.useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false)
   const [rejectionReason, setRejectionReason] = React.useState('')
+  const [showPaymentForm, setShowPaymentForm] = React.useState(false)
+  const [cancelPaymentId, setCancelPaymentId] = React.useState<string | null>(null)
+
+  const { data: payments = [] } = useInboundInvoicePayments(id)
+  const cancelPaymentMutation = useCancelInboundInvoicePayment()
 
   // Form state (initialized from invoice data)
   const [form, setForm] = React.useState<Record<string, unknown>>({})
@@ -238,6 +249,21 @@ export function InboundInvoiceDetail({ id }: Props) {
           </p>
         </div>
         <InboundInvoiceStatusBadge status={invoice.status} />
+        {(invoice.status === 'APPROVED' || invoice.status === 'EXPORTED') && (
+          <InboundInvoicePaymentStatusBadge
+            status={(invoice as { paymentStatus?: string }).paymentStatus ?? 'UNPAID'}
+          />
+        )}
+        {(invoice as { paymentStatus?: string }).paymentStatus !== 'PAID' &&
+          (invoice.status === 'APPROVED' || invoice.status === 'EXPORTED') && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowPaymentForm(true)}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> {t('payments.recordPayment')}
+            </Button>
+          )}
         {isEditable && dirty && (
           <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
             <Save className="mr-1 h-3.5 w-3.5" /> {t('detail.saveButton')}
@@ -499,6 +525,61 @@ export function InboundInvoiceDetail({ id }: Props) {
                 />
               </CardContent>
             </Card>
+
+            {/* Payments */}
+            {(invoice.status === 'APPROVED' || invoice.status === 'EXPORTED') && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">{t('payments.cardTitle')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {payments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t('payments.noPayments')}
+                    </p>
+                  ) : (
+                    <ul className="space-y-2 text-sm">
+                      {payments.map((p: {
+                        id: string
+                        date: string | Date
+                        amount: number
+                        type: string
+                        status: string
+                      }) => (
+                        <li
+                          key={p.id}
+                          className={`flex items-center justify-between gap-2 ${
+                            p.status === 'CANCELLED' ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <span>
+                            {formatDate(p.date)} —{' '}
+                            {new Intl.NumberFormat('de-DE', {
+                              style: 'currency',
+                              currency: 'EUR',
+                            }).format(p.amount)}{' '}
+                            ({p.type === 'BANK'
+                              ? t('payments.typeBank')
+                              : t('payments.typeCash')})
+                          </span>
+                          {p.status === 'ACTIVE' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200"
+                              onClick={() => setCancelPaymentId(p.id)}
+                            >
+                              <XCircle className="mr-1 h-3.5 w-3.5" />
+                              {t('payments.cancelPayment')}
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
@@ -532,6 +613,43 @@ export function InboundInvoiceDetail({ id }: Props) {
         isLoading={approveMutation.isPending}
         onConfirm={handleApprove}
       />
+
+      {/* Payment Form Dialog */}
+      <InboundInvoicePaymentFormDialog
+        open={showPaymentForm}
+        onOpenChange={setShowPaymentForm}
+        invoiceId={id}
+        openAmount={Math.max(
+          0,
+          (invoice.totalGross != null ? Number(invoice.totalGross) : 0) -
+            ((invoice as { paidAmount?: number }).paidAmount ?? 0)
+        )}
+      />
+
+      {/* Cancel Payment Confirm Dialog */}
+      {cancelPaymentId && (
+        <ConfirmDialog
+          open={!!cancelPaymentId}
+          onOpenChange={(open: boolean) => { if (!open) setCancelPaymentId(null) }}
+          title={t('payments.cancelConfirmTitle')}
+          description={t('payments.cancelConfirmDescription')}
+          isLoading={cancelPaymentMutation.isPending}
+          onConfirm={async () => {
+            try {
+              await cancelPaymentMutation.mutateAsync({ id: cancelPaymentId })
+              toast.success(t('payments.toastCancelled'))
+            } catch (err) {
+              toast.error(
+                err instanceof Error
+                  ? err.message
+                  : t('payments.toastCancelFailed')
+              )
+            } finally {
+              setCancelPaymentId(null)
+            }
+          }}
+        />
+      )}
 
       {/* Reject Dialog */}
       {rejectDialogOpen && (

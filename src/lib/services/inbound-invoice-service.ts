@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, InboundInvoicePaymentStatus } from "@/generated/prisma/client"
 import * as repo from "./inbound-invoice-repository"
 import * as lineItemRepo from "./inbound-invoice-line-item-repository"
 import type { LineItemInput } from "./inbound-invoice-line-item-repository"
@@ -9,6 +9,7 @@ import * as storage from "@/lib/supabase/storage"
 import * as approvalService from "./inbound-invoice-approval-service"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as inboundPaymentService from "./inbound-invoice-payment-service"
 
 // --- Constants ---
 
@@ -188,7 +189,34 @@ export async function list(
   filters?: Parameters<typeof repo.findMany>[2],
   pagination?: Parameters<typeof repo.findMany>[3]
 ) {
-  return repo.findMany(prisma, tenantId, filters, pagination)
+  // TODO(2026-05-26): Phase 3c-Konsistenz-Check entfernen — nach 4 Wochen
+  // produktiver Laufzeit ohne consistency_warning-Audit-Entries diesen
+  // gesamten Block inkl. Env-Flag, Repo-Include und
+  // consistencyCheckPaymentStatus entfernen. Plan:
+  // thoughts/shared/plans/2026-04-14-camt-preflight-items.md Phase 3c.
+  const consistencyCheckEnabled =
+    process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK === "true"
+
+  const result = await repo.findMany(prisma, tenantId, filters, pagination, {
+    includePaymentRunItems: consistencyCheckEnabled,
+  })
+
+  if (consistencyCheckEnabled) {
+    for (const inv of result.items as Array<{
+      id: string
+      tenantId: string
+      paymentStatus: InboundInvoicePaymentStatus
+      paymentRunItems?: Array<{ paymentRun: { status: string } }>
+    }>) {
+      void inboundPaymentService
+        .consistencyCheckPaymentStatus(prisma, inv, inv.paymentRunItems ?? [])
+        .catch((err) =>
+          console.error("[ConsistencyCheck] failed:", err)
+        )
+    }
+  }
+
+  return result
 }
 
 export async function update(

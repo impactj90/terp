@@ -27,6 +27,7 @@ import * as numberSequenceService from "./number-sequence-service"
 import * as billingTenantConfigService from "./billing-tenant-config-service"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as inboundPaymentService from "./inbound-invoice-payment-service"
 
 export { getPaymentStatus } from "./payment-run-data-resolver"
 export type { PaymentStatus } from "./payment-run-data-resolver"
@@ -444,6 +445,11 @@ export async function setExported(
 
 /**
  * Transition EXPORTED → BOOKED. Idempotent on BOOKED.
+ *
+ * Wraps the status update + InboundInvoice payment-status flip in a
+ * single $transaction so a partial failure does not leave a BOOKED run
+ * pointing at UNPAID invoices (or vice versa).
+ * Plan: thoughts/shared/plans/2026-04-14-camt-preflight-items.md Phase 3c.
  */
 export async function markBooked(
   prisma: PrismaClient,
@@ -462,12 +468,27 @@ export async function markBooked(
     )
   }
 
-  const updated = await repo.updateStatus(prisma, tenantId, id, {
-    status: "BOOKED",
-    bookedAt: new Date(),
-    bookedBy: userId,
+  const bookedAt = new Date()
+  const invoiceIds = existing.items.map((i) => i.inboundInvoiceId)
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+    const u = await repo.updateStatus(txPrisma, tenantId, id, {
+      status: "BOOKED",
+      bookedAt,
+      bookedBy: userId,
+    })
+    if (!u) throw new PaymentRunNotFoundError(id)
+
+    await inboundPaymentService.markInvoicesPaidFromPaymentRun(
+      txPrisma,
+      tenantId,
+      invoiceIds,
+      bookedAt
+    )
+
+    return u
   })
-  if (!updated) throw new PaymentRunNotFoundError(id)
 
   if (audit) {
     await auditLog

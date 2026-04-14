@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import type { PrismaClient } from "@/generated/prisma/client"
 
 // --- Hoisted mocks ---
@@ -76,6 +76,17 @@ vi.mock("../audit-logs-service", () => ({
     }
     return Object.keys(changes).length > 0 ? changes : null
   }),
+}))
+
+const { mockConsistencyCheck } = vi.hoisted(() => ({
+  mockConsistencyCheck: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("../inbound-invoice-payment-service", () => ({
+  consistencyCheckPaymentStatus: mockConsistencyCheck,
+  // The service module also re-exports markInvoicesPaidFromPaymentRun
+  // and createPayment etc., but inbound-invoice-service only consumes
+  // consistencyCheckPaymentStatus, so this lean mock is sufficient.
 }))
 
 // --- Import after mocks ---
@@ -378,6 +389,55 @@ describe("inbound-invoice-service", () => {
       await expect(
         service.reopenExported(prisma, TENANT_ID, "inv-001")
       ).rejects.toThrow("only EXPORTED")
+    })
+  })
+
+  describe("list (consistency check wiring)", () => {
+    const ORIGINAL_FLAG = process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK
+
+    afterEach(() => {
+      if (ORIGINAL_FLAG === undefined) {
+        delete process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK
+      } else {
+        process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK = ORIGINAL_FLAG
+      }
+      mockConsistencyCheck.mockClear()
+    })
+
+    it("does not call consistencyCheckPaymentStatus when flag is unset", async () => {
+      delete process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK
+      mockFindMany.mockResolvedValue([
+        makeMockInvoice({ id: "i1", paymentStatus: "UNPAID" }),
+      ])
+      mockCount.mockResolvedValue(1)
+
+      await service.list(prisma, TENANT_ID, undefined, undefined)
+
+      expect(mockConsistencyCheck).not.toHaveBeenCalled()
+    })
+
+    it("invokes consistencyCheckPaymentStatus per invoice when flag is true", async () => {
+      process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK = "true"
+      mockFindMany.mockResolvedValue([
+        makeMockInvoice({
+          id: "i1",
+          paymentStatus: "UNPAID",
+          paymentRunItems: [{ paymentRun: { status: "BOOKED" } }],
+        }),
+        makeMockInvoice({
+          id: "i2",
+          paymentStatus: "PAID",
+          paymentRunItems: [],
+        }),
+      ])
+      mockCount.mockResolvedValue(2)
+
+      await service.list(prisma, TENANT_ID, undefined, undefined)
+
+      // Microtask flush so the void-prefixed promise chains run
+      await Promise.resolve()
+
+      expect(mockConsistencyCheck).toHaveBeenCalledTimes(2)
     })
   })
 })

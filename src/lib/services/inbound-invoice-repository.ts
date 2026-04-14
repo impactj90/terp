@@ -46,7 +46,8 @@ export async function findMany(
     dateFrom?: string
     dateTo?: string
   },
-  pagination?: { page?: number; pageSize?: number }
+  pagination?: { page?: number; pageSize?: number },
+  options?: { includePaymentRunItems?: boolean }
 ) {
   const page = pagination?.page ?? 1
   const pageSize = pagination?.pageSize ?? 25
@@ -74,6 +75,31 @@ export async function findMany(
       ...(filters.dateFrom ? { gte: new Date(filters.dateFrom) } : {}),
       ...(filters.dateTo ? { lte: new Date(filters.dateTo) } : {}),
     }
+  }
+
+  // TODO(2026-05-26): Phase 3c-Konsistenz-Check entfernen — sobald
+  // INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK gestrichen wird, fällt
+  // der `includePaymentRunItems`-Branch hier raus. Plan:
+  // thoughts/shared/plans/2026-04-14-camt-preflight-items.md Phase 3c.
+  if (options?.includePaymentRunItems) {
+    const [items, total] = await Promise.all([
+      prisma.inboundInvoice.findMany({
+        where,
+        include: {
+          supplier: { select: { id: true, number: true, company: true } },
+          order: { select: { id: true, code: true, name: true } },
+          costCenter: { select: { id: true, code: true, name: true } },
+          paymentRunItems: {
+            include: { paymentRun: { select: { status: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+      prisma.inboundInvoice.count({ where }),
+    ])
+    return { items, total }
   }
 
   const [items, total] = await Promise.all([

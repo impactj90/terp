@@ -52,6 +52,22 @@ export const serverEnv = {
   get platformOperatorTenantId() {
     return process.env.PLATFORM_OPERATOR_TENANT_ID ?? ''
   },
+  /**
+   * Phase 3c: Temporärer Konsistenz-Check zwischen dem gespeicherten
+   * `inbound_invoices.payment_status` und dem aus den PaymentRunItems
+   * abgeleiteten Wert. Auf staging zuerst, danach prod. Sobald 4 Wochen
+   * ohne `consistency_warning`-Audit-Entries vorbeigegangen sind, wird
+   * dieser Block + die zugehörige Service-/Repo-/Plan-Logik entfernt.
+   * Plan: thoughts/shared/plans/2026-04-14-camt-preflight-items.md
+   * Phase 3c. TODO(2026-05-26).
+   *
+   * Getter, weil der Service direkt aus `process.env` liest, falls der
+   * Check zur Laufzeit Noise produziert und ohne Restart deaktiviert
+   * werden soll.
+   */
+  get inboundInvoicePaymentConsistencyCheck() {
+    return process.env.INBOUND_INVOICE_PAYMENT_CONSISTENCY_CHECK === 'true'
+  },
 } as const
 
 // Client-side accessible

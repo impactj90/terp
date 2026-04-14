@@ -855,6 +855,13 @@ export {
   useCancelBillingPayment,
 } from './use-billing-payments'
 
+// Inbound Invoice Payments
+export {
+  useInboundInvoicePayments,
+  useCreateInboundInvoicePayment,
+  useCancelInboundInvoicePayment,
+} from './use-inbound-invoice-payments'
+
 // Billing Price Lists
 export {
   useBillingPriceLists,
