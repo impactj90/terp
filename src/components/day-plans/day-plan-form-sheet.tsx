@@ -112,11 +112,15 @@ const INITIAL_STATE: FormState = {
   isActive: true,
 }
 
-function validateForm(form: FormState, isEdit: boolean): string[] {
+function validateForm(
+  form: FormState,
+  isEdit: boolean,
+  t: ReturnType<typeof useTranslations<'adminDayPlans'>>,
+): string[] {
   const errors: string[] = []
-  if (!isEdit && !form.code.trim()) errors.push('Code is required')
-  if (!form.name.trim()) errors.push('Name is required')
-  if (form.regularHours <= 0) errors.push('Regular hours must be greater than 0')
+  if (!isEdit && !form.code.trim()) errors.push(t('validationCodeRequired'))
+  if (!form.name.trim()) errors.push(t('validationNameRequired'))
+  if (form.regularHours <= 0) errors.push(t('validationRegularHoursPositive'))
   return errors
 }
 
@@ -206,7 +210,7 @@ export function DayPlanFormSheet({
     e.preventDefault()
     setError(null)
 
-    const errors = validateForm(form, isEdit)
+    const errors = validateForm(form, isEdit, t)
     if (!isEdit && isReservedDayPlanCode(form.code)) {
       errors.push(t('validationCodeReserved'))
     }

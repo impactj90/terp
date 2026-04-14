@@ -97,13 +97,13 @@ export async function create(
     code: string
     name: string
     description?: string
-    mondayDayPlanId: string
-    tuesdayDayPlanId: string
-    wednesdayDayPlanId: string
-    thursdayDayPlanId: string
-    fridayDayPlanId: string
-    saturdayDayPlanId: string
-    sundayDayPlanId: string
+    mondayDayPlanId?: string | null
+    tuesdayDayPlanId?: string | null
+    wednesdayDayPlanId?: string | null
+    thursdayDayPlanId?: string | null
+    fridayDayPlanId?: string | null
+    saturdayDayPlanId?: string | null
+    sundayDayPlanId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -125,7 +125,8 @@ export async function create(
     throw new WeekPlanConflictError("Week plan code already exists")
   }
 
-  // Validate all 7 day plan IDs reference existing day plans in same tenant
+  // Validate provided day plan IDs reference existing day plans in same tenant
+  // (null/undefined entries represent off days and are skipped)
   await validateDayPlanIds(prisma, tenantId, [
     input.mondayDayPlanId,
     input.tuesdayDayPlanId,
@@ -144,13 +145,13 @@ export async function create(
     code,
     name,
     description,
-    mondayDayPlanId: input.mondayDayPlanId,
-    tuesdayDayPlanId: input.tuesdayDayPlanId,
-    wednesdayDayPlanId: input.wednesdayDayPlanId,
-    thursdayDayPlanId: input.thursdayDayPlanId,
-    fridayDayPlanId: input.fridayDayPlanId,
-    saturdayDayPlanId: input.saturdayDayPlanId,
-    sundayDayPlanId: input.sundayDayPlanId,
+    mondayDayPlanId: input.mondayDayPlanId ?? null,
+    tuesdayDayPlanId: input.tuesdayDayPlanId ?? null,
+    wednesdayDayPlanId: input.wednesdayDayPlanId ?? null,
+    thursdayDayPlanId: input.thursdayDayPlanId ?? null,
+    fridayDayPlanId: input.fridayDayPlanId ?? null,
+    saturdayDayPlanId: input.saturdayDayPlanId ?? null,
+    sundayDayPlanId: input.sundayDayPlanId ?? null,
     isActive: true,
   })
 
@@ -270,29 +271,12 @@ export async function update(
     data.isActive = input.isActive
   }
 
-  // Wrap update + completeness check in transaction for atomicity (Tier 3)
   const updated = await prisma.$transaction(async (tx) => {
     await repo.update(tx as unknown as PrismaClient, tenantId, input.id, data)
 
-    // Re-fetch with include to check completeness and return
     const plan = await repo.findByIdWithInclude(tx as unknown as PrismaClient, tenantId, input.id)
     if (!plan) {
       throw new WeekPlanNotFoundError()
-    }
-
-    // Verify completeness: all 7 days must have plans
-    if (
-      !plan.mondayDayPlanId ||
-      !plan.tuesdayDayPlanId ||
-      !plan.wednesdayDayPlanId ||
-      !plan.thursdayDayPlanId ||
-      !plan.fridayDayPlanId ||
-      !plan.saturdayDayPlanId ||
-      !plan.sundayDayPlanId
-    ) {
-      throw new WeekPlanValidationError(
-        "Week plan must have a day plan assigned for all 7 days"
-      )
     }
 
     return plan

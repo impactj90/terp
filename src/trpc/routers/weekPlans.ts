@@ -72,13 +72,13 @@ const createWeekPlanInputSchema = z.object({
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  mondayDayPlanId: z.string(),
-  tuesdayDayPlanId: z.string(),
-  wednesdayDayPlanId: z.string(),
-  thursdayDayPlanId: z.string(),
-  fridayDayPlanId: z.string(),
-  saturdayDayPlanId: z.string(),
-  sundayDayPlanId: z.string(),
+  mondayDayPlanId: z.string().nullable().optional(),
+  tuesdayDayPlanId: z.string().nullable().optional(),
+  wednesdayDayPlanId: z.string().nullable().optional(),
+  thursdayDayPlanId: z.string().nullable().optional(),
+  fridayDayPlanId: z.string().nullable().optional(),
+  saturdayDayPlanId: z.string().nullable().optional(),
+  sundayDayPlanId: z.string().nullable().optional(),
 })
 
 const updateWeekPlanInputSchema = z.object({
@@ -263,8 +263,9 @@ export const weekPlansRouter = createTRPCRouter({
    *
    * Validates code and name are non-empty after trimming.
    * Checks code uniqueness within tenant.
-   * All 7 day plan IDs must be provided (non-null) -- ZMI Section 11.2.
-   * Each day plan ID must reference an existing DayPlan in the same tenant.
+   * Day plan IDs are optional per day; a null/undefined day represents an
+   * off day (no shift scheduled for that weekday).
+   * Each provided day plan ID must reference an existing DayPlan in the same tenant.
    *
    * Requires: week_plans.manage permission
    */
@@ -305,7 +306,7 @@ export const weekPlansRouter = createTRPCRouter({
           })
         }
 
-        // Validate all 7 day plan IDs reference existing day plans in same tenant
+        // Validate provided day plan IDs reference existing day plans in same tenant
         await validateDayPlanIds(ctx.prisma, tenantId, [
           input.mondayDayPlanId,
           input.tuesdayDayPlanId,
@@ -325,13 +326,13 @@ export const weekPlansRouter = createTRPCRouter({
             code,
             name,
             description,
-            mondayDayPlanId: input.mondayDayPlanId,
-            tuesdayDayPlanId: input.tuesdayDayPlanId,
-            wednesdayDayPlanId: input.wednesdayDayPlanId,
-            thursdayDayPlanId: input.thursdayDayPlanId,
-            fridayDayPlanId: input.fridayDayPlanId,
-            saturdayDayPlanId: input.saturdayDayPlanId,
-            sundayDayPlanId: input.sundayDayPlanId,
+            mondayDayPlanId: input.mondayDayPlanId ?? null,
+            tuesdayDayPlanId: input.tuesdayDayPlanId ?? null,
+            wednesdayDayPlanId: input.wednesdayDayPlanId ?? null,
+            thursdayDayPlanId: input.thursdayDayPlanId ?? null,
+            fridayDayPlanId: input.fridayDayPlanId ?? null,
+            saturdayDayPlanId: input.saturdayDayPlanId ?? null,
+            sundayDayPlanId: input.sundayDayPlanId ?? null,
             isActive: true,
           },
         })
@@ -374,7 +375,7 @@ export const weekPlansRouter = createTRPCRouter({
    *
    * Supports partial updates. If code changes, checks uniqueness.
    * If any day plan IDs are provided, validates them.
-   * After update, verifies completeness (all 7 days must still have plans).
+   * Null day plan IDs are allowed and represent off days.
    *
    * Requires: week_plans.manage permission
    */
