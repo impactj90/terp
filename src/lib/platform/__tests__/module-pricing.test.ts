@@ -14,10 +14,17 @@ describe("platform module pricing", () => {
     expect(unitPrice).toBe(40)
   })
 
-  it("defines all 5 modules", () => {
+  it("defines all 6 modules", () => {
     const keys = Object.keys(MODULE_PRICES).sort()
     expect(keys).toEqual(
-      ["billing", "core", "crm", "inbound_invoices", "warehouse"].sort(),
+      [
+        "billing",
+        "core",
+        "crm",
+        "inbound_invoices",
+        "payment_runs",
+        "warehouse",
+      ].sort(),
     )
   })
 
