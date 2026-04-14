@@ -4,6 +4,7 @@ import { inboundInvoiceRouter } from "./inbound"
 import { approvalPolicyRouter } from "./approvalPolicy"
 import { emailLogRouter } from "./emailLog"
 import { paymentRunsRouter } from "./payment-runs"
+import { inboundInvoicePaymentsRouter } from "./inbound-invoice-payments"
 
 export const invoicesRouter = createTRPCRouter({
   imapConfig: imapConfigRouter,
@@ -11,4 +12,5 @@ export const invoicesRouter = createTRPCRouter({
   approvalPolicy: approvalPolicyRouter,
   emailLog: emailLogRouter,
   paymentRuns: paymentRunsRouter,
+  inboundPayments: inboundInvoicePaymentsRouter,
 })
