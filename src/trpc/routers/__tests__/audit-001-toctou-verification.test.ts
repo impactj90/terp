@@ -997,7 +997,7 @@ describe("AUDIT-001 Item 4: weekPlans update + completeness check atomicity", ()
     expect(result.name).toBe("Updated")
   })
 
-  it("AUDIT-001: weekPlan update rolls back on completeness failure", async () => {
+  it("AUDIT-001: weekPlan update allows clearing a weekday (off day)", async () => {
     const existing = makeWeekPlan()
     const incompleteAfterUpdate = makeWeekPlan({
       mondayDayPlanId: null,
@@ -1005,21 +1005,21 @@ describe("AUDIT-001 Item 4: weekPlans update + completeness check atomicity", ()
     })
     const mockPrisma = {
       weekPlan: {
-        // Flow: findByIdSimple (#1) -> inside tx: updateMany + refetch (#2) + findByIdWithInclude (#3)
-        // No dayPlan validation needed since mondayDayPlanId is null
         findFirst: vi.fn()
-          .mockResolvedValueOnce(existing)               // #1 findByIdSimple
-          .mockResolvedValueOnce(incompleteAfterUpdate)   // #2 tenantScopedUpdate refetch
-          .mockResolvedValueOnce(incompleteAfterUpdate),  // #3 findByIdWithInclude
+          .mockResolvedValueOnce(existing)
+          .mockResolvedValueOnce(incompleteAfterUpdate)
+          .mockResolvedValueOnce(incompleteAfterUpdate),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     }
     const ctx = createCtx(mockPrisma, [WEEK_PLANS_MANAGE])
     const caller = weekPlansCaller(ctx)
 
-    await expect(
-      caller.update({ id: WEEK_PLAN_ID, mondayDayPlanId: null })
-    ).rejects.toThrow("Week plan must have a day plan assigned for all 7 days")
+    const result = await caller.update({
+      id: WEEK_PLAN_ID,
+      mondayDayPlanId: null,
+    })
+    expect(result.mondayDayPlanId).toBeNull()
   })
 
   it("AUDIT-001: weekPlan update succeeds when all 7 days have plans after update", async () => {
@@ -1052,8 +1052,7 @@ describe("AUDIT-001 Item 4: weekPlans update + completeness check atomicity", ()
     expect(result.tuesdayDayPlanId).toBe(DAY_PLAN_ID) // unchanged
   })
 
-  it("AUDIT-001: weekPlan completeness check covers all 7 days", async () => {
-    // Test that setting each individual day to null causes a completeness failure
+  it("AUDIT-001: weekPlan update allows any weekday to be cleared independently", async () => {
     const dayFields = [
       "mondayDayPlanId",
       "tuesdayDayPlanId",
@@ -1066,26 +1065,23 @@ describe("AUDIT-001 Item 4: weekPlans update + completeness check atomicity", ()
 
     for (const field of dayFields) {
       const dayPlanField = field.replace("Id", "")
-      const incomplete = makeWeekPlan({ [field]: null, [dayPlanField]: null })
+      const cleared = makeWeekPlan({ [field]: null, [dayPlanField]: null })
       const existing = makeWeekPlan()
 
       const mockPrisma = {
         weekPlan: {
           findFirst: vi.fn()
-            .mockResolvedValueOnce(existing)   // #1 findByIdSimple
-            .mockResolvedValueOnce(incomplete)  // #2 tenantScopedUpdate refetch
-            .mockResolvedValueOnce(incomplete), // #3 findByIdWithInclude
+            .mockResolvedValueOnce(existing)
+            .mockResolvedValueOnce(cleared)
+            .mockResolvedValueOnce(cleared),
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
       }
       const ctx = createCtx(mockPrisma, [WEEK_PLANS_MANAGE])
       const caller = weekPlansCaller(ctx)
 
-      await expect(
-        caller.update({ id: WEEK_PLAN_ID, [field]: null })
-      ).rejects.toThrow(
-        "Week plan must have a day plan assigned for all 7 days"
-      )
+      const result = await caller.update({ id: WEEK_PLAN_ID, [field]: null })
+      expect(result[field as keyof typeof result]).toBeNull()
     }
   })
 

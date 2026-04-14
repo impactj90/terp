@@ -379,19 +379,18 @@ describe("weekPlans.update", () => {
     ).rejects.toThrow("Week plan not found")
   })
 
-  it("verifies completeness after update (all 7 days must have plans)", async () => {
-    vi.mocked(weekPlanService.update).mockRejectedValue(
-      new weekPlanService.WeekPlanValidationError(
-        "Week plan must have a day plan assigned for all 7 days"
-      )
-    )
+  it("allows clearing a weekday to represent an off day", async () => {
+    vi.mocked(weekPlanService.update).mockResolvedValue({
+      id: WEEK_PLAN_ID,
+      mondayDayPlanId: null,
+    } as unknown as Awaited<ReturnType<typeof weekPlanService.update>>)
     const mockPrisma = {}
     const caller = createCaller(createTestContext(mockPrisma))
-    await expect(
-      caller.update({ id: WEEK_PLAN_ID, mondayDayPlanId: null })
-    ).rejects.toThrow(
-      "Week plan must have a day plan assigned for all 7 days"
-    )
+    const result = await caller.update({
+      id: WEEK_PLAN_ID,
+      mondayDayPlanId: null,
+    })
+    expect(result.mondayDayPlanId).toBeNull()
   })
 
   it("validates day plan IDs when changed", async () => {

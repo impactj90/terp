@@ -82,25 +82,14 @@ const DAYS = [
   { key: 'sunday', labelKey: 'sunday' as const, shortKey: 'sun' as const, formKey: 'sundayDayPlanId' as const, weekend: true },
 ]
 
-function validateForm(form: FormState, isEdit: boolean): string[] {
+function validateForm(
+  form: FormState,
+  isEdit: boolean,
+  t: ReturnType<typeof useTranslations<'adminWeekPlans'>>,
+): string[] {
   const errors: string[] = []
-  if (!isEdit && !form.code.trim()) errors.push('Code is required')
-  if (!form.name.trim()) errors.push('Name is required')
-
-  // All 7 days must have a day plan assigned (per ZMI manual section 11.2)
-  const missingDays: string[] = []
-  if (!form.mondayDayPlanId) missingDays.push('Monday')
-  if (!form.tuesdayDayPlanId) missingDays.push('Tuesday')
-  if (!form.wednesdayDayPlanId) missingDays.push('Wednesday')
-  if (!form.thursdayDayPlanId) missingDays.push('Thursday')
-  if (!form.fridayDayPlanId) missingDays.push('Friday')
-  if (!form.saturdayDayPlanId) missingDays.push('Saturday')
-  if (!form.sundayDayPlanId) missingDays.push('Sunday')
-
-  if (missingDays.length > 0) {
-    errors.push(`Day plan required for: ${missingDays.join(', ')}`)
-  }
-
+  if (!isEdit && !form.code.trim()) errors.push(t('validationCodeRequired'))
+  if (!form.name.trim()) errors.push(t('validationNameRequired'))
   return errors
 }
 
@@ -178,7 +167,7 @@ export function WeekPlanFormSheet({
     e.preventDefault()
     setError(null)
 
-    const errors = validateForm(form, isEdit)
+    const errors = validateForm(form, isEdit, t)
     if (errors.length > 0) {
       setError(errors.join('. '))
       return
@@ -188,13 +177,13 @@ export function WeekPlanFormSheet({
       const fields = {
         name: form.name,
         description: form.description || undefined,
-        mondayDayPlanId: form.mondayDayPlanId!,
-        tuesdayDayPlanId: form.tuesdayDayPlanId!,
-        wednesdayDayPlanId: form.wednesdayDayPlanId!,
-        thursdayDayPlanId: form.thursdayDayPlanId!,
-        fridayDayPlanId: form.fridayDayPlanId!,
-        saturdayDayPlanId: form.saturdayDayPlanId!,
-        sundayDayPlanId: form.sundayDayPlanId!,
+        mondayDayPlanId: form.mondayDayPlanId,
+        tuesdayDayPlanId: form.tuesdayDayPlanId,
+        wednesdayDayPlanId: form.wednesdayDayPlanId,
+        thursdayDayPlanId: form.thursdayDayPlanId,
+        fridayDayPlanId: form.fridayDayPlanId,
+        saturdayDayPlanId: form.saturdayDayPlanId,
+        sundayDayPlanId: form.sundayDayPlanId,
         isActive: form.isActive,
       }
 
@@ -346,6 +335,8 @@ export function WeekPlanFormSheet({
   )
 }
 
+const OFF_DAY_VALUE = '__off__'
+
 function DayPlanSelector({
   dayLabelKey,
   value,
@@ -361,25 +352,26 @@ function DayPlanSelector({
 }) {
   const t = useTranslations('adminWeekPlans')
   const selectedPlan = value ? dayPlans.find((d) => d.id === value) : null
-  const hasError = !value
 
   return (
     <div
       className={cn(
         'flex items-center gap-4 p-3 border rounded-lg',
         isWeekend && 'bg-muted/30',
-        hasError && 'border-destructive/50'
       )}
     >
-      <Label className="w-24 text-sm font-medium shrink-0">{t(dayLabelKey as Parameters<typeof t>[0])} *</Label>
+      <Label className="w-24 text-sm font-medium shrink-0">{t(dayLabelKey as Parameters<typeof t>[0])}</Label>
       <Select
-        value={value ?? ''}
-        onValueChange={(v) => onChange(v || null)}
+        value={value ?? OFF_DAY_VALUE}
+        onValueChange={(v) => onChange(v === OFF_DAY_VALUE ? null : v)}
       >
-        <SelectTrigger className={cn('flex-1', hasError && 'border-destructive')}>
+        <SelectTrigger className="flex-1">
           <SelectValue placeholder={t('placeholderSelectDayPlan')} />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value={OFF_DAY_VALUE}>
+            <span className="text-muted-foreground italic">{t('off')}</span>
+          </SelectItem>
           {dayPlans.map((dp) => (
             <SelectItem key={dp.id} value={dp.id}>
               <div className="flex items-center gap-2">

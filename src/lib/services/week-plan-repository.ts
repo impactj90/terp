@@ -89,13 +89,13 @@ export async function create(
     code: string
     name: string
     description: string | null
-    mondayDayPlanId: string
-    tuesdayDayPlanId: string
-    wednesdayDayPlanId: string
-    thursdayDayPlanId: string
-    fridayDayPlanId: string
-    saturdayDayPlanId: string
-    sundayDayPlanId: string
+    mondayDayPlanId: string | null
+    tuesdayDayPlanId: string | null
+    wednesdayDayPlanId: string | null
+    thursdayDayPlanId: string | null
+    fridayDayPlanId: string | null
+    saturdayDayPlanId: string | null
+    sundayDayPlanId: string | null
     isActive: boolean
   }
 ) {
