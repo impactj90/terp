@@ -296,15 +296,11 @@ export const remindersRouter = createTRPCRouter({
     .input(idInput)
     .query(async ({ ctx, input }) => {
       try {
-        const result = await reminderRepo.findById(
+        return await reminderService.getReminderForView(
           ctx.prisma as unknown as PrismaClient,
           ctx.tenantId!,
           input.id
         )
-        if (!result) {
-          throw new reminderService.ReminderNotFoundError(input.id)
-        }
-        return result
       } catch (err) {
         handleServiceError(err)
       }

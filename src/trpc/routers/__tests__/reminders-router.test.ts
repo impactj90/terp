@@ -64,6 +64,7 @@ const mockReminderMarkSentManually = vi.fn()
 const mockReminderCancel = vi.fn()
 const mockReminderSetInvoiceBlock = vi.fn()
 const mockReminderSetCustomerBlock = vi.fn()
+const mockGetReminderForView = vi.fn()
 vi.mock("@/lib/services/reminder-service", () => {
   class MockReminderNotFoundError extends Error {
     constructor(id: string) {
@@ -80,6 +81,7 @@ vi.mock("@/lib/services/reminder-service", () => {
       mockReminderCancel(...args),
     setInvoiceBlock: (...args: unknown[]) => mockReminderSetInvoiceBlock(...args),
     setCustomerBlock: (...args: unknown[]) => mockReminderSetCustomerBlock(...args),
+    getReminderForView: (...args: unknown[]) => mockGetReminderForView(...args),
     ReminderNotFoundError: MockReminderNotFoundError,
   }
 })
@@ -372,14 +374,20 @@ describe("billing.reminders.listRuns / getRun", () => {
   })
 
   it("getRun returns reminder", async () => {
-    mockReminderRepoFindById.mockResolvedValue(reminderRow)
+    mockGetReminderForView.mockResolvedValue(reminderRow)
     const caller = createCaller(createTestContext())
     const result = await caller.getRun({ id: REMINDER_ID })
     expect(result!.number).toBe("MA-2026-001")
   })
 
   it("getRun maps NotFound to NOT_FOUND", async () => {
-    mockReminderRepoFindById.mockResolvedValue(null)
+    class NotFound extends Error {
+      constructor() {
+        super("not found")
+        this.name = "ReminderNotFoundError"
+      }
+    }
+    mockGetReminderForView.mockRejectedValue(new NotFound())
     const caller = createCaller(createTestContext())
     await expect(caller.getRun({ id: REMINDER_ID })).rejects.toThrow()
   })

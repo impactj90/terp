@@ -86,6 +86,16 @@ export function useCreateBillingPayment() {
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documents.getById.queryKey(),
       })
+      // A new payment may have changed the live open amount of an
+      // invoice that is referenced by a DRAFT reminder — the server
+      // refreshes on read, but the client cache (5min staleTime) has
+      // to be invalidated so the detail sheet actually re-fetches.
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.reminders.getRun.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.reminders.listRuns.queryKey(),
+      })
     },
   })
 }
@@ -113,6 +123,12 @@ export function useCancelBillingPayment() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.billing.documents.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.reminders.getRun.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.billing.reminders.listRuns.queryKey(),
       })
     },
   })

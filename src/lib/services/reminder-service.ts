@@ -328,6 +328,8 @@ export async function sendReminder(
   reminderId: string,
   sentById: string
 ) {
+  await refreshDraftReminder(prisma, tenantId, reminderId)
+
   const reminder = await prisma.reminder.findFirst({
     where: { id: reminderId, tenantId },
     include: {
@@ -477,6 +479,8 @@ export async function markSentManually(
   method: "letter" | "manual",
   sentById: string
 ) {
+  await refreshDraftReminder(prisma, tenantId, reminderId)
+
   const reminder = await prisma.reminder.findFirst({
     where: { id: reminderId, tenantId },
     include: {
@@ -580,6 +584,115 @@ async function areAnyItemsStillOpen(
     if (effectiveTotalGross - paid > 0.005) return true
   }
   return false
+}
+
+/**
+ * For DRAFT reminders: re-computes openAmountAtReminder per item live
+ * from BillingDocument.payments/childDocuments, removes fully-paid items
+ * and updates the header sums. No-op on SENT/CANCELLED reminders.
+ *
+ * Why: reminder items are snapshot at proposal time; customers may pay
+ * in the window between proposal and send. Running the refresh both on
+ * detail-load and on send guarantees the operator never mahns a paid
+ * invoice. levelAtReminder/daysOverdue/interestAmount stay historical.
+ */
+export async function refreshDraftReminder(
+  prisma: PrismaClient,
+  tenantId: string,
+  reminderId: string
+): Promise<void> {
+  const reminder = await prisma.reminder.findFirst({
+    where: { id: reminderId, tenantId },
+    include: { items: true },
+  })
+  if (!reminder) throw new ReminderNotFoundError(reminderId)
+  if (reminder.status !== "DRAFT") return
+
+  if (reminder.items.length === 0) return
+
+  const docIds = reminder.items.map((i) => i.billingDocumentId)
+  const docs = await prisma.billingDocument.findMany({
+    where: { tenantId, id: { in: docIds } },
+    include: { payments: true, childDocuments: true },
+  })
+  const docById = new Map(docs.map((d) => [d.id, d]))
+
+  const toDelete: string[] = []
+  const toUpdate: Array<{ id: string; openAmount: number }> = []
+
+  for (const item of reminder.items) {
+    const doc = docById.get(item.billingDocumentId)
+    if (!doc) {
+      toDelete.push(item.id)
+      continue
+    }
+    const creditNoteReduction = (doc.childDocuments ?? [])
+      .filter((cn) => cn.type === "CREDIT_NOTE" && cn.status !== "CANCELLED")
+      .reduce((sum, cn) => sum + cn.totalGross, 0)
+    const effectiveTotalGross = doc.totalGross - creditNoteReduction
+    const paidAmount = (doc.payments ?? [])
+      .filter((p) => p.status === "ACTIVE")
+      .reduce((sum, p) => sum + p.amount, 0)
+    const liveOpen = Math.max(0, effectiveTotalGross - paidAmount)
+    const rounded = round2(liveOpen)
+
+    if (rounded <= 0.005) {
+      toDelete.push(item.id)
+    } else if (Math.abs(rounded - item.openAmountAtReminder) > 0.005) {
+      toUpdate.push({ id: item.id, openAmount: rounded })
+    }
+  }
+
+  if (toDelete.length === 0 && toUpdate.length === 0) return
+
+  await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as unknown as PrismaClient
+    if (toDelete.length > 0) {
+      await txPrisma.reminderItem.deleteMany({
+        where: { id: { in: toDelete }, tenantId },
+      })
+    }
+    for (const u of toUpdate) {
+      await txPrisma.reminderItem.update({
+        where: { id: u.id },
+        data: { openAmountAtReminder: u.openAmount },
+      })
+    }
+
+    const remaining = await txPrisma.reminderItem.findMany({
+      where: { reminderId, tenantId },
+    })
+    const totalOpenAmount = round2(
+      remaining.reduce((s, i) => s + i.openAmountAtReminder, 0)
+    )
+    const totalInterest = round2(
+      remaining.reduce((s, i) => s + i.interestAmount, 0)
+    )
+    await txPrisma.reminder.update({
+      where: { id: reminderId },
+      data: {
+        totalOpenAmount,
+        totalInterest,
+        totalDue: round2(totalOpenAmount + totalInterest + reminder.totalFees),
+      },
+    })
+  })
+}
+
+/**
+ * Detail-view load path for reminders. For DRAFT reminders the open
+ * amounts are refreshed before returning so the operator always sees
+ * the live numbers. For SENT/CANCELLED reminders it's just a read.
+ */
+export async function getReminderForView(
+  prisma: PrismaClient,
+  tenantId: string,
+  reminderId: string
+) {
+  await refreshDraftReminder(prisma, tenantId, reminderId)
+  const result = await repo.findById(prisma, tenantId, reminderId)
+  if (!result) throw new ReminderNotFoundError(reminderId)
+  return result
 }
 
 // --- Dunning Blocks ---
