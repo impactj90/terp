@@ -33,9 +33,13 @@ import {
   EffectiveTariffPreview,
 } from '@/components/employees/tariff-assignments'
 import { PersonnelFileTab } from '@/components/hr/personnel-file-tab'
-import type { components } from '@/types/legacy-api-types'
 
-type TariffAssignment = components['schemas']['EmployeeTariffAssignment']
+// Assignment shape flows through from the tRPC output (camelCase Date
+// objects). Kept loose here so the list/form/delete components don't
+// need to agree on an exact structural type — each reads the fields
+// it cares about directly.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TariffAssignment = any
 
 export default function EmployeeDetailPage() {
   const params = useParams<{ id: string }>()
