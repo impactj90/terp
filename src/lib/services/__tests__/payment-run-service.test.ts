@@ -28,10 +28,15 @@ const auditMock = vi.hoisted(() => ({
   computeChanges: vi.fn().mockReturnValue(null),
 }))
 
+const inboundPaymentMock = vi.hoisted(() => ({
+  markInvoicesPaidFromPaymentRun: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock("../payment-run-repository", () => repoMock)
 vi.mock("../billing-tenant-config-service", () => configMock)
 vi.mock("../number-sequence-service", () => numberSequenceMock)
 vi.mock("../audit-logs-service", () => auditMock)
+vi.mock("../inbound-invoice-payment-service", () => inboundPaymentMock)
 
 import {
   PaymentRunInvalidStateError,
@@ -53,8 +58,12 @@ const fakePrisma = {
   inboundInvoice: {
     findMany: vi.fn(),
   },
-  $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({})),
 } as unknown as PrismaClient
+;(fakePrisma as unknown as {
+  $transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
+}).$transaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+  fn(fakePrisma)
+)
 
 function run(
   status: string,
@@ -199,6 +208,50 @@ describe("markBooked", () => {
     await expect(
       markBooked(fakePrisma, TENANT_ID, RUN_ID, USER_ID)
     ).rejects.toBeInstanceOf(PaymentRunNotFoundError)
+  })
+
+  it("calls markInvoicesPaidFromPaymentRun with the linked invoice ids", async () => {
+    repoMock.findById.mockResolvedValue(
+      run("EXPORTED", {
+        items: [
+          { inboundInvoiceId: "inv-1" },
+          { inboundInvoiceId: "inv-2" },
+        ],
+      })
+    )
+    repoMock.updateStatus.mockResolvedValue(
+      run("BOOKED", { bookedAt: new Date(), bookedBy: USER_ID })
+    )
+    await markBooked(fakePrisma, TENANT_ID, RUN_ID, USER_ID)
+
+    expect(inboundPaymentMock.markInvoicesPaidFromPaymentRun).toHaveBeenCalledTimes(1)
+    expect(inboundPaymentMock.markInvoicesPaidFromPaymentRun).toHaveBeenCalledWith(
+      fakePrisma,
+      TENANT_ID,
+      ["inv-1", "inv-2"],
+      expect.any(Date)
+    )
+  })
+
+  it("rolls back status update when markInvoicesPaidFromPaymentRun throws", async () => {
+    repoMock.findById.mockResolvedValue(
+      run("EXPORTED", { items: [{ inboundInvoiceId: "inv-1" }] })
+    )
+    repoMock.updateStatus.mockResolvedValue(run("BOOKED"))
+    inboundPaymentMock.markInvoicesPaidFromPaymentRun.mockRejectedValueOnce(
+      new Error("simulated db failure")
+    )
+
+    // Make the $transaction wrapper actually propagate rejections —
+    // the default fakePrisma mock just runs the callback and returns
+    // its result, so any thrown error will surface to the caller.
+    await expect(
+      markBooked(fakePrisma, TENANT_ID, RUN_ID, USER_ID)
+    ).rejects.toThrow("simulated db failure")
+
+    // Audit log should NOT have been written — markBooked only logs
+    // after the transaction commits.
+    expect(auditMock.log).not.toHaveBeenCalled()
   })
 })
 
