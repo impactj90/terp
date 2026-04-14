@@ -257,6 +257,12 @@ model Tenant {
   // Payment Runs (SEPA pain.001.001.09)
   paymentRuns                     PaymentRun[]
 
+  // Bank Statements (CAMT.053)
+  bankStatements                 BankStatement[]
+  bankTransactions               BankTransaction[]
+  billingDocumentBankAllocations BillingDocumentBankAllocation[]
+  inboundInvoiceBankAllocations  InboundInvoiceBankAllocation[]
+
   // Mahnwesen (Dunning)
   reminderSettings  ReminderSettings?
   reminderTemplates ReminderTemplate[]
@@ -506,6 +512,7 @@ model CrmAddress {
   supplierInvoices         WhSupplierInvoice[]
   inboundInvoices          InboundInvoice[]
   reminders                Reminder[]
+  bankTransactionSuggestions BankTransaction[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -924,6 +931,7 @@ model BillingDocument {
   billingServiceCases BillingServiceCase[]
   payments            BillingPayment[]
   reminderItems       ReminderItem[]
+  bankAllocations     BillingDocumentBankAllocation[]
 
   @@unique([tenantId, number])
   @@index([tenantId, type])
@@ -1114,9 +1122,11 @@ model BillingPayment {
   createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById   String?               @map("created_by_id") @db.Uuid
+  bankAllocationId String?            @map("bank_allocation_id") @db.Uuid
 
-  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  document BillingDocument @relation(fields: [documentId], references: [id])
+  tenant          Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document        BillingDocument                 @relation(fields: [documentId], references: [id])
+  bankAllocation  BillingDocumentBankAllocation[]
 
   @@index([tenantId, documentId])
   @@index([tenantId, date])
@@ -1168,9 +1178,11 @@ model InboundInvoicePayment {
   createdAt     DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById   String?                        @map("created_by_id") @db.Uuid
+  bankAllocationId String?                     @map("bank_allocation_id") @db.Uuid
 
-  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice InboundInvoice @relation(fields: [invoiceId], references: [id])
+  tenant          Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice         InboundInvoice                 @relation(fields: [invoiceId], references: [id])
+  bankAllocation  InboundInvoiceBankAllocation[]
 
   @@index([tenantId, invoiceId])
   @@index([tenantId, date])
@@ -5843,6 +5855,7 @@ model InboundInvoice {
   approvals        InboundInvoiceApproval[]
   paymentRunItems  PaymentRunItem[]
   inboundPayments  InboundInvoicePayment[]
+  bankAllocations  InboundInvoiceBankAllocation[]
 
   @@index([tenantId, status], map: "idx_inbound_invoices_tenant_status")
   @@index([tenantId, supplierId], map: "idx_inbound_invoices_tenant_supplier")
@@ -6396,4 +6409,132 @@ model PaymentRunItem {
   @@index([tenantId, paymentRunId], map: "idx_pri_tenant_run")
   @@index([tenantId, inboundInvoiceId], map: "idx_pri_inbound_invoice")
   @@map("payment_run_items")
+}
+
+// -----------------------------------------------------------------------------
+// BankStatement + BankTransaction + Allocations (CAMT.053)
+// -----------------------------------------------------------------------------
+// Migration: 20260427000000 + 20260427000001
+
+enum BankTransactionDirection {
+  CREDIT
+  DEBIT
+
+  @@map("bank_transaction_direction")
+}
+
+enum BankTransactionStatus {
+  unmatched
+  matched
+  ignored
+
+  @@map("bank_transaction_status")
+}
+
+model BankStatement {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  fileName        String   @map("file_name") @db.VarChar(255)
+  sha256Hash      String   @map("sha256_hash") @db.Char(64)
+  xmlStoragePath  String   @map("xml_storage_path")
+  accountIban     String   @map("account_iban") @db.VarChar(34)
+  statementId     String   @map("statement_id") @db.VarChar(255)
+  periodFrom      DateTime @map("period_from") @db.Timestamptz(6)
+  periodTo        DateTime @map("period_to") @db.Timestamptz(6)
+  openingBalance  Float    @map("opening_balance")
+  closingBalance  Float    @map("closing_balance")
+  currency        String   @db.Char(3)
+  importedAt      DateTime @default(now()) @map("imported_at") @db.Timestamptz(6)
+  importedById    String?  @map("imported_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions BankTransaction[]
+
+  @@unique([tenantId, sha256Hash], map: "uq_bank_statements_tenant_hash")
+  @@index([tenantId, importedAt(sort: Desc)], map: "idx_bank_statements_tenant_imported_at")
+  @@map("bank_statements")
+}
+
+model BankTransaction {
+  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String                   @map("tenant_id") @db.Uuid
+  statementId         String                   @map("statement_id") @db.Uuid
+  bookingDate         DateTime                 @map("booking_date") @db.Timestamptz(6)
+  valueDate           DateTime                 @map("value_date") @db.Timestamptz(6)
+  amount              Float
+  currency            String                   @db.Char(3)
+  direction           BankTransactionDirection
+  counterpartyIban    String?                  @map("counterparty_iban") @db.VarChar(34)
+  counterpartyName    String?                  @map("counterparty_name")
+  counterpartyBic     String?                  @map("counterparty_bic") @db.VarChar(11)
+  remittanceInfo      String?                  @map("remittance_info")
+  endToEndId          String?                  @map("end_to_end_id") @db.VarChar(255)
+  mandateId           String?                  @map("mandate_id") @db.VarChar(255)
+  bankReference       String?                  @map("bank_reference") @db.VarChar(255)
+  bankTxCode          Json?                    @map("bank_tx_code")
+  status              BankTransactionStatus    @default(unmatched)
+  suggestedAddressId  String?                  @map("suggested_address_id") @db.Uuid
+  ignoredAt           DateTime?                @map("ignored_at") @db.Timestamptz(6)
+  ignoredById         String?                  @map("ignored_by_id") @db.Uuid
+  ignoredReason       String?                  @map("ignored_reason")
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant             Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  statement          BankStatement                   @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  suggestedAddress   CrmAddress?                     @relation(fields: [suggestedAddressId], references: [id], onDelete: SetNull)
+  billingAllocations BillingDocumentBankAllocation[]
+  inboundAllocations InboundInvoiceBankAllocation[]
+
+  @@index([tenantId, status], map: "idx_bank_transactions_tenant_status")
+  @@index([tenantId, bookingDate], map: "idx_bank_transactions_tenant_booking_date")
+  @@index([tenantId, counterpartyIban], map: "idx_bank_transactions_tenant_counterparty_iban")
+  @@index([tenantId, statementId], map: "idx_bank_transactions_tenant_statement")
+  @@map("bank_transactions")
+}
+
+model BillingDocumentBankAllocation {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  bankTransactionId String   @map("bank_transaction_id") @db.Uuid
+  billingDocumentId String   @map("billing_document_id") @db.Uuid
+  billingPaymentId  String?  @map("billing_payment_id") @db.Uuid
+  amount            Float
+  autoMatched       Boolean  @default(false) @map("auto_matched")
+  matchedAt         DateTime @default(now()) @map("matched_at") @db.Timestamptz(6)
+  matchedById       String?  @map("matched_by_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bankTransaction BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+  billingDocument BillingDocument @relation(fields: [billingDocumentId], references: [id])
+  billingPayment  BillingPayment? @relation(fields: [billingPaymentId], references: [id])
+
+  @@index([tenantId, bankTransactionId], map: "idx_billing_doc_bank_alloc_tenant_tx")
+  @@index([tenantId, billingDocumentId], map: "idx_billing_doc_bank_alloc_tenant_doc")
+  @@map("billing_document_bank_allocations")
+}
+
+model InboundInvoiceBankAllocation {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  bankTransactionId       String   @map("bank_transaction_id") @db.Uuid
+  inboundInvoiceId        String   @map("inbound_invoice_id") @db.Uuid
+  inboundInvoicePaymentId String?  @map("inbound_invoice_payment_id") @db.Uuid
+  amount                  Float
+  autoMatched             Boolean  @default(false) @map("auto_matched")
+  matchedAt               DateTime @default(now()) @map("matched_at") @db.Timestamptz(6)
+  matchedById             String?  @map("matched_by_id") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bankTransaction       BankTransaction        @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+  inboundInvoice        InboundInvoice         @relation(fields: [inboundInvoiceId], references: [id])
+  inboundInvoicePayment InboundInvoicePayment? @relation(fields: [inboundInvoicePaymentId], references: [id])
+
+  @@index([tenantId, bankTransactionId], map: "idx_inbound_inv_bank_alloc_tenant_tx")
+  @@index([tenantId, inboundInvoiceId], map: "idx_inbound_inv_bank_alloc_tenant_inv")
+  @@map("inbound_invoice_bank_allocations")
 }
