@@ -366,6 +366,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("payment_runs.book", "payment_runs", "book", "Mark payment run as booked"),
   p("payment_runs.cancel", "payment_runs", "cancel", "Cancel payment runs"),
 
+  // Bank Statements (CAMT.053)
+  p("bank_transactions.view", "bank_transactions", "view", "View bank transactions"),
+  p("bank_transactions.import", "bank_transactions", "import", "Import CAMT.053 bank statements"),
+  p("bank_transactions.match", "bank_transactions", "match", "Match bank transactions to invoices"),
+  p("bank_transactions.unmatch", "bank_transactions", "unmatch", "Cancel bank transaction matches"),
+  p("bank_transactions.ignore", "bank_transactions", "ignore", "Ignore bank transactions"),
+
   // Email IMAP
   p("email_imap.view", "email_imap", "view", "View IMAP configuration"),
   p("email_imap.manage", "email_imap", "manage", "Manage IMAP configuration"),

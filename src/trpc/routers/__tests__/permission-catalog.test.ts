@@ -18,8 +18,17 @@ describe("permission-catalog", () => {
     )
   })
 
-  it("contains exactly 169 permissions", () => {
-    expect(ALL_PERMISSIONS).toHaveLength(169)
+  it("contains exactly 174 permissions", () => {
+    expect(ALL_PERMISSIONS).toHaveLength(174)
+  })
+
+  it("includes all 5 bank_transactions permissions", () => {
+    const keys = ALL_PERMISSIONS.map((p) => p.key)
+    expect(keys).toContain("bank_transactions.view")
+    expect(keys).toContain("bank_transactions.import")
+    expect(keys).toContain("bank_transactions.match")
+    expect(keys).toContain("bank_transactions.unmatch")
+    expect(keys).toContain("bank_transactions.ignore")
   })
 
   it("all permissions have unique IDs", () => {

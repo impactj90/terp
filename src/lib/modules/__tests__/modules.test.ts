@@ -27,6 +27,7 @@ describe("AVAILABLE_MODULES", () => {
       "warehouse",
       "inbound_invoices",
       "payment_runs",
+      "bank_statements",
     ])
   })
 })

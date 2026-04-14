@@ -90,6 +90,11 @@ public = false
 file_size_limit = "1MiB"
 allowed_mime_types = ["application/xml", "text/xml"]
 
+[storage.buckets.bank-statements]
+public = false
+file_size_limit = "5MiB"
+allowed_mime_types = ["application/xml", "text/xml"]
+
 [auth]
 enabled = true
 # Base URL the app is served from. Used by auth.admin.generateLink() as the
