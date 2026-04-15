@@ -341,18 +341,19 @@ ON CONFLICT (id) DO NOTHING;
 -- Admin(40h)->TAR-40H, User(40h)->TAR-FLEX, Maria(20h)->TAR-20H,
 -- Thomas(40h)->TAR-40H, Anna(35h)->TAR-38H
 
+-- Deterministische IDs (eine ETA pro Mitarbeiter) damit der Seed idempotent bleibt.
 INSERT INTO employee_tariff_assignments (id, tenant_id, employee_id, tariff_id, effective_from, effective_to, overwrite_behavior, is_active, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000701', '2020-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000703', '2021-03-15', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000704', '2022-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000701', '2024-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000702', '2015-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000703', '2023-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000701', '2023-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000702', '2022-03-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000701', '2024-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000704', '2025-02-01', NULL, 'preserve_manual', true, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000019011', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000701', '2020-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019012', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000703', '2021-03-15', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019013', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000704', '2022-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019014', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000701', '2024-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019015', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000702', '2015-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019016', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000703', '2023-01-15', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019017', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000701', '2023-06-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019018', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000702', '2022-03-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000019019', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000701', '2024-09-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001901a', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000704', '2025-02-01', NULL, 'preserve_manual', true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Also set tariff_id on the employees directly
@@ -1011,18 +1012,24 @@ ON CONFLICT (employee_id, year, month) DO NOTHING;
 -- 19. Vacation balances (2026)
 -- =============================================================
 
+-- taken-Spalte spiegelt genehmigte U/UH-Tage aus Sektion 20 + C2/C2b wider
 INSERT INTO vacation_balances (id, tenant_id, employee_id, year, entitlement, carryover, adjustments, taken, created_at, updated_at)
 VALUES
-  ('00000000-0000-0000-0000-000000016000', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 2026, 30.00, 3.00, 0.00, 3.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016001', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', 2026, 28.00, 5.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016002', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016003', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', 2026, 30.00, 0.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016004', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', 2026, 32.00, 4.00, 0.00, 0.50, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016005', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', 2026, 30.00, 2.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016000', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 2026, 30.00, 3.00, 0.00, 5.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016001', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000012', 2026, 28.00, 5.00, 0.00, 3.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016002', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000013', 2026, 15.00, 2.00, 0.00, 3.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016003', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000014', 2026, 30.00, 0.00, 0.00, 2.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016004', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015', 2026, 32.00, 4.00, 0.00, 5.50, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016005', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000016', 2026, 30.00, 2.00, 0.00, 6.00, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000016006', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', 2026, 30.00, 5.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016008', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', 2026, 30.00, 0.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000016007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', 2026, 30.00, 5.00, 0.00, 1.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016008', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', 2026, 30.00, 0.00, 0.00, 1.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000016009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW()),
+  -- Zusaetzliche Mitarbeiter (Klaus, Andrea, Mehmet, Sandra) — vorher ohne Balance
+  ('00000000-0000-0000-0000-00000001600a', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 2026, 30.00, 4.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600b', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600c', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 2026, 30.00, 2.00, 0.00, 4.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600d', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', 2026, 30.00, 5.00, 0.00, 0.00, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
@@ -1607,6 +1614,85 @@ BEGIN
     (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 12, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
     (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 13, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW()),
     (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000016', CURRENT_DATE + 14, at_u, 1.00, 'approved', '00000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 days', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+END $$;
+
+-- =============================================================
+-- C2b. Additional April 2026 absences for HR demo
+-- Fills out all 14 employees with current/upcoming Urlaub & Krank
+-- so the Personalabteilung dashboard is populated on 2026-04-15.
+-- =============================================================
+DO $$
+DECLARE
+  at_u  uuid;
+  at_uh uuid;
+  at_k  uuid;
+  at_kk uuid;
+  t_id  uuid := '10000000-0000-0000-0000-000000000001';
+  approver_id uuid := '00000000-0000-0000-0000-000000000001';
+BEGIN
+  SELECT id INTO at_u  FROM absence_types WHERE code = 'U'  LIMIT 1;
+  SELECT id INTO at_uh FROM absence_types WHERE code = 'UH' LIMIT 1;
+  SELECT id INTO at_k  FROM absence_types WHERE code = 'K'  LIMIT 1;
+  SELECT id INTO at_kk FROM absence_types WHERE code = 'KK' LIMIT 1;
+
+  -- Admin (011): sick day early April (approved)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000011', '2026-04-08', at_k, 1.00, 'approved', approver_id, '2026-04-08 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Markus (017): sick Apr 2-3 (approved)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000017', '2026-04-02', at_k, 1.00, 'approved', approver_id, '2026-04-02 08:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000017', '2026-04-03', at_k, 1.00, 'approved', approver_id, '2026-04-02 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Stefan (019): approved 1-day vacation Apr 10 (Fri)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000019', '2026-04-10', at_u, 1.00, 'approved', approver_id, '2026-04-01 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Petra (01a): child sick Apr 9 (approved)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001a', '2026-04-09', at_kk, 1.00, 'approved', approver_id, '2026-04-09 07:30+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Klaus (01b): sick today (approved this morning)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001b', '2026-04-15', at_k, 1.00, 'approved', approver_id, '2026-04-15 07:15+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Andrea (01c): pending vacation Apr 20-22
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-20', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-21', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-22', at_u, 1.00, 'pending', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Mehmet (01d): approved vacation Apr 27-30 (Mon-Thu)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-27', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-28', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-29', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-30', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Sandra (01e): sick yesterday (approved, returned today)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001e', '2026-04-14', at_k, 1.00, 'approved', approver_id, '2026-04-14 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Julia (018): pending half-day vacation afternoon Apr 22
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, half_day_period, status, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000018', '2026-04-22', at_uh, 0.50, 'afternoon', 'pending', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Anna (015): pending vacation Apr 27 - May 1 (Mon-Fri, incl. 01.05 feiertag)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-04-27', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-04-28', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-04-29', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-000000000015', '2026-04-30', at_u, 1.00, 'pending', NOW(), NOW())
   ON CONFLICT (id) DO NOTHING;
 END $$;
 
@@ -3061,13 +3147,13 @@ BEGIN
     WHERE id = '00000000-0000-0000-0000-00000000001e' AND tenant_id = t_id;
 END $$;
 
--- S3-7. Employee tariff assignments
+-- S3-7. Employee tariff assignments (deterministische IDs fuer Idempotenz)
 INSERT INTO employee_tariff_assignments (id, tenant_id, employee_id, tariff_id, effective_from, effective_to, overwrite_behavior, is_active, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW())
+  ('00000000-0000-0000-0000-00000001901b', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001901c', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001901d', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001901e', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', '00000000-0000-0000-0000-000000000707', '2026-01-01', NULL, 'preserve_manual', true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- S3-8. Employee day plans + shifts (rolling 3-week schedule from Jan 5 -> CURRENT_DATE + 90)
@@ -3812,6 +3898,23 @@ DECLARE
   e16 uuid := 'e1000000-0000-4000-a000-000000000016';
   e17 uuid := 'e1000000-0000-4000-a000-000000000017';
   e18 uuid := 'e1000000-0000-4000-a000-000000000018';
+  -- Demo entries (2026-04-15 as "today"):
+  --   e19-e23 = bereits abgelaufen (red "Abgelaufen"-Badge)
+  --   e24-e27 = laeuft in den naechsten 30 Tagen ab (yellow "Laeuft bald ab")
+  --   e28     = Reminder faellig innerhalb naechster 14 Tage
+  --   e29-e30 = Abmahnungen (WARNINGS Kategorie, bisher leer)
+  e19 uuid := 'e1000000-0000-4000-a000-000000000019';
+  e20 uuid := 'e1000000-0000-4000-a000-00000000001a';
+  e21 uuid := 'e1000000-0000-4000-a000-00000000001b';
+  e22 uuid := 'e1000000-0000-4000-a000-00000000001c';
+  e23 uuid := 'e1000000-0000-4000-a000-00000000001d';
+  e24 uuid := 'e1000000-0000-4000-a000-00000000001e';
+  e25 uuid := 'e1000000-0000-4000-a000-00000000001f';
+  e26 uuid := 'e1000000-0000-4000-a000-000000000020';
+  e27 uuid := 'e1000000-0000-4000-a000-000000000021';
+  e28 uuid := 'e1000000-0000-4000-a000-000000000022';
+  e29 uuid := 'e1000000-0000-4000-a000-000000000023';
+  e30 uuid := 'e1000000-0000-4000-a000-000000000024';
 
   -- Attachment IDs
   a1  uuid := 'e2000000-0000-4000-a000-000000000001';
@@ -3917,6 +4020,44 @@ BEGIN
 
     -- Medical
     (a16, e17, t_id, 'G25_KlausWeber_2025.pdf',                'hr/personnel/' || emp_klaus  || '/medical/G25_KlausWeber_2025.pdf',                 'application/pdf', 98304,   '00000000-0000-0000-0000-000000000001', NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- =========================================================
+  -- DEMO: Ablaufende / abgelaufene Eintraege (Stichtag 2026-04-15)
+  -- Zeigt in der HR-Ansicht rote "Abgelaufen"- und gelbe
+  -- "Laeuft bald ab"-Badges sowie faellige Reminders.
+  -- =========================================================
+
+  -- Bereits abgelaufen (expires_at < 2026-04-15)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e19, t_id, emp_markus, cat_certs,  'Schweisserschein EN ISO 9606-1 (alt)',  'Vorherige Schweisserpruefung, abgelaufen — muss erneuert werden', '2023-01-05', '2025-12-31', '2025-11-01', 'ABGELAUFEN: Markus dringend zur Wiederholungspruefung anmelden', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e20, t_id, emp_maria,  cat_certs,  'Ersthelfer-Ausbildung',                 'Erste-Hilfe-Grundkurs nach DGUV Vorschrift 1',                    '2023-02-15', '2026-02-15', '2025-12-15', 'ABGELAUFEN: Auffrischung Maria Schmidt faellig',                     false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e21, t_id, emp_thomas, cat_safety, 'Sicherheitsunterweisung 2025',          'Jaehrliche Unterweisung — neue Unterweisung fuer 2026 faellig',   '2025-03-20', '2026-03-31', '2026-03-01', 'ABGELAUFEN: Unterweisung Thomas Mueller neu ansetzen',               false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e22, t_id, emp_anna,   cat_safety, 'Brandschutzunterweisung 2025',          'Brandschutzhelfer-Schulung ASR A2.2 — abgelaufen',                '2024-12-10', '2026-01-10', '2025-11-10', 'ABGELAUFEN: Brandschutzunterweisung Anna Weber nachholen',           false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e23, t_id, emp_klaus,  cat_medical,'G37 Bildschirmarbeit',                  'Eignungsuntersuchung G37 fuer Bildschirmarbeit — Nachuntersuchung faellig', '2023-04-10', '2026-04-10', '2026-02-10', 'ABGELAUFEN: G37 Klaus Weber neu veranlassen',                        true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Laeuft in den naechsten 30 Tagen ab (2026-04-15 .. 2026-05-15)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e24, t_id, emp_julia,  cat_safety, 'Datenschutzunterweisung 2025',          'DSGVO-Unterweisung gemaess Art. 32 DSGVO',                        '2025-04-22', '2026-04-22', '2026-04-20', 'Datenschutzunterweisung Julia Hoffmann verlaengern',                  false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e25, t_id, emp_sabine, cat_certs,  'Ersthelfer-Ausbildung',                 'Erste-Hilfe-Grundkurs nach DGUV Vorschrift 1',                    '2024-05-10', '2026-05-10', '2026-04-25', 'Ersthelfer Sabine Fischer auffrischen',                               false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e26, t_id, emp_admin,  cat_medical,'G37 Bildschirmarbeit',                  'Eignungsuntersuchung G37 Bildschirmarbeit',                       '2023-04-28', '2026-04-28', '2026-04-18', 'G37 Admin User faellig — Termin vereinbaren',                         true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e27, t_id, emp_andrea, cat_safety, 'Sicherheitsunterweisung Produktion 2025','Jaehrliche Unterweisung Arbeitssicherheit Produktion',           '2025-05-12', '2026-05-12', '2026-04-28', 'Sicherheitsunterweisung Andrea Mueller verlaengern',                  false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Zusaetzlicher Eintrag mit Reminder innerhalb 14 Tage (faellig, expires_at spaeter)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e28, t_id, emp_thomas, cat_certs,  'Gabelstaplerschein',                    'Gabelstaplerfuehrerschein nach DGUV G 308-001',                   '2024-07-01', '2029-07-01', '2026-04-25', 'Stichprobenkontrolle Staplerschein Thomas Mueller',                   false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Abmahnungen (bisher keine Eintraege in WARNINGS-Kategorie)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e29, t_id, emp_markus, cat_warnings, 'Abmahnung — Verspaetung',              'Wiederholte unentschuldigte Verspaetung (14./18.02.2026)',         '2026-02-20', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e30, t_id, emp_user,   cat_warnings, 'Ermahnung — Arbeitsschutzverstoss',    'Nichttragen der PSA im Produktionsbereich am 05.03.2026',          '2026-03-06', true, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
   ON CONFLICT (id) DO NOTHING;
 
 END $$;
@@ -4263,6 +4404,106 @@ INSERT INTO hr_personnel_file_categories (tenant_id, name, code, color, sort_ord
   ('10000000-0000-0000-0000-000000000001', 'Elternzeit-Antrag', 'ELTERNZEIT_ANTRAG', '#7C3AED', 20, ARRAY['admin', 'hr']),
   ('10000000-0000-0000-0000-000000000001', 'Mutterschutz-Bescheinigung', 'MUTTERSCHUTZ_BESCHEINIGUNG', '#DB2777', 21, ARRAY['admin', 'hr'])
 ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- Personalakte-Beispieleintraege fuer Lohn-Stammdaten-Kategorien
+-- (Stichtag 2026-04-15) — fuellt die neuen Kategorien mit einem
+-- realistischen Muster, damit die HR-Abteilung die komplette
+-- Lohn-Stammdaten-Workflow demonstrieren kann.
+-- =============================================================
+DO $$
+DECLARE
+  t_id uuid := '10000000-0000-0000-0000-000000000001';
+
+  -- Kategorien
+  cat_sv       uuid;
+  cat_kk       uuid;
+  cat_lohn     uuid;
+  cat_ausweis  uuid;
+  cat_aufent   uuid;
+  cat_sb       uuid;
+  cat_pfaend   uuid;
+  cat_bav      uuid;
+  cat_arbv     uuid;
+  cat_nachweis uuid;
+  cat_a1       uuid;
+  cat_bg       uuid;
+  cat_elternz  uuid;
+  cat_muschu   uuid;
+
+  -- Mitarbeiter
+  emp_admin  uuid := '00000000-0000-0000-0000-000000000011';
+  emp_user   uuid := '00000000-0000-0000-0000-000000000012';
+  emp_maria  uuid := '00000000-0000-0000-0000-000000000013';
+  emp_thomas uuid := '00000000-0000-0000-0000-000000000014';
+  emp_anna   uuid := '00000000-0000-0000-0000-000000000015';
+  emp_sabine uuid := '00000000-0000-0000-0000-000000000016';
+  emp_markus uuid := '00000000-0000-0000-0000-000000000017';
+  emp_julia  uuid := '00000000-0000-0000-0000-000000000018';
+  emp_stefan uuid := '00000000-0000-0000-0000-000000000019';
+  emp_petra  uuid := '00000000-0000-0000-0000-00000000001a';
+  emp_klaus  uuid := '00000000-0000-0000-0000-00000000001b';
+  emp_andrea uuid := '00000000-0000-0000-0000-00000000001c';
+  emp_mehmet uuid := '00000000-0000-0000-0000-00000000001d';
+
+  -- Entry-IDs (deterministisch)
+  e31 uuid := 'e1000000-0000-4000-a000-000000000031';
+  e32 uuid := 'e1000000-0000-4000-a000-000000000032';
+  e33 uuid := 'e1000000-0000-4000-a000-000000000033';
+  e34 uuid := 'e1000000-0000-4000-a000-000000000034';
+  e35 uuid := 'e1000000-0000-4000-a000-000000000035';
+  e36 uuid := 'e1000000-0000-4000-a000-000000000036';
+  e37 uuid := 'e1000000-0000-4000-a000-000000000037';
+  e38 uuid := 'e1000000-0000-4000-a000-000000000038';
+  e39 uuid := 'e1000000-0000-4000-a000-000000000039';
+  e40 uuid := 'e1000000-0000-4000-a000-000000000040';
+  e41 uuid := 'e1000000-0000-4000-a000-000000000041';
+  e42 uuid := 'e1000000-0000-4000-a000-000000000042';
+  e43 uuid := 'e1000000-0000-4000-a000-000000000043';
+  e44 uuid := 'e1000000-0000-4000-a000-000000000044';
+  e45 uuid := 'e1000000-0000-4000-a000-000000000045';
+BEGIN
+  SELECT id INTO cat_sv       FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'SV_AUSWEIS';
+  SELECT id INTO cat_kk       FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'KK_BESCHEINIGUNG';
+  SELECT id INTO cat_lohn     FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'LOHNSTEUER_VORJAHR';
+  SELECT id INTO cat_ausweis  FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'PERSONALAUSWEIS';
+  SELECT id INTO cat_aufent   FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'AUFENTHALT';
+  SELECT id INTO cat_sb       FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'SB_AUSWEIS';
+  SELECT id INTO cat_pfaend   FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'PFAENDUNG';
+  SELECT id INTO cat_bav      FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'BAV_VERTRAG';
+  SELECT id INTO cat_arbv     FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'ARBEITSVERTRAG';
+  SELECT id INTO cat_nachweis FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'NACHWEIS';
+  SELECT id INTO cat_a1       FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'A1_BESCHEINIGUNG';
+  SELECT id INTO cat_bg       FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'BG_BESCHEINIGUNG';
+  SELECT id INTO cat_elternz  FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'ELTERNZEIT_ANTRAG';
+  SELECT id INTO cat_muschu   FROM hr_personnel_file_categories WHERE tenant_id = t_id AND code = 'MUTTERSCHUTZ_BESCHEINIGUNG';
+
+  -- Eintraege ohne Ablaufdatum
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e31, t_id, emp_admin,  cat_sv,       'Sozialversicherungsausweis',           'SV-Nummer bei Eintritt eingereicht',                                       '2020-01-05', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e32, t_id, emp_user,   cat_kk,       'Mitgliedsbescheinigung AOK Bayern',    'Bestaetigung der Mitgliedschaft fuer Krankenversicherung',                 '2021-03-18', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e33, t_id, emp_maria,  cat_lohn,     'Lohnsteuerbescheinigung 2025',         'Elektronische Lohnsteuerbescheinigung Vorjahr',                            '2026-02-28', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e34, t_id, emp_sabine, cat_lohn,     'Lohnsteuerbescheinigung 2025',         'Elektronische Lohnsteuerbescheinigung Vorjahr',                            '2026-02-28', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e38, t_id, emp_markus, cat_pfaend,   'Pfaendungs- und Ueberweisungsbeschluss','AG Muenchen — Az. 123 M 456/26, monatliche Pfaendung',                     '2026-01-15', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e39, t_id, emp_anna,   cat_bav,      'bAV-Direktversicherung Allianz',       'Betriebliche Altersvorsorge, Entgeltumwandlung EUR 150/Monat',             '2023-06-01', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e40, t_id, emp_petra,  cat_arbv,     'Arbeitsvertrag Teilzeit (NachwG-konform)', 'Neuer NachwG-konformer Arbeitsvertrag seit 01.02.2025',                 '2025-02-01', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e41, t_id, emp_stefan, cat_nachweis, 'Nachweisgesetz-Dokument',              'Wesentliche Arbeitsbedingungen gemaess Nachweisgesetz (NachwG 2022)',      '2024-09-01', true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e43, t_id, emp_andrea, cat_bg,       'BG-Mitgliedsbescheinigung BGHM',       'Mitgliedschaft Berufsgenossenschaft Holz und Metall',                      '2022-09-15', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Eintraege mit Ablaufdatum / Reminder (Personalausweis, Aufenthaltstitel,
+  -- SB-Ausweis, A1, Elternzeit, Mutterschutz)
+  INSERT INTO hr_personnel_file_entries (id, tenant_id, employee_id, category_id, title, description, entry_date, expires_at, reminder_date, reminder_note, is_confidential, created_by_id, created_at, updated_at)
+  VALUES
+    (e35, t_id, emp_thomas, cat_ausweis, 'Personalausweis',                        'Kopie Personalausweis, DE-Staatsangehoerigkeit',                          '2024-01-15', '2034-01-15', '2033-10-15', 'Personalausweis Thomas Mueller bald abgelaufen',                false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e36, t_id, emp_mehmet, cat_aufent,  'Aufenthaltstitel § 18a AufenthG',       'Aufenthaltstitel fuer Fachkraefte mit Berufsausbildung',                  '2024-02-15', '2027-02-15', '2026-11-15', 'Aufenthaltstitel Mehmet Yilmaz verlaengern',                    true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e37, t_id, emp_klaus,  cat_sb,      'Schwerbehindertenausweis GdB 50',        'Anerkennung nach SGB IX, Merkzeichen G',                                 '2023-08-10', '2028-08-10', '2028-05-10', 'SB-Ausweis Klaus Weber Verlaengerung',                          true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e42, t_id, emp_thomas, cat_a1,      'A1-Bescheinigung Frankreich',           'Entsendung zu Kundentermin Lyon 18.-22.05.2026',                         '2026-04-10', '2026-05-22', '2026-04-25', 'A1-Bescheinigung bis zum Reiseantritt ins Personalportal laden', false, '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e44, t_id, emp_sabine, cat_elternz, 'Elternzeit-Antrag',                     'Elternzeit 01.09.2026 bis 31.08.2027 (12 Monate)',                        '2026-03-15', '2027-08-31', '2027-06-15', 'Rueckkehr aus Elternzeit Sabine Fischer vorbereiten',           true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW()),
+    (e45, t_id, emp_julia,  cat_muschu,  'Mutterschutz-Bescheinigung',            'Mutterschutzfrist voraussichtlich 20.05.2026 bis 12.08.2026',             '2026-04-02', '2026-08-12', '2026-07-20', 'Rueckkehr aus Mutterschutz Julia Hoffmann planen',              true,  '00000000-0000-0000-0000-000000000001', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+END $$;
 
 -- =============================================================
 -- Payroll Master Data: Seed employee payroll fields
