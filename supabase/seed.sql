@@ -1024,13 +1024,9 @@ VALUES
   ('00000000-0000-0000-0000-000000016006', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000016007', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000018', 2026, 30.00, 5.00, 0.00, 1.00, NOW(), NOW()),
   ('00000000-0000-0000-0000-000000016008', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000019', 2026, 30.00, 0.00, 0.00, 1.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000016009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW()),
-  -- Zusaetzliche Mitarbeiter (Klaus, Andrea, Mehmet, Sandra) — vorher ohne Balance
-  ('00000000-0000-0000-0000-00000001600a', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 2026, 30.00, 4.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-00000001600b', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-00000001600c', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 2026, 30.00, 2.00, 0.00, 4.00, NOW(), NOW()),
-  ('00000000-0000-0000-0000-00000001600d', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', 2026, 30.00, 5.00, 0.00, 0.00, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000016009', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001a', 2026, 15.00, 2.00, 0.00, 0.00, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
+-- Klaus, Andrea, Mehmet, Sandra erst nach ihrer Anlage in Sektion S3-11 unten.
 
 -- =============================================================
 -- 20. Absence days (last week of January 2026)
@@ -1657,30 +1653,8 @@ BEGIN
     (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001a', '2026-04-09', at_kk, 1.00, 'approved', approver_id, '2026-04-09 07:30+00', NOW(), NOW())
   ON CONFLICT (id) DO NOTHING;
 
-  -- Klaus (01b): sick today (approved this morning)
-  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001b', '2026-04-15', at_k, 1.00, 'approved', approver_id, '2026-04-15 07:15+00', NOW(), NOW())
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Andrea (01c): pending vacation Apr 20-22
-  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, created_at, updated_at) VALUES
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-20', at_u, 1.00, 'pending', NOW(), NOW()),
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-21', at_u, 1.00, 'pending', NOW(), NOW()),
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-22', at_u, 1.00, 'pending', NOW(), NOW())
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Mehmet (01d): approved vacation Apr 27-30 (Mon-Thu)
-  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-27', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-28', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-29', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-30', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW())
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Sandra (01e): sick yesterday (approved, returned today)
-  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
-    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001e', '2026-04-14', at_k, 1.00, 'approved', approver_id, '2026-04-14 08:00+00', NOW(), NOW())
-  ON CONFLICT (id) DO NOTHING;
+  -- Klaus/Andrea/Mehmet/Sandra (01b–01e) absences: see Sektion S3 unten,
+  -- da diese Schichtarbeiter erst dort angelegt werden.
 
   -- Julia (018): pending half-day vacation afternoon Apr 22
   INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, half_day_period, status, created_at, updated_at) VALUES
@@ -3374,13 +3348,51 @@ BEGIN
   END LOOP;
 END $$;
 
+-- S3-10b. Absence days for shift workers (Klaus/Andrea/Mehmet/Sandra)
+-- Verschoben aus Sektion C2b, weil die Employees erst hier in S3 angelegt werden.
+DO $$
+DECLARE
+  at_u  uuid;
+  at_k  uuid;
+  t_id  uuid := '10000000-0000-0000-0000-000000000001';
+  approver_id uuid := '00000000-0000-0000-0000-000000000001';
+BEGIN
+  SELECT id INTO at_u FROM absence_types WHERE code = 'U' LIMIT 1;
+  SELECT id INTO at_k FROM absence_types WHERE code = 'K' LIMIT 1;
+
+  -- Klaus (01b): sick today (approved this morning)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001b', '2026-04-15', at_k, 1.00, 'approved', approver_id, '2026-04-15 07:15+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Andrea (01c): pending vacation Apr 20-22
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-20', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-21', at_u, 1.00, 'pending', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001c', '2026-04-22', at_u, 1.00, 'pending', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Mehmet (01d): approved vacation Apr 27-30 (Mon-Thu)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-27', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-28', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-29', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW()),
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001d', '2026-04-30', at_u, 1.00, 'approved', approver_id, '2026-04-10 10:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Sandra (01e): sick yesterday (approved, returned today)
+  INSERT INTO absence_days (id, tenant_id, employee_id, absence_date, absence_type_id, duration, status, approved_by, approved_at, created_at, updated_at) VALUES
+    (gen_random_uuid(), t_id, '00000000-0000-0000-0000-00000000001e', '2026-04-14', at_k, 1.00, 'approved', approver_id, '2026-04-14 08:00+00', NOW(), NOW())
+  ON CONFLICT (id) DO NOTHING;
+END $$;
+
 -- S3-11. Vacation balances for shift workers (2026)
-INSERT INTO vacation_balances (id, tenant_id, employee_id, year, entitlement, taken, adjustments, carryover, created_at, updated_at)
+INSERT INTO vacation_balances (id, tenant_id, employee_id, year, entitlement, carryover, adjustments, taken, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 2026, 30.00, 0, 0, 0, NOW(), NOW()),
-  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', 2026, 30.00, 0, 0, 0, NOW(), NOW())
+  ('00000000-0000-0000-0000-00000001600a', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b', 2026, 30.00, 4.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600b', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c', 2026, 30.00, 3.00, 0.00, 0.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600c', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001d', 2026, 30.00, 2.00, 0.00, 4.00, NOW(), NOW()),
+  ('00000000-0000-0000-0000-00000001600d', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001e', 2026, 30.00, 5.00, 0.00, 0.00, NOW(), NOW())
 ON CONFLICT (employee_id, year) DO NOTHING;
 
 -- S3-12. Set department manager
