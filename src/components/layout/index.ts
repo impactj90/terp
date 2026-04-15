@@ -35,6 +35,9 @@ export { LoadingSkeleton } from './loading-skeleton'
 export { DemoExpirationGate } from './demo-expiration-gate'
 export { DemoBanner } from './demo-banner'
 
+// SMTP config warning
+export { SmtpConfigWarningBanner } from './smtp-config-warning-banner'
+
 // Layout primitives
 export { Stack, HStack, VStack, type StackProps } from '@/components/ui/stack'
 export { Container, type ContainerProps } from '@/components/ui/container'

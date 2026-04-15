@@ -6,6 +6,17 @@ export function useEmailSmtpConfig() {
   return useQuery(trpc.email.smtpConfig.get.queryOptions())
 }
 
+export function useSmtpConfigStatus() {
+  const trpc = useTRPC()
+  const { data, isLoading } = useQuery(
+    trpc.email.smtpConfig.status.queryOptions(),
+  )
+  return {
+    isConfigured: data?.isConfigured ?? null,
+    isLoading,
+  }
+}
+
 export function useUpsertEmailSmtpConfig() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()

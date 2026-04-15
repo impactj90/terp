@@ -17,9 +17,9 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma/client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
-  DEFAULT_DEMO_TEMPLATE,
-  getDemoTemplate,
-} from "@/lib/demo/registry"
+  DEFAULT_TENANT_TEMPLATE,
+  getTenantTemplate,
+} from "@/lib/tenant-templates/registry"
 import { PLATFORM_SYSTEM_USER_ID } from "@/trpc/init"
 import * as repo from "./demo-tenant-repository"
 import * as auditLog from "./audit-logs-service"
@@ -145,8 +145,8 @@ export async function createDemo(
   platformUserId: string,
   audit: { ipAddress?: string | null; userAgent?: string | null },
 ): Promise<CreateDemoResult> {
-  const templateKey = input.demoTemplate ?? DEFAULT_DEMO_TEMPLATE
-  const template = getDemoTemplate(templateKey) // throws if unknown
+  const templateKey = input.demoTemplate ?? DEFAULT_TENANT_TEMPLATE
+  const template = getTenantTemplate(templateKey) // throws if unknown
 
   const durationDays = input.demoDurationDays ?? DEMO_DEFAULT_DURATION_DAYS
   if (durationDays < 1 || durationDays > 90) {
@@ -220,11 +220,15 @@ export async function createDemo(
         createdAuthUserId = adminUser.id
 
         // 5. Apply the demo template
-        await template.apply({
+        const templateCtx = {
           tx,
           tenantId: tenant.id,
           adminUserId: adminUser.id,
-        })
+        }
+        const templateConfig = await template.applyConfig(templateCtx)
+        if (template.kind === "showcase" && template.applySeedData) {
+          await template.applySeedData(templateCtx, templateConfig)
+        }
 
         return { tenant, adminUser, welcomeEmail }
       },

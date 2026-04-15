@@ -56,6 +56,19 @@ export const emailSmtpConfigRouter = createTRPCRouter({
       }
     }),
 
+  // Lightweight existence check used by the SMTP-missing warning banner.
+  // Intentionally NOT permission-gated beyond tenantProcedure: the boolean
+  // leaks nothing and every tenant user needs to know whether the tenant
+  // can send email at all.
+  status: tenantProcedure.query(async ({ ctx }) => {
+    try {
+      const config = await smtpConfigService.get(ctx.prisma, ctx.tenantId!)
+      return { isConfigured: config !== null && config !== undefined }
+    } catch (err) {
+      handleServiceError(err)
+    }
+  }),
+
   upsert: tenantProcedure
     .use(requirePermission(EMAIL_SMTP_MANAGE))
     .input(upsertInputSchema)

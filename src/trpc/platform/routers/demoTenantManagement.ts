@@ -22,9 +22,9 @@ import * as platformAudit from "@/lib/platform/audit-service"
 import * as demoService from "@/lib/services/demo-tenant-service"
 import * as subscriptionService from "@/lib/platform/subscription-service"
 import {
-  DEFAULT_DEMO_TEMPLATE,
-  listDemoTemplates,
-} from "@/lib/demo/registry"
+  DEFAULT_TENANT_TEMPLATE,
+  listTenantTemplates,
+} from "@/lib/tenant-templates/registry"
 import type { ModuleId } from "@/lib/modules/constants"
 
 // --- Schemas ---------------------------------------------------------------
@@ -54,7 +54,7 @@ const createDemoInputSchema = z.object({
   addressCountry: z.string().trim().min(1),
   adminEmail: z.string().email(),
   adminDisplayName: z.string().trim().min(1),
-  demoTemplate: z.string().optional().default(DEFAULT_DEMO_TEMPLATE),
+  demoTemplate: z.string().optional().default(DEFAULT_TENANT_TEMPLATE),
   demoDurationDays: z.number().int().min(1).max(90).optional(),
   notes: z.string().nullish(),
 })
@@ -66,7 +66,7 @@ export const platformDemoTenantManagementRouter = createTRPCRouter({
    * Returns the list of available demo templates (key + label + description).
    * Used by the platform admin UI's create-demo sheet dropdown.
    */
-  templates: platformAuthedProcedure.query(() => listDemoTemplates()),
+  templates: platformAuthedProcedure.query(() => listTenantTemplates()),
 
   /**
    * Lists ALL demo tenants (active + expired) with creator DTO and
