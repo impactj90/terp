@@ -9,7 +9,7 @@
 import { describe, expect, test } from "vitest"
 
 import { prisma } from "@/lib/db/prisma"
-import { industriedienstleister150 } from "../templates/industriedienstleister_150"
+import { industriedienstleisterShowcase } from "../templates/industriedienstleister/showcase"
 
 const ROLLBACK_SENTINEL = "DEMO_TEMPLATE_TEST_ROLLBACK"
 
@@ -48,7 +48,7 @@ describe.skipIf(!HAS_DB)("industriedienstleister_150 template", () => {
                 isActive: true,
                 isDemo: true,
                 demoExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-                demoTemplate: industriedienstleister150.key,
+                demoTemplate: industriedienstleisterShowcase.key,
               },
             })
 
@@ -65,11 +65,18 @@ describe.skipIf(!HAS_DB)("industriedienstleister_150 template", () => {
               },
             })
 
-            await industriedienstleister150.apply({
+            const templateCtx = {
               tx,
               tenantId: tenant.id,
               adminUserId: adminUser.id,
-            })
+            }
+            const config = await industriedienstleisterShowcase.applyConfig(
+              templateCtx,
+            )
+            await industriedienstleisterShowcase.applySeedData!(
+              templateCtx,
+              config,
+            )
 
             counts = {
               departments: await tx.department.count({ where: { tenantId: tenant.id } }),

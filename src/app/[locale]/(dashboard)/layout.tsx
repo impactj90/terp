@@ -9,6 +9,7 @@ import {
   DemoBanner,
   DemoExpirationGate,
   LoadingSkeleton,
+  SmtpConfigWarningBanner,
 } from '@/components/layout'
 
 export default function DashboardLayout({
@@ -24,6 +25,7 @@ export default function DashboardLayout({
             <AppLayout>
               <SupportSessionBanner />
               <DemoBanner />
+              <SmtpConfigWarningBanner />
               {children}
             </AppLayout>
           </DemoExpirationGate>
