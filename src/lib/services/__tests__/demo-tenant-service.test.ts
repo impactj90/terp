@@ -97,7 +97,7 @@ describe("demo-tenant-service validation", () => {
         PLATFORM_USER_ID,
         PLATFORM_AUDIT,
       ),
-    ).rejects.toThrow(/Unknown demo template/)
+    ).rejects.toThrow(/Unknown tenant template/)
   })
 })
 

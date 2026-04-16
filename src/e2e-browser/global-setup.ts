@@ -256,6 +256,79 @@ DELETE FROM support_sessions WHERE reason LIKE 'E2E%';
 DELETE FROM holidays WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND holiday_date >= '2027-01-01' AND holiday_date < '2028-01-01';
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- Bank Inbox (spec 65-bank-inbox.spec.ts)
+-- Seeds bank transactions for manual match, ignore, and upload test flows.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Cleanup previous bank inbox E2E data
+DELETE FROM inbound_invoice_bank_allocations WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND bank_transaction_id IN (SELECT id FROM bank_transactions WHERE bank_reference LIKE 'E2E%');
+DELETE FROM billing_document_bank_allocations WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND bank_transaction_id IN (SELECT id FROM bank_transactions WHERE bank_reference LIKE 'E2E%');
+DELETE FROM inbound_invoice_payments WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND notes LIKE '%E2E%';
+DELETE FROM billing_payments WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND notes LIKE '%E2E%';
+DELETE FROM bank_transactions WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND bank_reference LIKE 'E2E%';
+DELETE FROM bank_statements WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND file_name LIKE 'E2E%';
+
+-- Enable bank_statements module
+INSERT INTO tenant_modules (tenant_id, module, enabled_at)
+VALUES ('10000000-0000-0000-0000-000000000001', 'bank_statements', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Seed a bank statement so we can attach pre-seeded transactions
+INSERT INTO bank_statements (
+  id, tenant_id, file_name, sha256_hash, xml_storage_path,
+  account_iban, statement_id, period_from, period_to,
+  opening_balance, closing_balance, currency, imported_at
+) VALUES (
+  'e2ebafe0-0000-4000-a000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  'E2E-seed-statement.xml',
+  'e2e_seed_hash_bank_inbox_' || gen_random_uuid(),
+  '10000000-0000-0000-0000-000000000001/e2e-seed.xml',
+  'DE89370400440532013000', 'E2E-STMT-001',
+  '2026-04-01', '2026-04-30',
+  50000, 48000, 'EUR', NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- Tx 1: Unmatched CREDIT for manual-match test (Müller Maschinenbau, RE-6 = 8092 EUR)
+INSERT INTO bank_transactions (
+  id, tenant_id, statement_id, booking_date, value_date,
+  amount, currency, direction, counterparty_iban, counterparty_name,
+  remittance_info, end_to_end_id, bank_reference, status,
+  suggested_address_id, created_at, updated_at
+) VALUES (
+  'e2ebafe0-0000-4000-a000-000000000011',
+  '10000000-0000-0000-0000-000000000001',
+  'e2ebafe0-0000-4000-a000-000000000001',
+  '2026-04-10', '2026-04-10',
+  8092, 'EUR', 'CREDIT', 'DE89370400440532013000', 'Mueller Maschinenbau GmbH',
+  'Zahlung RE-6', 'E2E-MATCH-001', 'E2E-REF-MATCH-001', 'unmatched',
+  'c1000000-0000-4000-a000-000000000001',
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- Tx 2: Unmatched DEBIT for ignore test (Bankgebuehr)
+INSERT INTO bank_transactions (
+  id, tenant_id, statement_id, booking_date, value_date,
+  amount, currency, direction, counterparty_iban, counterparty_name,
+  remittance_info, end_to_end_id, bank_reference, status,
+  created_at, updated_at
+) VALUES (
+  'e2ebafe0-0000-4000-a000-000000000012',
+  '10000000-0000-0000-0000-000000000001',
+  'e2ebafe0-0000-4000-a000-000000000001',
+  '2026-04-15', '2026-04-15',
+  12.50, 'EUR', 'DEBIT', 'DE00000000000000000000', 'Commerzbank AG',
+  'Kontofuehrungsgebuehr', 'E2E-IGNORE-001', 'E2E-REF-IGNORE-001', 'unmatched',
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- Cross-tenant isolation test: seed Tenant B (security-tenant-isolation.spec.ts)
 -- Re-insert after cleanup so tests have deterministic data every run
 -- ═══════════════════════════════════════════════════════════════════════════

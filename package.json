@@ -90,7 +90,6 @@
     "fast-xml-parser": "^5.5.10",
     "fastest-levenshtein": "^1.0.16",
     "html5-qrcode": "^2.3.8",
-    "iban": "^0.0.14",
     "iconv-lite": "^0.7.2",
     "imapflow": "^1.2.18",
     "jose": "^5.9.6",

@@ -315,7 +315,7 @@ Internal sales-enablement tooling for spinning up fully populated demo tenants o
    - Tenant row with `is_demo=true`, `demo_expires_at=now()+N days`
    - All 4 demo modules (`core`, `crm`, `billing`, `warehouse`) via `tenant-module-repository.upsert`
    - Admin user with a Supabase Auth identity (reuses the welcome-email flow from above, so the admin receives a recovery link; if SMTP is down, the UI falls back to a copyable invite link)
-   - Template data applied via `src/lib/demo/templates/*.ts` (today: `industriedienstleister_150` — ~150 employees, departments, bookings, groups)
+   - Template data applied via `src/lib/tenant-templates/templates/*.ts` (today: `industriedienstleister_150` — ~150 employees, departments, bookings, groups)
    - `audit_logs` entry `demo_create`
 2. **Banner** — Once the demo admin logs in, the dashboard layout (`src/components/layout/demo-banner.tsx`) shows a yellow sticky banner "Demo-Modus: noch X Tage verbleibend". Countdown is computed client-side from `tenant.demo_expires_at`.
 3. **Extend** — Admin can extend a demo by +7 or +14 days from the row action menu. If the demo was already expired (`isActive=false`), extend reactivates it atomically — useful when sales wants to rescue a demo after a last-minute deal conversation.
@@ -331,7 +331,7 @@ Internal sales-enablement tooling for spinning up fully populated demo tenants o
 
 - Router: `src/trpc/routers/demo-tenants.ts` (all procedures gated by `tenants.manage`, except `requestConvertFromExpired` which is gated by tenant membership)
 - Service + repository: `src/lib/services/demo-tenant-service.ts`, `src/lib/services/demo-tenant-repository.ts`
-- Template engine: `src/lib/demo/registry.ts`, `src/lib/demo/templates/industriedienstleister_150.ts`
+- Template engine: `src/lib/tenant-templates/registry.ts`, `src/lib/tenant-templates/templates/industriedienstleister_150.ts`
 - Cron: `src/app/api/cron/expire-demo-tenants/route.ts` (registered in `vercel.json`)
 - Admin UI: `src/components/tenants/demo/*` mounted in `/admin/tenants/page.tsx`
 - Expired page + gate: `src/app/[locale]/demo-expired/`, `src/components/layout/demo-expiration-gate.tsx`
@@ -343,9 +343,39 @@ Internal sales-enablement tooling for spinning up fully populated demo tenants o
 | `DEMO_CONVERT_NOTIFICATION_EMAIL` | Optional. Recipient for demo-convert-request notifications. Default: `sales@terp.dev`. |
 | `CRON_SECRET` | Already documented above. Required for the expire-demo-tenants cron. |
 
-**Adding a new template**: create `src/lib/demo/templates/<key>.ts` exporting a `DemoTemplate` (key, label, description, `apply(tx, tenantId)` function). Register it in `src/lib/demo/registry.ts`. The UI template dropdown is automatically populated from the registry.
+**Adding a new template**: create `src/lib/tenant-templates/templates/<key>.ts` exporting a `TenantTemplate` (key, label, description, `apply(tx, tenantId)` function). Register it in `src/lib/tenant-templates/registry.ts`. The UI template dropdown is automatically populated from the registry.
 
 **Rollback plan**: if the feature needs to be disabled temporarily, (a) remove the cron entry from `vercel.json`, (b) hide the demo panel in `/admin/tenants/page.tsx`, (c) set all demos to `is_demo=false, demo_expires_at=null` via one-off SQL. Data is preserved.
+
+### Tenant Templates (Showcase & Starter)
+
+Tenant-Templates leben unter `src/lib/tenant-templates/`. Jedes Template hat ein `kind`-Feld, das entscheidet, in welchem Pfad es verwendet wird:
+
+- **`kind: "showcase"`** — wird im Demo-Pfad (`/platform/tenants/demo`) verwendet, läuft auf einem Demo-Tenant (`isDemo=true`) und seedet Stammdaten + Fake-Mitarbeiter + Beispiel-Belege. Heute: `industriedienstleister_150` (~150 Employees, Bayern-Feiertage, Demo-Rechnungen).
+- **`kind: "starter"`** — wird im Tenant-Create-Pfad (`/platform/tenants/new` mit aktiviertem Template-Toggle) verwendet, läuft auf einem produktiven Tenant (`isDemo=false`) und seedet **ausschließlich** die branchen-typische Stammdaten-Ebene (Departments, Tariffs, DayPlans/WeekPlans, BookingTypes, AbsenceTypes, WhArticleGroups, Accounts) plus universelle Defaults (ReminderTemplates, EmailTemplates, ReminderSettings nach BGB §288 Abs. 2) und Feiertage für das operator-gewählte Bundesland. **Keine** Personen, Buchungen oder Belege. Heute: `industriedienstleister_starter`.
+
+**Eine neue Branche hinzufügen**:
+
+1. Neuen Ordner `src/lib/tenant-templates/templates/<branche>/` anlegen.
+2. `shared-config.ts` mit `apply<Branche>Config(ctx)` schreiben — diese Funktion seedet Departments, Tariffs, etc. und gibt ein `TenantTemplateConfigResult` zurück.
+3. `showcase.ts` mit dem `kind: "showcase"`-Template schreiben, das sowohl `applyConfig` als auch `applySeedData` (Personen + Belege) implementiert.
+4. `starter.ts` mit dem `kind: "starter"`-Template schreiben, das `applyConfig` ruft und danach `seedUniversalDefaults(ctx.tx, ctx.tenantId)` aufruft.
+5. Beide Templates in `src/lib/tenant-templates/registry.ts` registrieren.
+
+**Wann welchen Pfad nutzen**:
+
+- **Sales-Demo** (Showcase): `/platform/tenants/demo` mit dem heutigen Demo-Flow. Tenant bekommt ein Expiration-Gate und wird nach N Tagen deaktiviert.
+- **Kunden-Go-Live** (Starter): `/platform/tenants/new` mit aktiviertem Toggle "Mit Branchen-Template starten". Operator füllt zusätzlich Firmen-Stammdaten (BillingTenantConfig), Bundesland und Default-Location aus. Tenant hat `isDemo=false` und startet produktiv.
+
+**Key Files**:
+
+- Registry + Interface: `src/lib/tenant-templates/registry.ts`, `src/lib/tenant-templates/types.ts`
+- Branchen-Templates: `src/lib/tenant-templates/templates/<branche>/{shared-config,showcase,starter}.ts`
+- Universal-Defaults-Seeder: `src/lib/tenant-templates/seed-universal-defaults.ts`
+- Showcase-Pfad-Router: `src/trpc/platform/routers/demoTenantManagement.ts` (`templates`, `create`)
+- Starter-Pfad-Router: `src/trpc/platform/routers/tenantManagement.ts` (`starterTemplates`, `createFromTemplate`)
+- Admin-UI Starter: `src/app/platform/(authed)/tenants/new/page.tsx` (Template-Toggle)
+- Admin-UI Showcase: `src/app/platform/(authed)/tenants/demo/page.tsx`
 
 ### Platform Admin System
 

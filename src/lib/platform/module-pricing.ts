@@ -85,6 +85,12 @@ export const MODULE_PRICES: Record<ModuleId, ModulePricing> = {
     vatRate: 19,
     description: "Terp Zahlungsläufe — SEPA-Sammelüberweisungen (pain.001)",
   },
+  bank_statements: {
+    monthly: 2,
+    annual: 20,
+    vatRate: 19,
+    description: "Terp Bankkontoauszüge — CAMT.053-Import und Auto-Matching",
+  },
 }
 
 export function getModulePrice(

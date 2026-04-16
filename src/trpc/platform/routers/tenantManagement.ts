@@ -14,13 +14,23 @@
  */
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import type { Prisma } from "@/generated/prisma/client"
 import { createTRPCRouter, platformAuthedProcedure } from "../init"
 import * as platformAudit from "@/lib/platform/audit-service"
 import * as subscriptionService from "@/lib/platform/subscription-service"
 import * as billingPaymentService from "@/lib/services/billing-payment-service"
+import * as holidayService from "@/lib/services/holiday-service"
+import * as billingTenantConfigService from "@/lib/services/billing-tenant-config-service"
+import * as locationService from "@/lib/services/location-service"
 import { create as createUserService } from "@/lib/services/users-service"
 import { AVAILABLE_MODULES } from "@/lib/modules/constants"
 import { PLATFORM_SYSTEM_USER_ID } from "@/trpc/init"
+import {
+  getTenantTemplate,
+  listTenantTemplates,
+} from "@/lib/tenant-templates/registry"
+import { isValidIban } from "@/lib/sepa/iban-validator"
+import { GERMAN_STATES } from "@/lib/services/holiday-calendar"
 
 // --- Schemas ----------------------------------------------------------------
 
@@ -51,6 +61,102 @@ function computeChanges<T extends Record<string, unknown>>(
     }
   }
   return changes
+}
+
+/**
+ * Shared core for platform-initiated tenant creation — extracted from the
+ * `create` procedure so that `createFromTemplate` can reuse the same
+ * tenant/userGroup/user/welcome-email flow without duplicating the wiring.
+ *
+ * Byte-compat with the pre-extraction `create` body is enforced by the
+ * existing `tenantManagement.create` unit test (same tenant.create args,
+ * same userGroup.create args, same createUserService call shape).
+ */
+type CreatePlatformTenantCoreInput = {
+  name: string
+  slug: string
+  contactEmail: string
+  initialAdminEmail: string
+  initialAdminDisplayName: string
+  addressStreet: string
+  addressZip: string
+  addressCity: string
+  addressCountry: string
+  billingExempt: boolean
+}
+
+type CreatePlatformTenantCoreAudit = {
+  ipAddress: string | null
+  userAgent: string | null
+}
+
+async function createPlatformTenantCore(
+  tx: Prisma.TransactionClient,
+  input: CreatePlatformTenantCoreInput,
+  audit: CreatePlatformTenantCoreAudit,
+) {
+  const existing = await tx.tenant.findUnique({
+    where: { slug: input.slug },
+  })
+  if (existing) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "Tenant-Slug existiert bereits",
+    })
+  }
+
+  const tenant = await tx.tenant.create({
+    data: {
+      name: input.name,
+      slug: input.slug,
+      email: input.contactEmail,
+      addressStreet: input.addressStreet,
+      addressZip: input.addressZip,
+      addressCity: input.addressCity,
+      addressCountry: input.addressCountry,
+      isActive: true,
+      billingExempt: input.billingExempt,
+    },
+  })
+
+  // Create a per-tenant admin group so the initial user has full
+  // permissions (is_admin bypass). Without this, the first user
+  // cannot access the UI to manage permissions — chicken-and-egg.
+  const adminGroup = await tx.userGroup.create({
+    data: {
+      tenantId: tenant.id,
+      name: "Administratoren",
+      code: "ADMIN",
+      description: "Vollzugriff auf alle Module und Funktionen",
+      permissions: [],
+      isAdmin: true,
+      isSystem: false,
+      isActive: true,
+    },
+  })
+
+  const { user: adminUser, welcomeEmail } = await createUserService(
+    tx,
+    tenant.id,
+    {
+      email: input.initialAdminEmail,
+      displayName: input.initialAdminDisplayName,
+      userGroupId: adminGroup.id,
+      isActive: true,
+      isLocked: false,
+    },
+    {
+      // Tenant-side audit attributes the action to the platform
+      // system sentinel — the acting platform operator is not a
+      // member of the new tenant. The authoritative record of
+      // the actor lives in platform_audit_logs at the call site.
+      userId: PLATFORM_SYSTEM_USER_ID,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    },
+  )
+
+  return { tenant, adminUser, welcomeEmail }
 }
 
 // --- Router -----------------------------------------------------------------
@@ -161,69 +267,12 @@ export const platformTenantManagementRouter = createTRPCRouter({
       try {
         const result = await ctx.prisma.$transaction(
           async (tx) => {
-            const existing = await tx.tenant.findUnique({
-              where: { slug: input.slug },
+            const core = await createPlatformTenantCore(tx, input, {
+              ipAddress: ctx.ipAddress,
+              userAgent: ctx.userAgent,
             })
-            if (existing) {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Tenant-Slug existiert bereits",
-              })
-            }
-
-            const tenant = await tx.tenant.create({
-              data: {
-                name: input.name,
-                slug: input.slug,
-                email: input.contactEmail,
-                addressStreet: input.addressStreet,
-                addressZip: input.addressZip,
-                addressCity: input.addressCity,
-                addressCountry: input.addressCountry,
-                isActive: true,
-                billingExempt: input.billingExempt,
-              },
-            })
-
-            // Create a per-tenant admin group so the initial user has full
-            // permissions (is_admin bypass). Without this, the first user
-            // cannot access the UI to manage permissions — chicken-and-egg.
-            const adminGroup = await tx.userGroup.create({
-              data: {
-                tenantId: tenant.id,
-                name: "Administratoren",
-                code: "ADMIN",
-                description: "Vollzugriff auf alle Module und Funktionen",
-                permissions: [],
-                isAdmin: true,
-                isSystem: false,
-                isActive: true,
-              },
-            })
-
-            const { user: adminUser, welcomeEmail } = await createUserService(
-              tx,
-              tenant.id,
-              {
-                email: input.initialAdminEmail,
-                displayName: input.initialAdminDisplayName,
-                userGroupId: adminGroup.id,
-                isActive: true,
-                isLocked: false,
-              },
-              {
-                // Tenant-side audit attributes the action to the platform
-                // system sentinel — the acting platform operator is not a
-                // member of the new tenant. The authoritative record of
-                // the actor lives in platform_audit_logs below.
-                userId: PLATFORM_SYSTEM_USER_ID,
-                ipAddress: ctx.ipAddress,
-                userAgent: ctx.userAgent,
-              },
-            )
-            createdAuthUserId = adminUser.id
-
-            return { tenant, adminUser, welcomeEmail }
+            createdAuthUserId = core.adminUser.id
+            return core
           },
           { timeout: 60_000 },
         )
@@ -256,6 +305,180 @@ export const platformTenantManagementRouter = createTRPCRouter({
         // insert raced into the catch BEFORE users-service ran, there is
         // nothing to compensate — createdAuthUserId is still null. The
         // reference assignment above is defensive; we do not double-rollback.
+        void createdAuthUserId
+        throw err
+      }
+    }),
+
+  starterTemplates: platformAuthedProcedure.query(() =>
+    listTenantTemplates().filter((t) => t.kind === "starter"),
+  ),
+
+  createFromTemplate: platformAuthedProcedure
+    .input(
+      z.object({
+        name: z.string().trim().min(2).max(255),
+        slug: z
+          .string()
+          .trim()
+          .toLowerCase()
+          .min(2)
+          .max(100)
+          .regex(slugPattern, "Slug darf nur Kleinbuchstaben, Ziffern und Bindestriche enthalten"),
+        contactEmail: z.string().email(),
+        initialAdminEmail: z.string().email(),
+        initialAdminDisplayName: z.string().trim().min(2).max(255),
+        addressStreet: z.string().trim().min(1).max(255),
+        addressZip: z.string().trim().min(1).max(20),
+        addressCity: z.string().trim().min(1).max(100),
+        addressCountry: z.string().trim().min(1).max(100),
+        billingExempt: z.boolean().default(false),
+
+        templateKey: z.string().min(1),
+
+        billingConfig: z.object({
+          legalName: z.string().trim().min(1).max(255),
+          iban: z
+            .string()
+            .trim()
+            .min(15)
+            .max(34)
+            .refine(isValidIban, { message: "Ungültige IBAN" }),
+          bic: z.string().trim().min(8).max(11).optional(),
+          taxId: z.string().trim().min(1),
+          leitwegId: z.string().trim().optional(),
+        }),
+
+        holidayState: z
+          .string()
+          .refine((s) => (GERMAN_STATES as readonly string[]).includes(s), {
+            message: "Ungültiger Bundesland-Code",
+          }),
+
+        defaultLocation: z.object({
+          name: z.string().trim().min(1).max(255).default("Hauptsitz"),
+          street: z.string().trim().min(1),
+          zip: z.string().trim().min(1),
+          city: z.string().trim().min(1),
+          country: z.string().trim().min(1),
+        }),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Template is validated outside the tx so an unknown key / wrong
+      // kind fails the call before any DB write.
+      const template = getTenantTemplate(input.templateKey)
+      if (template.kind !== "starter") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "createFromTemplate akzeptiert nur Templates mit kind=starter",
+        })
+      }
+
+      let createdAuthUserId: string | null = null
+      try {
+        const result = await ctx.prisma.$transaction(
+          async (tx) => {
+            // Step 1: Tenant + ADMIN group + initial admin user + welcome email
+            const core = await createPlatformTenantCore(tx, input, {
+              ipAddress: ctx.ipAddress,
+              userAgent: ctx.userAgent,
+            })
+            createdAuthUserId = core.adminUser.id
+
+            const templateCtx = {
+              tx,
+              tenantId: core.tenant.id,
+              adminUserId: core.adminUser.id,
+            }
+
+            // Step 2: Industry-specific config + universal defaults
+            await template.applyConfig(templateCtx)
+
+            // Step 3: Holidays for the chosen Bundesland (current + next year)
+            const currentYear = new Date().getFullYear()
+            await holidayService.generate(
+              tx as unknown as Parameters<typeof holidayService.generate>[0],
+              core.tenant.id,
+              { year: currentYear, state: input.holidayState },
+            )
+            await holidayService.generate(
+              tx as unknown as Parameters<typeof holidayService.generate>[0],
+              core.tenant.id,
+              { year: currentYear + 1, state: input.holidayState },
+            )
+
+            // Step 4: Billing tenant config (per-instance fields)
+            await billingTenantConfigService.upsert(
+              tx as unknown as Parameters<
+                typeof billingTenantConfigService.upsert
+              >[0],
+              core.tenant.id,
+              {
+                companyName: input.billingConfig.legalName,
+                iban: input.billingConfig.iban,
+                bic: input.billingConfig.bic ?? null,
+                taxId: input.billingConfig.taxId,
+                leitwegId: input.billingConfig.leitwegId ?? null,
+                companyStreet: input.addressStreet,
+                companyZip: input.addressZip,
+                companyCity: input.addressCity,
+                companyCountry: input.addressCountry,
+              },
+            )
+
+            // Step 5: Default location
+            await locationService.create(
+              tx as unknown as Parameters<typeof locationService.create>[0],
+              core.tenant.id,
+              {
+                code: "HQ",
+                name: input.defaultLocation.name,
+                address: `${input.defaultLocation.street}, ${input.defaultLocation.zip}`,
+                city: input.defaultLocation.city,
+                country: input.defaultLocation.country,
+              },
+            )
+
+            return core
+          },
+          { timeout: 120_000 },
+        )
+
+        await platformAudit.log(ctx.prisma, {
+          platformUserId: ctx.platformUser.id,
+          action: "tenant.created_from_template",
+          entityType: "tenant",
+          entityId: result.tenant.id,
+          targetTenantId: result.tenant.id,
+          metadata: {
+            slug: result.tenant.slug,
+            templateKey: input.templateKey,
+            industry: template.industry,
+            kind: template.kind,
+            initialAdminEmail: input.initialAdminEmail,
+            welcomeEmailSent: result.welcomeEmail.sent,
+            billingExempt: input.billingExempt,
+            holidayState: input.holidayState,
+          },
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        })
+
+        return {
+          tenant: result.tenant,
+          inviteLink: result.welcomeEmail.fallbackLink,
+          welcomeEmailSent: result.welcomeEmail.sent,
+          templateKey: input.templateKey,
+          industry: template.industry,
+        }
+      } catch (err) {
+        // Auth user cleanup — same pattern as `create`: users-service
+        // handles its own rollback when its own repo call fails; this
+        // defensive reference guards the rare race where the failure
+        // happens strictly after the auth row but nothing downstream can
+        // react to it.
         void createdAuthUserId
         throw err
       }

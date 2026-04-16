@@ -1,6 +1,8 @@
-import type { PrismaClient } from "@/generated/prisma/client"
+import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+
+type Tx = PrismaClient | Prisma.TransactionClient
 
 // --- Audit ---
 
@@ -60,6 +62,28 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   // keys like "dunning_2026" with prefix "MA-2026-" so the counter
   // resets each calendar year. This entry is kept for documentation.
   dunning: "MA-",
+}
+
+export interface TenantPrefixSnapshot {
+  invoicePrefix: string
+  inboundInvoicePrefix: string
+  creditNotePrefix: string
+}
+
+export async function getPrefixSnapshot(
+  prisma: Tx,
+  tenantId: string,
+): Promise<TenantPrefixSnapshot> {
+  const sequences = await prisma.numberSequence.findMany({
+    where: { tenantId, key: { in: ["invoice", "inbound_invoice", "credit_note"] } },
+    select: { key: true, prefix: true },
+  })
+  const map = new Map(sequences.map((s) => [s.key, s.prefix]))
+  return {
+    invoicePrefix: map.get("invoice") ?? DEFAULT_PREFIXES["invoice"] ?? "RE-",
+    inboundInvoicePrefix: map.get("inbound_invoice") ?? DEFAULT_PREFIXES["inbound_invoice"] ?? "ER-",
+    creditNotePrefix: map.get("credit_note") ?? DEFAULT_PREFIXES["credit_note"] ?? "G-",
+  }
 }
 
 export async function getNextNumber(

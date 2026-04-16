@@ -217,6 +217,18 @@ export async function deleteContact(
 
 // --- Bank Account Repository ---
 
+export async function findAddressByIban(
+  prisma: PrismaClient,
+  tenantId: string,
+  iban: string,
+): Promise<{ addressId: string; bankAccountId: string } | null> {
+  const row = await prisma.crmBankAccount.findFirst({
+    where: { tenantId, iban },
+    select: { id: true, addressId: true },
+  })
+  return row ? { addressId: row.addressId, bankAccountId: row.id } : null
+}
+
 export async function findBankAccounts(
   prisma: PrismaClient,
   tenantId: string,
