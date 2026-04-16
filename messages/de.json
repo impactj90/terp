@@ -8440,7 +8440,8 @@
       "matchingProgress": "Auto-Matching...",
       "matchingDone": "{matched} von {total} automatisch zugeordnet",
       "matchingError": "Auto-Matching fehlgeschlagen",
-      "matchingCancelled": "Auto-Matching abgebrochen"
+      "matchingCancelled": "Auto-Matching abgebrochen",
+      "matchingResume": "Matching fortsetzen ({count})"
     },
     "imports": {
       "button": "Importverlauf",

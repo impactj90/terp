@@ -8440,7 +8440,8 @@
       "matchingProgress": "Auto-matching...",
       "matchingDone": "{matched} of {total} auto-matched",
       "matchingError": "Auto-matching failed",
-      "matchingCancelled": "Auto-matching cancelled"
+      "matchingCancelled": "Auto-matching cancelled",
+      "matchingResume": "Resume matching ({count})"
     },
     "imports": {
       "button": "Import history",

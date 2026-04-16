@@ -80,6 +80,37 @@ export const bankStatementsRouter = createTRPCRouter({
       }
     }),
 
+  lastUnmatched: bankStatementsProcedure
+    .use(requirePermission(VIEW))
+    .query(async ({ ctx }) => {
+      try {
+        const prisma = ctx.prisma as unknown as PrismaClient
+        const tenantId = ctx.tenantId!
+        const rows = await prisma.$queryRaw<{ id: string; file_name: string; total: bigint; pending: bigint }[]>`
+          SELECT s.id, s.file_name,
+            COUNT(t.id)::bigint AS total,
+            COUNT(t.id) FILTER (WHERE t.status = 'unmatched' AND t.updated_at <= t.created_at)::bigint AS pending
+          FROM bank_statements s
+          JOIN bank_transactions t ON t.statement_id = s.id AND t.tenant_id = s.tenant_id
+          WHERE s.tenant_id = ${tenantId}
+          GROUP BY s.id
+          HAVING COUNT(t.id) FILTER (WHERE t.status = 'unmatched' AND t.updated_at <= t.created_at) > 0
+          ORDER BY s.created_at DESC
+          LIMIT 1
+        `
+        if (rows.length === 0) return null
+        const row = rows[0]
+        return {
+          statementId: row.id,
+          fileName: row.file_name,
+          total: Number(row.total),
+          pending: Number(row.pending),
+        }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   list: bankStatementsProcedure
     .use(requirePermission(VIEW))
     .input(

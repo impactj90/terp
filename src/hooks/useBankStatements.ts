@@ -59,3 +59,8 @@ export function useAutoMatchBatch() {
   const trpc = useTRPC()
   return useMutation(trpc.bankStatements.autoMatch.mutationOptions())
 }
+
+export function useLastUnmatchedStatement() {
+  const trpc = useTRPC()
+  return useQuery(trpc.bankStatements.lastUnmatched.queryOptions())
+}

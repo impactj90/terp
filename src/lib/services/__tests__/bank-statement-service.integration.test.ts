@@ -449,7 +449,7 @@ describe.sequential("bank-statement credit-match integration", () => {
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(1)
-    expect(result.remaining).toBe(2)
+    expect(result.remaining).toBe(0)
 
     const txRows = await prisma.bankTransaction.findMany({
       where: { tenantId: TEST_TENANT_ID },
@@ -725,7 +725,7 @@ describe.sequential("bank-statement debit-match integration", () => {
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(2)
-    expect(result.remaining).toBe(1)
+    expect(result.remaining).toBe(0)
 
     const creditAllocation = await prisma.billingDocumentBankAllocation.findFirst({
       where: { tenantId: TEST_TENANT_ID, billingDocumentId: DOC_ID_HAPPY },

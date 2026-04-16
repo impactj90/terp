@@ -177,12 +177,15 @@ export async function autoMatchBatch(
   userId: string | null,
   batchSize = 20,
 ): Promise<AutoMatchBatchResult> {
-  const transactions = await prisma.bankTransaction.findMany({
-    where: { tenantId, statementId, status: "unmatched" },
-    select: { id: true, direction: true },
-    orderBy: { createdAt: "asc" },
-    take: batchSize,
-  })
+  const transactions = await prisma.$queryRaw<{ id: string; direction: string }[]>`
+    SELECT id, direction FROM bank_transactions
+    WHERE tenant_id = ${tenantId}
+      AND statement_id = ${statementId}
+      AND status = 'unmatched'
+      AND updated_at <= created_at
+    ORDER BY created_at ASC
+    LIMIT ${batchSize}
+  `
 
   if (transactions.length === 0) {
     return { processed: 0, autoMatched: 0, failed: 0, remaining: 0 }
@@ -208,17 +211,25 @@ export async function autoMatchBatch(
     } catch {
       failed++
     }
+    await prisma.bankTransaction.update({
+      where: { id: bankTx.id },
+      data: { updatedAt: new Date() },
+    })
   }
 
-  const remaining = await prisma.bankTransaction.count({
-    where: { tenantId, statementId, status: "unmatched" },
-  })
+  const [{ count: remainingCount }] = await prisma.$queryRaw<[{ count: bigint }]>`
+    SELECT COUNT(*)::bigint AS count FROM bank_transactions
+    WHERE tenant_id = ${tenantId}
+      AND statement_id = ${statementId}
+      AND status = 'unmatched'
+      AND updated_at <= created_at
+  `
 
   return {
     processed: transactions.length,
     autoMatched,
     failed,
-    remaining,
+    remaining: Number(remainingCount),
   }
 }
 

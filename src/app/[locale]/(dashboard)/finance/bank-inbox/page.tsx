@@ -6,12 +6,13 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Play } from 'lucide-react'
 import { BankTransactionList } from '@/components/bank/bank-transaction-list'
 import { BankTransactionDetailSheet } from '@/components/bank/bank-transaction-detail-sheet'
 import { BankStatementUploadDialog } from '@/components/bank/bank-statement-upload-dialog'
 import { BankStatementHistorySheet } from '@/components/bank/bank-statement-history-sheet'
 import { useBankTransactionCounts } from '@/hooks/useBankTransactions'
-import { useAutoMatchBatch } from '@/hooks/useBankStatements'
+import { useAutoMatchBatch, useLastUnmatchedStatement } from '@/hooks/useBankStatements'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@/trpc'
 
@@ -26,13 +27,34 @@ export default function BankInboxPage() {
   const [uploadOpen, setUploadOpen] = React.useState(false)
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const { data: counts } = useBankTransactionCounts()
+  const { data: lastUnmatched } = useLastUnmatchedStatement()
 
   const autoMatchBatch = useAutoMatchBatch()
   const cancelledRef = React.useRef(false)
+  const [isMatching, setIsMatching] = React.useState(false)
 
-  const handleImportComplete = React.useCallback(
+  const invalidateAll = React.useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: trpc.billing.payments.openItems.list.queryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: trpc.billing.payments.openItems.summary.queryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: trpc.bankStatements.lastUnmatched.queryKey(),
+    })
+  }, [queryClient, trpc])
+
+  const runMatchLoop = React.useCallback(
     async (statementId: string, total: number) => {
       cancelledRef.current = false
+      setIsMatching(true)
       const toastId = `match-${statementId}`
       let processed = 0
       let totalMatched = 0
@@ -86,21 +108,25 @@ export default function BankInboxPage() {
         )
       }
 
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.billing.payments.openItems.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.billing.payments.openItems.summary.queryKey(),
-      })
+      setIsMatching(false)
+      invalidateAll()
     },
-    [autoMatchBatch, queryClient, trpc, t],
+    [autoMatchBatch, invalidateAll, t],
   )
+
+  const handleImportComplete = React.useCallback(
+    (statementId: string, total: number) => {
+      runMatchLoop(statementId, total)
+    },
+    [runMatchLoop],
+  )
+
+  const handleResume = React.useCallback(() => {
+    if (!lastUnmatched) return
+    runMatchLoop(lastUnmatched.statementId, lastUnmatched.pending)
+  }, [lastUnmatched, runMatchLoop])
+
+  const showResumeButton = !isMatching && lastUnmatched && lastUnmatched.pending > 0
 
   return (
     <div className="p-6 space-y-6">
@@ -110,6 +136,12 @@ export default function BankInboxPage() {
           <p className="text-sm text-muted-foreground">{t('pageSubtitle')}</p>
         </div>
         <div className="flex gap-2">
+          {showResumeButton && (
+            <Button variant="outline" onClick={handleResume}>
+              <Play className="mr-2 h-4 w-4" />
+              {t('upload.matchingResume', { count: lastUnmatched.pending })}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setHistoryOpen(true)}>
             {t('imports.button')}
           </Button>
