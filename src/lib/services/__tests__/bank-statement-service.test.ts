@@ -35,6 +35,7 @@ vi.mock("../bank-transaction-matcher-service", () => ({
 import * as storage from "@/lib/supabase/storage"
 import * as repo from "../bank-statement-repository"
 import * as auditLog from "../audit-logs-service"
+import * as numberSequenceService from "../number-sequence-service"
 import {
   importCamtStatement,
   BankStatementValidationError,
@@ -46,11 +47,12 @@ const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
 const USER_ID = "a0000000-0000-4000-a000-000000000001"
 
 function makePrismaStub(): PrismaClient {
-  return {
+  const stub = {
     $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => {
-      return cb({} as unknown)
+      return cb(stub)
     }),
   } as unknown as PrismaClient
+  return stub
 }
 
 function makeB64(xml: string): string {

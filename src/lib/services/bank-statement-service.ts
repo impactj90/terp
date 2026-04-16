@@ -99,9 +99,12 @@ export async function importCamtStatement(
     throw err
   }
 
+  let statement: { id: string }
+  let newTransactions: { id: string; direction: string }[]
+
   try {
-    return await prisma.$transaction(async (tx) => {
-      const statement = await repo.createStatement(tx, {
+    const txResult = await prisma.$transaction(async (tx) => {
+      const stmt = await repo.createStatement(tx, {
         id: statementRowId,
         tenantId,
         fileName: input.fileName,
@@ -119,7 +122,7 @@ export async function importCamtStatement(
 
       const rows = parsed.transactions.map((t) => ({
         tenantId,
-        statementId: statement.id,
+        statementId: stmt.id,
         bookingDate: t.bookingDate,
         valueDate: t.valueDate,
         amount: t.amount,
@@ -136,53 +139,61 @@ export async function importCamtStatement(
         status: "unmatched" as const,
       }))
 
-      const newTransactions = await repo.createTransactionsBatch(tx, tenantId, statement.id, rows)
-
-      const snapshot = await numberSequenceService.getPrefixSnapshot(tx, tenantId)
-      let autoMatched = 0
-      for (const bankTx of newTransactions) {
-        if (bankTx.direction === "CREDIT") {
-          const decision = await matcherService.runCreditMatchForTransaction(
-            tx, tenantId, bankTx.id, snapshot, userId,
-          )
-          if (decision.result === "matched") autoMatched++
-        } else {
-          const decision = await matcherService.runDebitMatchForTransaction(
-            tx, tenantId, bankTx.id, snapshot, userId,
-          )
-          if (decision.result === "matched" || decision.result === "consistency_confirmed") autoMatched++
-        }
-      }
-
-      await auditLog.log(tx, {
-        tenantId,
-        userId,
-        action: "import",
-        entityType: "bank_statement",
-        entityId: statement.id,
-        entityName: input.fileName,
-        metadata: {
-          transactionsImported: newTransactions.length,
-          autoMatched,
-          accountIban: parsed.accountIban,
-          statementId: parsed.statementId,
-        },
-      })
-
-      return {
-        statementId: statement.id,
-        alreadyImported: false,
-        transactionsImported: newTransactions.length,
-        autoMatched,
-        unmatched: newTransactions.length - autoMatched,
-        ignored: 0,
-      }
+      const txns = await repo.createTransactionsBatch(tx, tenantId, stmt.id, rows)
+      return { statement: stmt, transactions: txns }
     })
+    statement = txResult.statement
+    newTransactions = txResult.transactions
   } catch (err) {
     await storage
       .remove(BANK_STATEMENTS_BUCKET, [storagePath])
       .catch(() => {})
     throw err
+  }
+
+  // Auto-matching runs outside the import transaction (best-effort)
+  const snapshot = await numberSequenceService.getPrefixSnapshot(prisma, tenantId)
+  let autoMatched = 0
+  for (const bankTx of newTransactions) {
+    try {
+      if (bankTx.direction === "CREDIT") {
+        const decision = await matcherService.runCreditMatchForTransaction(
+          prisma, tenantId, bankTx.id, snapshot, userId,
+        )
+        if (decision.result === "matched") autoMatched++
+      } else {
+        const decision = await matcherService.runDebitMatchForTransaction(
+          prisma, tenantId, bankTx.id, snapshot, userId,
+        )
+        if (decision.result === "matched" || decision.result === "consistency_confirmed") autoMatched++
+      }
+    } catch {
+      // Individual match failure should not abort remaining matches
+    }
+  }
+
+  await auditLog.log(prisma, {
+    tenantId,
+    userId,
+    action: "import",
+    entityType: "bank_statement",
+    entityId: statement.id,
+    entityName: input.fileName,
+    metadata: {
+      transactionsImported: newTransactions.length,
+      autoMatched,
+      accountIban: parsed.accountIban,
+      statementId: parsed.statementId,
+    },
+  })
+
+  return {
+    statementId: statement.id,
+    alreadyImported: false,
+    transactionsImported: newTransactions.length,
+    autoMatched,
+    unmatched: newTransactions.length - autoMatched,
+    ignored: 0,
   }
 }
 

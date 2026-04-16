@@ -459,7 +459,7 @@ describe.sequential("bank-statement credit-match integration", () => {
     expect(unmatchedWithAddress?.amount).toBe(999.99)
   })
 
-  it("atomicity: DB transaction rolls back on matcher failure", async () => {
+  it("matcher failure does not roll back imported statement", async () => {
     await seedInvoice({ id: DOC_ID_HAPPY, number: "RE-20", totalGross: 500 })
 
     const xml = buildCreditXml({
@@ -473,22 +473,24 @@ describe.sequential("bank-statement credit-match integration", () => {
     )
     createSpy.mockRejectedValueOnce(new Error("simulated payment failure"))
 
-    await expect(
-      importCamtStatement(
-        prisma, TEST_TENANT_ID,
-        { fileBase64: toB64(xml), fileName: "atomicity.xml" },
-        TEST_USER_ID,
-      ),
-    ).rejects.toThrow("simulated payment failure")
+    const result = await importCamtStatement(
+      prisma, TEST_TENANT_ID,
+      { fileBase64: toB64(xml), fileName: "atomicity.xml" },
+      TEST_USER_ID,
+    )
 
     createSpy.mockRestore()
+
+    expect(result.transactionsImported).toBe(1)
+    expect(result.autoMatched).toBe(0)
+    expect(result.unmatched).toBe(1)
 
     const stmtCount = await prisma.bankStatement.count({ where: { tenantId: TEST_TENANT_ID } })
     const txCount = await prisma.bankTransaction.count({ where: { tenantId: TEST_TENANT_ID } })
     const payCount = await prisma.billingPayment.count({ where: { tenantId: TEST_TENANT_ID } })
 
-    expect(stmtCount).toBe(0)
-    expect(txCount).toBe(0)
+    expect(stmtCount).toBe(1)
+    expect(txCount).toBe(1)
     expect(payCount).toBe(0)
   })
 })
