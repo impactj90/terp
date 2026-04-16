@@ -55,37 +55,7 @@ export function useImportBankStatement() {
   })
 }
 
-export function useAutoMatchStatement() {
+export function useAutoMatchBatch() {
   const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  return useMutation({
-    ...trpc.bankStatements.autoMatch.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.billing.payments.openItems.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.billing.payments.openItems.summary.queryKey(),
-      })
-    },
-  })
-}
-
-export function useMatchProgress(statementId: string | null) {
-  const trpc = useTRPC()
-  return useQuery(
-    trpc.bankStatements.matchProgress.queryOptions(
-      { statementId: statementId! },
-      {
-        enabled: !!statementId,
-        refetchInterval: 1500,
-      },
-    ),
-  )
+  return useMutation(trpc.bankStatements.autoMatch.mutationOptions())
 }

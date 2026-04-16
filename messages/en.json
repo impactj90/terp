@@ -8439,7 +8439,8 @@
       "permissionError": "No permission to import bank statements",
       "matchingProgress": "Auto-matching...",
       "matchingDone": "{matched} of {total} auto-matched",
-      "matchingError": "Auto-matching failed"
+      "matchingError": "Auto-matching failed",
+      "matchingCancelled": "Auto-matching cancelled"
     },
     "imports": {
       "button": "Import history",

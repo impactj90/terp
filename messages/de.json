@@ -8439,7 +8439,8 @@
       "permissionError": "Keine Berechtigung, Bank-Auszüge zu importieren",
       "matchingProgress": "Auto-Matching...",
       "matchingDone": "{matched} von {total} automatisch zugeordnet",
-      "matchingError": "Auto-Matching fehlgeschlagen"
+      "matchingError": "Auto-Matching fehlgeschlagen",
+      "matchingCancelled": "Auto-Matching abgebrochen"
     },
     "imports": {
       "button": "Importverlauf",

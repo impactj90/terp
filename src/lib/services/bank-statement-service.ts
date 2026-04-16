@@ -43,16 +43,11 @@ export interface ImportCamtResult {
   transactionsImported: number
 }
 
-export interface AutoMatchResult {
-  autoMatched: number
-  unmatched: number
-  failed: number
-}
-
-export interface MatchProgress {
-  total: number
+export interface AutoMatchBatchResult {
   processed: number
-  matched: number
+  autoMatched: number
+  failed: number
+  remaining: number
 }
 
 export async function importCamtStatement(
@@ -175,70 +170,55 @@ export async function importCamtStatement(
   return { statementId, alreadyImported: false, transactionsImported }
 }
 
-export async function autoMatchStatement(
+export async function autoMatchBatch(
   prisma: PrismaClient,
   tenantId: string,
   statementId: string,
   userId: string | null,
-): Promise<AutoMatchResult> {
+  batchSize = 20,
+): Promise<AutoMatchBatchResult> {
   const transactions = await prisma.bankTransaction.findMany({
     where: { tenantId, statementId, status: "unmatched" },
     select: { id: true, direction: true },
+    orderBy: { createdAt: "asc" },
+    take: batchSize,
   })
+
+  if (transactions.length === 0) {
+    return { processed: 0, autoMatched: 0, failed: 0, remaining: 0 }
+  }
 
   const snapshot = await numberSequenceService.getPrefixSnapshot(prisma, tenantId)
   let autoMatched = 0
   let failed = 0
 
   for (const bankTx of transactions) {
-    let matched = false
     try {
       if (bankTx.direction === "CREDIT") {
         const decision = await matcherService.runCreditMatchForTransaction(
           prisma, tenantId, bankTx.id, snapshot, userId,
         )
-        if (decision.result === "matched") { autoMatched++; matched = true }
+        if (decision.result === "matched") autoMatched++
       } else {
         const decision = await matcherService.runDebitMatchForTransaction(
           prisma, tenantId, bankTx.id, snapshot, userId,
         )
-        if (decision.result === "matched" || decision.result === "consistency_confirmed") { autoMatched++; matched = true }
+        if (decision.result === "matched" || decision.result === "consistency_confirmed") autoMatched++
       }
     } catch {
       failed++
     }
-    if (!matched) {
-      await prisma.bankTransaction.update({
-        where: { id: bankTx.id },
-        data: { updatedAt: new Date() },
-      })
-    }
   }
 
+  const remaining = await prisma.bankTransaction.count({
+    where: { tenantId, statementId, status: "unmatched" },
+  })
+
   return {
+    processed: transactions.length,
     autoMatched,
-    unmatched: transactions.length - autoMatched - failed,
     failed,
-  }
-}
-
-export async function getMatchProgress(
-  prisma: PrismaClient,
-  tenantId: string,
-  statementId: string,
-): Promise<MatchProgress> {
-  const [result] = await prisma.$queryRaw<[{ total: bigint; processed: bigint; matched: bigint }]>`
-    SELECT
-      COUNT(*)::bigint AS total,
-      COUNT(*) FILTER (WHERE updated_at > created_at)::bigint AS processed,
-      COUNT(*) FILTER (WHERE status = 'matched')::bigint AS matched
-    FROM bank_transactions
-    WHERE tenant_id = ${tenantId} AND statement_id = ${statementId}
-  `
-  return {
-    total: Number(result.total),
-    processed: Number(result.processed),
-    matched: Number(result.matched),
+    remaining,
   }
 }
 

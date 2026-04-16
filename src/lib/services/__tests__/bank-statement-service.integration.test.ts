@@ -6,8 +6,8 @@ vi.mock("@/lib/supabase/storage", () => ({
 }))
 
 import { prisma } from "@/lib/db/prisma"
-import { importCamtStatement, autoMatchStatement, deleteStatement } from "../bank-statement-service"
-import type { ImportCamtResult, AutoMatchResult } from "../bank-statement-service"
+import { importCamtStatement, autoMatchBatch, deleteStatement } from "../bank-statement-service"
+import type { ImportCamtResult, AutoMatchBatchResult } from "../bank-statement-service"
 import { unmatchBankTransaction, BankTransactionMatchConflictError } from "../bank-transaction-matcher-service"
 import { seedBankTestContext, type BankTestContext } from "./helpers/bank-match-fixtures"
 
@@ -27,17 +27,17 @@ async function importAndMatch(
   xml: string,
   fileName: string,
   userId: string = TEST_USER_ID,
-): Promise<ImportCamtResult & AutoMatchResult> {
+): Promise<ImportCamtResult & AutoMatchBatchResult> {
   const importResult = await importCamtStatement(
     prisma, TEST_TENANT_ID,
     { fileBase64: toB64(xml), fileName },
     userId,
   )
   if (importResult.alreadyImported) {
-    return { ...importResult, autoMatched: 0, unmatched: 0, failed: 0 }
+    return { ...importResult, processed: 0, autoMatched: 0, failed: 0, remaining: 0 }
   }
-  const matchResult = await autoMatchStatement(
-    prisma, TEST_TENANT_ID, importResult.statementId, userId,
+  const matchResult = await autoMatchBatch(
+    prisma, TEST_TENANT_ID, importResult.statementId, userId, 1000,
   )
   return { ...importResult, ...matchResult }
 }
@@ -376,7 +376,7 @@ describe.sequential("bank-statement credit-match integration", () => {
     const result = await importAndMatch(xml, "happy.xml")
 
     expect(result.autoMatched).toBe(1)
-    expect(result.unmatched).toBe(0)
+    expect(result.remaining).toBe(0)
 
     const txRow = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -449,7 +449,7 @@ describe.sequential("bank-statement credit-match integration", () => {
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(1)
-    expect(result.unmatched).toBe(2)
+    expect(result.remaining).toBe(2)
 
     const txRows = await prisma.bankTransaction.findMany({
       where: { tenantId: TEST_TENANT_ID },
@@ -583,7 +583,7 @@ describe.sequential("bank-statement debit-match integration", () => {
     const result = await importAndMatch(xml, "debit-happy.xml")
 
     expect(result.autoMatched).toBe(1)
-    expect(result.unmatched).toBe(0)
+    expect(result.remaining).toBe(0)
 
     const txRow = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -725,7 +725,7 @@ describe.sequential("bank-statement debit-match integration", () => {
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(2)
-    expect(result.unmatched).toBe(1)
+    expect(result.remaining).toBe(1)
 
     const creditAllocation = await prisma.billingDocumentBankAllocation.findFirst({
       where: { tenantId: TEST_TENANT_ID, billingDocumentId: DOC_ID_HAPPY },
