@@ -35,10 +35,10 @@ export default function BankInboxPage() {
   React.useEffect(() => {
     if (!matchingJob || !progress) return
     const pct = matchingJob.total > 0
-      ? Math.round((progress.matched / matchingJob.total) * 100)
+      ? Math.round((progress.processed / matchingJob.total) * 100)
       : 0
     toast.loading(
-      `${t('upload.matchingProgress')}  ${progress.matched}/${matchingJob.total}  (${pct}%)`,
+      `${t('upload.matchingProgress')}  ${progress.processed}/${matchingJob.total}  (${pct}%)`,
       { id: matchingJob.toastId },
     )
   }, [matchingJob, progress, t])
