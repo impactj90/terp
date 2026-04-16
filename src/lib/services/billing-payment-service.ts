@@ -80,7 +80,7 @@ interface OpenItemDocument {
   childDocuments?: Array<{ totalGross: number }>
 }
 
-function enrichOpenItem(doc: OpenItemDocument) {
+export function enrichOpenItem(doc: OpenItemDocument) {
   const creditNoteReduction = (doc.childDocuments ?? []).reduce(
     (sum, cn) => sum + cn.totalGross,
     0

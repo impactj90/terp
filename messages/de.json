@@ -152,6 +152,8 @@
     "inboundApprovals": "Freigaben",
     "inboundSettings": "Einstellungen",
     "paymentRuns": "Zahlungsläufe",
+    "financeSection": "Finanzen",
+    "bankInbox": "Bank-Inbox",
     "warehouseSection": "Lager",
     "warehouseOverview": "Lagerübersicht",
     "warehouseArticles": "Artikel",
@@ -8326,6 +8328,128 @@
       "EXPORTED": "Exportiert",
       "BOOKED": "Gebucht",
       "CANCELLED": "Storniert"
+    }
+  },
+  "bankInbox": {
+    "pageTitle": "Bank-Inbox",
+    "pageSubtitle": "Offene Bank-Buchungen zuordnen",
+    "tabs": {
+      "unmatched": "Offen",
+      "matched": "Zugeordnet",
+      "ignored": "Ignoriert"
+    },
+    "list": {
+      "empty": {
+        "unmatched": "Keine offenen Buchungen.",
+        "matched": "Keine zugeordneten Buchungen.",
+        "ignored": "Keine ignorierten Buchungen."
+      },
+      "column": {
+        "date": "Datum",
+        "counterparty": "Gegenpartei",
+        "amount": "Betrag",
+        "direction": "Richtung",
+        "remittance": "Verwendungszweck",
+        "status": "Status"
+      }
+    },
+    "direction": {
+      "credit": "Eingang",
+      "debit": "Ausgang"
+    },
+    "status": {
+      "unmatched": "Offen",
+      "matched": "Zugeordnet",
+      "ignored": "Ignoriert"
+    },
+    "detail": {
+      "title": "Buchung zuordnen",
+      "transactionInfo": "Bank-Buchung",
+      "bookingDate": "Buchungsdatum",
+      "valueDate": "Valutadatum",
+      "counterpartyName": "Name",
+      "counterpartyIban": "IBAN",
+      "counterpartyBic": "BIC",
+      "remittanceInfo": "Verwendungszweck",
+      "endToEndId": "End-to-End-ID",
+      "suggestedCustomer": "Vermuteter Kunde",
+      "suggestedCustomerHint": "Wir vermuten, diese Zahlung gehört zu {name}.",
+      "candidatesHeading": "Offene Rechnungen",
+      "candidatesEmpty": "Keine offenen Rechnungen für diesen Kunden.",
+      "customerSearchPlaceholder": "Anderen Kunden suchen…",
+      "allocationAmountLabel": "Zugeordneter Betrag",
+      "matchedInfo": "Zuordnungsinformationen",
+      "allocations": "Zuordnungen",
+      "ignoredInfo": "Ignoriert",
+      "ignoredReason": "Begründung",
+      "ignoredAt": "Ignoriert am",
+      "ignoredBy": "Ignoriert von",
+      "noReason": "Keine Begründung angegeben"
+    },
+    "footer": {
+      "allocatedSum": "Zugeordnet",
+      "transactionAmount": "Buchungsbetrag",
+      "difference": "Differenz",
+      "confirmMatch": "Zuordnung bestätigen",
+      "ignoreAction": "Ignorieren",
+      "cancel": "Abbrechen"
+    },
+    "ignoreDialog": {
+      "title": "Buchung ignorieren",
+      "description": "Ignorierte Buchungen tauchen nicht mehr in der Inbox auf. Du kannst sie später im Tab 'Ignoriert' einsehen.",
+      "reasonLabel": "Begründung (optional)",
+      "reasonPlaceholder": "z.B. Bankgebühr, Rückbuchung, …",
+      "confirm": "Ignorieren"
+    },
+    "matched": {
+      "view": "Rechnung öffnen",
+      "allocationCount": "{count} Zuordnung(en)"
+    },
+    "toast": {
+      "matchSuccess": "Zuordnung gespeichert",
+      "matchError": "Zuordnung fehlgeschlagen: {message}",
+      "ignoreSuccess": "Buchung ignoriert",
+      "unmatchSuccess": "Zuordnung aufgehoben",
+      "unmatchError": "Aufhebung fehlgeschlagen: {message}",
+      "importSuccess": "{transactionCount} Buchungen importiert, {matchedCount} automatisch zugeordnet",
+      "importAlreadyImported": "Diese Datei wurde bereits importiert.",
+      "importInvalidFile": "Datei ist kein gültiger CAMT.053-Auszug."
+    },
+    "upload": {
+      "button": "CAMT.053 importieren",
+      "dialogTitle": "Bankkontoauszug importieren",
+      "description": "CAMT.053-XML-Datei hochladen. Maximale Größe 5 MB.",
+      "fileLabel": "CAMT.053-Datei auswählen",
+      "submit": "Importieren",
+      "cancel": "Abbrechen",
+      "successToast": "{count} Buchungen importiert",
+      "alreadyImportedToast": "Diese Datei wurde bereits importiert, keine neuen Buchungen",
+      "invalidFileToast": "Datei ist kein gültiger CAMT.053-Auszug",
+      "permissionError": "Keine Berechtigung, Bank-Auszüge zu importieren"
+    },
+    "imports": {
+      "button": "Importverlauf",
+      "title": "Importierte Kontoauszüge",
+      "description": "Hier können Sie fehlerhafte Imports rückgängig machen. Alle zugehörigen Buchungen und Zuordnungen werden gelöscht.",
+      "empty": "Keine Kontoauszüge importiert.",
+      "transactionCount": "{count} Buchungen",
+      "deleteConfirmTitle": "Import rückgängig machen?",
+      "deleteConfirmDescription": "Alle {count} Buchungen dieses Imports werden gelöscht. Bestehende Zuordnungen werden aufgehoben und Zahlungen storniert. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteButton": "Import löschen",
+      "deleteSuccess": "Import gelöscht: {transactions} Buchungen entfernt, {payments} Zahlungen storniert",
+      "deleteError": "Löschen fehlgeschlagen: {message}"
+    },
+    "unmatch": {
+      "button": "Zuordnung aufheben",
+      "confirmTitle": "Zuordnung wirklich aufheben?",
+      "confirmDescription": "Die zugehörigen Zahlungen werden storniert und die Buchung kehrt in die Inbox zurück.",
+      "confirm": "Aufheben"
+    },
+    "permission": {
+      "denied": "Keine Berechtigung für die Bank-Inbox.",
+      "deniedMatch": "Keine Berechtigung, Bank-Buchungen zuzuordnen.",
+      "deniedIgnore": "Keine Berechtigung, Bank-Buchungen zu ignorieren.",
+      "deniedUnmatch": "Keine Berechtigung, Zuordnungen aufzuheben."
     }
   }
 }

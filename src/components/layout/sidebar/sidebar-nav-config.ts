@@ -57,6 +57,7 @@ import {
   FileInput,
   FileCheck,
   LifeBuoy,
+  Inbox,
 } from 'lucide-react'
 
 /**
@@ -425,6 +426,19 @@ export const navConfig: NavSection[] = [
         icon: Landmark,
         module: 'payment_runs',
         permissions: ['payment_runs.view'],
+      },
+    ],
+  },
+  {
+    titleKey: 'financeSection',
+    module: 'bank_statements',
+    items: [
+      {
+        titleKey: 'bankInbox',
+        href: '/finance/bank-inbox',
+        icon: Inbox,
+        module: 'bank_statements',
+        permissions: ['bank_transactions.view'],
       },
     ],
   },

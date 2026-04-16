@@ -191,6 +191,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [22.14 Berechtigungen](#2214-berechtigungen)
     - [22.15 Praxisbeispiele](#2215-praxisbeispiele)
     - [22.16 Zahlungsläufe (SEPA)](#2216-zahlungsläufe-sepa)
+    - [22.18 Bank-Inbox (CAMT.053)](#2218-bank-inbox-camt053)
 23. [Glossar](#23-glossar)
 
 ---
@@ -11092,6 +11093,157 @@ Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mah
 
 ---
 
+### 22.18 Bank-Inbox (CAMT.053)
+
+**Was ist die Bank-Inbox?** Die Bank-Inbox gleicht elektronische Kontoauszüge im CAMT.053-Format (ISO 20022) mit offenen Ausgangs- und Eingangsrechnungen ab. Eingehende Zahlungen (Credit) werden offenen Ausgangsrechnungen zugeordnet, ausgehende Zahlungen (Debit) offenen Eingangsrechnungen. Die Zuordnung läuft zunächst automatisch; was der Matcher nicht eindeutig zuweisen kann, landet als offener Posten in der Inbox zur manuellen Bearbeitung.
+
+**Wozu dient es?** Es ersetzt das manuelle Abhaken im Online-Banking: Statt jeden Zahlungseingang einzeln zu suchen und in Terp als Zahlung zu erfassen, importieren Sie den Kontoauszug einmalig und Terp erledigt den Abgleich.
+
+**Wer kann es nutzen?** Benutzer mit den Berechtigungen `bank_transactions.view/import/match/ignore`. Das Modul `bank_statements` muss für den Mandanten aktiviert sein.
+
+📍 Seitenleiste → **Finanzen** → **Bank-Inbox**
+
+#### Kontoauszug importieren
+
+1. 📍 Bank-Inbox → **„CAMT.053 importieren"** (Button oben rechts)
+2. 📍 CAMT.053-XML-Datei per Drag-and-Drop oder Dateiauswahl hochladen (max. 5 MB)
+3. ✅ Toast zeigt „X Buchungen importiert, Y automatisch zugeordnet"
+4. ✅ Dieselbe Datei nochmals hochladen → Toast „Diese Datei wurde bereits importiert" (SHA-256-Duplikatserkennung)
+
+> 💡 **CAMT.053** ist der ISO-20022-Standard für elektronische Kontoauszüge. Sie erhalten die Datei im Online-Banking Ihrer Bank unter „Elektronische Kontoauszüge" oder „CAMT-Download". Das Format heißt bei einigen Banken auch „MT940-Nachfolger" oder „ISO-XML-Kontoauszug".
+
+#### Automatisches Matching
+
+Beim Import versucht Terp, jede Buchung automatisch einer offenen Rechnung zuzuordnen:
+
+**Eingehende Zahlungen (Credit → Ausgangsrechnungen):**
+1. IBAN der Gegenpartei wird in den CRM-Bankverbindungen gesucht → Kunde identifiziert
+2. Offene Rechnungen des Kunden werden nach Betrag verglichen
+3. Wenn der Verwendungszweck eine Rechnungsnummer enthält (z.B. „RE-42"), wird diese zur Eindeutigkeit herangezogen
+4. Skonto wird erkannt: Wenn der Kunde z.B. 980 EUR für eine 1.000-EUR-Rechnung mit 2 % Skonto überweist, erkennt Terp den Skontoabzug und bucht automatisch die Differenz als Skontoertrag
+
+**Ausgehende Zahlungen (Debit → Eingangsrechnungen):**
+1. Verwendungszweck wird nach Lieferanten-Rechnungsnummern und Terp-Nummern (ER-...) durchsucht
+2. IBAN-Abgleich mit der auf der Eingangsrechnung hinterlegten Lieferanten-IBAN
+3. Betragsvergleich mit ±3 Tagen Datumstoleranz zum Fälligkeitsdatum
+4. End-to-End-ID aus SEPA-Zahlungsläufen (siehe 22.16) wird automatisch erkannt — bereits als „gebucht" markierte Rechnungen werden als Konsistenz-Match bestätigt, ohne eine zweite Zahlung anzulegen
+
+#### Die drei Tabs
+
+| Tab | Inhalt | Badge |
+|---|---|---|
+| **Offen** | Buchungen, die der Matcher nicht zuordnen konnte | Anzahl offener Posten |
+| **Zugeordnet** | Automatisch oder manuell zugeordnete Buchungen | Gesamtzahl |
+| **Ignoriert** | Manuell als irrelevant markierte Buchungen (Bankgebühren, Rückbuchungen, etc.) | — |
+
+Jede Zeile zeigt: Datum, Gegenpartei (mit Kundenvorschlag falls IBAN erkannt), Verwendungszweck, Richtung (Eingang/Ausgang) und Betrag.
+
+#### Manuelle Zuordnung
+
+Wenn der Auto-Matcher eine Buchung nicht zuordnen konnte:
+
+1. 📍 Tab **Offen** → Buchung anklicken → Detail-Sheet öffnet sich
+2. ✅ Linke Spalte zeigt alle Transaktionsdetails (Datum, IBAN, Verwendungszweck, End-to-End-ID)
+3. ✅ Falls die IBAN einem Kunden/Lieferanten zugeordnet ist, zeigt Terp einen Hinweis: „Wir vermuten, diese Zahlung gehört zu [Kundenname]."
+4. ✅ Darunter: Liste offener Rechnungen des erkannten Kunden
+5. 📍 Checkbox bei der passenden Rechnung aktivieren → Betrag wird vorausgefüllt
+6. ✅ Sticky Footer zeigt laufende Summe: Zugeordnet / Buchungsbetrag / Differenz
+7. 📍 Bei Split-Buchungen: mehrere Rechnungen auswählen, Beträge ggf. anpassen
+8. 📍 **„Zuordnung bestätigen"** klicken (Button wird erst aktiv, wenn Zugeordnet ≈ Buchungsbetrag ±0,01 €)
+9. ✅ Toast „Zuordnung gespeichert", Buchung wandert in den Tab **Zugeordnet**
+
+> 💡 **Split-Allocation:** Eine Sammelüberweisung über z.B. 4.500 € kann gleichzeitig einer Rechnung über 1.500 € und einer über 3.000 € zugeordnet werden. Der Sticky Footer zeigt live die Summe und die verbleibende Differenz.
+
+#### Buchung ignorieren
+
+Nicht jede Buchung gehört zu einer Rechnung — Bankgebühren, Zinsen, interne Umbuchungen etc. können ignoriert werden:
+
+1. 📍 Tab **Offen** → Buchung anklicken → Detail-Sheet
+2. 📍 **„Ignorieren"** klicken (Button im Footer)
+3. ✅ Dialog: „Ignorierte Buchungen tauchen nicht mehr in der Inbox auf."
+4. 📍 Optional: Begründung eingeben (z.B. „Bankgebühr", „Rückbuchung")
+5. 📍 **„Ignorieren"** bestätigen
+6. ✅ Toast „Buchung ignoriert", Buchung wandert in den Tab **Ignoriert**
+7. ✅ Im Tab **Ignoriert** ist die Begründung unter dem Verwendungszweck sichtbar
+
+#### Zugeordnete Buchungen einsehen
+
+Im Tab **Zugeordnet** sehen Sie, welche Rechnungen jeder Buchung zugeordnet wurden:
+
+1. 📍 Tab **Zugeordnet** → Buchung anklicken
+2. ✅ Detail-Sheet zeigt: Transaktionsdetails + Zuordnungsliste mit Rechnungsnummer und Betrag
+
+#### Zuordnung aufheben
+
+Wurde eine Buchung versehentlich falsch zugeordnet — ob automatisch oder manuell — können Sie die Zuordnung rückgängig machen:
+
+1. 📍 Tab **Zugeordnet** → Buchung anklicken → Detail-Sheet
+2. 📍 **„Zuordnung aufheben"** klicken (Button im Footer)
+3. ✅ Sicherheitsabfrage: „Zuordnung wirklich aufheben? Die zugehörigen Zahlungen werden storniert und die Buchung kehrt in die Inbox zurück."
+4. 📍 **„Aufheben"** bestätigen
+5. ✅ Toast „Zuordnung aufgehoben", Buchung wandert zurück in den Tab **Offen**
+6. ✅ Die zugehörigen Zahlungen auf der Rechnung werden automatisch storniert, die Rechnung wird wieder als offen geführt
+
+> 💡 **Konsistenz-Matches** (Buchungen, die bereits über einen SEPA-Zahlungslauf als „gebucht" markiert wurden): Beim Aufheben wird nur die Bank-Zuordnung entfernt. Die Rechnung bleibt als bezahlt markiert, da die Zahlung nicht über den Matcher, sondern über den Zahlungslauf erfasst wurde.
+
+#### Import rückgängig machen
+
+Wurde versehentlich die falsche CAMT-Datei importiert — z.B. vom falschen Bankkonto oder ein Testkonto — können Sie den gesamten Import rückgängig machen:
+
+1. 📍 Bank-Inbox → **„Importverlauf"** (Button oben rechts neben „CAMT.053 importieren")
+2. ✅ Sheet öffnet sich mit der Liste aller importierten Kontoauszüge (Dateiname, Importdatum)
+3. 📍 Beim fehlerhaften Import auf das **Papierkorb-Symbol** klicken
+4. ✅ Sicherheitsabfrage: „Alle X Buchungen dieses Imports werden gelöscht. Bestehende Zuordnungen werden aufgehoben und Zahlungen storniert."
+5. 📍 **„Import löschen"** bestätigen
+6. ✅ Toast „Import gelöscht: X Buchungen entfernt, Y Zahlungen storniert"
+7. ✅ Alle Buchungen des Imports verschwinden aus allen Tabs (Offen, Zugeordnet, Ignoriert)
+8. ✅ Zugehörige Zahlungen werden automatisch storniert, betroffene Rechnungen wieder als offen geführt
+9. ✅ Die CAMT-Datei kann anschließend erneut importiert werden (SHA-256-Duplikatssperre wurde aufgehoben)
+
+> 💡 **Wichtig:** Dieser Vorgang storniert alle Zahlungen, die durch den Matcher beim Import oder durch manuelle Zuordnung zu diesem Kontoauszug erzeugt wurden. Prüfen Sie nach dem Löschen, ob die betroffenen Rechnungen den korrekten Zahlungsstatus haben.
+
+#### Berechtigungen
+
+| Berechtigung | Erlaubt |
+|---|---|
+| `bank_transactions.view` | Inbox sehen, Buchungen und Zuordnungen einsehen |
+| `bank_transactions.import` | CAMT.053-Dateien hochladen und Imports rückgängig machen |
+| `bank_transactions.match` | Buchungen manuell zuordnen |
+| `bank_transactions.ignore` | Buchungen ignorieren |
+| `bank_transactions.unmatch` | Bestehende Zuordnungen aufheben |
+
+#### Praxisbeispiel: Monatsabschluss — Kontoauszug importieren und abgleichen
+
+**Ausgangslage:** Monatsletzter, Buchhalterin Maria möchte den Bankkontoauszug vom April abgleichen.
+
+1. 📍 Online-Banking öffnen → Elektronische Kontoauszüge → CAMT.053-Datei für April herunterladen
+2. 📍 Terp → Finanzen → Bank-Inbox → **„CAMT.053 importieren"** → Datei hochladen
+3. ✅ Toast: „47 Buchungen importiert, 38 automatisch zugeordnet"
+4. ✅ Tab **Offen** zeigt 9 nicht zugeordnete Buchungen
+5. 📍 Buchung „Kontoführungsgebühr 9,90 €" anklicken → **„Ignorieren"** → Begründung „Bankgebühr" → Bestätigen
+6. 📍 Buchung „Max Mustermann, 1.200 €" anklicken → Terp schlägt Kunden „Mustermann GmbH" vor → Rechnung RE-45 (1.200 €) auswählen → **„Zuordnung bestätigen"**
+7. 📍 Buchung „Sammelüberweisung 4.500 €" anklicken → Zwei Rechnungen RE-50 (1.500 €) und RE-51 (3.000 €) auswählen → Beträge vorausgefüllt → **„Zuordnung bestätigen"**
+8. 📍 Verbleibende Buchungen analog abarbeiten
+9. ✅ Tab **Offen** zeigt 0 — alle Buchungen sind zugeordnet oder ignoriert
+
+> 💡 **Tipp:** Wenn Kunden konsequent die Rechnungsnummer im Verwendungszweck angeben, steigt die Auto-Match-Quote deutlich. Sie können Kunden auf der Rechnung darum bitten, z.B.: „Bitte geben Sie bei der Überweisung RE-45 als Verwendungszweck an."
+
+#### Praxisbeispiel: Falschen Kontoauszug importiert — Import rückgängig machen
+
+**Ausgangslage:** Kollegin Lisa hat versehentlich den Kontoauszug vom Sparkonto statt vom Geschäftskonto importiert. 35 Buchungen wurden angelegt, 3 davon zufällig automatisch zugeordnet.
+
+1. 📍 Terp → Finanzen → Bank-Inbox → **„Importverlauf"**
+2. ✅ Sheet zeigt den fehlerhaften Import „sparkonto-april.xml" mit Datum und Uhrzeit
+3. 📍 **Papierkorb-Symbol** beim fehlerhaften Import klicken
+4. ✅ Sicherheitsabfrage: „Alle 35 Buchungen dieses Imports werden gelöscht."
+5. 📍 **„Import löschen"** bestätigen
+6. ✅ Toast: „Import gelöscht: 35 Buchungen entfernt, 3 Zahlungen storniert"
+7. ✅ Die 3 fälschlicherweise zugeordneten Rechnungen sind wieder als offen geführt
+8. 📍 Korrekten Kontoauszug vom Geschäftskonto herunterladen und importieren
+9. ✅ Normaler Import-Flow wie gewohnt
+
+---
+
 ## 23. Glossar
 
 | Begriff | Erklärung | Wo in Terp |
@@ -11101,7 +11253,9 @@ Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mah
 | **Benachrichtigung** | Interne Systemmeldung an einen Benutzer (Genehmigung, Fehler, Erinnerung, System) | 📍 Glocke (🔔) / Benachrichtigungen |
 | **Abwesenheitstyp** | Kategorie einer Abwesenheit mit Regeln (Urlaubsabzug, Genehmigung) | 📍 Verwaltung → Abwesenheitsarten |
 | **Aktivität** | Art der Arbeit innerhalb eines Auftrags (z. B. Montage, Dokumentation) | 📍 Verwaltung → Aufträge → Tab Aktivitäten |
+| **Bank-Inbox** | Oberfläche zum Abgleich von CAMT.053-Kontoauszügen mit offenen Rechnungen. Buchungen werden automatisch oder manuell zugeordnet oder ignoriert | 📍 Finanzen → Bank-Inbox |
 | **Bestellung (Einkauf)** | Einkaufsauftrag an einen Lieferanten mit Positionen, Preisen und Status-Workflow (Entwurf → Bestellt → Geliefert) | 📍 Lager → Bestellungen |
+| **CAMT.053** | ISO-20022-XML-Format für elektronische Kontoauszüge. Nachfolger des MT940-Formats. Wird von der Bank im Online-Banking zum Download angeboten und von der Bank-Inbox importiert | 📍 Finanzen → Bank-Inbox → „CAMT.053 importieren" |
 | **DATEV-Export** | Export freigegebener Eingangsrechnungen als DATEV-Buchungsstapel-CSV (Windows-1252, Semikolon-getrennt) | 📍 Rechnungen → Eingangsrechnungen → Detail → „DATEV Export" |
 | **Eingangsrechnung** | Eingehende Lieferantenrechnung mit Status-Workflow (Entwurf → Freigabe → Export). Kann per IMAP, ZUGFeRD-Upload oder manuell erfasst werden | 📍 Rechnungen → Eingangsrechnungen |
 | **Freigaberegel** | Konfigurierbare Schwellenwert-Regel: Ab welchem Betrag welcher Genehmiger in welchem Schritt freigeben muss | 📍 Rechnungen → Einstellungen → Freigaberegeln |

@@ -152,6 +152,8 @@
     "inboundApprovals": "Approvals",
     "inboundSettings": "Settings",
     "paymentRuns": "Payment Runs",
+    "financeSection": "Finance",
+    "bankInbox": "Bank Inbox",
     "warehouseSection": "Warehouse",
     "warehouseOverview": "Warehouse Overview",
     "warehouseArticles": "Articles",
@@ -8326,6 +8328,128 @@
       "EXPORTED": "Exported",
       "BOOKED": "Booked",
       "CANCELLED": "Cancelled"
+    }
+  },
+  "bankInbox": {
+    "pageTitle": "Bank Inbox",
+    "pageSubtitle": "Assign pending bank transactions",
+    "tabs": {
+      "unmatched": "Unmatched",
+      "matched": "Matched",
+      "ignored": "Ignored"
+    },
+    "list": {
+      "empty": {
+        "unmatched": "No unmatched transactions.",
+        "matched": "No matched transactions.",
+        "ignored": "No ignored transactions."
+      },
+      "column": {
+        "date": "Date",
+        "counterparty": "Counterparty",
+        "amount": "Amount",
+        "direction": "Direction",
+        "remittance": "Remittance info",
+        "status": "Status"
+      }
+    },
+    "direction": {
+      "credit": "Credit",
+      "debit": "Debit"
+    },
+    "status": {
+      "unmatched": "Unmatched",
+      "matched": "Matched",
+      "ignored": "Ignored"
+    },
+    "detail": {
+      "title": "Match transaction",
+      "transactionInfo": "Bank transaction",
+      "bookingDate": "Booking date",
+      "valueDate": "Value date",
+      "counterpartyName": "Name",
+      "counterpartyIban": "IBAN",
+      "counterpartyBic": "BIC",
+      "remittanceInfo": "Remittance info",
+      "endToEndId": "End-to-end ID",
+      "suggestedCustomer": "Suggested customer",
+      "suggestedCustomerHint": "We suspect this payment belongs to {name}.",
+      "candidatesHeading": "Open invoices",
+      "candidatesEmpty": "No open invoices for this customer.",
+      "customerSearchPlaceholder": "Search another customer…",
+      "allocationAmountLabel": "Allocated amount",
+      "matchedInfo": "Match information",
+      "allocations": "Allocations",
+      "ignoredInfo": "Ignored",
+      "ignoredReason": "Reason",
+      "ignoredAt": "Ignored at",
+      "ignoredBy": "Ignored by",
+      "noReason": "No reason provided"
+    },
+    "footer": {
+      "allocatedSum": "Allocated",
+      "transactionAmount": "Transaction amount",
+      "difference": "Difference",
+      "confirmMatch": "Confirm match",
+      "ignoreAction": "Ignore",
+      "cancel": "Cancel"
+    },
+    "ignoreDialog": {
+      "title": "Ignore transaction",
+      "description": "Ignored transactions no longer appear in the inbox. You can find them under the \"Ignored\" tab.",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "e.g. bank fee, reversal, …",
+      "confirm": "Ignore"
+    },
+    "matched": {
+      "view": "Open invoice",
+      "allocationCount": "{count} allocation(s)"
+    },
+    "toast": {
+      "matchSuccess": "Match saved",
+      "matchError": "Match failed: {message}",
+      "ignoreSuccess": "Transaction ignored",
+      "unmatchSuccess": "Match undone",
+      "unmatchError": "Undo failed: {message}",
+      "importSuccess": "{transactionCount} transactions imported, {matchedCount} auto-matched",
+      "importAlreadyImported": "This file has already been imported.",
+      "importInvalidFile": "File is not a valid CAMT.053 statement."
+    },
+    "upload": {
+      "button": "Import CAMT.053",
+      "dialogTitle": "Import bank statement",
+      "description": "Upload a CAMT.053 XML file. Max size 5 MB.",
+      "fileLabel": "Select CAMT.053 file",
+      "submit": "Import",
+      "cancel": "Cancel",
+      "successToast": "{count} transactions imported",
+      "alreadyImportedToast": "This file has already been imported, no new transactions",
+      "invalidFileToast": "File is not a valid CAMT.053 statement",
+      "permissionError": "No permission to import bank statements"
+    },
+    "imports": {
+      "button": "Import history",
+      "title": "Imported bank statements",
+      "description": "Here you can undo erroneous imports. All associated transactions and matches will be deleted.",
+      "empty": "No bank statements imported.",
+      "transactionCount": "{count} transactions",
+      "deleteConfirmTitle": "Undo import?",
+      "deleteConfirmDescription": "All {count} transactions from this import will be deleted. Existing matches will be undone and payments cancelled. This action cannot be reversed.",
+      "deleteButton": "Delete import",
+      "deleteSuccess": "Import deleted: {transactions} transactions removed, {payments} payments cancelled",
+      "deleteError": "Deletion failed: {message}"
+    },
+    "unmatch": {
+      "button": "Undo match",
+      "confirmTitle": "Really undo match?",
+      "confirmDescription": "The associated payments will be cancelled and the transaction returns to the inbox.",
+      "confirm": "Undo"
+    },
+    "permission": {
+      "denied": "No permission for the bank inbox.",
+      "deniedMatch": "No permission to match bank transactions.",
+      "deniedIgnore": "No permission to ignore bank transactions.",
+      "deniedUnmatch": "No permission to undo matches."
     }
   }
 }
