@@ -11168,8 +11168,11 @@ Täglich um **05:00 UTC** prüft Terp automatisch alle Mandanten mit aktivem Mah
 
 1. 📍 Bank-Inbox → **„CAMT.053 importieren"** (Button oben rechts)
 2. 📍 CAMT.053-XML-Datei per Drag-and-Drop oder Dateiauswahl hochladen (max. 5 MB)
-3. ✅ Toast zeigt „X Buchungen importiert, Y automatisch zugeordnet"
-4. ✅ Dieselbe Datei nochmals hochladen → Toast „Diese Datei wurde bereits importiert" (SHA-256-Duplikatserkennung)
+3. ✅ Dialog schließt sofort, Toast zeigt „X Buchungen importiert"
+4. ✅ Das Auto-Matching startet im Hintergrund — ein Toast zeigt den Fortschritt: „Auto-Matching… 40/200 (20%)"
+5. ✅ Der **„Abbrechen"**-Button im Toast stoppt das Matching. Bereits zugeordnete Buchungen bleiben erhalten, die restlichen bleiben als offene Posten im Tab **Offen**
+6. ✅ Nach Abbruch oder Seitenwechsel: Der Button **„Matching fortsetzen (X)"** erscheint oben rechts und setzt das Matching an der abgebrochenen Stelle fort
+7. ✅ Dieselbe Datei nochmals hochladen → Toast „Diese Datei wurde bereits importiert" (SHA-256-Duplikatserkennung)
 
 > 💡 **CAMT.053** ist der ISO-20022-Standard für elektronische Kontoauszüge. Sie erhalten die Datei im Online-Banking Ihrer Bank unter „Elektronische Kontoauszüge" oder „CAMT-Download". Das Format heißt bei einigen Banken auch „MT940-Nachfolger" oder „ISO-XML-Kontoauszug".
 
@@ -11279,8 +11282,8 @@ Wurde versehentlich die falsche CAMT-Datei importiert — z.B. vom falschen Bank
 
 1. 📍 Online-Banking öffnen → Elektronische Kontoauszüge → CAMT.053-Datei für April herunterladen
 2. 📍 Terp → Finanzen → Bank-Inbox → **„CAMT.053 importieren"** → Datei hochladen
-3. ✅ Toast: „47 Buchungen importiert, 38 automatisch zugeordnet"
-4. ✅ Tab **Offen** zeigt 9 nicht zugeordnete Buchungen
+3. ✅ Toast: „47 Buchungen importiert" — Auto-Matching läuft im Hintergrund mit Fortschrittsanzeige
+4. ✅ Toast: „38 von 47 automatisch zugeordnet" — Tab **Offen** zeigt 9 nicht zugeordnete Buchungen
 5. 📍 Buchung „Kontoführungsgebühr 9,90 €" anklicken → **„Ignorieren"** → Begründung „Bankgebühr" → Bestätigen
 6. 📍 Buchung „Max Mustermann, 1.200 €" anklicken → Terp schlägt Kunden „Mustermann GmbH" vor → Rechnung RE-45 (1.200 €) auswählen → **„Zuordnung bestätigen"**
 7. 📍 Buchung „Sammelüberweisung 4.500 €" anklicken → Zwei Rechnungen RE-50 (1.500 €) und RE-51 (3.000 €) auswählen → Beträge vorausgefüllt → **„Zuordnung bestätigen"**
