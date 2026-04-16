@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +11,7 @@ import { BankTransactionDetailSheet } from '@/components/bank/bank-transaction-d
 import { BankStatementUploadDialog } from '@/components/bank/bank-statement-upload-dialog'
 import { BankStatementHistorySheet } from '@/components/bank/bank-statement-history-sheet'
 import { useBankTransactionCounts } from '@/hooks/useBankTransactions'
+import { useAutoMatchStatement, useMatchProgress } from '@/hooks/useBankStatements'
 
 type TabStatus = 'unmatched' | 'matched' | 'ignored'
 
@@ -20,6 +22,55 @@ export default function BankInboxPage() {
   const [uploadOpen, setUploadOpen] = React.useState(false)
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const { data: counts } = useBankTransactionCounts()
+
+  const [matchingJob, setMatchingJob] = React.useState<{
+    statementId: string
+    total: number
+    toastId: string
+  } | null>(null)
+
+  const autoMatchMutation = useAutoMatchStatement()
+  const { data: progress } = useMatchProgress(matchingJob?.statementId ?? null)
+
+  React.useEffect(() => {
+    if (!matchingJob || !progress) return
+    const pct = matchingJob.total > 0
+      ? Math.round((progress.matched / matchingJob.total) * 100)
+      : 0
+    toast.loading(
+      `${t('upload.matchingProgress')}  ${progress.matched}/${matchingJob.total}  (${pct}%)`,
+      { id: matchingJob.toastId },
+    )
+  }, [matchingJob, progress, t])
+
+  const handleImportComplete = React.useCallback(
+    (statementId: string, total: number) => {
+      const toastId = `match-${statementId}`
+      toast.loading(`${t('upload.matchingProgress')}  0/${total}  (0%)`, { id: toastId })
+      setMatchingJob({ statementId, total, toastId })
+
+      autoMatchMutation.mutate(
+        { statementId },
+        {
+          onSuccess: (result) => {
+            toast.success(
+              t('upload.matchingDone', {
+                matched: result?.autoMatched ?? 0,
+                total,
+              }),
+              { id: toastId },
+            )
+            setMatchingJob(null)
+          },
+          onError: () => {
+            toast.error(t('upload.matchingError'), { id: toastId })
+            setMatchingJob(null)
+          },
+        },
+      )
+    },
+    [autoMatchMutation, t],
+  )
 
   return (
     <div className="p-6 space-y-6">
@@ -85,6 +136,7 @@ export default function BankInboxPage() {
       <BankStatementUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        onImportComplete={handleImportComplete}
       />
 
       <BankStatementHistorySheet
