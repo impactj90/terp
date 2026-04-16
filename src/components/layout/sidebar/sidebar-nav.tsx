@@ -55,9 +55,36 @@ function filterNavSection(
     filterNavItem(item, check, enabledModules)
   )
 
-  if (filteredItems.length === 0) return null
+  const filteredSubGroups = section.subGroups
+    ?.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => filterNavItem(item, check, enabledModules)),
+    }))
+    .filter((group) => group.items.length > 0)
 
-  return { ...section, items: filteredItems }
+  const hasItems = filteredItems.length > 0
+  const hasSubGroups = filteredSubGroups && filteredSubGroups.length > 0
+
+  if (!hasItems && !hasSubGroups) return null
+
+  return {
+    ...section,
+    items: filteredItems,
+    subGroups: filteredSubGroups,
+  }
+}
+
+/**
+ * Collect all NavItems from a section (flat items + sub-group items).
+ */
+function getAllSectionItems(section: NavSection): NavItem[] {
+  const items = [...section.items]
+  if (section.subGroups) {
+    for (const group of section.subGroups) {
+      items.push(...group.items)
+    }
+  }
+  return items
 }
 
 /**
@@ -66,7 +93,7 @@ function filterNavSection(
 function buildItemMap(sections: NavSection[]): Map<string, NavItem> {
   const map = new Map<string, NavItem>()
   for (const section of sections) {
-    for (const item of section.items) {
+    for (const item of getAllSectionItems(section)) {
       map.set(item.href, item)
     }
   }
@@ -117,13 +144,15 @@ export function SidebarNav() {
     [favorites, itemMap]
   )
 
-  // Check if any item in a section is active (for highlighting the parent)
-  const isSectionActive = (section: NavSection) =>
-    section.items.some((item) => {
+  const isAnyItemActive = (items: NavItem[]) =>
+    items.some((item) => {
       const segments = item.href.split('/').filter(Boolean)
       const prefixMatch = segments.length > 1 && pathname.startsWith(`${item.href}/`)
       return pathname === item.href || prefixMatch
     })
+
+  const isSectionActive = (section: NavSection) =>
+    isAnyItemActive(getAllSectionItems(section))
 
   const handleStarClick = (e: React.MouseEvent, href: string) => {
     e.preventDefault()
@@ -184,8 +213,9 @@ export function SidebarNav() {
             {visibleSections.map((section) => {
               const sectionTitle = t(section.titleKey as Parameters<typeof t>[0])
               const sectionActive = isSectionActive(section)
-              const SectionIcon = section.items[0]?.icon
-              const siblingHrefs = section.items.map(i => i.href)
+              const allItems = getAllSectionItems(section)
+              const SectionIcon = allItems[0]?.icon
+              const allHrefs = allItems.map(i => i.href)
 
               return (
                 <Collapsible
@@ -203,36 +233,94 @@ export function SidebarNav() {
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {section.items.map((item) => {
-                          const title = t(item.titleKey as Parameters<typeof t>[0])
-                          const active = isItemActive(item, siblingHrefs)
-                          const starred = isFavorite(item.href)
+                      {section.subGroups && section.subGroups.length > 0 ? (
+                        <SidebarMenuSub>
+                          {section.subGroups.map((group) => {
+                            const groupKey = `${section.titleKey}:${group.titleKey}`
+                            const groupTitle = t(group.titleKey as Parameters<typeof t>[0])
+                            const groupActive = isAnyItemActive(group.items)
+                            const GroupIcon = group.icon
 
-                          return (
-                            <SidebarMenuSubItem key={item.href} className="group/sub-item">
-                              <SidebarMenuSubButton asChild isActive={active}>
-                                <Link href={item.href} prefetch={false} onClick={handleNavClick}>
-                                  <span>{title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                              {/* Favorite star on hover */}
-                              <button
-                                type="button"
-                                onClick={(e) => handleStarClick(e, item.href)}
-                                className={`absolute right-1 top-1 rounded p-0.5 transition-opacity ${
-                                  starred
-                                    ? 'text-amber-500 opacity-100'
-                                    : 'opacity-0 text-muted-foreground hover:text-amber-500 group-hover/sub-item:opacity-100'
-                                }`}
-                                aria-label={starred ? 'Remove from favorites' : 'Add to favorites'}
+                            return (
+                              <Collapsible
+                                key={groupKey}
+                                open={isSectionExpanded(groupKey)}
+                                onOpenChange={() => toggleSection(groupKey)}
+                                className="group/subgroup"
                               >
-                                <Star className={`h-3 w-3 ${starred ? 'fill-amber-500' : ''}`} />
-                              </button>
-                            </SidebarMenuSubItem>
-                          )
-                        })}
-                      </SidebarMenuSub>
+                                <SidebarMenuSubItem>
+                                  <CollapsibleTrigger asChild>
+                                    <SidebarMenuSubButton className={`h-auto min-h-7 cursor-pointer font-medium [&>span:last-child]:whitespace-normal ${groupActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/70'}`}>
+                                      <GroupIcon className="h-3.5 w-3.5 shrink-0" />
+                                      <span>{groupTitle}</span>
+                                      <ChevronRight className="ml-auto h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/subgroup:rotate-90" />
+                                    </SidebarMenuSubButton>
+                                  </CollapsibleTrigger>
+                                </SidebarMenuSubItem>
+                                <CollapsibleContent>
+                                  {group.items.map((item) => {
+                                    const title = t(item.titleKey as Parameters<typeof t>[0])
+                                    const active = isItemActive(item, allHrefs)
+                                    const starred = isFavorite(item.href)
+
+                                    return (
+                                      <SidebarMenuSubItem key={item.href} className="group/sub-item">
+                                        <SidebarMenuSubButton asChild isActive={active} size="sm">
+                                          <Link href={item.href} prefetch={false} onClick={handleNavClick}>
+                                            <span className="pl-5">{title}</span>
+                                          </Link>
+                                        </SidebarMenuSubButton>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleStarClick(e, item.href)}
+                                          className={`absolute right-1 top-1 rounded p-0.5 transition-opacity ${
+                                            starred
+                                              ? 'text-amber-500 opacity-100'
+                                              : 'opacity-0 text-muted-foreground hover:text-amber-500 group-hover/sub-item:opacity-100'
+                                          }`}
+                                          aria-label={starred ? 'Remove from favorites' : 'Add to favorites'}
+                                        >
+                                          <Star className={`h-3 w-3 ${starred ? 'fill-amber-500' : ''}`} />
+                                        </button>
+                                      </SidebarMenuSubItem>
+                                    )
+                                  })}
+                                </CollapsibleContent>
+                              </Collapsible>
+                            )
+                          })}
+                        </SidebarMenuSub>
+                      ) : (
+                        <SidebarMenuSub>
+                          {section.items.map((item) => {
+                            const title = t(item.titleKey as Parameters<typeof t>[0])
+                            const active = isItemActive(item, allHrefs)
+                            const starred = isFavorite(item.href)
+
+                            return (
+                              <SidebarMenuSubItem key={item.href} className="group/sub-item">
+                                <SidebarMenuSubButton asChild isActive={active}>
+                                  <Link href={item.href} prefetch={false} onClick={handleNavClick}>
+                                    <span>{title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleStarClick(e, item.href)}
+                                  className={`absolute right-1 top-1 rounded p-0.5 transition-opacity ${
+                                    starred
+                                      ? 'text-amber-500 opacity-100'
+                                      : 'opacity-0 text-muted-foreground hover:text-amber-500 group-hover/sub-item:opacity-100'
+                                  }`}
+                                  aria-label={starred ? 'Remove from favorites' : 'Add to favorites'}
+                                >
+                                  <Star className={`h-3 w-3 ${starred ? 'fill-amber-500' : ''}`} />
+                                </button>
+                              </SidebarMenuSubItem>
+                            )
+                          })}
+                        </SidebarMenuSub>
+                      )}
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>

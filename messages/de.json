@@ -172,7 +172,18 @@
     "hrPersonnelFile": "Personalakte",
     "hrPersonnelFileCategories": "Aktenkategorien",
     "dsgvoRetention": "DSGVO-Datenlöschung",
-    "emailSettings": "E-Mail-Einstellungen"
+    "emailSettings": "E-Mail-Einstellungen",
+    "subgroupStaff": "Mitarbeiter & Organisation",
+    "subgroupTimeModels": "Zeitmodelle",
+    "subgroupAbsences": "Abwesenheiten",
+    "subgroupAccounts": "Konten & Korrekturen",
+    "subgroupEvaluations": "Auswertungen",
+    "subgroupPlanning": "Einsatzplanung",
+    "subgroupUsersAccess": "Benutzer & Zugriff",
+    "subgroupPayroll": "Lohn & DATEV",
+    "subgroupExports": "Export & Vorlagen",
+    "subgroupSystem": "System",
+    "subgroupAutomation": "Automatisierung"
   },
   "sidebar": {
     "collapse": "Einklappen",

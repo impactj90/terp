@@ -79,13 +79,27 @@ export interface NavItem {
 }
 
 /**
+ * Sub-group within a section for organizing many items.
+ */
+export interface NavSubGroup {
+  /** Translation key in 'nav' namespace */
+  titleKey: string
+  /** Lucide icon for the sub-group label */
+  icon: LucideIcon
+  /** Navigation items in this sub-group */
+  items: NavItem[]
+}
+
+/**
  * Navigation section configuration
  */
 export interface NavSection {
   /** Translation key in 'nav' namespace */
   titleKey: string
-  /** Navigation items in this section */
+  /** Navigation items in this section (used when no subGroups) */
   items: NavItem[]
+  /** Collapsible sub-groups within this section */
+  subGroups?: NavSubGroup[]
   /** Required module for this entire section (if undefined, shown regardless of modules) */
   module?: string
 }
@@ -142,150 +156,187 @@ export const navConfig: NavSection[] = [
   },
   {
     titleKey: 'management',
-    items: [
+    items: [],
+    subGroups: [
       {
-        titleKey: 'approvals',
-        href: '/admin/approvals',
-        icon: ClipboardCheck,
-        permissions: ['absences.approve'],
-      },
-      {
-        titleKey: 'employees',
-        href: '/admin/employees',
+        titleKey: 'subgroupStaff',
         icon: Users,
-        permissions: ['employees.view'],
+        items: [
+          {
+            titleKey: 'employees',
+            href: '/admin/employees',
+            icon: Users,
+            permissions: ['employees.view'],
+          },
+          {
+            titleKey: 'teams',
+            href: '/admin/teams',
+            icon: UsersRound,
+            permissions: ['teams.manage'],
+          },
+          {
+            titleKey: 'departments',
+            href: '/admin/departments',
+            icon: Building2,
+            permissions: ['departments.manage'],
+          },
+          {
+            titleKey: 'costCenters',
+            href: '/admin/cost-centers',
+            icon: Landmark,
+            permissions: ['departments.manage'],
+          },
+          {
+            titleKey: 'locations',
+            href: '/admin/locations',
+            icon: MapPin,
+            permissions: ['locations.manage'],
+          },
+          {
+            titleKey: 'employmentTypes',
+            href: '/admin/employment-types',
+            icon: Briefcase,
+            permissions: ['employees.view'],
+          },
+        ],
       },
       {
-        titleKey: 'teams',
-        href: '/admin/teams',
-        icon: UsersRound,
-        permissions: ['teams.manage'],
-      },
-      {
-        titleKey: 'departments',
-        href: '/admin/departments',
-        icon: Building2,
-        permissions: ['departments.manage'],
-      },
-      {
-        titleKey: 'costCenters',
-        href: '/admin/cost-centers',
-        icon: Landmark,
-        permissions: ['departments.manage'],
-      },
-      {
-        titleKey: 'locations',
-        href: '/admin/locations',
-        icon: MapPin,
-        permissions: ['locations.manage'],
-      },
-      {
-        titleKey: 'employmentTypes',
-        href: '/admin/employment-types',
-        icon: Briefcase,
-        permissions: ['employees.view'],
-      },
-      {
-        titleKey: 'dayPlans',
-        href: '/admin/day-plans',
+        titleKey: 'subgroupTimeModels',
         icon: CalendarDays,
-        permissions: ['day_plans.manage'],
+        items: [
+          {
+            titleKey: 'dayPlans',
+            href: '/admin/day-plans',
+            icon: CalendarDays,
+            permissions: ['day_plans.manage'],
+          },
+          {
+            titleKey: 'weekPlans',
+            href: '/admin/week-plans',
+            icon: CalendarRange,
+            permissions: ['week_plans.manage'],
+          },
+          {
+            titleKey: 'tariffs',
+            href: '/admin/tariffs',
+            icon: ScrollText,
+            permissions: ['tariffs.manage'],
+          },
+          {
+            titleKey: 'holidays',
+            href: '/admin/holidays',
+            icon: CalendarHeart,
+            permissions: ['holidays.manage'],
+          },
+          {
+            titleKey: 'bookingTypes',
+            href: '/admin/booking-types',
+            icon: Clock,
+            permissions: ['booking_types.manage'],
+          },
+        ],
       },
       {
-        titleKey: 'weekPlans',
-        href: '/admin/week-plans',
-        icon: CalendarRange,
-        permissions: ['week_plans.manage'],
-      },
-      {
-        titleKey: 'tariffs',
-        href: '/admin/tariffs',
-        icon: ScrollText,
-        permissions: ['tariffs.manage'],
-      },
-      {
-        titleKey: 'holidays',
-        href: '/admin/holidays',
-        icon: CalendarHeart,
-        permissions: ['holidays.manage'],
-      },
-      {
-        titleKey: 'absenceTypes',
-        href: '/admin/absence-types',
+        titleKey: 'subgroupAbsences',
         icon: CalendarOff,
-        permissions: ['absence_types.manage'],
+        items: [
+          {
+            titleKey: 'approvals',
+            href: '/admin/approvals',
+            icon: ClipboardCheck,
+            permissions: ['absences.approve'],
+          },
+          {
+            titleKey: 'absenceTypes',
+            href: '/admin/absence-types',
+            icon: CalendarOff,
+            permissions: ['absence_types.manage'],
+          },
+          {
+            titleKey: 'vacationBalances',
+            href: '/admin/vacation-balances',
+            icon: Palmtree,
+            permissions: ['absences.manage'],
+          },
+          {
+            titleKey: 'vacationConfig',
+            href: '/admin/vacation-config',
+            icon: Umbrella,
+            permissions: ['absence_types.manage'],
+          },
+          {
+            titleKey: 'calculationRules',
+            href: '/admin/calculation-rules',
+            icon: Calculator,
+            permissions: ['absence_types.manage'],
+          },
+        ],
       },
       {
-        titleKey: 'bookingTypes',
-        href: '/admin/booking-types',
-        icon: Clock,
-        permissions: ['booking_types.manage'],
-      },
-      {
-        titleKey: 'contactTypes',
-        href: '/admin/contact-types',
-        icon: Contact,
-        permissions: ['contact_management.manage'],
-      },
-      {
-        titleKey: 'calculationRules',
-        href: '/admin/calculation-rules',
-        icon: Calculator,
-        permissions: ['absence_types.manage'],
-      },
-      {
-        titleKey: 'accounts',
-        href: '/admin/accounts',
+        titleKey: 'subgroupAccounts',
         icon: Wallet,
-        permissions: ['accounts.manage'],
+        items: [
+          {
+            titleKey: 'accounts',
+            href: '/admin/accounts',
+            icon: Wallet,
+            permissions: ['accounts.manage'],
+          },
+          {
+            titleKey: 'correctionAssistant',
+            href: '/admin/correction-assistant',
+            icon: AlertTriangle,
+            permissions: ['corrections.manage'],
+          },
+          {
+            titleKey: 'contactTypes',
+            href: '/admin/contact-types',
+            icon: Contact,
+            permissions: ['contact_management.manage'],
+          },
+        ],
       },
       {
-        titleKey: 'correctionAssistant',
-        href: '/admin/correction-assistant',
-        icon: AlertTriangle,
-        permissions: ['corrections.manage'],
-      },
-      {
-        titleKey: 'evaluations',
-        href: '/admin/evaluations',
+        titleKey: 'subgroupEvaluations',
         icon: BarChart3,
-        permissions: ['reports.view'],
+        items: [
+          {
+            titleKey: 'evaluations',
+            href: '/admin/evaluations',
+            icon: BarChart3,
+            permissions: ['reports.view'],
+          },
+          {
+            titleKey: 'monthlyValues',
+            href: '/admin/monthly-values',
+            icon: CalendarCheck,
+            permissions: ['reports.view'],
+          },
+        ],
       },
       {
-        titleKey: 'monthlyValues',
-        href: '/admin/monthly-values',
-        icon: CalendarCheck,
-        permissions: ['reports.view'],
-      },
-      {
-        titleKey: 'vacationBalances',
-        href: '/admin/vacation-balances',
-        icon: Palmtree,
-        permissions: ['absences.manage'],
-      },
-      {
-        titleKey: 'vacationConfig',
-        href: '/admin/vacation-config',
-        icon: Umbrella,
-        permissions: ['absence_types.manage'],
-      },
-      {
-        titleKey: 'shiftPlanning',
-        href: '/admin/shift-planning',
+        titleKey: 'subgroupPlanning',
         icon: Layers,
-        permissions: ['shift_planning.manage'],
-      },
-      {
-        titleKey: 'orders',
-        href: '/admin/orders',
-        icon: Package,
-        permissions: ['orders.manage'],
-      },
-      {
-        titleKey: 'employeeMessages',
-        href: '/admin/employee-messages',
-        icon: Mail,
-        permissions: ['notifications.manage'],
+        items: [
+          {
+            titleKey: 'shiftPlanning',
+            href: '/admin/shift-planning',
+            icon: Layers,
+            permissions: ['shift_planning.manage'],
+          },
+          {
+            titleKey: 'orders',
+            href: '/admin/orders',
+            icon: Package,
+            permissions: ['orders.manage'],
+          },
+          {
+            titleKey: 'employeeMessages',
+            href: '/admin/employee-messages',
+            icon: Mail,
+            permissions: ['notifications.manage'],
+          },
+        ],
       },
     ],
   },
@@ -533,155 +584,170 @@ export const navConfig: NavSection[] = [
   },
   {
     titleKey: 'administration',
-    items: [
+    items: [],
+    subGroups: [
       {
-        titleKey: 'users',
-        href: '/admin/users',
+        titleKey: 'subgroupUsersAccess',
         icon: UserCog,
-        permissions: ['users.manage'],
+        items: [
+          {
+            titleKey: 'users',
+            href: '/admin/users',
+            icon: UserCog,
+            permissions: ['users.manage'],
+          },
+          {
+            titleKey: 'userGroups',
+            href: '/admin/user-groups',
+            icon: ShieldCheck,
+            permissions: ['users.manage'],
+          },
+          {
+            titleKey: 'accessControl',
+            href: '/admin/access-control',
+            icon: DoorOpen,
+            permissions: ['access_control.manage'],
+          },
+          {
+            titleKey: 'supportAccess',
+            href: '/admin/settings/support-access',
+            icon: LifeBuoy,
+            permissions: ['platform.support_access.grant'],
+          },
+        ],
       },
       {
-        titleKey: 'userGroups',
-        href: '/admin/user-groups',
-        icon: ShieldCheck,
-        permissions: ['users.manage'],
-      },
-      {
-        titleKey: 'reports',
-        href: '/admin/reports',
-        icon: FileText,
-        permissions: ['reports.view'],
-      },
-      {
-        titleKey: 'auditLogs',
-        href: '/admin/audit-logs',
-        icon: FileClock,
-        permissions: ['users.manage'],
-      },
-      {
-        titleKey: 'settings',
-        href: '/admin/settings',
-        icon: Settings,
-        permissions: ['settings.manage'],
-      },
-      {
-        titleKey: 'tenants',
-        href: '/admin/tenants',
-        icon: Shield,
-        permissions: ['tenants.manage'],
-      },
-      {
-        titleKey: 'payrollExports',
-        href: '/admin/payroll-exports',
+        titleKey: 'subgroupPayroll',
         icon: FileOutput,
-        permissions: ['payroll.view'],
+        items: [
+          {
+            titleKey: 'payrollExports',
+            href: '/admin/payroll-exports',
+            icon: FileOutput,
+            permissions: ['payroll.view'],
+          },
+          {
+            titleKey: 'payrollWages',
+            href: '/admin/payroll-wages',
+            icon: Tag,
+            permissions: ['personnel.payroll_data.view'],
+          },
+          {
+            titleKey: 'payrollBulkImport',
+            href: '/admin/payroll-import',
+            icon: FileInput,
+            permissions: ['personnel.payroll_data.edit'],
+          },
+          {
+            titleKey: 'datevOnboarding',
+            href: '/admin/datev-onboarding',
+            icon: FileCheck,
+            permissions: ['payroll.view'],
+          },
+        ],
       },
-      // ─────────────────────────────────────────────────────────────
-      // TODO(ExportInterface-Abbau): Sidebar-Eintrag "exportInterfaces"
-      // wurde am 2026-04-09 aus der Navigation entfernt, weil die
-      // Tabelle `export_interfaces` eine ZMI-Legacy-Konstruktion ist,
-      // die durch die Template-Engine grösstenteils überflüssig wurde.
-      //
-      // Noch offen (bewusste Nicht-Entscheidung, später angehen):
-      //   1. beraterNr + mandantenNr + defaultTemplateId auf den
-      //      Tenant verschieben
-      //   2. Legacy-CSV-Export (`payroll-export-service.ts`) stilllegen
-      //   3. ExportInterfaceAccount-Junction entfernen
-      //   4. Tabellen `export_interfaces` + `export_interface_accounts`
-      //      und die zugehörigen Services/Router/UI/Tests löschen
-      //   5. Route `/admin/export-interfaces` entfernen
-      //   6. i18n-Key `nav.exportInterfaces` + `adminExportInterfaces`
-      //      aufräumen
-      //
-      // Hintergrund: siehe Diskussion Phase 3 Abschluss 2026-04-09 und
-      // `thoughts/shared/research/2026-04-08-export-script-konzept-lohnschnittstelle.md`.
-      // Die Route existiert weiterhin (kein Breaking Change), nur der
-      // Nav-Eintrag fehlt. Direktaufruf via URL funktioniert noch.
-      // ─────────────────────────────────────────────────────────────
       {
-        titleKey: 'exportTemplates',
-        href: '/admin/export-templates',
+        titleKey: 'subgroupExports',
         icon: FileStack,
-        permissions: ['export_template.view'],
+        items: [
+          // ─────────────────────────────────────────────────────────────
+          // TODO(ExportInterface-Abbau): Sidebar-Eintrag "exportInterfaces"
+          // wurde am 2026-04-09 aus der Navigation entfernt, weil die
+          // Tabelle `export_interfaces` eine ZMI-Legacy-Konstruktion ist,
+          // die durch die Template-Engine grösstenteils überflüssig wurde.
+          // ─────────────────────────────────────────────────────────────
+          {
+            titleKey: 'exportTemplates',
+            href: '/admin/export-templates',
+            icon: FileStack,
+            permissions: ['export_template.view'],
+          },
+          {
+            titleKey: 'exportTemplateSchedules',
+            href: '/admin/export-templates/schedules',
+            icon: FileStack,
+            permissions: ['export_template.schedule'],
+          },
+          {
+            titleKey: 'reports',
+            href: '/admin/reports',
+            icon: FileText,
+            permissions: ['reports.view'],
+          },
+        ],
       },
       {
-        titleKey: 'exportTemplateSchedules',
-        href: '/admin/export-templates/schedules',
-        icon: FileStack,
-        permissions: ['export_template.schedule'],
+        titleKey: 'subgroupSystem',
+        icon: Settings,
+        items: [
+          {
+            titleKey: 'settings',
+            href: '/admin/settings',
+            icon: Settings,
+            permissions: ['settings.manage'],
+          },
+          {
+            titleKey: 'tenants',
+            href: '/admin/tenants',
+            icon: Shield,
+            permissions: ['tenants.manage'],
+          },
+          {
+            titleKey: 'auditLogs',
+            href: '/admin/audit-logs',
+            icon: FileClock,
+            permissions: ['users.manage'],
+          },
+          {
+            titleKey: 'dsgvoRetention',
+            href: '/admin/dsgvo',
+            icon: ShieldAlert,
+            permissions: ['dsgvo.view'],
+          },
+          {
+            titleKey: 'emailSettings',
+            href: '/admin/email-settings',
+            icon: Mail,
+            permissions: ['email_smtp.view'],
+          },
+          {
+            titleKey: 'billingConfig',
+            href: '/admin/billing-config',
+            icon: Stamp,
+            module: 'billing',
+            permissions: ['billing_documents.edit'],
+          },
+        ],
       },
       {
-        titleKey: 'payrollWages',
-        href: '/admin/payroll-wages',
-        icon: Tag,
-        permissions: ['personnel.payroll_data.view'],
-      },
-      {
-        titleKey: 'payrollBulkImport',
-        href: '/admin/payroll-import',
-        icon: FileInput,
-        permissions: ['personnel.payroll_data.edit'],
-      },
-      {
-        titleKey: 'datevOnboarding',
-        href: '/admin/datev-onboarding',
-        icon: FileCheck,
-        permissions: ['payroll.view'],
-      },
-      {
-        titleKey: 'monthlyEvaluations',
-        href: '/admin/monthly-evaluations',
-        icon: ClipboardList,
-        permissions: ['monthly_evaluations.manage'],
-      },
-      {
-        titleKey: 'schedules',
-        href: '/admin/schedules',
+        titleKey: 'subgroupAutomation',
         icon: Timer,
-        permissions: ['schedules.manage'],
-      },
-      {
-        titleKey: 'macros',
-        href: '/admin/macros',
-        icon: Repeat,
-        permissions: ['macros.manage'],
-      },
-      {
-        titleKey: 'accessControl',
-        href: '/admin/access-control',
-        icon: DoorOpen,
-        permissions: ['access_control.manage'],
-      },
-      {
-        titleKey: 'supportAccess',
-        href: '/admin/settings/support-access',
-        icon: LifeBuoy,
-        permissions: ['platform.support_access.grant'],
-      },
-      {
-        titleKey: 'terminalBookings',
-        href: '/admin/terminal-bookings',
-        icon: Terminal,
-        permissions: ['terminal_bookings.manage'],
-      },
-      {
-        titleKey: 'billingConfig',
-        href: '/admin/billing-config',
-        icon: Stamp,
-        module: 'billing',
-        permissions: ['billing_documents.edit'],
-      },
-      {
-        titleKey: 'dsgvoRetention',
-        href: '/admin/dsgvo',
-        icon: ShieldAlert,
-        permissions: ['dsgvo.view'],
-      },
-      {
-        titleKey: 'emailSettings',
-        href: '/admin/email-settings',
-        icon: Mail,
-        permissions: ['email_smtp.view'],
+        items: [
+          {
+            titleKey: 'monthlyEvaluations',
+            href: '/admin/monthly-evaluations',
+            icon: ClipboardList,
+            permissions: ['monthly_evaluations.manage'],
+          },
+          {
+            titleKey: 'schedules',
+            href: '/admin/schedules',
+            icon: Timer,
+            permissions: ['schedules.manage'],
+          },
+          {
+            titleKey: 'macros',
+            href: '/admin/macros',
+            icon: Repeat,
+            permissions: ['macros.manage'],
+          },
+          {
+            titleKey: 'terminalBookings',
+            href: '/admin/terminal-bookings',
+            icon: Terminal,
+            permissions: ['terminal_bookings.manage'],
+          },
+        ],
       },
     ],
   },

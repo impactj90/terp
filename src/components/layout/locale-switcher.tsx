@@ -3,7 +3,6 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter, usePathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
-import { Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,9 +16,14 @@ const localeLabels: Record<string, string> = {
   en: 'English',
 }
 
+const localeShort: Record<string, string> = {
+  de: 'DE',
+  en: 'EN',
+}
+
 /**
  * Language switcher dropdown.
- * Allows users to switch between available locales.
+ * Shows the active locale abbreviation (DE/EN) as the trigger.
  */
 export function LocaleSwitcher() {
   const locale = useLocale()
@@ -38,8 +42,9 @@ export function LocaleSwitcher() {
           variant="ghost"
           size="icon"
           aria-label={t('switchLanguage')}
+          className="text-xs font-semibold"
         >
-          <Languages className="h-5 w-5" />
+          {localeShort[locale] ?? locale.toUpperCase()}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

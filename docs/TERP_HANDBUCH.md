@@ -269,7 +269,7 @@ Die Anwendung besteht aus vier Bereichen:
 
 ### Seitenleiste — Alle Menüpunkte
 
-Die Seitenleiste ist in drei Bereiche gegliedert. Menüpunkte erscheinen nur, wenn der Benutzer die nötige Berechtigung hat.
+Die Seitenleiste ist in mehrere Bereiche gegliedert. Menüpunkte erscheinen nur, wenn der Benutzer die nötige Berechtigung hat. Die umfangreicheren Bereiche (Verwaltung, Administration) sind zusätzlich in aufklappbare Untergruppen unterteilt.
 
 #### Hauptmenü (für alle Benutzer sichtbar)
 
@@ -286,49 +286,110 @@ Die Seitenleiste ist in drei Bereiche gegliedert. Menüpunkte erscheinen nur, we
 
 #### Verwaltung (je nach Berechtigung sichtbar)
 
+Die Menüpunkte sind in aufklappbare Untergruppen gegliedert:
+
+**Mitarbeiter & Organisation**
+
 | Menüpunkt | Berechtigung |
 |-----------|-------------|
-| Genehmigungen | Abwesenheiten genehmigen |
 | Mitarbeiter | Mitarbeiter ansehen |
 | Teams | Teams verwalten |
 | Abteilungen | Abteilungen verwalten |
 | Kostenstellen | Abteilungen verwalten |
 | Standorte | Standorte verwalten |
 | Beschäftigungsarten | Mitarbeiter ansehen |
+
+**Zeitmodelle**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
 | Tagespläne | Tagespläne verwalten |
 | Wochenpläne | Wochenpläne verwalten |
 | Tarife | Tarife verwalten |
 | Feiertage | Feiertage verwalten |
-| Abwesenheitsarten | Abwesenheitsarten verwalten |
 | Buchungstypen | Buchungstypen verwalten |
-| Kontaktarten | Kontaktverwaltung |
-| Berechnungsregeln | Abwesenheitsarten verwalten |
-| Konten | Konten verwalten |
-| Korrekturassistent | Korrekturen verwalten |
-| Auswertungen | Berichte ansehen |
-| Monatswerte | Berichte ansehen |
+
+**Abwesenheiten**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
+| Genehmigungen | Abwesenheiten genehmigen |
+| Abwesenheitsarten | Abwesenheitsarten verwalten |
 | Urlaubskonten | Abwesenheiten verwalten |
 | Urlaubskonfiguration | Abwesenheitsarten verwalten |
+| Berechnungsregeln | Abwesenheitsarten verwalten |
+
+**Konten & Korrekturen**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
+| Konten | Konten verwalten |
+| Korrekturassistent | Korrekturen verwalten |
+| Kontaktarten | Kontaktverwaltung |
+
+**Auswertungen**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
+| Auswertungen | Berichte ansehen |
+| Monatswerte | Berichte ansehen |
+
+**Einsatzplanung**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
 | Schichtplanung | Schichtplanung verwalten |
 | Aufträge | Aufträge verwalten |
 | Mitarbeiternachrichten | Benachrichtigungen verwalten |
 
 #### Administration (je nach Berechtigung sichtbar)
 
+Die Menüpunkte sind in aufklappbare Untergruppen gegliedert:
+
+**Benutzer & Zugriff**
+
 | Menüpunkt | Berechtigung |
 |-----------|-------------|
 | Benutzer | Benutzer verwalten |
 | Benutzergruppen | Benutzer verwalten |
+| Zutrittskontrolle | Zutrittskontrolle verwalten |
+| Support-Zugriff | Support-Zugriff gewähren |
+
+**Lohn & DATEV**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
+| Lohnexporte | Lohnexport ansehen |
+| Lohnart-Mapping | Personaldaten ansehen |
+| Lohn-Massenimport | Personaldaten bearbeiten |
+| DATEV-Onboarding | Lohnexport ansehen |
+
+**Export & Vorlagen**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
+| Export-Templates | Export-Templates ansehen |
+| Export-Zeitpläne | Export-Templates planen |
 | Berichte | Berichte ansehen |
-| Audit-Protokoll | Benutzer verwalten |
+
+**System**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
 | Einstellungen | Einstellungen verwalten |
 | Mandanten | Mandanten verwalten |
-| Lohnexporte | Lohnexport ansehen |
-| Exportschnittstellen | Lohnexport verwalten |
+| Audit-Protokoll | Benutzer verwalten |
+| DSGVO-Datenlöschung | DSGVO ansehen |
+| E-Mail-Einstellungen | E-Mail-SMTP ansehen |
+| Briefpapier | Belege bearbeiten (Modul: Fakturierung) |
+
+**Automatisierung**
+
+| Menüpunkt | Berechtigung |
+|-----------|-------------|
 | Auswertungsvorlagen | Monatsauswertungen verwalten |
 | Zeitpläne | Zeitpläne verwalten |
 | Makros | Makros verwalten |
-| Zutrittskontrolle | Zutrittskontrolle verwalten |
 | Terminal-Buchungen | Terminal-Buchungen verwalten |
 
 ### Auf dem Mobilgerät

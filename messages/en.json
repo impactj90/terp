@@ -172,7 +172,18 @@
     "hrPersonnelFile": "Personnel File",
     "hrPersonnelFileCategories": "File Categories",
     "dsgvoRetention": "GDPR Data Retention",
-    "emailSettings": "Email Settings"
+    "emailSettings": "Email Settings",
+    "subgroupStaff": "Staff & Organization",
+    "subgroupTimeModels": "Time Models",
+    "subgroupAbsences": "Absences",
+    "subgroupAccounts": "Accounts & Corrections",
+    "subgroupEvaluations": "Evaluations",
+    "subgroupPlanning": "Operations",
+    "subgroupUsersAccess": "Users & Access",
+    "subgroupPayroll": "Payroll & DATEV",
+    "subgroupExports": "Exports & Templates",
+    "subgroupSystem": "System",
+    "subgroupAutomation": "Automation"
   },
   "sidebar": {
     "collapse": "Collapse",
