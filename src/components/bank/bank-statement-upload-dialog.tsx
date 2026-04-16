@@ -11,9 +11,34 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useImportBankStatement } from '@/hooks/useBankStatements'
+import {
+  useImportBankStatement,
+  useAutoMatchStatement,
+  useMatchProgress,
+} from '@/hooks/useBankStatements'
 
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+
+function MatchProgressToast({ statementId, total, label }: { statementId: string; total: number; label: string }) {
+  const { data } = useMatchProgress(statementId)
+  const matched = data?.matched ?? 0
+  const pct = total > 0 ? Math.round((matched / total) * 100) : 0
+
+  return (
+    <div className="w-full space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span>{label}</span>
+        <span>{matched}/{total}</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+        <div
+          className="h-full bg-primary transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
 
 interface Props {
   open: boolean
@@ -23,6 +48,7 @@ interface Props {
 export function BankStatementUploadDialog({ open, onOpenChange }: Props) {
   const t = useTranslations('bankInbox')
   const importMutation = useImportBankStatement()
+  const autoMatchMutation = useAutoMatchStatement()
   const [isDragOver, setIsDragOver] = React.useState(false)
   const [isUploading, setIsUploading] = React.useState(false)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
@@ -68,14 +94,42 @@ export function BankStatementUploadDialog({ open, onOpenChange }: Props) {
 
         if (result?.alreadyImported) {
           toast.info(t('upload.alreadyImportedToast'))
-        } else {
-          toast.success(
-            t('upload.successToast', {
-              count: result?.transactionsImported ?? 0,
-            }),
+          handleOpenChange(false)
+          return
+        }
+
+        handleOpenChange(false)
+        const count = result?.transactionsImported ?? 0
+        toast.success(t('upload.successToast', { count }))
+
+        if (result?.statementId && count > 0) {
+          const toastId = `match-${result.statementId}`
+          toast(
+            <MatchProgressToast
+              statementId={result.statementId}
+              total={count}
+              label={t('upload.matchingProgress')}
+            />,
+            { id: toastId, duration: Infinity },
+          )
+          autoMatchMutation.mutate(
+            { statementId: result.statementId },
+            {
+              onSuccess: (matchResult) => {
+                toast.success(
+                  t('upload.matchingDone', {
+                    matched: matchResult?.autoMatched ?? 0,
+                    total: count,
+                  }),
+                  { id: toastId },
+                )
+              },
+              onError: () => {
+                toast.error(t('upload.matchingError'), { id: toastId })
+              },
+            },
           )
         }
-        handleOpenChange(false)
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : t('upload.invalidFileToast')
@@ -83,7 +137,7 @@ export function BankStatementUploadDialog({ open, onOpenChange }: Props) {
         setIsUploading(false)
       }
     },
-    [importMutation, handleOpenChange, t],
+    [importMutation, autoMatchMutation, handleOpenChange, t],
   )
 
   const handleDrop = React.useCallback(

@@ -6,7 +6,8 @@ vi.mock("@/lib/supabase/storage", () => ({
 }))
 
 import { prisma } from "@/lib/db/prisma"
-import { importCamtStatement, deleteStatement } from "../bank-statement-service"
+import { importCamtStatement, autoMatchStatement, deleteStatement } from "../bank-statement-service"
+import type { ImportCamtResult, AutoMatchResult } from "../bank-statement-service"
 import { unmatchBankTransaction, BankTransactionMatchConflictError } from "../bank-transaction-matcher-service"
 import { seedBankTestContext, type BankTestContext } from "./helpers/bank-match-fixtures"
 
@@ -21,6 +22,25 @@ const PAYMENT_RUN_ID = "f0000000-0000-4000-a000-000000000570"
 const PAYMENT_RUN_ITEM_ID = "f0000000-0000-4000-a000-000000000571"
 
 let bankCtx: BankTestContext
+
+async function importAndMatch(
+  xml: string,
+  fileName: string,
+  userId: string = TEST_USER_ID,
+): Promise<ImportCamtResult & AutoMatchResult> {
+  const importResult = await importCamtStatement(
+    prisma, TEST_TENANT_ID,
+    { fileBase64: toB64(xml), fileName },
+    userId,
+  )
+  if (importResult.alreadyImported) {
+    return { ...importResult, autoMatched: 0, unmatched: 0, failed: 0 }
+  }
+  const matchResult = await autoMatchStatement(
+    prisma, TEST_TENANT_ID, importResult.statementId, userId,
+  )
+  return { ...importResult, ...matchResult }
+}
 
 function buildCreditXml(opts: {
   amount: string
@@ -353,11 +373,7 @@ describe.sequential("bank-statement credit-match integration", () => {
       remittance: "Rechnung RE-1",
     })
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "happy.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "happy.xml")
 
     expect(result.autoMatched).toBe(1)
     expect(result.unmatched).toBe(0)
@@ -404,11 +420,7 @@ describe.sequential("bank-statement credit-match integration", () => {
       remittance: "RE-2 Skonto",
     })
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "skonto.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "skonto.xml")
 
     expect(result.autoMatched).toBe(1)
 
@@ -433,11 +445,7 @@ describe.sequential("bank-statement credit-match integration", () => {
       { amount: "200.00", iban: "DE02120300000000999999", name: "Unbekannt AG" },
     ])
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "partial.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "partial.xml")
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(1)
@@ -473,17 +481,13 @@ describe.sequential("bank-statement credit-match integration", () => {
     )
     createSpy.mockRejectedValueOnce(new Error("simulated payment failure"))
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "atomicity.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "atomicity.xml")
 
     createSpy.mockRestore()
 
     expect(result.transactionsImported).toBe(1)
     expect(result.autoMatched).toBe(0)
-    expect(result.unmatched).toBe(1)
+    expect(result.failed).toBe(1)
 
     const stmtCount = await prisma.bankStatement.count({ where: { tenantId: TEST_TENANT_ID } })
     const txCount = await prisma.bankTransaction.count({ where: { tenantId: TEST_TENANT_ID } })
@@ -576,11 +580,7 @@ describe.sequential("bank-statement debit-match integration", () => {
       remittance: "Zahlung LF-2026-042",
     })
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "debit-happy.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "debit-happy.xml")
 
     expect(result.autoMatched).toBe(1)
     expect(result.unmatched).toBe(0)
@@ -659,11 +659,7 @@ describe.sequential("bank-statement debit-match integration", () => {
       endToEndId: "E2E-CONS-001",
     })
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "consistency.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "consistency.xml")
 
     expect(result.autoMatched).toBe(1)
 
@@ -725,11 +721,7 @@ describe.sequential("bank-statement debit-match integration", () => {
       unknownAmount: "777.77",
     })
 
-    const result = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "mixed.xml" },
-      TEST_USER_ID,
-    )
+    const result = await importAndMatch(xml, "mixed.xml")
 
     expect(result.transactionsImported).toBe(3)
     expect(result.autoMatched).toBe(2)
@@ -815,11 +807,7 @@ describe.sequential("bank-statement unmatch integration", () => {
       remittance: "Rechnung RE-1",
     })
 
-    await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "unmatch-credit.xml" },
-      TEST_USER_ID,
-    )
+    await importAndMatch(xml, "unmatch-credit.xml")
 
     const txBefore = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -908,11 +896,7 @@ describe.sequential("bank-statement unmatch integration", () => {
       endToEndId: "E2E-CONS-UNMATCH",
     })
 
-    await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "unmatch-consistency.xml" },
-      TEST_USER_ID,
-    )
+    await importAndMatch(xml, "unmatch-consistency.xml")
 
     const txBefore = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -948,11 +932,7 @@ describe.sequential("bank-statement unmatch integration", () => {
       remittance: "Rechnung RE-1",
     })
 
-    await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "double-unmatch.xml" },
-      TEST_USER_ID,
-    )
+    await importAndMatch(xml, "double-unmatch.xml")
 
     const txRow = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -976,11 +956,7 @@ describe.sequential("bank-statement unmatch integration", () => {
       iban: bankCtx.addressWithIban.iban,
     })
 
-    await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "split-unmatch.xml" },
-      TEST_USER_ID,
-    )
+    await importAndMatch(xml, "split-unmatch.xml")
 
     const txRow = await prisma.bankTransaction.findFirst({
       where: { tenantId: TEST_TENANT_ID },
@@ -1099,11 +1075,7 @@ describe.sequential("bank-statement delete integration", () => {
       remittance: "Rechnung RE-1",
     })
 
-    const importResult = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "delete-test.xml" },
-      TEST_USER_ID,
-    )
+    const importResult = await importAndMatch(xml, "delete-test.xml")
     expect(importResult.autoMatched).toBe(1)
 
     const paymentBefore = await prisma.billingPayment.findFirst({
@@ -1167,11 +1139,7 @@ describe.sequential("bank-statement delete integration", () => {
       remittance: "Zahlung LF-DEL-001",
     })
 
-    const importResult = await importCamtStatement(
-      prisma, TEST_TENANT_ID,
-      { fileBase64: toB64(xml), fileName: "delete-debit.xml" },
-      TEST_USER_ID,
-    )
+    const importResult = await importAndMatch(xml, "delete-debit.xml")
     expect(importResult.autoMatched).toBe(1)
 
     const invoiceBefore = await prisma.inboundInvoice.findUnique({

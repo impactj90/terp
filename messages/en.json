@@ -8436,7 +8436,10 @@
       "successToast": "{count} transactions imported",
       "alreadyImportedToast": "This file has already been imported, no new transactions",
       "invalidFileToast": "File is not a valid CAMT.053 statement",
-      "permissionError": "No permission to import bank statements"
+      "permissionError": "No permission to import bank statements",
+      "matchingProgress": "Auto-matching...",
+      "matchingDone": "{matched} of {total} auto-matched",
+      "matchingError": "Auto-matching failed"
     },
     "imports": {
       "button": "Import history",

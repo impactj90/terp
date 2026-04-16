@@ -8436,7 +8436,10 @@
       "successToast": "{count} Buchungen importiert",
       "alreadyImportedToast": "Diese Datei wurde bereits importiert, keine neuen Buchungen",
       "invalidFileToast": "Datei ist kein gültiger CAMT.053-Auszug",
-      "permissionError": "Keine Berechtigung, Bank-Auszüge zu importieren"
+      "permissionError": "Keine Berechtigung, Bank-Auszüge zu importieren",
+      "matchingProgress": "Auto-Matching...",
+      "matchingDone": "{matched} von {total} automatisch zugeordnet",
+      "matchingError": "Auto-Matching fehlgeschlagen"
     },
     "imports": {
       "button": "Importverlauf",

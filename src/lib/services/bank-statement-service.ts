@@ -41,9 +41,18 @@ export interface ImportCamtResult {
   statementId: string
   alreadyImported: boolean
   transactionsImported: number
+}
+
+export interface AutoMatchResult {
   autoMatched: number
   unmatched: number
-  ignored: number
+  failed: number
+}
+
+export interface MatchProgress {
+  total: number
+  matched: number
+  unmatched: number
 }
 
 export async function importCamtStatement(
@@ -70,9 +79,6 @@ export async function importCamtStatement(
       statementId: existing.id,
       alreadyImported: true,
       transactionsImported: 0,
-      autoMatched: 0,
-      unmatched: 0,
-      ignored: 0,
     }
   }
 
@@ -99,8 +105,8 @@ export async function importCamtStatement(
     throw err
   }
 
-  let statement: { id: string }
-  let newTransactions: { id: string; direction: string }[]
+  let statementId: string
+  let transactionsImported: number
 
   try {
     const txResult = await prisma.$transaction(async (tx) => {
@@ -140,10 +146,25 @@ export async function importCamtStatement(
       }))
 
       const txns = await repo.createTransactionsBatch(tx, tenantId, stmt.id, rows)
-      return { statement: stmt, transactions: txns }
+
+      await auditLog.log(tx, {
+        tenantId,
+        userId,
+        action: "import",
+        entityType: "bank_statement",
+        entityId: stmt.id,
+        entityName: input.fileName,
+        metadata: {
+          transactionsImported: txns.length,
+          accountIban: parsed.accountIban,
+          statementId: parsed.statementId,
+        },
+      })
+
+      return { statementId: stmt.id, count: txns.length }
     })
-    statement = txResult.statement
-    newTransactions = txResult.transactions
+    statementId = txResult.statementId
+    transactionsImported = txResult.count
   } catch (err) {
     await storage
       .remove(BANK_STATEMENTS_BUCKET, [storagePath])
@@ -151,10 +172,25 @@ export async function importCamtStatement(
     throw err
   }
 
-  // Auto-matching runs outside the import transaction (best-effort)
+  return { statementId, alreadyImported: false, transactionsImported }
+}
+
+export async function autoMatchStatement(
+  prisma: PrismaClient,
+  tenantId: string,
+  statementId: string,
+  userId: string | null,
+): Promise<AutoMatchResult> {
+  const transactions = await prisma.bankTransaction.findMany({
+    where: { tenantId, statementId, status: "unmatched" },
+    select: { id: true, direction: true },
+  })
+
   const snapshot = await numberSequenceService.getPrefixSnapshot(prisma, tenantId)
   let autoMatched = 0
-  for (const bankTx of newTransactions) {
+  let failed = 0
+
+  for (const bankTx of transactions) {
     try {
       if (bankTx.direction === "CREDIT") {
         const decision = await matcherService.runCreditMatchForTransaction(
@@ -168,33 +204,27 @@ export async function importCamtStatement(
         if (decision.result === "matched" || decision.result === "consistency_confirmed") autoMatched++
       }
     } catch {
-      // Individual match failure should not abort remaining matches
+      failed++
     }
   }
 
-  await auditLog.log(prisma, {
-    tenantId,
-    userId,
-    action: "import",
-    entityType: "bank_statement",
-    entityId: statement.id,
-    entityName: input.fileName,
-    metadata: {
-      transactionsImported: newTransactions.length,
-      autoMatched,
-      accountIban: parsed.accountIban,
-      statementId: parsed.statementId,
-    },
-  })
-
   return {
-    statementId: statement.id,
-    alreadyImported: false,
-    transactionsImported: newTransactions.length,
     autoMatched,
-    unmatched: newTransactions.length - autoMatched,
-    ignored: 0,
+    unmatched: transactions.length - autoMatched - failed,
+    failed,
   }
+}
+
+export async function getMatchProgress(
+  prisma: PrismaClient,
+  tenantId: string,
+  statementId: string,
+): Promise<MatchProgress> {
+  const [total, matched] = await Promise.all([
+    prisma.bankTransaction.count({ where: { tenantId, statementId } }),
+    prisma.bankTransaction.count({ where: { tenantId, statementId, status: "matched" } }),
+  ])
+  return { total, matched, unmatched: total - matched }
 }
 
 export interface DeleteStatementResult {

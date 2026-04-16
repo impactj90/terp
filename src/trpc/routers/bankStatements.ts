@@ -60,6 +60,37 @@ export const bankStatementsRouter = createTRPCRouter({
       }
     }),
 
+  autoMatch: bankStatementsProcedure
+    .use(requirePermission(IMPORT))
+    .input(z.object({ statementId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await bankStatementService.autoMatchStatement(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.statementId,
+          ctx.user?.id ?? null,
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  matchProgress: bankStatementsProcedure
+    .use(requirePermission(VIEW))
+    .input(z.object({ statementId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await bankStatementService.getMatchProgress(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.statementId,
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   list: bankStatementsProcedure
     .use(requirePermission(VIEW))
     .input(

@@ -35,7 +35,6 @@ vi.mock("../bank-transaction-matcher-service", () => ({
 import * as storage from "@/lib/supabase/storage"
 import * as repo from "../bank-statement-repository"
 import * as auditLog from "../audit-logs-service"
-import * as numberSequenceService from "../number-sequence-service"
 import {
   importCamtStatement,
   BankStatementValidationError,
@@ -96,8 +95,6 @@ describe("importCamtStatement", () => {
 
     expect(result.alreadyImported).toBe(false)
     expect(result.transactionsImported).toBe(1)
-    expect(result.unmatched).toBe(1)
-    expect(result.autoMatched).toBe(0)
     expect(storage.upload).toHaveBeenCalledTimes(1)
     expect(storage.upload).toHaveBeenCalledWith(
       "bank-statements",
@@ -128,9 +125,6 @@ describe("importCamtStatement", () => {
       statementId: "existing-stmt-id",
       alreadyImported: true,
       transactionsImported: 0,
-      autoMatched: 0,
-      unmatched: 0,
-      ignored: 0,
     })
     expect(storage.upload).not.toHaveBeenCalled()
     expect(repo.createStatement).not.toHaveBeenCalled()
@@ -214,7 +208,6 @@ describe("importCamtStatement", () => {
       USER_ID,
     )
     expect(result.transactionsImported).toBe(3)
-    expect(result.unmatched).toBe(3)
 
     const call = vi.mocked(repo.createTransactionsBatch).mock.calls[0]!
     const rows = call[3]
