@@ -38,8 +38,9 @@ export function PriceBulkAdjustDialog({
   const adjustPrices = useAdjustWhPrices()
   const { data: groups } = useWhArticleGroups()
 
+  const ALL_GROUPS = '__all__'
   const [percent, setPercent] = React.useState('0')
-  const [groupId, setGroupId] = React.useState<string>('')
+  const [groupId, setGroupId] = React.useState<string>(ALL_GROUPS)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,14 +54,14 @@ export function PriceBulkAdjustDialog({
       {
         priceListId,
         adjustmentPercent: parsedPercent,
-        articleGroupId: groupId || undefined,
+        articleGroupId: groupId === ALL_GROUPS ? undefined : groupId,
       },
       {
         onSuccess: (result) => {
           toast.success(`${t('pricesAdjusted')}: ${result?.adjustedCount ?? 0} ${t('affectedEntries')}`)
           onOpenChange(false)
           setPercent('0')
-          setGroupId('')
+          setGroupId(ALL_GROUPS)
         },
         onError: (err) => toast.error(err.message),
       }
@@ -107,7 +108,7 @@ export function PriceBulkAdjustDialog({
                 <SelectValue placeholder={t('allGroups')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('allGroups')}</SelectItem>
+                <SelectItem value={ALL_GROUPS}>{t('allGroups')}</SelectItem>
                 {flatGroups.map((g) => (
                   <SelectItem key={g.id} value={g.id}>
                     {'  '.repeat(g.depth)}{g.name}
