@@ -194,6 +194,28 @@ export function useCreateDayPlanBonus() {
 }
 
 /**
+ * Hook to update an existing bonus/surcharge on a day plan.
+ */
+export function useUpdateDayPlanBonus() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.dayPlans.updateBonus.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.list.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.dayPlans.getById.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.employees.dayView.queryKey(),
+      })
+    },
+  })
+}
+
+/**
  * Hook to delete a bonus/surcharge from a day plan.
  */
 export function useDeleteDayPlanBonus() {

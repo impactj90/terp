@@ -135,6 +135,82 @@ describe("createSandboxedEngine", () => {
     })
   })
 
+  describe("terp_value filter", () => {
+    it("resolves account: prefix against employee.accountValues", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        {
+          source: "account:NIGHT",
+          employee: { accountValues: { NIGHT: 8 }, monthlyValues: {} },
+        },
+      )
+      expect(out).toBe("8")
+    })
+
+    it("resolves plain source against employee.monthlyValues", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        {
+          source: "workedHours",
+          employee: { accountValues: {}, monthlyValues: { workedHours: 160 } },
+        },
+      )
+      expect(out).toBe("160")
+    })
+
+    it("returns 0 for unknown account code", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        {
+          source: "account:UNKNOWN",
+          employee: { accountValues: { NIGHT: 8 }, monthlyValues: {} },
+        },
+      )
+      expect(out).toBe("0")
+    })
+
+    it("returns 0 for unknown monthly source", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        {
+          source: "unknownField",
+          employee: { accountValues: {}, monthlyValues: { workedHours: 160 } },
+        },
+      )
+      expect(out).toBe("0")
+    })
+
+    it("returns 0 when terpSource is null", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        {
+          source: null,
+          employee: { accountValues: { NIGHT: 8 }, monthlyValues: {} },
+        },
+      )
+      expect(out).toBe("0")
+    })
+
+    it("returns 0 when employee is null", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee }}",
+        { source: "account:NIGHT", employee: null },
+      )
+      expect(out).toBe("0")
+    })
+
+    it("chains cleanly with datev_decimal", async () => {
+      const out = await engine.parseAndRender(
+        "{{ source | terp_value: employee | datev_decimal: 2 }}",
+        {
+          source: "account:NIGHT",
+          employee: { accountValues: { NIGHT: 8.5 }, monthlyValues: {} },
+        },
+      )
+      expect(out).toBe("8,50")
+    })
+  })
+
   describe("sandboxing", () => {
     it("blocks include tags (no filesystem access)", async () => {
       await expect(

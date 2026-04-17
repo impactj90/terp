@@ -95,4 +95,29 @@ function registerDatevFilters(engine: Liquid): void {
     if (s.length < 8) return s
     return s.slice(0, 4) + "****" + s.slice(-4)
   })
+
+  // terp_value: Resolve a payroll-wage terpSource against an employee context.
+  // - "account:<CODE>" → employee.accountValues[CODE]
+  // - any other string → employee.monthlyValues[terpSource]
+  // Falls back to 0 on miss (keeps datev_decimal chain numeric-safe).
+  engine.registerFilter(
+    "terp_value",
+    (
+      terpSource: string | null | undefined,
+      employee:
+        | {
+            accountValues?: Record<string, number> | null
+            monthlyValues?: Record<string, number> | null
+          }
+        | null
+        | undefined,
+    ) => {
+      if (!terpSource || !employee) return 0
+      if (terpSource.startsWith("account:")) {
+        const code = terpSource.slice("account:".length)
+        return employee.accountValues?.[code] ?? 0
+      }
+      return employee.monthlyValues?.[terpSource] ?? 0
+    },
+  )
 }

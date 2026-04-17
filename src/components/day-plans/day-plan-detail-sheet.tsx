@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { TimeInput } from '@/components/ui/time-input'
 import { DurationInput } from '@/components/ui/duration-input'
+import { Input } from '@/components/ui/input'
 import {
   Sheet,
   SheetContent,
@@ -26,7 +27,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { useDayPlan, useCreateDayPlanBonus, useDeleteDayPlanBonus, useAccounts } from '@/hooks'
+import {
+  useDayPlan,
+  useCreateDayPlanBonus,
+  useUpdateDayPlanBonus,
+  useDeleteDayPlanBonus,
+  useAccounts,
+} from '@/hooks'
 import { formatTime, formatDuration } from '@/lib/time-utils'
 
 type DayPlanData = NonNullable<ReturnType<typeof useDayPlan>['data']>
@@ -70,6 +77,26 @@ const BREAK_TYPE_LABEL_KEYS = {
   minimum: 'breakTypeMinimum',
 } as const
 
+type BonusFormValue = {
+  accountId: string
+  timeFrom: number
+  timeTo: number
+  calculationType: 'fixed' | 'per_minute' | 'percentage'
+  valueMinutes: number
+  minWorkMinutes: number | null
+  appliesOnHoliday: boolean
+}
+
+const DEFAULT_BONUS: BonusFormValue = {
+  accountId: '',
+  timeFrom: 1320,
+  timeTo: 360,
+  calculationType: 'per_minute',
+  valueMinutes: 0,
+  minWorkMinutes: null,
+  appliesOnHoliday: false,
+}
+
 export function DayPlanDetailSheet({
   dayPlanId,
   open,
@@ -82,31 +109,20 @@ export function DayPlanDetailSheet({
   const { data: dayPlan, isLoading, refetch } = useDayPlan(dayPlanId ?? '', open && !!dayPlanId)
   const { data: accountsData } = useAccounts({ accountType: 'bonus', active: true, includeSystem: true, enabled: open })
   const createBonusMutation = useCreateDayPlanBonus()
+  const updateBonusMutation = useUpdateDayPlanBonus()
   const deleteBonusMutation = useDeleteDayPlanBonus()
   const [showAddBonus, setShowAddBonus] = useState(false)
-  const [newBonus, setNewBonus] = useState({
-    accountId: '',
-    timeFrom: 1320,
-    timeTo: 360,
-    calculationType: 'per_minute' as 'fixed' | 'per_minute' | 'percentage',
-    valueMinutes: 0,
-    minWorkMinutes: null as number | null,
-    appliesOnHoliday: false,
-  })
+  const [newBonus, setNewBonus] = useState<BonusFormValue>(DEFAULT_BONUS)
+  const [editingBonusId, setEditingBonusId] = useState<string | null>(null)
+  const [editBonus, setEditBonus] = useState<BonusFormValue>(DEFAULT_BONUS)
 
-  // Reset add bonus form when sheet closes
+  // Reset forms when sheet closes
   React.useEffect(() => {
     if (!open) {
       setShowAddBonus(false)
-      setNewBonus({
-        accountId: '',
-        timeFrom: 1320,
-        timeTo: 360,
-        calculationType: 'per_minute',
-        valueMinutes: 0,
-        minWorkMinutes: null,
-        appliesOnHoliday: false,
-      })
+      setNewBonus(DEFAULT_BONUS)
+      setEditingBonusId(null)
+      setEditBonus(DEFAULT_BONUS)
     }
   }, [open])
 
@@ -124,15 +140,46 @@ export function DayPlanDetailSheet({
         appliesOnHoliday: newBonus.appliesOnHoliday,
       })
       setShowAddBonus(false)
-      setNewBonus({
-        accountId: '',
-        timeFrom: 1320,
-        timeTo: 360,
-        calculationType: 'per_minute',
-        valueMinutes: 0,
-        minWorkMinutes: null,
-        appliesOnHoliday: false,
+      setNewBonus(DEFAULT_BONUS)
+      refetch()
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
+  const handleStartEditBonus = (bonus: NonNullable<DayPlanData['bonuses']>[number]) => {
+    setEditingBonusId(bonus.id)
+    setEditBonus({
+      accountId: bonus.accountId,
+      timeFrom: bonus.timeFrom,
+      timeTo: bonus.timeTo,
+      calculationType: bonus.calculationType as 'fixed' | 'per_minute' | 'percentage',
+      valueMinutes: bonus.valueMinutes,
+      minWorkMinutes: bonus.minWorkMinutes ?? null,
+      appliesOnHoliday: bonus.appliesOnHoliday,
+    })
+  }
+
+  const handleCancelEditBonus = () => {
+    setEditingBonusId(null)
+    setEditBonus(DEFAULT_BONUS)
+  }
+
+  const handleSaveEditBonus = async () => {
+    if (!dayPlan || !editingBonusId || !editBonus.accountId) return
+    try {
+      await updateBonusMutation.mutateAsync({
+        dayPlanId: dayPlan.id,
+        bonusId: editingBonusId,
+        accountId: editBonus.accountId,
+        timeFrom: editBonus.timeFrom,
+        timeTo: editBonus.timeTo,
+        calculationType: editBonus.calculationType,
+        valueMinutes: editBonus.valueMinutes,
+        minWorkMinutes: editBonus.minWorkMinutes,
+        appliesOnHoliday: editBonus.appliesOnHoliday,
       })
+      handleCancelEditBonus()
       refetch()
     } catch {
       // Error handled by mutation
@@ -154,7 +201,7 @@ export function DayPlanDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col">
+      <SheetContent className="w-full sm:max-w-xl flex min-h-0 flex-col">
         {isLoading ? (
           <DetailSheetSkeleton />
         ) : dayPlan ? (
@@ -323,32 +370,93 @@ export function DayPlanDetailSheet({
                   {dayPlan.bonuses && dayPlan.bonuses.length > 0 ? (
                     <div className="space-y-3">
                       {dayPlan.bonuses.map((bonus: NonNullable<DayPlanData['bonuses']>[number]) => (
-                        <div key={bonus.id} className="border rounded-lg p-3 text-sm">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{(bonus as { accountId?: string | null; account?: { name: string } | null }).account?.name ?? t('unknownAccount')}</span>
-                            <div className="flex items-center gap-2">
-                              <span>{formatDuration(bonus.valueMinutes)}</span>
+                        editingBonusId === bonus.id ? (
+                          <div key={bonus.id} className="border rounded-lg p-4 space-y-4">
+                            <h4 className="text-sm font-medium">{t('editBonus')}</h4>
+                            <BonusFormFields
+                              value={editBonus}
+                              onChange={setEditBonus}
+                              accounts={accountsData?.data ?? []}
+                              labels={{
+                                account: t('fieldAccount'),
+                                selectAccount: t('selectAccount'),
+                                timeFrom: t('fieldTimeFrom'),
+                                timeTo: t('fieldTimeTo'),
+                                calculationType: t('fieldCalculationType'),
+                                calcFixed: t('bonusCalculationFixed'),
+                                calcPerMinute: t('bonusCalculationPerMinute'),
+                                calcPercentage: t('bonusCalculationPercentage'),
+                                valueMinutes: t('fieldValueMinutes'),
+                                valuePercent: t('fieldValuePercent'),
+                                minWorkMinutes: t('fieldMinWorkMinutes'),
+                                appliesOnHoliday: t('fieldAppliesOnHoliday'),
+                              }}
+                              idPrefix={`edit-${bonus.id}`}
+                            />
+                            <div className="flex gap-2">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteBonus(bonus.id)}
-                                disabled={deleteBonusMutation.isPending}
+                                onClick={handleCancelEditBonus}
+                                className="flex-1"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                {t('cancel')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleSaveEditBonus}
+                                disabled={updateBonusMutation.isPending || !editBonus.accountId}
+                                className="flex-1"
+                              >
+                                {updateBonusMutation.isPending && (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                {t('saveBonus')}
                               </Button>
                             </div>
                           </div>
-                          <div className="text-muted-foreground">
-                            {formatTime(bonus.timeFrom)} - {formatTime(bonus.timeTo)}
+                        ) : (
+                          <div key={bonus.id} className="border rounded-lg p-3 text-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">{bonus.account?.name ?? t('unknownAccount')}</span>
+                              <div className="flex items-center gap-2">
+                                <span>{formatDuration(bonus.valueMinutes)}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => handleStartEditBonus(bonus)}
+                                  disabled={
+                                    updateBonusMutation.isPending ||
+                                    deleteBonusMutation.isPending ||
+                                    editingBonusId !== null
+                                  }
+                                  aria-label={t('editBonus')}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteBonus(bonus.id)}
+                                  disabled={deleteBonusMutation.isPending || editingBonusId !== null}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="text-muted-foreground">
+                              {formatTime(bonus.timeFrom)} - {formatTime(bonus.timeTo)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {bonus.calculationType === 'fixed' && t('bonusCalculationFixed')}
+                              {bonus.calculationType === 'per_minute' && t('bonusCalculationPerMinute')}
+                              {bonus.calculationType === 'percentage' && t('bonusCalculationPercentage')}
+                              {bonus.appliesOnHoliday && ` | ${t('bonusAppliesOnHoliday')}`}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {bonus.calculationType === 'fixed' && t('bonusCalculationFixed')}
-                            {bonus.calculationType === 'per_minute' && t('bonusCalculationPerMinute')}
-                            {bonus.calculationType === 'percentage' && t('bonusCalculationPercentage')}
-                            {bonus.appliesOnHoliday && ` | ${t('bonusAppliesOnHoliday')}`}
-                          </div>
-                        </div>
+                        )
                       ))}
                     </div>
                   ) : (
@@ -357,94 +465,28 @@ export function DayPlanDetailSheet({
 
                   {/* Add Bonus Form */}
                   {showAddBonus ? (
-                    <div className="border rounded-lg p-4 space-y-4 mt-4 max-h-80 overflow-y-auto">
+                    <div className="border rounded-lg p-4 space-y-4 mt-4">
                       <h4 className="text-sm font-medium">{t('addBonus')}</h4>
-
-                      <div className="space-y-2">
-                        <Label>{t('fieldAccount')}</Label>
-                        <Select
-                          value={newBonus.accountId}
-                          onValueChange={(v) => setNewBonus({ ...newBonus, accountId: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('selectAccount')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {accountsData?.data?.map((account: { id: string; name: string }) => (
-                              <SelectItem key={account.id} value={account.id}>
-                                {account.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>{t('fieldTimeFrom')}</Label>
-                          <TimeInput
-                            value={newBonus.timeFrom}
-                            onChange={(v) => setNewBonus({ ...newBonus, timeFrom: v ?? 0 })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>{t('fieldTimeTo')}</Label>
-                          <TimeInput
-                            value={newBonus.timeTo}
-                            onChange={(v) => setNewBonus({ ...newBonus, timeTo: v ?? 0 })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>{t('fieldCalculationType')}</Label>
-                          <Select
-                            value={newBonus.calculationType}
-                            onValueChange={(v) =>
-                              setNewBonus({ ...newBonus, calculationType: v as 'fixed' | 'per_minute' | 'percentage' })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fixed">{t('bonusCalculationFixed')}</SelectItem>
-                              <SelectItem value="per_minute">{t('bonusCalculationPerMinute')}</SelectItem>
-                              <SelectItem value="percentage">{t('bonusCalculationPercentage')}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>{t('fieldValueMinutes')}</Label>
-                          <DurationInput
-                            value={newBonus.valueMinutes}
-                            onChange={(v) => setNewBonus({ ...newBonus, valueMinutes: v ?? 0 })}
-                            format="minutes"
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>{t('fieldMinWorkMinutes')}</Label>
-                        <DurationInput
-                          value={newBonus.minWorkMinutes}
-                          onChange={(v) => setNewBonus({ ...newBonus, minWorkMinutes: v })}
-                          format="hhmm"
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="applies-on-holiday"
-                          checked={newBonus.appliesOnHoliday}
-                          onCheckedChange={(c) => setNewBonus({ ...newBonus, appliesOnHoliday: c === true })}
-                        />
-                        <Label htmlFor="applies-on-holiday">{t('fieldAppliesOnHoliday')}</Label>
-                      </div>
-
+                      <BonusFormFields
+                        value={newBonus}
+                        onChange={setNewBonus}
+                        accounts={accountsData?.data ?? []}
+                        labels={{
+                          account: t('fieldAccount'),
+                          selectAccount: t('selectAccount'),
+                          timeFrom: t('fieldTimeFrom'),
+                          timeTo: t('fieldTimeTo'),
+                          calculationType: t('fieldCalculationType'),
+                          calcFixed: t('bonusCalculationFixed'),
+                          calcPerMinute: t('bonusCalculationPerMinute'),
+                          calcPercentage: t('bonusCalculationPercentage'),
+                          valueMinutes: t('fieldValueMinutes'),
+                          valuePercent: t('fieldValuePercent'),
+                          minWorkMinutes: t('fieldMinWorkMinutes'),
+                          appliesOnHoliday: t('fieldAppliesOnHoliday'),
+                        }}
+                        idPrefix="add"
+                      />
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -472,6 +514,7 @@ export function DayPlanDetailSheet({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowAddBonus(true)}
+                      disabled={editingBonusId !== null}
                       className="mt-4"
                     >
                       <Plus className="mr-2 h-4 w-4" />
@@ -534,6 +577,147 @@ function DetailRow({ label, value }: { label: string; value: string | React.Reac
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
+  )
+}
+
+type BonusFormLabels = {
+  account: string
+  selectAccount: string
+  timeFrom: string
+  timeTo: string
+  calculationType: string
+  calcFixed: string
+  calcPerMinute: string
+  calcPercentage: string
+  valueMinutes: string
+  valuePercent: string
+  minWorkMinutes: string
+  appliesOnHoliday: string
+}
+
+function BonusFormFields({
+  value,
+  onChange,
+  accounts,
+  labels,
+  idPrefix,
+}: {
+  value: BonusFormValue
+  onChange: (next: BonusFormValue) => void
+  accounts: Array<{ id: string; name: string }>
+  labels: BonusFormLabels
+  idPrefix: string
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>{labels.account}</Label>
+        <Select value={value.accountId} onValueChange={(v) => onChange({ ...value, accountId: v })}>
+          <SelectTrigger>
+            <SelectValue placeholder={labels.selectAccount} />
+          </SelectTrigger>
+          <SelectContent>
+            {accounts.map((account) => (
+              <SelectItem key={account.id} value={account.id}>
+                {account.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{labels.timeFrom}</Label>
+          <TimeInput
+            value={value.timeFrom}
+            onChange={(v) => onChange({ ...value, timeFrom: v ?? 0 })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>{labels.timeTo}</Label>
+          <TimeInput
+            value={value.timeTo}
+            onChange={(v) => onChange({ ...value, timeTo: v ?? 0 })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{labels.calculationType}</Label>
+          <Select
+            value={value.calculationType}
+            onValueChange={(v) =>
+              onChange({
+                ...value,
+                calculationType: v as 'fixed' | 'per_minute' | 'percentage',
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fixed">{labels.calcFixed}</SelectItem>
+              <SelectItem value="per_minute">{labels.calcPerMinute}</SelectItem>
+              <SelectItem value="percentage">{labels.calcPercentage}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>
+            {value.calculationType === 'percentage'
+              ? labels.valuePercent
+              : labels.valueMinutes}
+          </Label>
+          {value.calculationType === 'percentage' ? (
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              value={value.valueMinutes === 0 ? '' : value.valueMinutes}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  valueMinutes: e.target.value === '' ? 0 : Number(e.target.value),
+                })
+              }
+              className="w-full"
+            />
+          ) : (
+            <DurationInput
+              value={value.valueMinutes}
+              onChange={(v) => onChange({ ...value, valueMinutes: v ?? 0 })}
+              format="minutes"
+              className="w-full"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{labels.minWorkMinutes}</Label>
+        <DurationInput
+          value={value.minWorkMinutes}
+          onChange={(v) => onChange({ ...value, minWorkMinutes: v })}
+          format="hhmm"
+          className="w-full"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={`${idPrefix}-applies-on-holiday`}
+          checked={value.appliesOnHoliday}
+          onCheckedChange={(c) =>
+            onChange({ ...value, appliesOnHoliday: c === true })
+          }
+        />
+        <Label htmlFor={`${idPrefix}-applies-on-holiday`}>{labels.appliesOnHoliday}</Label>
+      </div>
+    </>
   )
 }
 

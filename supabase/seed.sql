@@ -430,14 +430,15 @@ ON CONFLICT (team_id, employee_id) DO NOTHING;
 -- 15. Accounts (tenant-specific, system accounts exist from migration)
 -- =============================================================
 
-INSERT INTO accounts (id, tenant_id, code, name, account_type, unit, is_system, is_active, created_at, updated_at)
+INSERT INTO accounts (id, tenant_id, code, name, account_type, unit, is_system, is_active, is_payroll_relevant, payroll_code, created_at, updated_at)
 VALUES
-  ('00000000-0000-0000-0000-000000001101', '10000000-0000-0000-0000-000000000001', 'NIGHT', 'Night Shift Bonus', 'bonus', 'minutes', false, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000001102', '10000000-0000-0000-0000-000000000001', 'SAT', 'Saturday Bonus', 'bonus', 'minutes', false, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000001103', '10000000-0000-0000-0000-000000000001', 'SUN', 'Sunday/Holiday Bonus', 'bonus', 'minutes', false, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000001104', '10000000-0000-0000-0000-000000000001', 'ONCALL', 'On-Call Duty', 'day', 'minutes', false, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000001105', '10000000-0000-0000-0000-000000000001', 'TRAVEL', 'Travel Time', 'day', 'minutes', false, true, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000001106', '10000000-0000-0000-0000-000000000001', 'SICK', 'Sick Leave Balance', 'month', 'days', false, true, NOW(), NOW())
+  ('00000000-0000-0000-0000-000000001101', '10000000-0000-0000-0000-000000000001', 'NIGHT',   'Night Shift Bonus',   'bonus', 'minutes', false, true, true,  '1015', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001102', '10000000-0000-0000-0000-000000000001', 'SAT',     'Saturday Bonus',      'bonus', 'minutes', false, true, true,  '1020', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001103', '10000000-0000-0000-0000-000000000001', 'SUN',     'Sunday Bonus',        'bonus', 'minutes', false, true, true,  '1025', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001107', '10000000-0000-0000-0000-000000000001', 'HOLIDAY', 'Holiday Bonus',       'bonus', 'minutes', false, true, true,  '1030', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001104', '10000000-0000-0000-0000-000000000001', 'ONCALL',  'On-Call Duty',        'day',   'minutes', false, true, false, NULL,   NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001105', '10000000-0000-0000-0000-000000000001', 'TRAVEL',  'Travel Time',         'day',   'minutes', false, true, false, NULL,   NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000001106', '10000000-0000-0000-0000-000000000001', 'SICK',    'Sick Leave Balance',  'month', 'days',    false, true, false, NULL,   NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================

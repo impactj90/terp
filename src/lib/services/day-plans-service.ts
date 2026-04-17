@@ -841,3 +841,93 @@ export async function removeBonus(
 
   await repo.deleteBonus(prisma, input.bonusId)
 }
+
+const BONUS_TRACKED_FIELDS = [
+  "accountId",
+  "timeFrom",
+  "timeTo",
+  "calculationType",
+  "valueMinutes",
+  "minWorkMinutes",
+  "appliesOnHoliday",
+  "sortOrder",
+] as const
+
+export async function updateBonusFn(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: {
+    dayPlanId: string
+    bonusId: string
+    accountId?: string
+    timeFrom?: number
+    timeTo?: number
+    calculationType?: string
+    valueMinutes?: number
+    minWorkMinutes?: number | null
+    appliesOnHoliday?: boolean
+    sortOrder?: number
+  },
+  audit?: AuditContext
+) {
+  // Verify parent day plan exists and belongs to tenant
+  const dayPlan = await repo.findByIdBasic(prisma, tenantId, input.dayPlanId)
+  if (!dayPlan) {
+    throw new DayPlanNotFoundError()
+  }
+
+  // Verify bonus exists and belongs to the day plan (tenant scope via parent)
+  const existing = await repo.findBonusById(
+    prisma,
+    input.bonusId,
+    input.dayPlanId
+  )
+  if (!existing) {
+    throw new BonusNotFoundError()
+  }
+
+  // Validate the effective time window (merge with existing values for
+  // partial updates where only one of timeFrom/timeTo is provided).
+  const effectiveFrom = input.timeFrom ?? existing.timeFrom
+  const effectiveTo = input.timeTo ?? existing.timeTo
+  validateBonus(effectiveFrom, effectiveTo)
+
+  // Build partial update data — only fields explicitly provided
+  const data: Record<string, unknown> = {}
+  if (input.accountId !== undefined) data.accountId = input.accountId
+  if (input.timeFrom !== undefined) data.timeFrom = input.timeFrom
+  if (input.timeTo !== undefined) data.timeTo = input.timeTo
+  if (input.calculationType !== undefined)
+    data.calculationType = input.calculationType
+  if (input.valueMinutes !== undefined) data.valueMinutes = input.valueMinutes
+  if (input.minWorkMinutes !== undefined)
+    data.minWorkMinutes = input.minWorkMinutes
+  if (input.appliesOnHoliday !== undefined)
+    data.appliesOnHoliday = input.appliesOnHoliday
+  if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
+
+  const updated = await repo.updateBonus(prisma, input.bonusId, data)
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      [...BONUS_TRACKED_FIELDS]
+    )
+    await auditLog
+      .log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "update",
+        entityType: "day_plan_bonus",
+        entityId: input.bonusId,
+        entityName: null,
+        changes,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      })
+      .catch((err) => console.error("[AuditLog] Failed:", err))
+  }
+
+  return updated
+}

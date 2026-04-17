@@ -1098,9 +1098,62 @@ Zuschläge definieren Zeitfenster, in denen Arbeitszeit automatisch als Bonus au
 > 📍 Verwaltung → Tagespläne → Nachtschicht-Plan anklicken → Detailansicht → Abschnitt „Zuschläge" → „Zuschlag hinzufügen"
 > - Konto: `NZ (Nachtzuschlag)`, Zeit von: `22:00`, Zeit bis: `06:00`, Berechnungsart: **Pro Minute**, Wert: `0`, Gilt an Feiertagen: ☐ → 📍 „Zuschlag hinzufügen"
 >
+> **Schritt 4 — Test-Export erzeugen und Zuschlagszeile verifizieren**:
+> 📍 Administration → Lohnexporte → „Export erstellen" → Modus **Template-basiert** → gewünschtes System-Template (z. B. „DATEV LODAS — Bewegungsdaten") → Zeitraum wählen → 📍 „Generieren" → Datei herunterladen und öffnen → die Zeile mit Lohnart `1015` prüfen; der Stundenwert muss mit den gebuchten Nachtstunden übereinstimmen.
+>
+> **Schritt 5 — Steuerberater-Freigabe einholen**:
+> Test-Export und das Steuerberater-Briefing-PDF (→ Abschnitt 20f.10) an den Steuerberater mailen, schriftliche Freigabe abwarten und erst danach den ersten Produktivlauf durchführen.
+>
 > **Ergebnis:** Arbeitet ein Mitarbeiter mit diesem Tagesplan von 22:00 bis 06:00, berechnet das System automatisch 8 Stunden Nachtzuschlag und bucht sie auf das Konto NZ. Im Lohnexport erscheint der Wert unter Lohncode 1015.
 
 💡 **Hinweis:** Die Zuschlagsberechnung erfolgt bei jeder Buchungsänderung und zusätzlich nachts automatisch (→ Abschnitt 9.3).
+
+**Praxisbeispiel: Sonntagszuschlag End-to-End**
+
+> **Szenario:** Mitarbeiter, die am Sonntag arbeiten, sollen auf den gesamten Einsatz einen 50%-Zuschlag erhalten. Der Steuerberater verlangt den Wert unter Lohncode 1020 in einer separaten Lohnart.
+>
+> **Schritt 1 — Bonus-Konto anlegen** (einmalig):
+> 📍 Verwaltung → Konten → „Neues Konto"
+> - Code: `SZ`, Name: `Sonntagszuschlag`, Kontotyp: **Bonus**, Einheit: **Stunden**, Lohnrelevant: ✓, Lohncode: `1020` → 📍 „Erstellen"
+>
+> **Schritt 2 — Konto der Exportschnittstelle zuordnen** (einmalig):
+> 📍 Administration → Exportschnittstellen → Schnittstelle → ⋯ → „Konten verwalten" → `SZ` nach rechts verschieben → 📍 „Speichern"
+>
+> **Schritt 3 — Zuschlag am Sonntags-Tagesplan konfigurieren**:
+> 📍 Verwaltung → Tagespläne → Sonntags-Tagesplan anklicken → Detailansicht → Abschnitt „Zuschläge" → „Zuschlag hinzufügen"
+> - Konto: `SZ (Sonntagszuschlag)`, Zeit von: `00:00`, Zeit bis: `23:59`, Berechnungsart: **Prozentual**, Wert: `50`, Gilt an Feiertagen: ☐ → 📍 „Zuschlag hinzufügen"
+>
+> **Schritt 4 — Wochenplan pflegen** (falls noch nicht vorhanden): Sicherstellen, dass der Sonntag im Wochenplan auf diesen Tagesplan zeigt (→ Abschnitt 4.7).
+>
+> **Schritt 5 — Test-Export + Steuerberater-Freigabe**: Test-Export wie beim Nachtzuschlag (Schritte 4 + 5 oben) durchführen und die Zeile mit Lohnart `1020` verifizieren.
+>
+> **Ergebnis:** Bucht ein Mitarbeiter an einem Sonntag 8 Stunden Arbeit, werden 4 Stunden (50%) als Sonntagszuschlag auf das Konto SZ gebucht und landen im Lohnexport unter Lohncode 1020.
+
+💡 **Abgrenzung:** Der Sonntagszuschlag greift **nicht** automatisch an Feiertagen, die auf einen Sonntag fallen — dafür braucht es einen separaten Feiertags-Bonus mit „Gilt an Feiertagen" ✓. Beide Bonusse akkumulieren unabhängig (siehe nächstes Beispiel).
+
+**Praxisbeispiel: Feiertagszuschlag End-to-End**
+
+> **Szenario:** An gesetzlichen Feiertagen soll ein 125%-Feiertagszuschlag berechnet werden — zusätzlich zu einem eventuellen Sonntags- oder Nachtzuschlag.
+>
+> **Schritt 1 — Bonus-Konto anlegen** (einmalig):
+> 📍 Verwaltung → Konten → „Neues Konto"
+> - Code: `FZ`, Name: `Feiertagszuschlag`, Kontotyp: **Bonus**, Einheit: **Stunden**, Lohnrelevant: ✓, Lohncode: `1030` → 📍 „Erstellen"
+>
+> **Schritt 2 — Konto der Exportschnittstelle zuordnen** (einmalig):
+> 📍 Administration → Exportschnittstellen → Schnittstelle → ⋯ → „Konten verwalten" → `FZ` nach rechts verschieben → 📍 „Speichern"
+>
+> **Schritt 3 — Feiertagskalender prüfen** (einmalig pro Jahr):
+> 📍 Verwaltung → Feiertage → Jahr und Bundesland wählen → „Feiertage generieren". Ohne aktuelle Feiertagsdaten greift der Zuschlag nicht.
+>
+> **Schritt 4 — Zuschlag am Tagesplan konfigurieren** (auf allen Tagesplänen, die an Feiertagen aktiv sind):
+> 📍 Verwaltung → Tagespläne → Plan anklicken → Detailansicht → Abschnitt „Zuschläge" → „Zuschlag hinzufügen"
+> - Konto: `FZ (Feiertagszuschlag)`, Zeit von: `00:00`, Zeit bis: `23:59`, Berechnungsart: **Prozentual**, Wert: `125`, Gilt an Feiertagen: ✓ → 📍 „Zuschlag hinzufügen"
+>
+> **Schritt 5 — Test-Export + Steuerberater-Freigabe**: Test-Export wie beim Nachtzuschlag (Schritte 4 + 5 oben), Zeile mit Lohnart `1030` verifizieren.
+>
+> **Ergebnis:** Arbeitet ein Mitarbeiter an einem gesetzlichen Feiertag 8 Stunden, werden 10 Stunden (125%) als Feiertagszuschlag auf das Konto FZ gebucht. Fällt der Feiertag auf einen Sonntag und ist zusätzlich der Sonntagszuschlag konfiguriert, greift **beides** — die beiden Zuschläge akkumulieren unabhängig auf zwei unterschiedliche Konten.
+
+💡 **Hinweis zum Zusammenspiel:** Nacht-, Sonntags- und Feiertagszuschlag sind drei voneinander unabhängige Bonusse. Eine Nachtschicht am Feiertag erzeugt automatisch sowohl einen Nacht- als auch einen Feiertagszuschlag, solange beide Bonusse auf dem Tagesplan aktiv sind. Für die Steuerfreiheit nach §3b EStG ist Terp aktuell nicht zuständig — das steuerfreie Volumen rechnet der Steuerberater pro Lohnart aus den übergebenen Stunden aus.
 
 ##### Beispielkonfigurationen: Früh-, Spät- und Nachtschicht
 
@@ -9347,6 +9400,7 @@ Im Template-Body haben Sie Zugriff auf ein **Kontext-Objekt**, das alle Daten de
 | `compensation` | `grossSalary`, `hourlyRate`, `paymentType`, `salaryGroup` |
 | `contract` | `entryDate`, `exitDate`, `contractType`, `department`, `departmentCode`, `costCenter`, `costCenterCode` |
 | `monthlyValues` | `targetHours`, `workedHours`, `overtimeHours`, `vacationDays`, `sickDays`, `otherAbsenceDays` (nur aus abgeschlossenen Monaten) |
+| `accountValues` | Sparse-Objekt mit Kontostunden pro aktivem Mandanten-Konto (Schlüssel = `Account.code`, Wert = Stunden). Siehe Abschnitt unten. |
 | `benefits.companyCars[]` | `listPrice`, `propulsionType`, `distanceToWorkKm`, `usageType` |
 | `benefits.jobBikes[]`, `.mealAllowances[]`, `.vouchers[]`, `.jobTickets[]`, `.pensions[]`, `.savings[]` | siehe Stammdaten-Tabs (20e.7) |
 | `garnishments[]` | `creditorName` (entschlüsselt), `fileReference` (entschlüsselt), `amount`, `method`, `dependents`, `rank` |
@@ -9358,6 +9412,31 @@ Im Template-Body haben Sie Zugriff auf ein **Kontext-Objekt**, das alle Daten de
 💡 **Wichtig — Zeitraum-Filterung:** Benefit-Arrays (`companyCars`, `jobBikes`, `mealAllowances`, `vouchers`, `jobTickets`, `pensions`, `savings`, `garnishments`, `foreignAssignments`, `parentalLeaves`, `maternityLeaves`) enthalten **nur Datensätze, die im gewählten Abrechnungsmonat aktiv waren**. Ein Dienstwagen, der bis März gefahren wurde und ab April durch einen neuen ersetzt wurde, erscheint im April-Export nur mit dem Nachfolger. Die Filter-Logik: `start_date <= Monatsende` UND (`end_date IS NULL` ODER `end_date >= Monatsanfang`).
 
 💡 **Sensible Felder:** `tax.taxId`, `socialSecurity.ssn`, `bank.iban`, `savings[].recipientIban`, `garnishments[].creditorName`, `garnishments[].fileReference` sind in der Datenbank **verschlüsselt** gespeichert und werden nur für die Template-Ausführung entschlüsselt. Die entschlüsselten Klartext-Werte dürfen in Templates verwendet werden, sind aber **niemals** im Audit-Log oder in Vorschauen der Monatswerte sichtbar.
+
+##### `employee.accountValues` (Kontenwerte für Zuschläge und sonstige Konten)
+
+Neben `monthlyValues` stellt der Kontext `employee.accountValues` bereit — ein **Sparse-Objekt** mit Kontostunden pro aktivem Mandanten-Konto. Schlüssel = `Account.code` (z. B. `NIGHT`, `SUN`, `HOLIDAY`, `ONCALL`), Wert = Stunden (Summe aller `DailyAccountValue`-Quellen im Abrechnungszeitraum). Konten ohne Buchung in der Periode erscheinen nicht im Objekt.
+
+Alle aktiven Konten des Tenants (inklusive globaler System-Konten) werden berücksichtigt, unabhängig vom `accountType` (`bonus`, `day`, `month`).
+
+**Auflösung über den `terp_value`-Filter:** In der Lohnart-Mapping-Tabelle (siehe 20f.4) können Sie als **Terp-Quelle** einen `account:<CODE>`-String eintragen (z. B. `account:NIGHT`). Templates rufen den Wert über den `terp_value`-Filter auf:
+
+```liquid
+{%- assign val = wage.terpSource | terp_value: employee -%}
+```
+
+Der Filter löst automatisch auf:
+- `wage.terpSource = "account:NIGHT"` → `employee.accountValues.NIGHT`
+- `wage.terpSource = "workedHours"` → `employee.monthlyValues.workedHours`
+- Unbekannte Quelle → `0`
+
+**Direkter Zugriff im Template:**
+
+```liquid
+{{ employee.accountValues.NIGHT | datev_decimal: 2 }}
+```
+
+Die sechs mitgelieferten System-Templates (DATEV LODAS Bewegung, LODAS Stamm + Bewegung, LuG, Lexware, SAGE, Generic CSV) verwenden den `terp_value`-Filter bereits. Eigene Tenant-Templates, die das ältere Muster `employee.monthlyValues[wage.terpSource]` verwenden, funktionieren weiterhin für Nicht-`account:`-Quellen; bei Gelegenheit sollten sie auf den Filter umgestellt werden, damit Zuschlagskonten unterstützt werden.
 
 #### 20f.3.4 Custom Filter (DATEV-spezifisch)
 
@@ -9371,6 +9450,7 @@ Zusätzlich zu den eingebauten Liquid-Filtern stellt Terp sechs DATEV-Filter ber
 | `pad_left` | Feste Feldlänge, links aufgefüllt | `{{ 42 \| pad_left: 5, "0" }}` | `00042` |
 | `pad_right` | Feste Feldlänge, rechts aufgefüllt | `{{ "abc" \| pad_right: 6 }}` | `abc␣␣␣` |
 | `mask_iban` | IBAN nur Anfang + Ende zeigen (für Vorschauen) | `{{ "DE89370400440532013000" \| mask_iban }}` | `DE89****3000` |
+| `terp_value` | Lohnart-Quelle gegen den Employee-Kontext auflösen (`account:<CODE>` → `accountValues`, sonst → `monthlyValues`) | `{{ wage.terpSource \| terp_value: employee }}` | `8` (für 8 Nachtstunden) |
 
 Beispiel-Template:
 
@@ -9748,6 +9828,18 @@ In jeder Zeile gibt es einen **„Öffnen"**-Link, der direkt zum betroffenen Mi
 8. Zurück zu **DATEV-Onboarding** → alle 6 Flags grün ✅
 9. **Mitarbeiter-Vollständigkeit:** durch die Liste der unvollständigen MA gehen, Felder nachpflegen
 10. Wenn alle aktiven MA vollständig sind: ersten Produktivlauf durchführen (siehe 20f.5)
+
+#### 20f.9.4 DATEV-Zuschläge: Onboarding-Checkliste
+
+Für jeden Zuschlag (Nacht, Samstag, Sonntag, Feiertag), den der Steuerberater als eigene Lohnart sehen soll, die folgenden fünf Schritte in dieser Reihenfolge abarbeiten:
+
+1. **Lohnart vom Steuerberater erfragen** — DATEV-Lohnart-Code (4-stellig) und Name. Ohne diesen Code werden die Zuschlagsminuten unter dem Konto-Code als Lohnart ausgegeben, was selten das gewünschte Ergebnis ist.
+2. **Bonus-Konto anlegen oder anpassen** — 📍 Verwaltung → Konten → neues Konto vom Typ **Bonus** oder bestehendes Konto öffnen → Lohncode eintragen → **Lohnrelevant** aktivieren → Speichern.
+3. **Zuschlag am Tagesplan konfigurieren** — 📍 Verwaltung → Tagespläne → gewünschten Plan öffnen → Detailansicht → Abschnitt „Zuschläge" → „Zuschlag hinzufügen" (oder das Bleistift-Icon für einen bestehenden Zuschlag) → Zeitfenster, Berechnungsart und Wert eintragen → Speichern.
+4. **Test-Export erzeugen und Probezeile an den Steuerberater schicken** — 📍 Administration → Lohnexporte → „Export erstellen" → Modus **Template-basiert** → Generieren → CSV öffnen → die Zeile mit dem konfigurierten Lohnart-Code prüfen → zusammen mit dem Steuerberater-PDF (siehe 20f.10) per Mail an den Steuerberater.
+5. **Schriftliche Freigabe einholen, dann Go-Live** — erst nach schriftlichem OK des Steuerberaters den ersten Produktivlauf durchführen.
+
+⚠️ **Wichtig:** Lohnart-Codes sind steuerberaterspezifisch. Dieselbe Terp-Quelle (`account:NIGHT`) kann bei zwei Steuerberatern unterschiedliche Codes haben (z. B. 1003 vs. 1015). Das Mapping pflegen Sie unter 📍 Administration → Lohnart-Mapping (siehe 20f.4). Dort ist pro Code die **Terp-Quelle** zu hinterlegen — für Zuschlagskonten im Format `account:<CODE>` (z. B. `account:NIGHT`, `account:SUN`, `account:HOLIDAY`).
 
 ---
 

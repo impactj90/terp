@@ -208,3 +208,54 @@ export async function aggregateDailyAccountValues(
     _sum: { valueMinutes: true },
   })
 }
+
+/**
+ * Aggregates DailyAccountValue rows for all active accounts of a tenant
+ * (plus global system accounts) into a per-employee, per-account-code map
+ * in hours. Used by the export-context-builder to expose account-level
+ * values to LiquidJS templates via `employee.accountValues[code]`.
+ *
+ * Sums over ALL source values (net_time, capped_time, surcharge,
+ * absence_rule) — consistent with generateDatevLodas. Only accounts with
+ * non-zero sums appear in the result.
+ */
+export async function aggregateAccountValuesForContext(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeIds: string[],
+  year: number,
+  month: number,
+): Promise<Array<{ employeeId: string; accountCode: string; hours: number }>> {
+  if (employeeIds.length === 0) return []
+  const accounts = await prisma.account.findMany({
+    where: {
+      OR: [{ tenantId }, { tenantId: null }],
+      isActive: true,
+    },
+    select: { id: true, code: true },
+  })
+  if (accounts.length === 0) return []
+  const accountIds = accounts.map((a) => a.id)
+  const idToCode = new Map(accounts.map((a) => [a.id, a.code]))
+  const rows = await aggregateDailyAccountValues(
+    prisma,
+    tenantId,
+    employeeIds,
+    accountIds,
+    year,
+    month,
+  )
+  const out: Array<{ employeeId: string; accountCode: string; hours: number }> = []
+  for (const row of rows) {
+    const minutes = row._sum.valueMinutes ?? 0
+    if (minutes === 0) continue
+    const code = idToCode.get(row.accountId)
+    if (!code) continue
+    out.push({
+      employeeId: row.employeeId,
+      accountCode: code,
+      hours: minutes / 60,
+    })
+  }
+  return out
+}

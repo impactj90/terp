@@ -19,6 +19,7 @@
  */
 import type { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { decryptField, isEncrypted } from "./field-encryption"
+import * as repo from "./payroll-export-repository"
 
 const MONTH_NAMES_DE = [
   "",
@@ -161,6 +162,7 @@ export interface ExportContextEmployee {
     sickDays: number
     otherAbsenceDays: number
   }
+  accountValues: Record<string, number>
   benefits: {
     companyCars: Array<{
       listPrice: number
@@ -483,6 +485,23 @@ export async function buildExportContext(
     : []
   const mvMap = new Map(monthlyValues.map((mv) => [mv.employeeId, mv]))
 
+  // Account-value aggregation for template access (employee.accountValues[code])
+  const accountAgg = empIds.length
+    ? await repo.aggregateAccountValuesForContext(
+        prisma,
+        tenantId,
+        empIds,
+        year,
+        month,
+      )
+    : []
+  const accountValuesMap = new Map<string, Record<string, number>>()
+  for (const row of accountAgg) {
+    const empMap = accountValuesMap.get(row.employeeId) ?? {}
+    empMap[row.accountCode] = row.hours
+    accountValuesMap.set(row.employeeId, empMap)
+  }
+
   const employeeContexts: ExportContextEmployee[] = employees.map((emp) => {
     const mv = mvMap.get(emp.id)
 
@@ -554,6 +573,7 @@ export async function buildExportContext(
         sickDays: mv ? mv.sickDays : 0,
         otherAbsenceDays: mv ? mv.otherAbsenceDays : 0,
       },
+      accountValues: accountValuesMap.get(emp.id) ?? {},
       benefits: {
         companyCars: emp.companyCars.map((c) => ({
           listPrice: Number(c.listPrice),

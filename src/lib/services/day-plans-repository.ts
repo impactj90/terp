@@ -9,7 +9,10 @@ import { tenantScopedUpdate } from "@/lib/services/prisma-helpers"
 
 const dayPlanDetailInclude = {
   breaks: { orderBy: { sortOrder: "asc" as const } },
-  bonuses: { orderBy: { sortOrder: "asc" as const } },
+  bonuses: {
+    orderBy: { sortOrder: "asc" as const },
+    include: { account: { select: { id: true, code: true, name: true } } },
+  },
 } as const
 
 // --- DayPlan ---
@@ -157,6 +160,17 @@ export async function findBonusById(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createBonus(prisma: PrismaClient, data: any) {
   return prisma.dayPlanBonus.create({ data })
+}
+
+export async function updateBonus(
+  prisma: PrismaClient,
+  bonusId: string,
+  data: Record<string, unknown>,
+) {
+  return prisma.dayPlanBonus.update({
+    where: { id: bonusId },
+    data,
+  })
 }
 
 export async function deleteBonus(prisma: PrismaClient, bonusId: string) {

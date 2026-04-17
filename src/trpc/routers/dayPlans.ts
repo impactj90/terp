@@ -87,6 +87,10 @@ const dayPlanBonusOutputSchema = z.object({
   sortOrder: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  account: z
+    .object({ id: z.string(), code: z.string(), name: z.string() })
+    .nullable()
+    .optional(),
 })
 
 const dayPlanOutputSchema = z.object({
@@ -287,6 +291,19 @@ const deleteBonusInputSchema = z.object({
   bonusId: z.string(),
 })
 
+const updateBonusInputSchema = z.object({
+  dayPlanId: z.string(),
+  bonusId: z.string(),
+  accountId: z.string().optional(),
+  timeFrom: z.number().int().optional(),
+  timeTo: z.number().int().optional(),
+  calculationType: z.enum(CALCULATION_TYPES).optional(),
+  valueMinutes: z.number().int().min(1, "Value minutes must be positive").optional(),
+  minWorkMinutes: z.number().int().nullable().optional(),
+  appliesOnHoliday: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+})
+
 // --- Mapping Functions ---
 
 /**
@@ -384,6 +401,9 @@ function mapDayPlanToOutput(
           sortOrder: b.sortOrder as number,
           createdAt: b.createdAt as Date,
           updatedAt: b.updatedAt as Date,
+          account:
+            (b.account as { id: string; code: string; name: string } | null | undefined) ??
+            null,
         }))
       : undefined,
   }
@@ -634,6 +654,50 @@ export const dayPlansRouter = createTRPCRouter({
           ctx.prisma,
           ctx.tenantId!,
           input
+        )
+
+        return {
+          id: bonus.id,
+          dayPlanId: bonus.dayPlanId,
+          accountId: bonus.accountId,
+          timeFrom: bonus.timeFrom,
+          timeTo: bonus.timeTo,
+          calculationType: bonus.calculationType,
+          valueMinutes: bonus.valueMinutes,
+          minWorkMinutes: bonus.minWorkMinutes,
+          appliesOnHoliday: bonus.appliesOnHoliday,
+          sortOrder: bonus.sortOrder,
+          createdAt: bonus.createdAt,
+          updatedAt: bonus.updatedAt,
+        }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * dayPlans.updateBonus -- Updates an existing bonus on a day plan.
+   *
+   * Partial update. Validates timeFrom !== timeTo (merged against existing
+   * row if only one field is supplied). Writes an audit log entry on change.
+   *
+   * Requires: day_plans.manage permission
+   */
+  updateBonus: tenantProcedure
+    .use(requirePermission(DAY_PLANS_MANAGE))
+    .input(updateBonusInputSchema)
+    .output(dayPlanBonusOutputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const bonus = await dayPlansService.updateBonusFn(
+          ctx.prisma,
+          ctx.tenantId!,
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
         )
 
         return {

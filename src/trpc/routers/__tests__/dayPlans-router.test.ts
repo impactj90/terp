@@ -944,6 +944,151 @@ describe("dayPlans.createBonus", () => {
   })
 })
 
+// --- dayPlans.updateBonus tests ---
+
+describe("dayPlans.updateBonus", () => {
+  it("updates all fields successfully", async () => {
+    const existing = makeBonus()
+    const updated = makeBonus({
+      timeFrom: 0,
+      timeTo: 360,
+      calculationType: "percentage",
+      valueMinutes: 25,
+      minWorkMinutes: 240,
+      appliesOnHoliday: true,
+      sortOrder: 5,
+    })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+      },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.updateBonus({
+      dayPlanId: DAY_PLAN_ID,
+      bonusId: BONUS_ID,
+      timeFrom: 0,
+      timeTo: 360,
+      calculationType: "percentage",
+      valueMinutes: 25,
+      minWorkMinutes: 240,
+      appliesOnHoliday: true,
+      sortOrder: 5,
+    })
+    expect(result.id).toBe(BONUS_ID)
+    expect(result.calculationType).toBe("percentage")
+    expect(result.valueMinutes).toBe(25)
+    expect(result.appliesOnHoliday).toBe(true)
+  })
+
+  it("supports partial update (only valueMinutes)", async () => {
+    const existing = makeBonus({ valueMinutes: 15 })
+    const updated = makeBonus({ valueMinutes: 30 })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+      },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.updateBonus({
+      dayPlanId: DAY_PLAN_ID,
+      bonusId: BONUS_ID,
+      valueMinutes: 30,
+    })
+    expect(result.valueMinutes).toBe(30)
+    const updateCall = (mockPrisma.dayPlanBonus.update.mock.calls[0]![0] as {
+      data: Record<string, unknown>
+    }).data
+    expect(updateCall).toEqual({ valueMinutes: 30 })
+  })
+
+  it("rejects update that makes timeFrom equal timeTo", async () => {
+    const existing = makeBonus({ timeFrom: 1320, timeTo: 360 })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await expect(
+      caller.updateBonus({
+        dayPlanId: DAY_PLAN_ID,
+        bonusId: BONUS_ID,
+        timeFrom: 360,
+        timeTo: 360,
+      })
+    ).rejects.toThrow("Bonus time from and time to must not be equal")
+  })
+
+  it("validates timeFrom against existing timeTo for partial update", async () => {
+    const existing = makeBonus({ timeFrom: 1320, timeTo: 480 })
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await expect(
+      caller.updateBonus({
+        dayPlanId: DAY_PLAN_ID,
+        bonusId: BONUS_ID,
+        timeFrom: 480,
+      })
+    ).rejects.toThrow("Bonus time from and time to must not be equal")
+  })
+
+  it("throws NOT_FOUND when parent day plan missing", async () => {
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await expect(
+      caller.updateBonus({
+        dayPlanId: DAY_PLAN_ID,
+        bonusId: BONUS_ID,
+        valueMinutes: 30,
+      })
+    ).rejects.toThrow("Day plan not found")
+  })
+
+  it("throws NOT_FOUND when bonus missing", async () => {
+    const mockPrisma = {
+      dayPlan: {
+        findFirst: vi.fn().mockResolvedValue(makeDayPlan()),
+      },
+      dayPlanBonus: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await expect(
+      caller.updateBonus({
+        dayPlanId: DAY_PLAN_ID,
+        bonusId: BONUS_ID,
+        valueMinutes: 30,
+      })
+    ).rejects.toThrow("Bonus not found")
+  })
+})
+
 // --- dayPlans.deleteBonus tests ---
 
 describe("dayPlans.deleteBonus", () => {

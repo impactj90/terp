@@ -208,6 +208,7 @@ export {
   useCreateDayPlanBreak,
   useDeleteDayPlanBreak,
   useCreateDayPlanBonus,
+  useUpdateDayPlanBonus,
   useDeleteDayPlanBonus,
 } from './use-day-plans'
 
