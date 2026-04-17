@@ -1760,6 +1760,7 @@
     "vacationDeductionHelp": "Days deducted per vacation day (usually 1)",
     "noBookingBehaviorHelp": "What happens when no bookings are recorded",
     "dayChangeBehaviorHelp": "How to handle cross-midnight shifts",
+    "dayChangeAutoCompleteWarning": "Note: 'Auto-Complete at Midnight' causes night shift absences to consume multiple vacation days (each calendar day counts separately). For classic night shifts, we recommend 'Evaluate at Arrival' or 'Evaluate at Departure'.",
     "placeholderCode": "e.g., STD-1",
     "placeholderName": "e.g., Standard 8-Hour Day",
     "placeholderDescription": "Optional description",

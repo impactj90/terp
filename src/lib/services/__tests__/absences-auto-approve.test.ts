@@ -90,6 +90,11 @@ function setupDayPlans(dates: string[]) {
     dates.map((d) => ({
       planDate: new Date(`${d}T00:00:00Z`),
       dayPlanId: "plan-1",
+      dayPlan: {
+        dayChangeBehavior: "none",
+        comeFrom: 480,
+        goTo: 960,
+      },
     }))
   )
 }

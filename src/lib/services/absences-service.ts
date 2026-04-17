@@ -106,30 +106,31 @@ export function checkAbsenceDataScope(
 
 // --- Helper Functions ---
 
+import { resolveEffectiveWorkDay, type DayPlanInfo } from "./shift-day-resolver";
+
 /**
  * Determines if a date should be skipped during range creation.
- * Port of Go shouldSkipDate() from service/absence.go.
- *
- * Skip rules:
- * 1. Weekends (Saturday=6, Sunday=0 via getUTCDay())
- * 2. No EmployeeDayPlan for the date (no_plan)
- * 3. EmployeeDayPlan exists but dayPlanId is null (off_day)
+ * Consumes dayChangeBehavior via resolveEffectiveWorkDay() for
+ * correct night-shift day attribution.
  *
  * Holidays are NOT skipped per ZMI spec Section 18.2.
  */
 export function shouldSkipDate(
   date: Date,
-  dayPlanMap: Map<string, { dayPlanId: string | null }>,
+  dayPlanMap: Map<string, DayPlanInfo>,
 ): boolean {
-  const dayOfWeek = date.getUTCDay();
-  if (dayOfWeek === 0 || dayOfWeek === 6) return true; // weekend
-
   const dateKey = date.toISOString().split("T")[0]!;
-  const dayPlan = dayPlanMap.get(dateKey);
-  if (!dayPlan) return true; // no plan -> skip
-  if (!dayPlan.dayPlanId) return true; // off-day -> skip
+  const prevDate = new Date(date);
+  prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+  const prevKey = prevDate.toISOString().split("T")[0]!;
 
-  return false;
+  const result = resolveEffectiveWorkDay(
+    date,
+    dayPlanMap.get(dateKey) ?? null,
+    dayPlanMap.get(prevKey) ?? null,
+  );
+
+  return !result.isWorkDay;
 }
 
 // --- Recalculation Helpers ---
@@ -413,10 +414,15 @@ export async function createRange(
         toDate,
       );
 
-      const dayPlanMap = new Map<string, { dayPlanId: string | null }>();
+      const dayPlanMap = new Map<string, DayPlanInfo>();
       for (const dp of dayPlans) {
         const dateKey = dp.planDate.toISOString().split("T")[0]!;
-        dayPlanMap.set(dateKey, { dayPlanId: dp.dayPlanId });
+        dayPlanMap.set(dateKey, {
+          dayPlanId: dp.dayPlanId,
+          dayChangeBehavior: dp.dayPlan?.dayChangeBehavior ?? null,
+          comeFrom: dp.dayPlan?.comeFrom ?? null,
+          goTo: dp.dayPlan?.goTo ?? null,
+        });
       }
 
       // 4. Batch-fetch existing absences for employee in range where status != 'cancelled'
@@ -449,14 +455,25 @@ export async function createRange(
       }> = [];
       const txSkippedDates: string[] = [];
 
-      const currentDate = new Date(fromDate);
-      while (currentDate <= toDate) {
+      // Build extended iteration range (±1 day for night shift cross-day resolution)
+      const iterStart = new Date(fromDate);
+      iterStart.setUTCDate(iterStart.getUTCDate() - 1);
+      const iterEnd = new Date(toDate);
+      iterEnd.setUTCDate(iterEnd.getUTCDate() + 1);
+
+      const currentDate = new Date(iterStart);
+      while (currentDate <= iterEnd) {
         const dateKey = currentDate.toISOString().split("T")[0]!;
+        const isInRequestedRange = currentDate >= fromDate && currentDate <= toDate;
 
         if (shouldSkipDate(currentDate, dayPlanMap)) {
-          txSkippedDates.push(dateKey);
+          if (isInRequestedRange) {
+            txSkippedDates.push(dateKey);
+          }
         } else if (existingMap.has(dateKey)) {
-          txSkippedDates.push(dateKey);
+          if (isInRequestedRange) {
+            txSkippedDates.push(dateKey);
+          }
         } else {
           txToCreate.push({
             tenantId,

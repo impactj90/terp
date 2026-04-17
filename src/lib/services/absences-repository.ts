@@ -204,15 +204,28 @@ export async function findEmployeeDayPlans(
   fromDate: Date,
   toDate: Date
 ) {
+  // Extend range by ±1 day for night shift cross-day resolution
+  const extFrom = new Date(fromDate)
+  extFrom.setUTCDate(extFrom.getUTCDate() - 1)
+  const extTo = new Date(toDate)
+  extTo.setUTCDate(extTo.getUTCDate() + 1)
+
   return prisma.employeeDayPlan.findMany({
     where: {
       employeeId,
-      planDate: { gte: fromDate, lte: toDate },
+      planDate: { gte: extFrom, lte: extTo },
       employee: { tenantId },
     },
     select: {
       planDate: true,
       dayPlanId: true,
+      dayPlan: {
+        select: {
+          dayChangeBehavior: true,
+          comeFrom: true,
+          goTo: true,
+        },
+      },
     },
   })
 }

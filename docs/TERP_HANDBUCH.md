@@ -2622,12 +2622,53 @@ Manche Tagespläne erkennen automatisch die tatsächliche Schicht anhand der Ste
 
 Bei Schichten über Mitternacht gibt es vier Einstellungen (konfiguriert im Tagesplan, Tab „Spezial", Feld „Tageswechselverhalten"):
 
-| Einstellung | Bedeutung |
-|------------|-----------|
-| Keine | Keine besondere Behandlung |
-| Bei Ankunft | Gesamte Arbeitszeit wird dem Ankunftstag zugerechnet |
-| Bei Abgang | Gesamte Arbeitszeit wird dem Abgangstag zugerechnet |
-| Automatisch | Automatische Buchungen an der Tagesgrenze (Mitternacht) |
+| Einstellung | Bedeutung | Auswirkung auf Abwesenheiten |
+|---|---|---|
+| Keine | Keine besondere Behandlung | Jeder Kalendertag mit DayPlan ist ein eigenständiger Arbeitstag |
+| Bei Ankunft | Gesamte Arbeitszeit wird dem Ankunftstag zugerechnet | Urlaubstag wird dem Ankunftstag zugeordnet (z. B. Sonntag bei So 22:00 → Mo 06:00) |
+| Bei Gehen | Gesamte Arbeitszeit wird dem Abgangstag zugerechnet | Urlaubstag wird dem Abgangstag zugeordnet (z. B. Montag bei So 22:00 → Mo 06:00) |
+| Auto-Abschluss um Mitternacht | Automatische Buchungen an der Tagesgrenze (Mitternacht) | Jeder Kalendertag mit DayPlan ist eigenständig absenzfähig — eine Nachtschicht kann zwei Urlaubstage verbrauchen |
+
+#### Auswirkung auf Urlaubstage und Stundengutschrift
+
+Das Tageswechselverhalten bestimmt, auf welchen Kalendertag Urlaubstage und Krankmeldungen gebucht werden. Die folgende Tabelle zeigt das Ergebnis für eine typische Nachtschichtwoche (So 22:00 → Mo 06:00, Mo 22:00 → Di 06:00, usw.) bei Urlaubsantrag Mo–Fr:
+
+| Einstellung | Gebuchte Urlaubstage | Anzahl Tage | Stundengutschrift nach |
+|---|---|---|---|
+| Keine | So, Mo, Di, Mi, Do | 5 Tage (Fehlzuordnung!) | DayPlan des Kalendertags |
+| Bei Ankunft | So, Mo, Di, Mi, Do | 5 Tage | DayPlan des Ankunftstags |
+| Bei Gehen | Mo, Di, Mi, Do, Fr | 5 Tage | DayPlan des Abgangstags |
+| Auto-Abschluss | Mo, Di, Mi, Do, Fr | Bis zu 10 Tage (jeder Kalendertag separat) | DayPlan jedes Kalendertags |
+
+> **Empfehlung:** Für klassische Nachtschichten (eine Schicht, die um 22:00 beginnt und um 06:00 endet) empfehlen wir **„Bei Ankunft"** oder **„Bei Gehen"**. Die Einstellung **„Auto-Abschluss um Mitternacht"** sollte nur verwendet werden, wenn die Mitternachtstrennung bewusst gewünscht ist — sie führt dazu, dass pro Nachtschicht potenziell zwei Urlaubstage verbraucht werden.
+
+> **Hinweis zu „Bei Ankunft":** Wenn ein Mitarbeiter mit
+> „Bei Ankunft"-Nachtschicht Urlaub vom Montag bis Freitag beantragt,
+> werden die Urlaubstage intern auf Sonntag bis Donnerstag gebucht —
+> weil jede Nachtschicht dem Ankunftstag zugeordnet ist, und der
+> Sonntagabend ist der Ankunftstag der Montagnacht-Schicht.
+>
+> Das ist **logisch korrekt**: Urlaubskonto und Lohnabrechnung stimmen,
+> der Mitarbeiter verbraucht 5 Urlaubstage, die Stunden werden korrekt
+> gutgeschrieben. Im Kalender erscheinen die Urlaubstage aber auf anderen
+> Kalendertagen als im Antrag angegeben. HR sollte das beim Erklären des
+> Urlaubsantrags berücksichtigen.
+>
+> Für Betriebe, bei denen die Urlaubstag-Anzeige exakt dem Antragsdatum
+> entsprechen soll, empfehlen wir den Modus „Bei Gehen" statt
+> „Bei Ankunft".
+
+#### Praxisbeispiel: Tageswechselverhalten für Nachtschicht konfigurieren
+
+1. 📍 Administration → Tagespläne → Nachtschicht-Tagesplan öffnen
+2. 📍 Tab **„Spezial"** auswählen
+3. 📍 Feld **„Tageswechselverhalten"** auf **„Bei Gehen"** setzen
+4. 📍 **„Speichern"**
+5. 📍 Abwesenheiten → Abwesenheit für Nachtschicht-Mitarbeiter beantragen (Mo–Fr)
+6. ✅ Verifikation: Urlaubstage sind Mo, Di, Mi, Do, Fr (nicht So–Do)
+7. ✅ Verifikation: Urlaubskonto zeigt 5 Tage verbraucht
+
+→ Abschnitt 7 „Urlaub & Abwesenheiten" für Details zur Urlaubsstunden-Gutschrift
 
 ### 6.6 Praxisbeispiel: 3-Schicht-Betrieb einrichten (Früh / Spät / Nacht)
 
@@ -2861,6 +2902,8 @@ Wenn ein Nachtschicht-Mitarbeiter am 15.01.2026 um 22:00 einstempelt und am 16.0
 
 ## 7. Urlaub & Abwesenheiten
 
+> **Nachtschicht-Hinweis:** Bei Mitarbeitern mit Nachtschichten beeinflusst das Tageswechselverhalten des Tagesplans, auf welche Kalendertage Urlaubstage und Krankmeldungen gebucht werden. → Abschnitt 6.5 für Details.
+
 ### 7.1 Abwesenheit beantragen
 
 **Was ist es?** Die Abwesenheitsseite zeigt das eigene Urlaubskonto, alle bisherigen Anträge und einen Kalenderüberblick. Von hier aus werden neue Abwesenheitsanträge gestellt — egal ob Urlaub, Krankheit oder Sonderurlaub.
@@ -2961,6 +3004,8 @@ Für jeden genehmigten Abwesenheitstag wird die Tagesberechnung neu ausgeführt.
 3. Sonst → die regulären Sollstunden des Tagesplans (Standard: 480 Min = 8h)
 
 > **Beispiel:** Ein Mitarbeiter mit 20-Stunden-Woche hat Tagespläne mit 240 Min (4h). Wird ein Krankheitstag genehmigt, werden 4h gutgeschrieben — nicht 8h. Die Stunden richten sich immer nach dem konkreten Tagesplan, der über den Tarif-Rhythmus dem Mitarbeiter zugewiesen ist.
+
+> **Bei Nachtschichten:** Die Stundengutschrift folgt dem korrekt zugeordneten Kalendertag gemäß dem Tageswechselverhalten des Tagesplans. Bei „Bei Gehen" werden die Stunden dem Abgangstag gutgeschrieben, bei „Bei Ankunft" dem Ankunftstag. → Abschnitt 6.5 für Details.
 
 **2. Urlaubskonto-Aktualisierung**
 

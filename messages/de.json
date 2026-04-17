@@ -1760,6 +1760,7 @@
     "vacationDeductionHelp": "Abgezogene Tage pro Urlaubstag (üblicherweise 1)",
     "noBookingBehaviorHelp": "Was passiert, wenn keine Buchungen erfasst werden",
     "dayChangeBehaviorHelp": "Wie Schichten über Mitternacht behandelt werden",
+    "dayChangeAutoCompleteWarning": "Hinweis: 'Auto-Abschluss um Mitternacht' führt dazu, dass Nachtschicht-Urlaube mehrere Urlaubstage verbrauchen (jeder Kalendertag zählt separat). Für klassische Nachtschichten empfehlen wir 'Bei Ankunft' oder 'Bei Gehen'.",
     "placeholderCode": "z.B. STD-1",
     "placeholderName": "z.B. Standard 8-Stunden-Tag",
     "placeholderDescription": "Optionale Beschreibung",

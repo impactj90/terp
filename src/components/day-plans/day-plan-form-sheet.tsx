@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
-import { Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -868,6 +868,14 @@ export function DayPlanFormSheet({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">{t('dayChangeBehaviorHelp')}</p>
+                  {form.dayChangeBehavior === 'auto_complete' && (
+                    <Alert className="mt-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {t('dayChangeAutoCompleteWarning')}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

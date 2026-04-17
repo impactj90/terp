@@ -481,6 +481,87 @@ describe("daily-calc helpers", () => {
     })
   })
 
+  describe("applyDayChangeBehavior coverage gaps", () => {
+    const date = new Date("2026-03-02T00:00:00Z")
+    const prevDate = new Date("2026-03-01T00:00:00Z")
+    const nextDate = new Date("2026-03-03T00:00:00Z")
+
+    it("handles multiple cross-day pairs at same boundary", () => {
+      // IN prev@23:00, OUT current@02:00, then IN current@22:00, OUT next@06:00
+      const bIn1 = makeBooking({
+        id: "in1",
+        bookingDate: prevDate,
+        editedTime: 1380, // 23:00
+        bookingType: { code: "COME", direction: "in" },
+      })
+      const bOut1 = makeBooking({
+        id: "out1",
+        bookingDate: date,
+        editedTime: 120, // 02:00
+        bookingType: { code: "GO", direction: "out" },
+      })
+      const bIn2 = makeBooking({
+        id: "in2",
+        bookingDate: date,
+        editedTime: 1320, // 22:00
+        bookingType: { code: "COME", direction: "in" },
+      })
+      const bOut2 = makeBooking({
+        id: "out2",
+        bookingDate: nextDate,
+        editedTime: 360, // 06:00
+        bookingType: { code: "GO", direction: "out" },
+      })
+
+      // at_departure: include prev-day arrival for first pair's departure on current day
+      // exclude current-day arrival (in2) because its departure is on next day
+      const result = applyDayChangeBehavior(date, "at_departure", [bIn1, bOut1, bIn2, bOut2])
+      const ids = result.map((b) => b.id)
+      expect(ids).toContain("in1")  // included: arrival from prev day
+      expect(ids).toContain("out1") // included: departure on current day
+      expect(ids).not.toContain("in2")  // excluded: arrival for next-day departure
+    })
+
+    it("handles midnight edge case (editedTime=0)", () => {
+      // Booking with editedTime=0 on current day (midnight sharp)
+      const bIn = makeBooking({
+        id: "in1",
+        bookingDate: prevDate,
+        editedTime: 1380, // 23:00
+        bookingType: { code: "COME", direction: "in" },
+      })
+      const bOut = makeBooking({
+        id: "out1",
+        bookingDate: date,
+        editedTime: 0, // midnight sharp
+        bookingType: { code: "GO", direction: "out" },
+      })
+
+      // at_departure: pair arrival from prev with departure at midnight on current
+      const result = applyDayChangeBehavior(date, "at_departure", [bIn, bOut])
+      const ids = result.map((b) => b.id)
+      expect(ids).toContain("in1")
+      expect(ids).toContain("out1")
+    })
+
+    it("returns current-day bookings unchanged for unknown behavior", () => {
+      const bCurrent = makeBooking({
+        id: "current1",
+        bookingDate: date,
+        editedTime: 480,
+        bookingType: { code: "COME", direction: "in" },
+      })
+
+      const result = applyDayChangeBehavior(date, "unknown_value", [bCurrent])
+      expect(result.map((b) => b.id)).toEqual(["current1"])
+    })
+
+    it("returns empty array when no bookings exist", () => {
+      const result = applyDayChangeBehavior(date, "at_departure", [])
+      expect(result).toEqual([])
+    })
+  })
+
   describe("findFirstLastWorkBookings", () => {
     it("finds earliest IN and latest OUT", () => {
       const bookings = [

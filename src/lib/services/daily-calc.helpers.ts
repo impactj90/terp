@@ -20,6 +20,8 @@ import {
 } from "./daily-calc.types"
 import type { SurchargeConfig } from "@/lib/calculation"
 
+export { isNightShiftDayPlan } from "./shift-day-resolver"
+
 // --- Date helpers ---
 
 /**

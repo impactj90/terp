@@ -316,13 +316,18 @@ describe("checkAbsenceDataScope", () => {
 // --- shouldSkipDate Tests ---
 
 describe("shouldSkipDate", () => {
-  // Build a dayPlanMap with entries for specific dates
+  // Build a dayPlanMap with entries for specific dates (using DayPlanInfo shape)
   function makeDayPlanMap(
     entries: Array<{ date: string; dayPlanId: string | null }>
-  ): Map<string, { dayPlanId: string | null }> {
-    const map = new Map<string, { dayPlanId: string | null }>()
+  ) {
+    const map = new Map<string, { dayPlanId: string | null; dayChangeBehavior: string | null; comeFrom: number | null; goTo: number | null }>()
     for (const entry of entries) {
-      map.set(entry.date, { dayPlanId: entry.dayPlanId })
+      map.set(entry.date, {
+        dayPlanId: entry.dayPlanId,
+        dayChangeBehavior: "none",
+        comeFrom: 480,
+        goTo: 960,
+      })
     }
     return map
   }
