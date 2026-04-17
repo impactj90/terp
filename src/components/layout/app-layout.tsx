@@ -31,19 +31,17 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
 
         {/* Main content area */}
-        <SidebarInset className="min-w-0">
+        <SidebarInset className="min-w-0" id="main-content" tabIndex={-1}>
           {/* Header */}
           <Header />
 
           {/* Page content */}
           <div
-            id="main-content"
             className={cn(
               'flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6',
               // Bottom padding for mobile nav + safe area
               'pb-[calc(var(--bottom-nav-height)+var(--safe-area-bottom)+1rem)] lg:pb-6'
             )}
-            tabIndex={-1}
           >
             {children}
           </div>

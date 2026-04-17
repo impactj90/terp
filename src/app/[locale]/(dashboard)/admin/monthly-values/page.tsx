@@ -99,11 +99,12 @@ export default function MonthlyValuesPage() {
         target_minutes: mv.totalTargetTime ?? 0,
         net_minutes: mv.totalNetTime ?? 0,
         overtime_minutes: mv.totalOvertime ?? 0,
-        balance_minutes: mv.balanceMinutes ?? 0,
+        balance_minutes: mv.flextimeEnd ?? mv.balanceMinutes ?? 0,
         absence_days: vacationTaken + sickDays + otherAbsenceDays,
         working_days: mv.workDays ?? 0,
         worked_days: mv.workDays ?? 0,
         closed_at: mv.closedAt ? String(mv.closedAt) : null,
+        payout: (mv as unknown as Record<string, unknown>).overtimePayout as MonthlyValueRow['payout'] ?? null,
       }
     })
   }, [mvData, year, month])

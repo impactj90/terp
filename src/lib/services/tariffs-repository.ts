@@ -4,7 +4,7 @@
  * Pure Prisma data-access functions for the Tariff model and its
  * sub-entities (TariffBreak, TariffWeekPlan, TariffDayPlan).
  */
-import type { PrismaClient } from "@/generated/prisma/client"
+import { type PrismaClient } from "@/generated/prisma/client"
 
 // --- Prisma Include Objects ---
 
@@ -143,13 +143,51 @@ export async function updateTariffWithSubRecords(
   }
 ) {
   return prisma.$transaction(async (tx) => {
-    const { count } = await tx.tariff.updateMany({
+    const updateData = {
+      ...data.tariffData,
+    } as Record<string, unknown>
+
+    if (Object.prototype.hasOwnProperty.call(updateData, "weekPlanId")) {
+      const weekPlanId = updateData.weekPlanId as string | null | undefined
+      delete updateData.weekPlanId
+      updateData.weekPlan =
+        weekPlanId === undefined
+          ? undefined
+          : weekPlanId
+            ? { connect: { id: weekPlanId } }
+            : { disconnect: true }
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        updateData,
+        "vacationCappingRuleGroupId",
+      )
+    ) {
+      const vacationCappingRuleGroupId = updateData
+        .vacationCappingRuleGroupId as string | null | undefined
+      delete updateData.vacationCappingRuleGroupId
+      updateData.vacationCappingRuleGroup =
+        vacationCappingRuleGroupId === undefined
+          ? undefined
+          : vacationCappingRuleGroupId
+            ? { connect: { id: vacationCappingRuleGroupId } }
+            : { disconnect: true }
+    }
+
+    const existing = await tx.tariff.findFirst({
       where: { id, tenantId },
-      data: data.tariffData,
+      select: { id: true },
     })
-    if (count === 0) {
+
+    if (!existing) {
       throw new Error("Tariff not found")
     }
+
+    await tx.tariff.update({
+      where: { id: existing.id },
+      data: updateData as Parameters<typeof tx.tariff.update>[0]["data"],
+    })
 
     // Handle rhythm type changes -- clean up old sub-records
     if (data.rhythmTypeChanged) {

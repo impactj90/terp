@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Loader2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -18,11 +18,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   useEmployeeOtherEmployments,
   useCreateEmployeeOtherEmployment,
   useDeleteEmployeeOtherEmployment,
   useUpdateEmployee,
+  useEmployeeOvertimePayoutOverride,
+  useCreateEmployeeOvertimePayoutOverride,
+  useUpdateEmployeeOvertimePayoutOverride,
+  useDeleteEmployeeOvertimePayoutOverride,
   useHasPermission,
 } from '@/hooks'
 
@@ -55,6 +67,232 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{value || '---'}</p>
     </div>
+  )
+}
+
+const OVERTIME_PAYOUT_MODES = [
+  'ALL_ABOVE_THRESHOLD',
+  'PERCENTAGE',
+  'FIXED_AMOUNT',
+] as const
+type OvertimePayoutMode = (typeof OVERTIME_PAYOUT_MODES)[number]
+type OvertimePayoutModeFormValue = OvertimePayoutMode | 'inherit'
+
+function getOvertimePayoutModeLabel(
+  mode: OvertimePayoutMode | null,
+  t: (key: string) => string,
+) {
+  switch (mode) {
+    case 'ALL_ABOVE_THRESHOLD':
+      return t('specialCases.overtimePayoutOverride.modeAllAboveThreshold')
+    case 'PERCENTAGE':
+      return t('specialCases.overtimePayoutOverride.modePercentage')
+    case 'FIXED_AMOUNT':
+      return t('specialCases.overtimePayoutOverride.modeFixedAmount')
+    default:
+      return t('specialCases.overtimePayoutOverride.modeInherit')
+  }
+}
+
+function OvertimePayoutOverrideSection({ employeeId }: { employeeId: string }) {
+  const t = useTranslations('employeePayroll')
+  const { allowed: canManage } = useHasPermission(['tariffs.manage'])
+  const { data: override, isLoading } = useEmployeeOvertimePayoutOverride(
+    employeeId,
+    canManage,
+  )
+  const createOverride = useCreateEmployeeOvertimePayoutOverride()
+  const updateOverride = useUpdateEmployeeOvertimePayoutOverride()
+  const deleteOverride = useDeleteEmployeeOvertimePayoutOverride()
+
+  const [form, setForm] = React.useState({
+    overtimePayoutEnabled: true,
+    overtimePayoutMode: 'inherit' as OvertimePayoutModeFormValue,
+  })
+
+  React.useEffect(() => {
+    setForm({
+      overtimePayoutEnabled: override?.overtimePayoutEnabled ?? true,
+      overtimePayoutMode:
+        (override?.overtimePayoutMode as OvertimePayoutMode | null) ?? 'inherit',
+    })
+  }, [
+    override?.id,
+    override?.overtimePayoutEnabled,
+    override?.overtimePayoutMode,
+  ])
+
+  const isSaving =
+    createOverride.isPending ||
+    updateOverride.isPending ||
+    deleteOverride.isPending
+  const hasOverride = !!override
+  const isDirty =
+    form.overtimePayoutEnabled !== (override?.overtimePayoutEnabled ?? true) ||
+    form.overtimePayoutMode !== (override?.overtimePayoutMode ?? 'inherit')
+
+  async function handleSave() {
+    const overtimePayoutMode: OvertimePayoutMode | null =
+      form.overtimePayoutMode === 'inherit' ? null : form.overtimePayoutMode
+
+    if (override?.id) {
+      await updateOverride.mutateAsync({
+        id: override.id,
+        overtimePayoutEnabled: form.overtimePayoutEnabled,
+        overtimePayoutMode,
+      })
+      return
+    }
+
+    await createOverride.mutateAsync({
+      employeeId,
+      overtimePayoutEnabled: form.overtimePayoutEnabled,
+      overtimePayoutMode,
+    })
+  }
+
+  async function handleReset() {
+    if (override?.id) {
+      await deleteOverride.mutateAsync({ id: override.id })
+      return
+    }
+
+    setForm({
+      overtimePayoutEnabled: true,
+      overtimePayoutMode: 'inherit',
+    })
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold">
+              {t('specialCases.overtimePayoutOverride.title')}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t('specialCases.overtimePayoutOverride.description')}
+            </p>
+          </div>
+          <Badge variant={hasOverride ? 'default' : 'secondary'}>
+            {hasOverride
+              ? t('specialCases.overtimePayoutOverride.overrideActive')
+              : t('specialCases.overtimePayoutOverride.usingTariffRule')}
+          </Badge>
+        </div>
+
+        {!canManage ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            {t('specialCases.overtimePayoutOverride.noAccess')}
+          </p>
+        ) : isLoading ? (
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t('specialCases.overtimePayoutOverride.loading')}</span>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {!hasOverride && (
+              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                {t('specialCases.overtimePayoutOverride.usingTariffRule')}
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="overtime-payout-override-enabled">
+                  {t('specialCases.overtimePayoutOverride.enabledLabel')}
+                </Label>
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    {form.overtimePayoutEnabled
+                      ? t('specialCases.overtimePayoutOverride.enabledState')
+                      : t('specialCases.overtimePayoutOverride.disabledState')}
+                  </span>
+                  <Switch
+                    id="overtime-payout-override-enabled"
+                    checked={form.overtimePayoutEnabled}
+                    onCheckedChange={(checked) =>
+                      setForm((current) => ({
+                        ...current,
+                        overtimePayoutEnabled: checked,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('specialCases.overtimePayoutOverride.modeLabel')}</Label>
+                <Select
+                  value={form.overtimePayoutMode}
+                  onValueChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      overtimePayoutMode: value as OvertimePayoutModeFormValue,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inherit">
+                      {t('specialCases.overtimePayoutOverride.modeInherit')}
+                    </SelectItem>
+                    {OVERTIME_PAYOUT_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode}>
+                        {getOvertimePayoutModeLabel(mode, t as unknown as (key: string) => string)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {hasOverride && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label={t('specialCases.overtimePayoutOverride.currentEnabled')}
+                  value={
+                    override?.overtimePayoutEnabled
+                      ? t('specialCases.overtimePayoutOverride.enabledState')
+                      : t('specialCases.overtimePayoutOverride.disabledState')
+                  }
+                />
+                <Field
+                  label={t('specialCases.overtimePayoutOverride.currentMode')}
+                  value={getOvertimePayoutModeLabel(
+                    (override?.overtimePayoutMode as OvertimePayoutMode | null) ?? null,
+                    t as unknown as (key: string) => string,
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                disabled={isSaving || !hasOverride}
+              >
+                {t('specialCases.overtimePayoutOverride.reset')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || !isDirty}
+              >
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t('actions.save')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -646,6 +884,7 @@ export function SpecialCasesTab({ employeeId, employee }: SpecialCasesTabProps) 
         )}
       </div>
 
+      <OvertimePayoutOverrideSection employeeId={employeeId} />
       <PensionStatusSection employee={employee} editing={editing} form={form} setForm={setForm} />
       <BgDataSection employee={employee} editing={editing} form={form} setForm={setForm} />
       <OtherEmploymentSection employeeId={employeeId} />

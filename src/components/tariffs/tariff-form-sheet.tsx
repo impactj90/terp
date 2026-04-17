@@ -86,6 +86,14 @@ interface FormState {
   lowerLimitAnnual: number | null
   flextimeThreshold: number | null
   creditType: 'no_evaluation' | 'complete' | 'after_threshold' | 'no_carryover'
+
+  // Overtime Payout
+  overtimePayoutEnabled: boolean
+  overtimePayoutThresholdMinutes: number | null
+  overtimePayoutMode: string | null
+  overtimePayoutPercentage: number | null
+  overtimePayoutFixedMinutes: number | null
+  overtimePayoutApprovalRequired: boolean
 }
 
 const INITIAL_STATE: FormState = {
@@ -125,6 +133,14 @@ const INITIAL_STATE: FormState = {
   lowerLimitAnnual: null,
   flextimeThreshold: null,
   creditType: 'no_evaluation',
+
+  // Overtime Payout
+  overtimePayoutEnabled: false,
+  overtimePayoutThresholdMinutes: null,
+  overtimePayoutMode: null,
+  overtimePayoutPercentage: null,
+  overtimePayoutFixedMinutes: null,
+  overtimePayoutApprovalRequired: false,
 }
 
 function validateForm(form: FormState, isEdit: boolean): string[] {
@@ -135,6 +151,15 @@ function validateForm(form: FormState, isEdit: boolean): string[] {
   if (form.name.length > 255) errors.push('Name must be 255 characters or less')
   if (form.validFrom && form.validTo && form.validFrom > form.validTo) {
     errors.push('Valid To must be after Valid From')
+  }
+  if (form.overtimePayoutEnabled) {
+    if (!form.overtimePayoutMode) errors.push('Auszahlungsmodus ist erforderlich')
+    if (form.overtimePayoutMode === 'PERCENTAGE' && (form.overtimePayoutPercentage === null || form.overtimePayoutPercentage === undefined)) {
+      errors.push('Prozentsatz ist erforderlich')
+    }
+    if (form.overtimePayoutMode === 'FIXED_AMOUNT' && (form.overtimePayoutFixedMinutes === null || form.overtimePayoutFixedMinutes === undefined)) {
+      errors.push('Fester Auszahlungsbetrag ist erforderlich')
+    }
   }
   return errors
 }
@@ -219,6 +244,14 @@ export function TariffFormSheet({
           lowerLimitAnnual: fullTariff.lowerLimitAnnual ?? null,
           flextimeThreshold: fullTariff.flextimeThreshold ?? null,
           creditType: (fullTariff.creditType as FormState['creditType']) ?? 'no_evaluation',
+
+          // Overtime Payout
+          overtimePayoutEnabled: fullTariff.overtimePayoutEnabled ?? false,
+          overtimePayoutThresholdMinutes: fullTariff.overtimePayoutThresholdMinutes ?? null,
+          overtimePayoutMode: fullTariff.overtimePayoutMode ?? null,
+          overtimePayoutPercentage: fullTariff.overtimePayoutPercentage ?? null,
+          overtimePayoutFixedMinutes: fullTariff.overtimePayoutFixedMinutes ?? null,
+          overtimePayoutApprovalRequired: fullTariff.overtimePayoutApprovalRequired ?? false,
         })
       } else if (!isEdit) {
         setForm(INITIAL_STATE)
@@ -311,6 +344,14 @@ export function TariffFormSheet({
         lowerLimitAnnual: nullToUndefined(form.lowerLimitAnnual),
         flextimeThreshold: nullToUndefined(form.flextimeThreshold),
         creditType: form.creditType,
+
+        // Overtime Payout
+        overtimePayoutEnabled: form.overtimePayoutEnabled,
+        overtimePayoutThresholdMinutes: nullToUndefined(form.overtimePayoutThresholdMinutes),
+        overtimePayoutMode: form.overtimePayoutEnabled ? form.overtimePayoutMode ?? undefined : undefined,
+        overtimePayoutPercentage: nullToUndefined(form.overtimePayoutPercentage),
+        overtimePayoutFixedMinutes: nullToUndefined(form.overtimePayoutFixedMinutes),
+        overtimePayoutApprovalRequired: form.overtimePayoutApprovalRequired,
       }
 
       if (isEdit && tariff) {
@@ -363,6 +404,7 @@ export function TariffFormSheet({
                 <TabsTrigger value="vacation">{t('tabVacation')}</TabsTrigger>
                 <TabsTrigger value="hours">{t('tabTargetHours')}</TabsTrigger>
                 <TabsTrigger value="flextime">{t('tabFlextime')}</TabsTrigger>
+                <TabsTrigger value="payout">{t('tabOvertimePayout')}</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
@@ -891,6 +933,103 @@ export function TariffFormSheet({
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* Overtime Payout Tab */}
+              <TabsContent value="payout" className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('overtimePayoutDescription')}
+                </p>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('fieldOvertimePayoutEnabled')}</Label>
+                  <Switch
+                    checked={form.overtimePayoutEnabled}
+                    onCheckedChange={(checked) => setForm({ ...form, overtimePayoutEnabled: checked })}
+                    disabled={isPending}
+                  />
+                </div>
+
+                {form.overtimePayoutEnabled && (
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>{t('fieldOvertimePayoutMode')}</Label>
+                      <Select
+                        value={form.overtimePayoutMode ?? ''}
+                        onValueChange={(v) => setForm({ ...form, overtimePayoutMode: v || null })}
+                        disabled={isPending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('fieldOvertimePayoutMode')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL_ABOVE_THRESHOLD">{t('modeAllAboveThreshold')}</SelectItem>
+                          <SelectItem value="PERCENTAGE">{t('modePercentage')}</SelectItem>
+                          <SelectItem value="FIXED_AMOUNT">{t('modeFixedAmount')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.overtimePayoutMode && (
+                        <p className="text-xs text-muted-foreground">
+                          {t(`modeHelp_${form.overtimePayoutMode}` as 'modeHelp_ALL_ABOVE_THRESHOLD' | 'modeHelp_PERCENTAGE' | 'modeHelp_FIXED_AMOUNT')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('fieldThresholdMinutes')}</Label>
+                      <DurationInput
+                        value={form.overtimePayoutThresholdMinutes}
+                        onChange={(v) => setForm({ ...form, overtimePayoutThresholdMinutes: v })}
+                        format="hhmm"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">{t('thresholdHelp')}</p>
+                    </div>
+
+                    {form.overtimePayoutMode === 'PERCENTAGE' && (
+                      <div className="space-y-2">
+                        <Label>{t('fieldPercentage')}</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={form.overtimePayoutPercentage ?? ''}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              overtimePayoutPercentage: e.target.value ? parseInt(e.target.value) : null,
+                            })
+                          }
+                          disabled={isPending}
+                        />
+                      </div>
+                    )}
+
+                    {form.overtimePayoutMode === 'FIXED_AMOUNT' && (
+                      <div className="space-y-2">
+                        <Label>{t('fieldFixedMinutes')}</Label>
+                        <DurationInput
+                          value={form.overtimePayoutFixedMinutes}
+                          onChange={(v) => setForm({ ...form, overtimePayoutFixedMinutes: v })}
+                          format="hhmm"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <Label>{t('fieldApprovalRequired')}</Label>
+                      <Switch
+                        checked={form.overtimePayoutApprovalRequired}
+                        onCheckedChange={(checked) =>
+                          setForm({ ...form, overtimePayoutApprovalRequired: checked })
+                        }
+                        disabled={isPending}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t('approvalRequiredHelp')}</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 

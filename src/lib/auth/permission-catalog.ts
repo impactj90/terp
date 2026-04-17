@@ -401,6 +401,9 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("export_template.share", "export_template", "share", "Share export templates across tenants"),
   p("export_template.schedule", "export_template", "schedule", "Manage scheduled export template runs"),
 
+  // Overtime payouts
+  p("overtime_payouts.manage", "overtime_payouts", "manage", "Manage overtime payout approvals"),
+
   // Platform support access (Phase 6 — platform-admin-system plan)
   p(
     "platform.support_access.grant",

@@ -111,6 +111,8 @@ import { payrollBulkImportRouter } from "./payrollBulkImport"
 import { employeeSalaryHistoryRouter } from "./employeeSalaryHistory"
 import { datevOnboardingRouter } from "./datevOnboarding"
 import { bankStatementsRouter } from "./bankStatements"
+import { overtimePayoutsRouter } from "./overtimePayouts"
+import { employeeOvertimePayoutOverridesRouter } from "./employeeOvertimePayoutOverrides"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -219,6 +221,8 @@ export const appRouter = createTRPCRouter({
   employeeSalaryHistory: employeeSalaryHistoryRouter,
   datevOnboarding: datevOnboardingRouter,
   bankStatements: bankStatementsRouter,
+  overtimePayouts: overtimePayoutsRouter,
+  employeeOvertimePayoutOverrides: employeeOvertimePayoutOverridesRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -82,6 +82,7 @@ const previewLineSchema = z.object({
   targetHours: z.number(),
   workedHours: z.number(),
   overtimeHours: z.number(),
+  overtimePayoutHours: z.number(),
   vacationDays: z.number(),
   sickDays: z.number(),
   otherAbsenceDays: z.number(),

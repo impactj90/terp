@@ -100,6 +100,12 @@ export async function create(
     rhythmStartDate?: string
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
+    overtimePayoutEnabled?: boolean
+    overtimePayoutThresholdMinutes?: number
+    overtimePayoutMode?: string
+    overtimePayoutPercentage?: number
+    overtimePayoutFixedMinutes?: number
+    overtimePayoutApprovalRequired?: boolean
   },
   audit?: AuditContext
 ) {
@@ -179,6 +185,13 @@ export async function create(
     rhythmStartDate: input.rhythmStartDate
       ? new Date(input.rhythmStartDate)
       : undefined,
+    // Overtime payout
+    overtimePayoutEnabled: input.overtimePayoutEnabled,
+    overtimePayoutThresholdMinutes: input.overtimePayoutThresholdMinutes,
+    overtimePayoutMode: input.overtimePayoutMode,
+    overtimePayoutPercentage: input.overtimePayoutPercentage,
+    overtimePayoutFixedMinutes: input.overtimePayoutFixedMinutes,
+    overtimePayoutApprovalRequired: input.overtimePayoutApprovalRequired,
   }
 
   // Create tariff + sub-records in transaction
@@ -238,6 +251,12 @@ export async function update(
     rhythmStartDate?: string | null
     weekPlanIds?: string[]
     dayPlans?: Array<{ dayPosition: number; dayPlanId: string | null }>
+    overtimePayoutEnabled?: boolean | null
+    overtimePayoutThresholdMinutes?: number | null
+    overtimePayoutMode?: string | null
+    overtimePayoutPercentage?: number | null
+    overtimePayoutFixedMinutes?: number | null
+    overtimePayoutApprovalRequired?: boolean | null
   },
   audit?: AuditContext
 ) {
@@ -377,6 +396,26 @@ export async function update(
   }
   if (input.creditType !== undefined) {
     data.creditType = input.creditType
+  }
+
+  // Handle overtime payout fields
+  if (input.overtimePayoutEnabled !== undefined) {
+    data.overtimePayoutEnabled = input.overtimePayoutEnabled
+  }
+  if (input.overtimePayoutThresholdMinutes !== undefined) {
+    data.overtimePayoutThresholdMinutes = input.overtimePayoutThresholdMinutes
+  }
+  if (input.overtimePayoutMode !== undefined) {
+    data.overtimePayoutMode = input.overtimePayoutMode
+  }
+  if (input.overtimePayoutPercentage !== undefined) {
+    data.overtimePayoutPercentage = input.overtimePayoutPercentage
+  }
+  if (input.overtimePayoutFixedMinutes !== undefined) {
+    data.overtimePayoutFixedMinutes = input.overtimePayoutFixedMinutes
+  }
+  if (input.overtimePayoutApprovalRequired !== undefined) {
+    data.overtimePayoutApprovalRequired = input.overtimePayoutApprovalRequired
   }
 
   // Update tariff + rhythm sub-records in transaction

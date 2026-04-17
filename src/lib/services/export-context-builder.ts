@@ -158,6 +158,7 @@ export interface ExportContextEmployee {
     targetHours: number
     workedHours: number
     overtimeHours: number
+    overtimePayoutHours: number
     vacationDays: number
     sickDays: number
     otherAbsenceDays: number
@@ -502,6 +503,16 @@ export async function buildExportContext(
     accountValuesMap.set(row.employeeId, empMap)
   }
 
+  // Overtime payout aggregation for template access (employee.monthlyValues.overtimePayoutHours)
+  const payoutAgg = empIds.length
+    ? await prisma.overtimePayout.groupBy({
+        by: ["employeeId"],
+        where: { tenantId, employeeId: { in: empIds }, year, month, status: "approved" },
+        _sum: { payoutMinutes: true },
+      })
+    : []
+  const payoutMap = new Map(payoutAgg.map(p => [p.employeeId, (p._sum.payoutMinutes ?? 0) / 60]))
+
   const employeeContexts: ExportContextEmployee[] = employees.map((emp) => {
     const mv = mvMap.get(emp.id)
 
@@ -569,6 +580,7 @@ export async function buildExportContext(
         targetHours: mv ? mv.totalTargetTime / 60 : 0,
         workedHours: mv ? mv.totalNetTime / 60 : 0,
         overtimeHours: mv ? mv.totalOvertime / 60 : 0,
+        overtimePayoutHours: payoutMap.get(emp.id) ?? 0,
         vacationDays: mv ? Number(mv.vacationTaken) : 0,
         sickDays: mv ? mv.sickDays : 0,
         otherAbsenceDays: mv ? mv.otherAbsenceDays : 0,

@@ -58,6 +58,7 @@ import {
   FileCheck,
   LifeBuoy,
   Inbox,
+  Banknote,
 } from 'lucide-react'
 
 /**
@@ -311,6 +312,12 @@ export const navConfig: NavSection[] = [
             href: '/admin/monthly-values',
             icon: CalendarCheck,
             permissions: ['reports.view'],
+          },
+          {
+            titleKey: 'overtimePayouts',
+            href: '/admin/overtime-payouts',
+            icon: Banknote,
+            permissions: ['overtime_payouts.manage'],
           },
         ],
       },

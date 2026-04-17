@@ -154,6 +154,8 @@ describe("tariffs.list", () => {
     expect(result.data).toHaveLength(2)
     expect(result.data[0]!.code).toBe("T001")
     expect(result.data[1]!.code).toBe("T002")
+    expect(result.data[0]!.overtimePayoutEnabled).toBe(false)
+    expect(result.data[0]!.overtimePayoutApprovalRequired).toBe(false)
     expect(mockPrisma.tariff.findMany).toHaveBeenCalledWith({
       where: { tenantId: TENANT_ID },
       include: {
@@ -790,6 +792,7 @@ describe("tariffs.update", () => {
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
           tariff: {
+            findFirst: vi.fn().mockResolvedValue({ id: TARIFF_ID }),
             update: vi.fn().mockResolvedValue(updated),
           },
           tariffWeekPlan: {
@@ -825,6 +828,7 @@ describe("tariffs.update", () => {
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
           tariff: {
+            findFirst: vi.fn().mockResolvedValue({ id: TARIFF_ID }),
             update: vi.fn().mockResolvedValue(withDesc),
           },
           tariffWeekPlan: {
@@ -856,6 +860,7 @@ describe("tariffs.update", () => {
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
           tariff: {
+            findFirst: vi.fn().mockResolvedValue({ id: TARIFF_ID }),
             update: vi.fn().mockResolvedValue(cleared),
           },
           tariffWeekPlan: {
@@ -898,6 +903,7 @@ describe("tariffs.update", () => {
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
           tariff: {
+            findFirst: vi.fn().mockResolvedValue({ id: TARIFF_ID }),
             update: vi.fn().mockResolvedValue(updated),
           },
           tariffWeekPlan: {
@@ -932,6 +938,7 @@ describe("tariffs.update", () => {
       $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         return fn({
           tariff: {
+            findFirst: vi.fn().mockResolvedValue({ id: TARIFF_ID }),
             update: vi.fn().mockResolvedValue(updated),
           },
           tariffWeekPlan: {

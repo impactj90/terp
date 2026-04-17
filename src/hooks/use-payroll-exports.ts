@@ -16,6 +16,7 @@ export interface PayrollExportLine {
   targetHours: number
   workedHours: number
   overtimeHours: number
+  overtimePayoutHours: number
   accountValues: Record<string, number>
   vacationDays: number
   sickDays: number

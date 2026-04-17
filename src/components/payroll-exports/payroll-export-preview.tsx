@@ -77,6 +77,7 @@ export function PayrollExportPreview({
       targetHours: 0,
       workedHours: 0,
       overtimeHours: 0,
+      overtimePayoutHours: 0,
       vacationDays: 0,
       sickDays: 0,
       otherAbsenceDays: 0,
@@ -86,6 +87,7 @@ export function PayrollExportPreview({
       result.targetHours += line.targetHours ?? 0
       result.workedHours += line.workedHours ?? 0
       result.overtimeHours += line.overtimeHours ?? 0
+      result.overtimePayoutHours += line.overtimePayoutHours ?? 0
       result.vacationDays += line.vacationDays ?? 0
       result.sickDays += line.sickDays ?? 0
       result.otherAbsenceDays += line.otherAbsenceDays ?? 0
@@ -140,6 +142,7 @@ export function PayrollExportPreview({
                     <TableHead className="whitespace-nowrap text-right">{t('preview.targetHours')}</TableHead>
                     <TableHead className="whitespace-nowrap text-right">{t('preview.workedHours')}</TableHead>
                     <TableHead className="whitespace-nowrap text-right">{t('preview.overtimeHours')}</TableHead>
+                    <TableHead className="whitespace-nowrap text-right">{t('preview.overtimePayoutHours')}</TableHead>
                     <TableHead className="whitespace-nowrap text-right">{t('preview.vacationDays')}</TableHead>
                     <TableHead className="whitespace-nowrap text-right">{t('preview.sickDays')}</TableHead>
                     <TableHead className="whitespace-nowrap text-right">{t('preview.otherAbsenceDays')}</TableHead>
@@ -161,6 +164,7 @@ export function PayrollExportPreview({
                       <TableCell className="text-right">{formatDecimal(line.targetHours)}</TableCell>
                       <TableCell className="text-right">{formatDecimal(line.workedHours)}</TableCell>
                       <TableCell className="text-right">{formatDecimal(line.overtimeHours)}</TableCell>
+                      <TableCell className="text-right">{formatDecimal(line.overtimePayoutHours)}</TableCell>
                       <TableCell className="text-right">{formatDecimal(line.vacationDays)}</TableCell>
                       <TableCell className="text-right">{formatDecimal(line.sickDays)}</TableCell>
                       <TableCell className="text-right">{formatDecimal(line.otherAbsenceDays)}</TableCell>
@@ -180,6 +184,7 @@ export function PayrollExportPreview({
                     <TableCell className="text-right">{formatDecimal(totals.targetHours)}</TableCell>
                     <TableCell className="text-right">{formatDecimal(totals.workedHours)}</TableCell>
                     <TableCell className="text-right">{formatDecimal(totals.overtimeHours)}</TableCell>
+                    <TableCell className="text-right">{formatDecimal(totals.overtimePayoutHours)}</TableCell>
                     <TableCell className="text-right">{formatDecimal(totals.vacationDays)}</TableCell>
                     <TableCell className="text-right">{formatDecimal(totals.sickDays)}</TableCell>
                     <TableCell className="text-right">{formatDecimal(totals.otherAbsenceDays)}</TableCell>

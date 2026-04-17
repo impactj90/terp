@@ -110,6 +110,7 @@
     "time": "Stempeluhr",
     "correctionAssistant": "Korrekturassistent",
     "monthlyValues": "Monatswerte",
+    "overtimePayouts": "Überstunden-Auszahlung",
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
     "exportTemplates": "Export-Templates",
@@ -291,6 +292,7 @@
     "teamOverview": "Teamübersicht",
     "correctionAssistant": "Korrekturassistent",
     "monthlyValues": "Monatswerte",
+    "overtimePayouts": "Überstunden-Auszahlung",
     "payrollExports": "Lohnexporte",
     "exportInterfaces": "Exportschnittstellen",
     "exportTemplates": "Export-Templates",
@@ -2088,7 +2090,23 @@
     "unableToLoadTariff": "Tarif konnte nicht geladen werden",
     "tariffNotFound": "Tarif nicht gefunden",
     "loading": "Laden...",
-    "loadingTariffDetails": "Tarifdetails werden geladen"
+    "loadingTariffDetails": "Tarifdetails werden geladen",
+    "tabOvertimePayout": "Auszahlung",
+    "overtimePayoutDescription": "Konfigurieren Sie, welche Überstunden automatisch beim Monatsabschluss zur Auszahlung vorgemerkt werden.",
+    "fieldOvertimePayoutEnabled": "Überstunden-Auszahlung aktivieren",
+    "fieldOvertimePayoutMode": "Auszahlungsmodus",
+    "modeAllAboveThreshold": "Alles über Schwellenwert",
+    "modePercentage": "Prozentsatz",
+    "modeFixedAmount": "Festbetrag",
+    "modeHelp_ALL_ABOVE_THRESHOLD": "Alle Minuten über dem Schwellenwert werden zur Auszahlung vorgemerkt.",
+    "modeHelp_PERCENTAGE": "Ein Prozentsatz der Minuten über dem Schwellenwert wird zur Auszahlung vorgemerkt.",
+    "modeHelp_FIXED_AMOUNT": "Ein fester Minutenbetrag wird zur Auszahlung vorgemerkt (max. bis zum Überschuss).",
+    "fieldThresholdMinutes": "Schwellenwert (Gleitzeitkonto)",
+    "thresholdHelp": "Überstunden werden erst ab diesem Kontostand zur Auszahlung vorgemerkt (exklusiv).",
+    "fieldPercentage": "Prozentsatz (%)",
+    "fieldFixedMinutes": "Fester Auszahlungsbetrag",
+    "fieldApprovalRequired": "Freigabe erforderlich",
+    "approvalRequiredHelp": "Wenn aktiviert, müssen Auszahlungen nach dem Monatsabschluss einzeln freigegeben werden."
   },
   "adminHolidays": {
     "title": "Feiertage",
@@ -2843,6 +2861,7 @@
       "net": "Netto",
       "overtime": "Überstunden",
       "balance": "Saldo",
+      "payout": "Auszahlung",
       "absenceDays": "Abwesenheitstage",
       "workingDays": "Arbeitstage"
     },
@@ -2919,6 +2938,58 @@
     "count": {
       "item": "{count} Mitarbeiter",
       "items": "{count} Mitarbeiter"
+    },
+    "payoutPending": "ausstehend",
+    "payoutApproved": "genehmigt",
+    "payoutRejected": "abgelehnt"
+  },
+  "overtimePayouts": {
+    "page": {
+      "title": "Überstunden-Auszahlung",
+      "subtitle": "Überstunden-Auszahlungen prüfen, genehmigen oder ablehnen"
+    },
+    "toolbar": {
+      "allStatuses": "Alle Status",
+      "allDepartments": "Alle Abteilungen",
+      "searchPlaceholder": "Mitarbeiter suchen..."
+    },
+    "table": {
+      "employee": "Mitarbeiter",
+      "personnelNumber": "Pers. Nr.",
+      "period": "Zeitraum",
+      "payoutHours": "Auszahlung",
+      "sourceBalance": "Saldo vorher",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt"
+    },
+    "actions": {
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "approveAll": "Alle ausstehenden genehmigen",
+      "approveAllConfirm": "Möchten Sie wirklich alle ausstehenden Auszahlungen genehmigen? Die Gleitzeitkonten werden entsprechend reduziert.",
+      "confirm": "Bestätigen",
+      "cancel": "Abbrechen"
+    },
+    "reject": {
+      "title": "Auszahlung ablehnen",
+      "reasonLabel": "Ablehnungsgrund",
+      "reasonPlaceholder": "Begründung eingeben...",
+      "reasonMinChars": "Mindestens 10 Zeichen",
+      "submit": "Ablehnen"
+    },
+    "empty": {
+      "title": "Keine Auszahlungen gefunden",
+      "description": "Für den gewählten Zeitraum existieren keine Überstunden-Auszahlungen."
+    },
+    "batchResult": {
+      "title": "Ergebnis",
+      "approved": "{count} genehmigt",
+      "errors": "{count} Fehler"
     }
   },
   "payrollExports": {
@@ -2998,6 +3069,7 @@
       "targetHours": "Soll",
       "workedHours": "Ist",
       "overtimeHours": "Überstunden",
+      "overtimePayoutHours": "Auszahlung",
       "vacationDays": "Urlaub",
       "sickDays": "Krank",
       "otherAbsenceDays": "Sonst. Abw.",
@@ -8214,6 +8286,25 @@
         "endDate": "Bis",
         "empty": "Keine Mehrfachbeschäftigung erfasst",
         "add": "Nebenbeschäftigung hinzufügen"
+      },
+      "overtimePayoutOverride": {
+        "title": "Überstunden-Auszahlung Override",
+        "description": "Aktivieren oder deaktivieren Sie die tarifgesteuerte Auszahlung für diesen Mitarbeiter oder überschreiben Sie nur den Modus.",
+        "overrideActive": "Override aktiv",
+        "usingTariffRule": "Tarif-Regel wird angewendet",
+        "noAccess": "Für Änderungen an der Auszahlungsregel ist die Berechtigung zur Tarifverwaltung erforderlich.",
+        "loading": "Override wird geladen...",
+        "enabledLabel": "Auszahlung aktiviert",
+        "enabledState": "Aktiv",
+        "disabledState": "Deaktiviert",
+        "modeLabel": "Modus-Override",
+        "modeInherit": "Tarif-Regel übernehmen",
+        "modeAllAboveThreshold": "Alles über Schwellenwert",
+        "modePercentage": "Prozentsatz",
+        "modeFixedAmount": "Fester Betrag",
+        "currentEnabled": "Aktuelle Aktivierung",
+        "currentMode": "Aktueller Modus",
+        "reset": "Auf Tarif zurücksetzen"
       },
       "studentData": {
         "title": "Studenten-/Azubi-Daten",

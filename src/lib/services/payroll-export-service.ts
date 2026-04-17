@@ -101,6 +101,7 @@ function generateStandardCsv(lines: ExportLine[], accountCodeList: string[]): st
     "TargetHours",
     "WorkedHours",
     "OvertimeHours",
+    "OvertimePayoutHours",
     "VacationDays",
     "SickDays",
     "OtherAbsenceDays",
@@ -118,6 +119,7 @@ function generateStandardCsv(lines: ExportLine[], accountCodeList: string[]): st
       line.targetHours.toFixed(2),
       line.workedHours.toFixed(2),
       line.overtimeHours.toFixed(2),
+      line.overtimePayoutHours.toFixed(2),
       line.vacationDays.toFixed(2),
       line.sickDays.toFixed(2),
       line.otherAbsenceDays.toFixed(2),
@@ -144,6 +146,7 @@ function generateDatevLodas(
     { code: "1000", getValue: (l) => ({ hours: l.targetHours, days: 0 }) },
     { code: "1001", getValue: (l) => ({ hours: l.workedHours, days: 0 }) },
     { code: "1002", getValue: (l) => ({ hours: l.overtimeHours, days: 0 }) },
+    { code: "1010", getValue: (l) => ({ hours: l.overtimePayoutHours, days: 0 }) },
     { code: "2000", getValue: (l) => ({ hours: 0, days: l.vacationDays }) },
     { code: "2001", getValue: (l) => ({ hours: 0, days: l.sickDays }) },
     { code: "2002", getValue: (l) => ({ hours: 0, days: l.otherAbsenceDays }) },
@@ -255,6 +258,7 @@ export interface ExportLine {
   targetHours: number
   workedHours: number
   overtimeHours: number
+  overtimePayoutHours: number
   vacationDays: number
   sickDays: number
   otherAbsenceDays: number
@@ -413,6 +417,14 @@ export async function generate(
       prisma, tenantId, empIds, accountIds, input.year, input.month,
     )
 
+    // Aggregate approved overtime payouts for the export month
+    const payoutAgg = (await prisma.overtimePayout.groupBy({
+      by: ["employeeId"],
+      where: { tenantId, employeeId: { in: empIds }, year: input.year, month: input.month, status: "approved" },
+      _sum: { payoutMinutes: true },
+    })) ?? []
+    const payoutMap = new Map(payoutAgg.map(p => [p.employeeId, (p._sum.payoutMinutes ?? 0) / 60]))
+
     // Generate export lines
     const lines: ExportLine[] = []
     let totalWorked = 0
@@ -438,6 +450,7 @@ export async function generate(
         targetHours,
         workedHours,
         overtimeHours,
+        overtimePayoutHours: payoutMap.get(emp.id) ?? 0,
         vacationDays: decimalToNumber(mv.vacationTaken),
         sickDays: mv.sickDays,
         otherAbsenceDays: mv.otherAbsenceDays,
@@ -566,6 +579,14 @@ export async function preview(
   const allMvs = await repo.findMonthlyValuesBatch(prisma, tenantId, empIds, pe.year, pe.month)
   const mvMap = new Map(allMvs.map((mv) => [mv.employeeId, mv]))
 
+  // Aggregate approved overtime payouts for preview
+  const previewPayoutAgg = (await prisma.overtimePayout.groupBy({
+    by: ["employeeId"],
+    where: { tenantId, employeeId: { in: empIds }, year: pe.year, month: pe.month, status: "approved" },
+    _sum: { payoutMinutes: true },
+  })) ?? []
+  const previewPayoutMap = new Map(previewPayoutAgg.map(p => [p.employeeId, (p._sum.payoutMinutes ?? 0) / 60]))
+
   for (const emp of employees) {
     const mv = mvMap.get(emp.id)
     if (!mv) continue
@@ -587,6 +608,7 @@ export async function preview(
       targetHours,
       workedHours,
       overtimeHours,
+      overtimePayoutHours: previewPayoutMap.get(emp.id) ?? 0,
       vacationDays: decimalToNumber(mv.vacationTaken),
       sickDays: mv.sickDays,
       otherAbsenceDays: mv.otherAbsenceDays,

@@ -90,6 +90,12 @@ const employeeSummarySchema = z
   })
   .nullable()
 
+const overtimePayoutSummarySchema = z.object({
+  id: z.string(),
+  payoutMinutes: z.number(),
+  status: z.string(),
+}).nullable().optional()
+
 const monthlyValueOutputSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
@@ -120,6 +126,7 @@ const monthlyValueOutputSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   employee: employeeSummarySchema.optional(),
+  overtimePayout: overtimePayoutSummarySchema,
 })
 
 // --- Input Schemas ---
@@ -317,6 +324,8 @@ function mapMonthlyValueToOutput(
       : null
   }
 
+  result.overtimePayout = (record.overtimePayout as Record<string, unknown> | null | undefined) ?? null
+
   return result as z.infer<typeof monthlyValueOutputSchema>
 }
 
@@ -450,10 +459,25 @@ export const monthlyValuesRouter = createTRPCRouter({
             dataScopeWhere,
           }
         )
+
+        const employeeIds = items.map(i => (i as unknown as Record<string, unknown>).employeeId as string).filter(Boolean)
+        const payoutMap = new Map<string, { id: string; payoutMinutes: number; status: string }>()
+        if (employeeIds.length > 0) {
+          const payouts = await ctx.prisma.overtimePayout.findMany({
+            where: { tenantId, employeeId: { in: employeeIds }, year: input.year, month: input.month },
+            select: { id: true, employeeId: true, payoutMinutes: true, status: true },
+          })
+          for (const p of payouts) {
+            payoutMap.set(p.employeeId, { id: p.id, payoutMinutes: p.payoutMinutes, status: p.status })
+          }
+        }
+
         return {
-          items: items.map((item) =>
-            mapMonthlyValueToOutput(item as unknown as Record<string, unknown>)
-          ),
+          items: items.map((item) => {
+            const rec = item as unknown as Record<string, unknown>
+            rec.overtimePayout = payoutMap.get(rec.employeeId as string) ?? null
+            return mapMonthlyValueToOutput(rec)
+          }),
           total,
         }
       } catch (err) {

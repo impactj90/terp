@@ -11,23 +11,41 @@ export const SEED = {
   USER_PASSWORD: "dev-password-user",
 } as const;
 
+async function loginWithDevButton(page: Page, label: RegExp): Promise<void> {
+  await page.goto("/login");
+
+  const button = page.getByRole("button", { name: label });
+  await button.waitFor({ state: "visible", timeout: 30_000 });
+  await button.waitFor({ state: "attached", timeout: 30_000 });
+
+  await page.waitForFunction(
+    (buttonText) => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const match = buttons.find((candidate) =>
+        candidate.textContent?.match(buttonText),
+      );
+
+      return Boolean(match && !match.hasAttribute("disabled"));
+    },
+    label.source,
+    { timeout: 30_000 },
+  );
+
+  await button.click();
+  await page.waitForURL(/dashboard/, { timeout: 30_000 });
+  await page
+    .locator("main#main-content, main")
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
+}
+
 /** Login via the dev quick-login buttons (development mode only) */
 export async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page
-    .getByRole("button", { name: /Login as Admin|Als Admin anmelden/i })
-    .click();
-  // Wait for dashboard to load (URL may include locale prefix)
-  await page.waitForURL(/dashboard/, { timeout: 15_000 });
-  await page.locator("main#main-content, main").first().waitFor({ state: "visible", timeout: 10_000 });
+  await loginWithDevButton(page, /Login as Admin|Als Admin anmelden/i);
 }
 
 export async function loginAsUser(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page
-    .getByRole("button", { name: /Login as User|Als Benutzer anmelden/i })
-    .click();
-  await page.waitForURL("**/dashboard", { timeout: 15_000 });
+  await loginWithDevButton(page, /Login as User|Als Benutzer anmelden/i);
 }
 
 /** Login with manual email/password (used by UC-004 login/logout test) */

@@ -5,6 +5,7 @@
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import type { DataScope } from "@/lib/auth/middleware"
 import {
   buildRelatedEmployeeDataScopeWhere,
@@ -15,6 +16,13 @@ import { MonthlyCalcService } from "./monthly-calc"
 import * as repo from "./monthly-values-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import {
+  calculatePayout,
+  resolveEffectiveRule,
+  buildTariffRuleSnapshot,
+} from "./overtime-payout-service"
+import * as overtimePayoutRepo from "./overtime-payout-repository"
+import * as overrideRepo from "./employee-overtime-payout-override-repository"
 
 // --- Error Classes ---
 
@@ -30,6 +38,39 @@ export class MonthlyValueValidationError extends Error {
     super(message)
     this.name = "MonthlyValueValidationError"
   }
+}
+
+async function attachPayoutSummaries<
+  T extends { employeeId: string; year: number; month: number }
+>(
+  prisma: PrismaClient,
+  tenantId: string,
+  items: T[],
+): Promise<Array<T & { overtimePayout: { id: string; payoutMinutes: number; status: string } | null }>> {
+  if (items.length === 0) {
+    return []
+  }
+
+  const employeeIds = Array.from(new Set(items.map((item) => item.employeeId)))
+  const year = items[0]?.year
+  const month = items[0]?.month
+
+  if (!year || !month) {
+    return items.map((item) => ({ ...item, overtimePayout: null }))
+  }
+
+  const payoutByEmployee = await overtimePayoutRepo.batchFindByEmployeeMonth(
+    prisma,
+    tenantId,
+    employeeIds,
+    year,
+    month,
+  )
+
+  return items.map((item) => ({
+    ...item,
+    overtimePayout: payoutByEmployee.get(item.employeeId) ?? null,
+  }))
 }
 
 // --- Service Functions ---
@@ -71,7 +112,11 @@ export async function list(
 ) {
   // If filtering by "closed" status only, no need to find missing employees
   if (params.status === "closed") {
-    return repo.findMany(prisma, tenantId, params)
+    const result = await repo.findMany(prisma, tenantId, params)
+    return {
+      ...result,
+      items: await attachPayoutSummaries(prisma, tenantId, result.items),
+    }
   }
 
   // Get existing monthly values (unpaginated to merge with missing employees)
@@ -150,7 +195,10 @@ export async function list(
   const start = (page - 1) * pageSize
   const paginatedItems = allItems.slice(start, start + pageSize)
 
-  return { items: paginatedItems, total: allItems.length }
+  return {
+    items: await attachPayoutSummaries(prisma, tenantId, paginatedItems),
+    total: allItems.length,
+  }
 }
 
 export async function getById(
@@ -162,7 +210,123 @@ export async function getById(
   if (!mv) {
     throw new MonthlyValueNotFoundError()
   }
-  return mv
+
+  const payout = await overtimePayoutRepo.findByEmployeeMonth(
+    prisma,
+    tenantId,
+    mv.employeeId,
+    mv.year,
+    mv.month,
+  )
+
+  return {
+    ...mv,
+    overtimePayout: payout
+      ? {
+          id: payout.id,
+          payoutMinutes: payout.payoutMinutes,
+          status: payout.status,
+        }
+      : null,
+  }
+}
+
+async function createPayoutForClosedMonth(
+  prisma: PrismaClient,
+  tenantId: string,
+  employeeId: string,
+  year: number,
+  month: number,
+  userId: string,
+  tariffData?: {
+    overtimePayoutEnabled: boolean
+    overtimePayoutThresholdMinutes: number | null
+    overtimePayoutMode: string | null
+    overtimePayoutPercentage: number | null
+    overtimePayoutFixedMinutes: number | null
+    overtimePayoutApprovalRequired: boolean
+  } | null,
+  overrideData?: { overtimePayoutEnabled: boolean; overtimePayoutMode: string | null; isActive: boolean } | null,
+): Promise<{ status: "approved" | "pending" | null; payoutMinutes: number }> {
+  let tariff = tariffData
+  if (!tariff) {
+    const emp = await prisma.employee.findFirst({
+      where: { id: employeeId, tenantId },
+      select: { tariffId: true },
+    })
+    if (!emp?.tariffId) return { status: null, payoutMinutes: 0 }
+    const t = await prisma.tariff.findFirst({
+      where: { id: emp.tariffId, tenantId },
+      select: {
+        overtimePayoutEnabled: true,
+        overtimePayoutThresholdMinutes: true,
+        overtimePayoutMode: true,
+        overtimePayoutPercentage: true,
+        overtimePayoutFixedMinutes: true,
+        overtimePayoutApprovalRequired: true,
+      },
+    })
+    if (!t) return { status: null, payoutMinutes: 0 }
+    tariff = t
+  }
+
+  let override = overrideData
+  if (override === undefined) {
+    override = await overrideRepo.findByEmployeeId(prisma, tenantId, employeeId) ?? null
+  }
+
+  const rule = resolveEffectiveRule(tariff, override)
+  if (!rule.overtimePayoutEnabled) return { status: null, payoutMinutes: 0 }
+
+  const mv = await prisma.monthlyValue.findFirst({
+    where: { employeeId, year, month, tenantId },
+    select: { id: true, flextimeEnd: true },
+  })
+  if (!mv) return { status: null, payoutMinutes: 0 }
+
+  const { payoutMinutes } = calculatePayout(mv.flextimeEnd, rule)
+  if (payoutMinutes === 0) return { status: null, payoutMinutes: 0 }
+
+  const snapshot = buildTariffRuleSnapshot(rule) as unknown as Prisma.InputJsonValue
+
+  if (!rule.overtimePayoutApprovalRequired) {
+    await prisma.$transaction(async (tx) => {
+      await (tx as unknown as PrismaClient).overtimePayout.create({
+        data: {
+          tenantId,
+          employeeId,
+          year,
+          month,
+          payoutMinutes,
+          status: "approved",
+          sourceFlextimeEnd: mv.flextimeEnd,
+          tariffRuleSnapshot: snapshot,
+          approvedBy: userId,
+          approvedAt: new Date(),
+        },
+      })
+      await (tx as unknown as PrismaClient).monthlyValue.update({
+        where: { id: mv.id },
+        data: {
+          flextimeEnd: mv.flextimeEnd - payoutMinutes,
+          flextimeCarryover: mv.flextimeEnd - payoutMinutes,
+        },
+      })
+    })
+    return { status: "approved", payoutMinutes }
+  } else {
+    await overtimePayoutRepo.create(prisma, {
+      tenantId,
+      employeeId,
+      year,
+      month,
+      payoutMinutes,
+      status: "pending",
+      sourceFlextimeEnd: mv.flextimeEnd,
+      tariffRuleSnapshot: snapshot,
+    })
+    return { status: "pending", payoutMinutes }
+  }
 }
 
 export async function close(
@@ -207,6 +371,25 @@ export async function close(
   // 2. Close via MonthlyCalcService (has its own atomic guard internally)
   const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   await monthlyCalcService.closeMonth(mv.employeeId, mv.year, mv.month, userId)
+
+  // 2b. Payout hook — errors collected, not thrown
+  try {
+    const payoutResult = await createPayoutForClosedMonth(
+      prisma,
+      tenantId,
+      mv.employeeId,
+      mv.year,
+      mv.month,
+      userId,
+    )
+    if (payoutResult.status === "approved") {
+      const nextMonth = mv.month === 12 ? 1 : mv.month + 1
+      const nextYear = mv.month === 12 ? mv.year + 1 : mv.year
+      await monthlyCalcService.recalculateFromMonth(mv.employeeId, nextYear, nextMonth)
+    }
+  } catch (payoutErr) {
+    console.error(`[OvertimePayout] Failed for employee ${mv.employeeId}:`, payoutErr)
+  }
 
   // 3. Re-fetch and return updated record
   const updated = await repo.findById(prisma, tenantId, mv.id)
@@ -266,7 +449,26 @@ export async function reopen(
     throw new MonthlyValueValidationError("Month is not closed")
   }
 
-  // 2. Reopen via MonthlyCalcService (has its own atomic guard internally)
+  // 2a. Restore flextimeEnd if an approved payout reduced it, then delete payout
+  const existingPayout = await overtimePayoutRepo.findByEmployeeMonth(
+    prisma, tenantId, mv.employeeId, mv.year, mv.month,
+  )
+  if (existingPayout) {
+    if (existingPayout.status === "approved") {
+      await prisma.monthlyValue.update({
+        where: { id: mv.id },
+        data: {
+          flextimeEnd: existingPayout.sourceFlextimeEnd,
+          flextimeCarryover: existingPayout.sourceFlextimeEnd,
+        },
+      })
+    }
+    await overtimePayoutRepo.deleteByEmployeeMonth(
+      prisma, tenantId, mv.employeeId, mv.year, mv.month,
+    )
+  }
+
+  // 2b. Reopen via MonthlyCalcService (has its own atomic guard internally)
   const monthlyCalcService = new MonthlyCalcService(prisma, tenantId)
   await monthlyCalcService.reopenMonth(
     mv.employeeId,
@@ -274,6 +476,15 @@ export async function reopen(
     mv.month,
     userId
   )
+
+  // Recalculate subsequent open months so their carryover reflects the restored balance.
+  try {
+    const nextMonth = mv.month === 12 ? 1 : mv.month + 1
+    const nextYear = mv.month === 12 ? mv.year + 1 : mv.year
+    await monthlyCalcService.recalculateFromMonth(mv.employeeId, nextYear, nextMonth)
+  } catch (recalcErr) {
+    console.error(`[OvertimePayout] Recalc failed after reopen for ${mv.employeeId}:`, recalcErr)
+  }
 
   // 3. Re-fetch and return updated record
   const updated = await repo.findById(prisma, tenantId, mv.id)
@@ -369,6 +580,26 @@ export async function closeBatch(
     }
   }
 
+  // Pre-fetch tariff + override data for payout hook (batch, not N+1)
+  const employeeTariffs = await prisma.employee.findMany({
+    where: { id: { in: toClose }, tenantId },
+    select: {
+      id: true,
+      tariff: {
+        select: {
+          overtimePayoutEnabled: true,
+          overtimePayoutThresholdMinutes: true,
+          overtimePayoutMode: true,
+          overtimePayoutPercentage: true,
+          overtimePayoutFixedMinutes: true,
+          overtimePayoutApprovalRequired: true,
+        },
+      },
+    },
+  })
+  const tariffByEmp = new Map(employeeTariffs.map(e => [e.id, e.tariff]))
+  const overrideByEmp = await overrideRepo.batchFindByEmployeeIds(prisma, tenantId, toClose)
+
   // Close in parallel with concurrency limit
   const errors: { employeeId: string; reason: string }[] = []
   let closedCount = 0
@@ -377,6 +608,26 @@ export async function closeBatch(
     try {
       await monthlyCalcService.closeMonth(empId, year, month, userId)
       closedCount++
+
+      // Payout hook — errors collected, not thrown
+      try {
+        const payoutResult = await createPayoutForClosedMonth(
+          prisma, tenantId, empId, year, month, userId,
+          tariffByEmp.get(empId) ?? null,
+          overrideByEmp.get(empId) ?? null,
+        )
+        if (payoutResult.status === "approved") {
+          const nextMonth = month === 12 ? 1 : month + 1
+          const nextYear = month === 12 ? year + 1 : year
+          await monthlyCalcService.recalculateFromMonth(empId, nextYear, nextMonth)
+        }
+      } catch (payoutErr) {
+        console.error(`[OvertimePayout] Failed for employee ${empId}:`, payoutErr)
+        errors.push({
+          employeeId: empId,
+          reason: payoutErr instanceof Error ? payoutErr.message : String(payoutErr),
+        })
+      }
 
       // Never throws — audit failures must not block the actual operation
       if (audit) {

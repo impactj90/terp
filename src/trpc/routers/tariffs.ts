@@ -113,6 +113,13 @@ const tariffOutputSchema = z.object({
   rhythmStartDate: z.date().nullable(),
   // Vacation capping
   vacationCappingRuleGroupId: z.string().nullable(),
+  // Overtime payout
+  overtimePayoutEnabled: z.boolean(),
+  overtimePayoutThresholdMinutes: z.number().nullable(),
+  overtimePayoutMode: z.string().nullable(),
+  overtimePayoutPercentage: z.number().nullable(),
+  overtimePayoutFixedMinutes: z.number().nullable(),
+  overtimePayoutApprovalRequired: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
   // Optional relations (included in detail views)
@@ -171,6 +178,13 @@ const createTariffInputSchema = z.object({
       })
     )
     .optional(),
+  // Overtime payout
+  overtimePayoutEnabled: z.boolean().optional(),
+  overtimePayoutThresholdMinutes: z.number().int().min(0).optional(),
+  overtimePayoutMode: z.enum(["ALL_ABOVE_THRESHOLD", "PERCENTAGE", "FIXED_AMOUNT"]).optional(),
+  overtimePayoutPercentage: z.number().int().min(0).max(100).optional(),
+  overtimePayoutFixedMinutes: z.number().int().min(0).optional(),
+  overtimePayoutApprovalRequired: z.boolean().optional(),
 })
 
 const updateTariffInputSchema = z.object({
@@ -212,6 +226,13 @@ const updateTariffInputSchema = z.object({
       })
     )
     .optional(),
+  // Overtime payout
+  overtimePayoutEnabled: z.boolean().nullable().optional(),
+  overtimePayoutThresholdMinutes: z.number().int().min(0).nullable().optional(),
+  overtimePayoutMode: z.enum(["ALL_ABOVE_THRESHOLD", "PERCENTAGE", "FIXED_AMOUNT"]).nullable().optional(),
+  overtimePayoutPercentage: z.number().int().min(0).max(100).nullable().optional(),
+  overtimePayoutFixedMinutes: z.number().int().min(0).nullable().optional(),
+  overtimePayoutApprovalRequired: z.boolean().nullable().optional(),
 })
 
 const createBreakInputSchema = z.object({
@@ -289,6 +310,16 @@ function mapToOutput(
     // Vacation capping
     vacationCappingRuleGroupId:
       (t.vacationCappingRuleGroupId as string | null) ?? null,
+    // Overtime payout
+    overtimePayoutEnabled:
+      (t.overtimePayoutEnabled as boolean | null | undefined) ?? false,
+    overtimePayoutThresholdMinutes: (t.overtimePayoutThresholdMinutes as number | null) ?? null,
+    overtimePayoutMode: (t.overtimePayoutMode as string | null) ?? null,
+    overtimePayoutPercentage: (t.overtimePayoutPercentage as number | null) ?? null,
+    overtimePayoutFixedMinutes: (t.overtimePayoutFixedMinutes as number | null) ?? null,
+    overtimePayoutApprovalRequired:
+      (t.overtimePayoutApprovalRequired as boolean | null | undefined) ??
+      false,
     createdAt: t.createdAt as Date,
     updatedAt: t.updatedAt as Date,
   }

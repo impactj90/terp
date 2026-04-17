@@ -110,6 +110,7 @@
     "time": "Time",
     "correctionAssistant": "Correction Assistant",
     "monthlyValues": "Monthly Values",
+    "overtimePayouts": "Overtime Payouts",
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
     "exportTemplates": "Export Templates",
@@ -291,6 +292,7 @@
     "teamOverview": "Team Overview",
     "correctionAssistant": "Correction Assistant",
     "monthlyValues": "Monthly Values",
+    "overtimePayouts": "Overtime Payouts",
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
     "exportTemplates": "Export Templates",
@@ -2088,7 +2090,23 @@
     "unableToLoadTariff": "Unable to load tariff",
     "tariffNotFound": "Tariff not found",
     "loading": "Loading...",
-    "loadingTariffDetails": "Loading tariff details"
+    "loadingTariffDetails": "Loading tariff details",
+    "tabOvertimePayout": "Payout",
+    "overtimePayoutDescription": "Configure which overtime hours are automatically marked for payout at month close.",
+    "fieldOvertimePayoutEnabled": "Enable overtime payout",
+    "fieldOvertimePayoutMode": "Payout mode",
+    "modeAllAboveThreshold": "All above threshold",
+    "modePercentage": "Percentage",
+    "modeFixedAmount": "Fixed amount",
+    "modeHelp_ALL_ABOVE_THRESHOLD": "All minutes above the threshold are marked for payout.",
+    "modeHelp_PERCENTAGE": "A percentage of minutes above the threshold is marked for payout.",
+    "modeHelp_FIXED_AMOUNT": "A fixed number of minutes is marked for payout (capped at excess).",
+    "fieldThresholdMinutes": "Threshold (flextime account)",
+    "thresholdHelp": "Overtime is only marked for payout above this account balance (exclusive).",
+    "fieldPercentage": "Percentage (%)",
+    "fieldFixedMinutes": "Fixed payout amount",
+    "fieldApprovalRequired": "Approval required",
+    "approvalRequiredHelp": "When enabled, payouts must be individually approved after month close."
   },
   "adminHolidays": {
     "title": "Holidays",
@@ -2843,6 +2861,7 @@
       "net": "Net",
       "overtime": "Overtime",
       "balance": "Balance",
+      "payout": "Payout",
       "absenceDays": "Absence Days",
       "workingDays": "Work Days"
     },
@@ -2919,6 +2938,58 @@
     "count": {
       "item": "{count} employee",
       "items": "{count} employees"
+    },
+    "payoutPending": "pending",
+    "payoutApproved": "approved",
+    "payoutRejected": "rejected"
+  },
+  "overtimePayouts": {
+    "page": {
+      "title": "Overtime Payouts",
+      "subtitle": "Review, approve or reject overtime payouts"
+    },
+    "toolbar": {
+      "allStatuses": "All statuses",
+      "allDepartments": "All departments",
+      "searchPlaceholder": "Search employees..."
+    },
+    "table": {
+      "employee": "Employee",
+      "personnelNumber": "Pers. No.",
+      "period": "Period",
+      "payoutHours": "Payout",
+      "sourceBalance": "Balance before",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveAll": "Approve all pending",
+      "approveAllConfirm": "Are you sure you want to approve all pending payouts? Flextime accounts will be reduced accordingly.",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "reject": {
+      "title": "Reject payout",
+      "reasonLabel": "Rejection reason",
+      "reasonPlaceholder": "Enter reason...",
+      "reasonMinChars": "At least 10 characters",
+      "submit": "Reject"
+    },
+    "empty": {
+      "title": "No payouts found",
+      "description": "No overtime payouts exist for the selected period."
+    },
+    "batchResult": {
+      "title": "Result",
+      "approved": "{count} approved",
+      "errors": "{count} errors"
     }
   },
   "payrollExports": {
@@ -2998,6 +3069,7 @@
       "targetHours": "Target",
       "workedHours": "Worked",
       "overtimeHours": "Overtime",
+      "overtimePayoutHours": "Payout",
       "vacationDays": "Vacation",
       "sickDays": "Sick",
       "otherAbsenceDays": "Other Abs.",
@@ -8214,6 +8286,25 @@
         "endDate": "Until",
         "empty": "No other employment recorded",
         "add": "Add Other Employment"
+      },
+      "overtimePayoutOverride": {
+        "title": "Overtime Payout Override",
+        "description": "Enable or disable the tariff-driven payout for this employee or override only the payout mode.",
+        "overrideActive": "Override active",
+        "usingTariffRule": "Tariff rule applies",
+        "noAccess": "Tariff management permission is required to change this override.",
+        "loading": "Loading override...",
+        "enabledLabel": "Payout enabled",
+        "enabledState": "Enabled",
+        "disabledState": "Disabled",
+        "modeLabel": "Mode override",
+        "modeInherit": "Use tariff rule",
+        "modeAllAboveThreshold": "All above threshold",
+        "modePercentage": "Percentage",
+        "modeFixedAmount": "Fixed amount",
+        "currentEnabled": "Current enabled state",
+        "currentMode": "Current mode",
+        "reset": "Reset to tariff"
       },
       "studentData": {
         "title": "Student / Apprentice Data",

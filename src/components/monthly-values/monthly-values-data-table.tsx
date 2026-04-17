@@ -32,6 +32,7 @@ export interface MonthlyValueRow {
   working_days: number
   worked_days: number
   closed_at: string | null
+  payout?: { payoutMinutes: number; status: string } | null
 }
 
 interface MonthlyValuesDataTableProps {
@@ -94,6 +95,7 @@ export function MonthlyValuesDataTable({
           <TableHead className="w-24 text-right">{t('table.net')}</TableHead>
           <TableHead className="w-24 text-right">{t('table.overtime')}</TableHead>
           <TableHead className="w-24 text-right">{t('table.balance')}</TableHead>
+          <TableHead className="w-24 text-right">{t('table.payout')}</TableHead>
           <TableHead className="w-24 text-right">{t('table.absenceDays')}</TableHead>
         </TableRow>
       </TableHeader>
@@ -129,6 +131,29 @@ export function MonthlyValuesDataTable({
             </TableCell>
             <TableCell className="text-right">
               <TimeDisplay value={item.balance_minutes} format="balance" />
+            </TableCell>
+            <TableCell className="text-right">
+              {item.payout ? (
+                item.payout.status === 'rejected' ? (
+                  <span className="text-muted-foreground">
+                    &mdash;{" "}
+                    <span className="text-xs">
+                      ({t('payoutRejected')})
+                    </span>
+                  </span>
+                ) : (
+                  <span className={
+                    item.payout.status === 'pending' ? 'text-yellow-600' :
+                    'text-green-600'
+                  }>
+                    <TimeDisplay value={item.payout.payoutMinutes} format="duration" />
+                    {' '}
+                    <span className="text-xs">({t(item.payout.status === 'pending' ? 'payoutPending' : 'payoutApproved')})</span>
+                  </span>
+                )
+              ) : (
+                <span className="text-muted-foreground">&mdash;</span>
+              )}
             </TableCell>
             <TableCell className="text-right">{item.absence_days}</TableCell>
           </TableRow>
@@ -170,6 +195,9 @@ function MonthlyValuesDataTableSkeleton() {
           <TableHead className="w-24">
             <Skeleton className="h-4 w-16" />
           </TableHead>
+          <TableHead className="w-24">
+            <Skeleton className="h-4 w-16" />
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -186,6 +214,9 @@ function MonthlyValuesDataTableSkeleton() {
             </TableCell>
             <TableCell>
               <Skeleton className="h-5 w-20 rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-16 ml-auto" />
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-16 ml-auto" />

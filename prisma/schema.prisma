@@ -291,6 +291,10 @@ model Tenant {
   // Payroll salary history (Phase 3)
   employeeSalaryHistory EmployeeSalaryHistory[]
 
+  // Overtime payouts (migration 20260501000000)
+  overtimePayouts                 OvertimePayout[]
+  employeeOvertimePayoutOverrides EmployeeOvertimePayoutOverride[]
+
   // Template polish (Phase 4)
   exportTemplateSnapshots ExportTemplateSnapshot[]
   exportTemplateSchedules ExportTemplateSchedule[]
@@ -2029,6 +2033,8 @@ model Employee {
   crmTaskAssignees        CrmTaskAssignee[]
   assignedServiceCases    BillingServiceCase[]
   hrPersonnelFileEntries  HrPersonnelFileEntry[]
+  overtimePayouts                OvertimePayout[]
+  overtimePayoutOverrides        EmployeeOvertimePayoutOverride[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -2891,6 +2897,14 @@ model Tariff {
   // Vacation capping (migration 000051)
   vacationCappingRuleGroupId String? @map("vacation_capping_rule_group_id") @db.Uuid
 
+  // Overtime payout fields (migration 20260501000000)
+  overtimePayoutEnabled          Boolean  @default(false) @map("overtime_payout_enabled")
+  overtimePayoutThresholdMinutes Int?     @map("overtime_payout_threshold_minutes")
+  overtimePayoutMode             String?  @map("overtime_payout_mode") @db.VarChar(30)
+  overtimePayoutPercentage       Int?     @map("overtime_payout_percentage")
+  overtimePayoutFixedMinutes     Int?     @map("overtime_payout_fixed_minutes")
+  overtimePayoutApprovalRequired Boolean  @default(false) @map("overtime_payout_approval_required")
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -2979,6 +2993,71 @@ model TariffDayPlan {
   @@unique([tariffId, dayPosition])
   @@index([tariffId], map: "idx_tariff_day_plans_tariff")
   @@map("tariff_day_plans")
+}
+
+// -----------------------------------------------------------------------------
+// OvertimePayout
+// -----------------------------------------------------------------------------
+// Migration: 20260501000000
+//
+// CHECK constraints (enforced at DB level only):
+//   - status IN ('pending', 'approved', 'rejected')
+//   - month >= 1 AND month <= 12
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model OvertimePayout {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  employeeId          String    @map("employee_id") @db.Uuid
+  year                Int
+  month               Int
+  payoutMinutes       Int       @map("payout_minutes")
+  status              String    @default("pending") @db.VarChar(20)
+  sourceFlextimeEnd   Int       @map("source_flextime_end")
+  tariffRuleSnapshot  Json      @map("tariff_rule_snapshot")
+  approvedBy          String?   @map("approved_by") @db.Uuid
+  approvedAt          DateTime? @map("approved_at") @db.Timestamptz(6)
+  rejectedBy          String?   @map("rejected_by") @db.Uuid
+  rejectedAt          DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectedReason      String?   @map("rejected_reason") @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId, year, month])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, status])
+  @@index([tenantId, year, month])
+  @@map("overtime_payouts")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeOvertimePayoutOverride
+// -----------------------------------------------------------------------------
+// Migration: 20260501000000
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model EmployeeOvertimePayoutOverride {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  employeeId            String    @map("employee_id") @db.Uuid
+  overtimePayoutEnabled Boolean   @map("overtime_payout_enabled")
+  overtimePayoutMode    String?   @map("overtime_payout_mode") @db.VarChar(30)
+  notes                 String?   @db.Text
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@map("employee_overtime_payout_overrides")
 }
 
 // -----------------------------------------------------------------------------
