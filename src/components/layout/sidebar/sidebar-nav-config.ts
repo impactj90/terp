@@ -754,6 +754,66 @@ export const navConfig: NavSection[] = [
 ]
 
 /**
+ * Filters a nav item based on user permissions and enabled modules.
+ */
+export function filterNavItem(
+  item: NavItem,
+  check: (keys: string[]) => boolean,
+  enabledModules: Set<string>
+): boolean {
+  if (item.module && !enabledModules.has(item.module)) return false
+  if (!item.permissions) return true
+  return check(item.permissions)
+}
+
+/**
+ * Filters a nav section (including its sub-groups) by permissions and modules.
+ * Returns `null` if nothing in the section is visible to the user.
+ */
+export function filterNavSection(
+  section: NavSection,
+  check: (keys: string[]) => boolean,
+  enabledModules: Set<string>
+): NavSection | null {
+  if (section.module && !enabledModules.has(section.module)) return null
+
+  const filteredItems = section.items.filter((item) =>
+    filterNavItem(item, check, enabledModules)
+  )
+
+  const filteredSubGroups = section.subGroups
+    ?.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => filterNavItem(item, check, enabledModules)),
+    }))
+    .filter((group) => group.items.length > 0)
+
+  const hasItems = filteredItems.length > 0
+  const hasSubGroups = filteredSubGroups && filteredSubGroups.length > 0
+
+  if (!hasItems && !hasSubGroups) return null
+
+  return {
+    ...section,
+    items: filteredItems,
+    subGroups: filteredSubGroups,
+  }
+}
+
+/**
+ * Collect all NavItems from a section (flat items + sub-group items).
+ */
+export function getAllSectionItems(section: NavSection): NavItem[] {
+  const items = [...section.items]
+  if (section.subGroups) {
+    for (const group of section.subGroups) {
+      items.push(...group.items)
+    }
+  }
+  return items
+}
+
+/**
  * Mobile bottom navigation items.
  * Limited to 5 items for optimal mobile UX.
  */

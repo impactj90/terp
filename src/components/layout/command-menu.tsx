@@ -1,12 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Command } from 'cmdk'
 import { Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { navConfig, type NavSection } from './sidebar/sidebar-nav-config'
+import {
+  navConfig,
+  filterNavSection,
+  type NavSection,
+  type NavItem,
+} from './sidebar/sidebar-nav-config'
+import { usePermissionChecker } from '@/hooks/use-has-permission'
+import { useModules } from '@/hooks/use-modules'
 import { cn } from '@/lib/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +29,8 @@ export function CommandMenu() {
   const locale = useLocale()
   const tNav = useTranslations('nav')
   const tHeader = useTranslations('header')
+  const { check, isLoading } = usePermissionChecker()
+  const { data: modulesData, isLoading: modulesLoading } = useModules()
 
   // Toggle with ⌘K / Ctrl+K
   useEffect(() => {
@@ -41,6 +50,46 @@ export function CommandMenu() {
       router.push(`/${locale}${href}`)
     },
     [router, locale]
+  )
+
+  const enabledModules = useMemo(() => {
+    if (!modulesData?.modules) return new Set<string>(['core'])
+    return new Set<string>(modulesData.modules.map((m) => m.module))
+  }, [modulesData])
+
+  const visibleSections = useMemo<NavSection[]>(() => {
+    if (isLoading || modulesLoading) return []
+    return navConfig
+      .map((section) => filterNavSection(section, check, enabledModules))
+      .filter((section): section is NavSection => section !== null)
+  }, [check, isLoading, modulesLoading, enabledModules])
+
+  const renderItem = useCallback(
+    (item: NavItem, breadcrumb: string) => {
+      const Icon = item.icon
+      const title = tNav(item.titleKey as NavKey)
+      return (
+        <Command.Item
+          key={item.href}
+          value={`${title} ${item.href} ${breadcrumb}`}
+          onSelect={() => handleSelect(item.href)}
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm cursor-pointer',
+            'aria-selected:bg-accent aria-selected:text-accent-foreground',
+            'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50'
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background">
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">{title}</span>
+            <span className="text-xs text-muted-foreground">{breadcrumb}</span>
+          </div>
+        </Command.Item>
+      )
+    },
+    [handleSelect, tNav]
   )
 
   return (
@@ -109,40 +158,22 @@ export function CommandMenu() {
                 {tHeader('commandNoResults')}
               </Command.Empty>
 
-              {navConfig.map((section: NavSection) => (
-                <Command.Group
-                  key={section.titleKey}
-                  heading={tNav(section.titleKey as NavKey)}
-                >
-                  {section.items.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <Command.Item
-                        key={item.href}
-                        value={`${tNav(item.titleKey as NavKey)} ${item.href}`}
-                        onSelect={() => handleSelect(item.href)}
-                        className={cn(
-                          'flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm cursor-pointer',
-                          'aria-selected:bg-accent aria-selected:text-accent-foreground',
-                          'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50'
-                        )}
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium">
-                            {tNav(item.titleKey as NavKey)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {tNav(section.titleKey as NavKey)}
-                          </span>
-                        </div>
-                      </Command.Item>
-                    )
-                  })}
-                </Command.Group>
-              ))}
+              {visibleSections.map((section) => {
+                const sectionTitle = tNav(section.titleKey as NavKey)
+                return (
+                  <Command.Group key={section.titleKey} heading={sectionTitle}>
+                    {section.items.map((item) => renderItem(item, sectionTitle))}
+                    {section.subGroups?.map((group) =>
+                      group.items.map((item) =>
+                        renderItem(
+                          item,
+                          `${sectionTitle} › ${tNav(group.titleKey as NavKey)}`
+                        )
+                      )
+                    )}
+                  </Command.Group>
+                )
+              })}
             </Command.List>
 
             {/* Footer with keyboard hints */}
