@@ -8,6 +8,7 @@ import {
   createUserWithPermissions,
   createMockUserTenant,
 } from "./helpers"
+import { DEFAULT_PROBATION_REMINDER_DAYS } from "@/lib/services/probation-service"
 
 // --- Constants ---
 
@@ -42,6 +43,10 @@ function makeSettings(
     serverAliveExpectedCompletionTime: number | null
     serverAliveThresholdMinutes: number | null
     serverAliveNotifyAdmins: boolean
+    deliveryNoteStockMode: string
+    probationDefaultMonths: number
+    probationRemindersEnabled: boolean
+    probationReminderDays: number[]
     createdAt: Date
     updatedAt: Date
   }> = {}
@@ -65,6 +70,10 @@ function makeSettings(
     serverAliveExpectedCompletionTime: null,
     serverAliveThresholdMinutes: 30,
     serverAliveNotifyAdmins: true,
+    deliveryNoteStockMode: "MANUAL",
+    probationDefaultMonths: 6,
+    probationRemindersEnabled: true,
+    probationReminderDays: [...DEFAULT_PROBATION_REMINDER_DAYS],
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
     ...overrides,
@@ -113,6 +122,9 @@ describe("systemSettings.get", () => {
     expect(result.roundingRelativeToPlan).toBe(false)
     expect(result.errorListEnabled).toBe(true)
     expect(result.birthdayWindowDaysBefore).toBe(7)
+    expect(result.probationDefaultMonths).toBe(6)
+    expect(result.probationRemindersEnabled).toBe(true)
+    expect(result.probationReminderDays).toEqual(DEFAULT_PROBATION_REMINDER_DAYS)
     // proxyPassword should not be in output
     expect("proxyPassword" in result).toBe(false)
   })
@@ -181,6 +193,40 @@ describe("systemSettings.update", () => {
     })
   })
 
+  it("normalizes probation settings updates", async () => {
+    const existing = makeSettings()
+    const updated = makeSettings({
+      probationDefaultMonths: 3,
+      probationRemindersEnabled: false,
+      probationReminderDays: [28, 14, 7],
+    })
+    const mockPrisma = {
+      systemSetting: {
+        findUnique: vi.fn().mockResolvedValue(existing),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn().mockResolvedValue(updated),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.update({
+      probationDefaultMonths: 3,
+      probationRemindersEnabled: false,
+      probationReminderDays: [7, 28, 14, 14],
+    })
+
+    expect(result.probationDefaultMonths).toBe(3)
+    expect(result.probationRemindersEnabled).toBe(false)
+    expect(result.probationReminderDays).toEqual([28, 14, 7])
+    expect(mockPrisma.systemSetting.updateMany).toHaveBeenCalledWith({
+      where: { id: SETTINGS_ID, tenantId: TENANT_ID },
+      data: {
+        probationDefaultMonths: 3,
+        probationRemindersEnabled: false,
+        probationReminderDays: [28, 14, 7],
+      },
+    })
+  })
+
   it("validates birthday window range (0-90)", async () => {
     const mockPrisma = {
       systemSetting: {
@@ -218,6 +264,18 @@ describe("systemSettings.update", () => {
     await expect(
       caller.update({ serverAliveThresholdMinutes: 0 })
     ).rejects.toThrow()
+  })
+
+  it("rejects empty probation reminder stages", async () => {
+    const mockPrisma = {
+      systemSetting: {
+        findUnique: vi.fn().mockResolvedValue(makeSettings()),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    await expect(
+      caller.update({ probationReminderDays: [] })
+    ).rejects.toThrow("probationReminderDays must contain at least one reminder stage")
   })
 })
 

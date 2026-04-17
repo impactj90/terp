@@ -36,6 +36,29 @@ export async function findMany(
   return { employees, total }
 }
 
+export async function findManyByIds(
+  prisma: PrismaClient,
+  tenantId: string,
+  ids: string[]
+) {
+  if (ids.length === 0) {
+    return []
+  }
+
+  return prisma.employee.findMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      id: { in: ids },
+    },
+    include: {
+      department: { select: { id: true, name: true, code: true } },
+      location: { select: { id: true, name: true, code: true } },
+      tariff: { select: { id: true, name: true, code: true } },
+    },
+  })
+}
+
 export async function findById(
   prisma: PrismaClient,
   tenantId: string,

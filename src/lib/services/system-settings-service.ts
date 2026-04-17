@@ -9,6 +9,7 @@ import { RecalcService } from "@/lib/services/recalc"
 import * as repo from "./system-settings-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import { normalizeProbationReminderDays } from "./probation-service"
 
 // --- Audit ---
 
@@ -29,6 +30,9 @@ const TRACKED_FIELDS = [
   "serverAliveThresholdMinutes",
   "serverAliveNotifyAdmins",
   "deliveryNoteStockMode",
+  "probationDefaultMonths",
+  "probationRemindersEnabled",
+  "probationReminderDays",
 ]
 
 // --- Error Classes ---
@@ -110,6 +114,9 @@ export async function update(
     serverAliveThresholdMinutes?: number | null
     serverAliveNotifyAdmins?: boolean
     deliveryNoteStockMode?: string
+    probationDefaultMonths?: number
+    probationRemindersEnabled?: boolean
+    probationReminderDays?: number[]
   },
   audit?: AuditContext
 ) {
@@ -175,6 +182,22 @@ export async function update(
       )
     }
     data.deliveryNoteStockMode = input.deliveryNoteStockMode
+  }
+  if (input.probationDefaultMonths !== undefined) {
+    if (!Number.isInteger(input.probationDefaultMonths) || input.probationDefaultMonths < 0) {
+      throw new SystemSettingsValidationError(
+        "probationDefaultMonths must be a non-negative integer"
+      )
+    }
+    data.probationDefaultMonths = input.probationDefaultMonths
+  }
+  if (input.probationRemindersEnabled !== undefined) {
+    data.probationRemindersEnabled = input.probationRemindersEnabled
+  }
+  if (input.probationReminderDays !== undefined) {
+    data.probationReminderDays = normalizeProbationReminderDays(
+      input.probationReminderDays
+    )
   }
 
   const updated = (await repo.update(prisma, tenantId, existing.id, data))!

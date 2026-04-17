@@ -14,6 +14,7 @@ interface UseEmployeesOptions {
   locationId?: string
   isActive?: boolean
   hasExitDate?: boolean
+  probationStatus?: "ALL" | "IN_PROBATION" | "ENDS_IN_30_DAYS" | "ENDED"
 }
 
 /**

@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Info, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, Info, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,10 @@ interface SettingsFormState {
   // Birthday
   birthdayWindowDaysBefore: number
   birthdayWindowDaysAfter: number
+  // Probation
+  probationDefaultMonths: number
+  probationRemindersEnabled: boolean
+  probationReminderDays: number[]
   // Proxy
   proxyEnabled: boolean
   proxyHost: string
@@ -52,6 +56,9 @@ function mapApiToForm(data: SystemSettings): SettingsFormState {
     followUpEntriesEnabled: data.follow_up_entries_enabled ?? false,
     birthdayWindowDaysBefore: data.birthday_window_days_before ?? 0,
     birthdayWindowDaysAfter: data.birthday_window_days_after ?? 0,
+    probationDefaultMonths: data.probation_default_months ?? data.probationDefaultMonths ?? 6,
+    probationRemindersEnabled: data.probation_reminders_enabled ?? data.probationRemindersEnabled ?? true,
+    probationReminderDays: data.probation_reminder_days ?? data.probationReminderDays ?? [28, 14, 7],
     proxyEnabled: data.proxy_enabled ?? false,
     proxyHost: data.proxy_host ?? '',
     proxyPort: data.proxy_port ?? null,
@@ -73,6 +80,9 @@ const INITIAL_STATE: SettingsFormState = {
   followUpEntriesEnabled: false,
   birthdayWindowDaysBefore: 0,
   birthdayWindowDaysAfter: 0,
+  probationDefaultMonths: 6,
+  probationRemindersEnabled: true,
+  probationReminderDays: [28, 14, 7],
   proxyEnabled: false,
   proxyHost: '',
   proxyPort: null,
@@ -100,6 +110,7 @@ export function SystemSettingsForm() {
     calculation: true,
     order: true,
     warehouse: true,
+    probation: true,
     birthday: true,
     proxy: false,
     serverAlive: false,
@@ -139,6 +150,9 @@ export function SystemSettingsForm() {
         followUpEntriesEnabled: form.followUpEntriesEnabled,
         birthdayWindowDaysBefore: form.birthdayWindowDaysBefore,
         birthdayWindowDaysAfter: form.birthdayWindowDaysAfter,
+        probationDefaultMonths: form.probationDefaultMonths,
+        probationRemindersEnabled: form.probationRemindersEnabled,
+        probationReminderDays: form.probationReminderDays,
         proxyEnabled: form.proxyEnabled,
         proxyHost: form.proxyHost || null,
         proxyPort: form.proxyPort,
@@ -178,6 +192,29 @@ export function SystemSettingsForm() {
       <span>{t('notYetActive')}</span>
     </div>
   )
+
+  const updateProbationReminderDay = (index: number, value: string) => {
+    const nextValue = parseInt(value, 10)
+    setForm((prev) => {
+      const probationReminderDays = [...prev.probationReminderDays]
+      probationReminderDays[index] = Number.isNaN(nextValue) ? 0 : nextValue
+      return { ...prev, probationReminderDays }
+    })
+  }
+
+  const addProbationReminderDay = () => {
+    setForm((prev) => ({
+      ...prev,
+      probationReminderDays: [...prev.probationReminderDays, 1],
+    }))
+  }
+
+  const removeProbationReminderDay = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      probationReminderDays: prev.probationReminderDays.filter((_, currentIndex) => currentIndex !== index),
+    }))
+  }
 
   return (
     <div className="space-y-4">
@@ -326,6 +363,88 @@ export function SystemSettingsForm() {
                   Beim Abschliessen eines Lieferscheins werden automatisch Lagerentnahmen fuer alle Artikelpositionen mit Bestandsfuehrung erstellt.
                 </p>
               )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Probation Settings */}
+      <Card>
+        <CardHeader className="cursor-pointer" onClick={() => toggleSection('probation')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">{t('sectionProbation')}</CardTitle>
+              <CardDescription>{t('sectionProbationDesc')}</CardDescription>
+            </div>
+            {expandedSections.probation ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </div>
+        </CardHeader>
+        {expandedSections.probation && (
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="probationDefaultMonths">{t('fieldProbationDefaultMonths')}</Label>
+              <p className="text-xs text-muted-foreground">{t('fieldProbationDefaultMonthsDesc')}</p>
+              <Input
+                id="probationDefaultMonths"
+                type="number"
+                min={0}
+                value={form.probationDefaultMonths}
+                onChange={(e) => setForm((prev) => ({ ...prev, probationDefaultMonths: parseInt(e.target.value, 10) || 0 }))}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="probationRemindersEnabled" className="text-sm">{t('fieldProbationRemindersEnabled')}</Label>
+                <p className="text-xs text-muted-foreground">{t('fieldProbationRemindersEnabledDesc')}</p>
+              </div>
+              <Switch
+                id="probationRemindersEnabled"
+                checked={form.probationRemindersEnabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, probationRemindersEnabled: checked }))}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>{t('fieldProbationReminderDays')}</Label>
+                  <p className="text-xs text-muted-foreground">{t('fieldProbationReminderDaysDesc')}</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addProbationReminderDay} disabled={isSubmitting}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('fieldProbationAddReminderDay')}
+                </Button>
+              </div>
+              {form.probationReminderDays.map((days, index) => (
+                <div key={`${index}-${days}`} className="flex items-center gap-3">
+                  <Label htmlFor={`probationReminderDay-${index}`} className="w-28 text-sm">
+                    {t('fieldProbationReminderDayLabel', { index: index + 1 })}
+                  </Label>
+                  <Input
+                    id={`probationReminderDay-${index}`}
+                    type="number"
+                    min={1}
+                    value={days}
+                    onChange={(e) => updateProbationReminderDay(index, e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-32"
+                  />
+                  <span className="text-sm text-muted-foreground">{t('fieldProbationReminderDaySuffix')}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeProbationReminderDay(index)}
+                    disabled={isSubmitting || form.probationReminderDays.length <= 1}
+                    aria-label={t('fieldProbationRemoveReminderDay')}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
           </CardContent>
         )}

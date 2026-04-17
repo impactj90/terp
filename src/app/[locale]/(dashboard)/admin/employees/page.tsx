@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -25,11 +25,25 @@ import { EmployeeDataTable } from '@/components/employees/employee-data-table'
 import { EmployeeFormSheet } from '@/components/employees/employee-form-sheet'
 import { EmployeeDetailSheet } from '@/components/employees/employee-detail-sheet'
 import { BulkActions } from '@/components/employees/bulk-actions'
+import type { ProbationFilter } from '@/lib/services/probation-service'
 
 type Employee = NonNullable<ReturnType<typeof useEmployees>['data']>['items'][number]
 
+function parseProbationFilter(value: string | null): ProbationFilter {
+  if (
+    value === 'IN_PROBATION'
+    || value === 'ENDS_IN_30_DAYS'
+    || value === 'ENDED'
+  ) {
+    return value
+  }
+
+  return 'ALL'
+}
+
 export default function EmployeesPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('adminEmployees')
@@ -41,6 +55,9 @@ export default function EmployeesPage() {
   const [activeFilter, setActiveFilter] = React.useState<boolean | undefined>(undefined)
   const [departmentFilter, setDepartmentFilter] = React.useState<string | undefined>(undefined)
   const [locationFilter, setLocationFilter] = React.useState<string | undefined>(undefined)
+  const [probationFilter, setProbationFilter] = React.useState<ProbationFilter>(() =>
+    parseProbationFilter(searchParams.get('probation'))
+  )
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
 
   // Dialogs state
@@ -59,6 +76,7 @@ export default function EmployeesPage() {
     isActive: activeFilter,
     departmentId: departmentFilter,
     locationId: locationFilter,
+    probationStatus: probationFilter === 'ALL' ? undefined : probationFilter,
     enabled,
   })
 
@@ -74,12 +92,16 @@ export default function EmployeesPage() {
   // Reset page when filters change
   React.useEffect(() => {
     setPage(1)
-  }, [search, activeFilter, departmentFilter, locationFilter])
+  }, [search, activeFilter, departmentFilter, locationFilter, probationFilter])
 
   // Clear selection when page changes
   React.useEffect(() => {
     setSelectedIds(new Set())
-  }, [page, search, activeFilter, departmentFilter, locationFilter])
+  }, [page, search, activeFilter, departmentFilter, locationFilter, probationFilter])
+
+  React.useEffect(() => {
+    setProbationFilter(parseProbationFilter(searchParams.get('probation')))
+  }, [searchParams])
 
   React.useEffect(() => {
     if (!authLoading && !permLoading && !canAccess) {
@@ -139,7 +161,12 @@ export default function EmployeesPage() {
   }
 
   // Check for any active filters
-  const hasFilters = Boolean(search) || activeFilter !== undefined || departmentFilter !== undefined || locationFilter !== undefined
+  const hasFilters =
+    Boolean(search)
+    || activeFilter !== undefined
+    || departmentFilter !== undefined
+    || locationFilter !== undefined
+    || probationFilter !== 'ALL'
 
   if (authLoading || permLoading) {
     return <EmployeesPageSkeleton />
@@ -230,6 +257,21 @@ export default function EmployeesPage() {
             </SelectContent>
           </Select>
 
+          <Select
+            value={probationFilter}
+            onValueChange={(value) => setProbationFilter(value as ProbationFilter)}
+          >
+            <SelectTrigger className="w-[200px] shrink-0">
+              <SelectValue placeholder={t('filterProbation')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">{t('allProbation')}</SelectItem>
+              <SelectItem value="IN_PROBATION">{t('probationInProbation')}</SelectItem>
+              <SelectItem value="ENDS_IN_30_DAYS">{t('probationEndsIn30Days')}</SelectItem>
+              <SelectItem value="ENDED">{t('probationEnded')}</SelectItem>
+            </SelectContent>
+          </Select>
+
           {hasFilters && (
             <Button
               variant="ghost"
@@ -240,6 +282,7 @@ export default function EmployeesPage() {
                 setActiveFilter(undefined)
                 setDepartmentFilter(undefined)
                 setLocationFilter(undefined)
+                setProbationFilter('ALL')
               }}
             >
               <X className="mr-2 h-4 w-4" />

@@ -220,6 +220,8 @@ DELETE FROM employment_types WHERE code LIKE 'E2E%';
 DELETE FROM contact_types WHERE code LIKE 'E2E%';
 DELETE FROM booking_types WHERE code LIKE 'E2E%';
 DELETE FROM absence_types WHERE code LIKE 'UE2E%' OR code LIKE 'E2E%';
+DELETE FROM overtime_payouts WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
+DELETE FROM employee_overtime_payout_overrides WHERE employee_id IN (SELECT id FROM employees WHERE personnel_number LIKE 'E2E%');
 DELETE FROM day_plans WHERE code LIKE 'E2E%';
 DELETE FROM week_plans WHERE code LIKE 'E2E%';
 DELETE FROM tariffs WHERE code LIKE 'E2E%';
@@ -254,6 +256,42 @@ DELETE FROM platform_audit_logs WHERE support_session_id IN (
 );
 DELETE FROM support_sessions WHERE reason LIKE 'E2E%';
 DELETE FROM holidays WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND holiday_date >= '2027-01-01' AND holiday_date < '2028-01-01';
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Probezeit (spec 55-probezeit.spec.ts)
+-- Cleans ledger rows + probation-scoped notifications, then seeds one
+-- employee whose probation ends within the 30-day window so the dashboard
+-- widget and list filter have deterministic content.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Clear ledger + probation-scoped notifications for deterministic re-runs.
+DELETE FROM employee_probation_reminders WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
+DELETE FROM notifications
+  WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND type = 'reminders'
+  AND (link LIKE '/admin/employees/%' OR title LIKE 'Probezeit%');
+
+-- Clear any prior seeded probezeit employees so entry_date stays current.
+DELETE FROM employees
+  WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND personnel_number LIKE 'E2EPROB%';
+
+-- Seed an employee whose 6-month probation ends 14 days from today.
+-- entry_date = today - 6 months + 14 days -> probation ends in ~14 days.
+INSERT INTO employees (
+  id, tenant_id, personnel_number, pin, first_name, last_name,
+  entry_date, probation_months, is_active, weekly_hours, vacation_days_per_year,
+  created_at, updated_at
+) VALUES (
+  'e2e9b0fe-0000-4000-a000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  'E2EPROB-001', '8801', 'E2E', 'Probezeit',
+  (CURRENT_DATE - INTERVAL '6 months' + INTERVAL '14 days')::date,
+  6, true, 40, 30, NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  entry_date = (CURRENT_DATE - INTERVAL '6 months' + INTERVAL '14 days')::date,
+  probation_months = 6,
+  is_active = true;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Bank Inbox (spec 65-bank-inbox.spec.ts)

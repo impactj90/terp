@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
+import { useHasPermission } from '@/hooks'
 import {
   DashboardHeader,
   TodayScheduleCard,
@@ -12,27 +13,49 @@ import {
   PendingActions,
   RecentActivity,
 } from '@/components/dashboard'
+import { ProbationDashboardWidget } from '@/components/dashboard/probation-dashboard-widget'
 import { PersonnelFileDashboardWidget } from '@/components/hr/personnel-file-dashboard-widget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
+  const { allowed: canViewEmployees, isLoading: permissionLoading } = useHasPermission(['employees.view'])
   const t = useTranslations('dashboard')
 
   // Get employee_id directly from user (set via /auth/me from database)
   const employeeId = user?.employeeId
 
   // Show loading state while fetching auth data
-  if (isLoading) {
+  if (isLoading || permissionLoading) {
     return <DashboardLoadingSkeleton />
   }
 
-  // Show message if no employee is linked to the user
-  if (!employeeId) {
-    return (
-      <div className="space-y-6">
-        <DashboardHeader user={user} />
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Dashboard Header */}
+      <DashboardHeader user={user} />
+
+      {employeeId ? (
+        <>
+          {/* Quick Actions */}
+          <QuickActions employeeId={employeeId} />
+
+          {/* Stats Cards Grid — 2 cols on mobile, 4 on desktop */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <TodayScheduleCard employeeId={employeeId} />
+            <HoursThisWeekCard employeeId={employeeId} />
+            <VacationBalanceCard employeeId={employeeId} />
+            <FlextimeBalanceCard employeeId={employeeId} />
+          </div>
+
+          {/* Two column layout for pending + activity */}
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+            <PendingActions employeeId={employeeId} />
+            <RecentActivity employeeId={employeeId} />
+          </div>
+        </>
+      ) : (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="rounded-full bg-muted p-4">
             <UserX className="h-8 w-8 text-muted-foreground" />
@@ -47,34 +70,14 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-      </div>
-    )
-  }
+      )}
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Dashboard Header */}
-      <DashboardHeader user={user} />
-
-      {/* Quick Actions */}
-      <QuickActions employeeId={employeeId} />
-
-      {/* Stats Cards Grid — 2 cols on mobile, 4 on desktop */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <TodayScheduleCard employeeId={employeeId} />
-        <HoursThisWeekCard employeeId={employeeId} />
-        <VacationBalanceCard employeeId={employeeId} />
-        <FlextimeBalanceCard employeeId={employeeId} />
-      </div>
-
-      {/* Two column layout for pending + activity */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <PendingActions employeeId={employeeId} />
-        <RecentActivity employeeId={employeeId} />
-      </div>
-
-      {/* HR Personnel File Widget */}
-      <PersonnelFileDashboardWidget />
+      {(employeeId || canViewEmployees) && (
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+          {employeeId && <PersonnelFileDashboardWidget />}
+          {canViewEmployees && <ProbationDashboardWidget />}
+        </div>
+      )}
     </div>
   )
 }

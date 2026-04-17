@@ -31,6 +31,10 @@ import {
 } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import * as employeesService from "@/lib/services/employees-service"
+import {
+  PROBATION_FILTERS,
+  PROBATION_STATUSES,
+} from "@/lib/services/probation-service"
 import { decryptField, isEncrypted } from "@/lib/services/field-encryption"
 
 // --- Permission Constants ---
@@ -166,13 +170,23 @@ const relationSchema = z.object({
   name: z.string(),
 }).nullable()
 
+const probationInfoSchema = z.object({
+  effectiveMonths: z.number().int().nullable(),
+  endDate: z.date().nullable(),
+  daysRemaining: z.number().int().nullable(),
+  status: z.enum(PROBATION_STATUSES),
+  showBadge: z.boolean(),
+})
+
 const employeeListItemOutputSchema = employeeOutputSchema.extend({
+  probation: probationInfoSchema,
   department: relationSchema,
   location: relationSchema,
   tariff: relationSchema,
 })
 
 const employeeDetailOutputSchema = employeeOutputSchema.extend({
+  probation: probationInfoSchema,
   department: relationSchema,
   costCenter: relationSchema,
   employmentType: relationSchema,
@@ -216,6 +230,15 @@ const employeeSearchOutputSchema = z.object({
   lastName: z.string(),
 })
 
+const probationDashboardItemSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  departmentName: z.string().nullable(),
+  endDate: z.date(),
+  daysRemaining: z.number().int(),
+})
+
 // --- Input Schemas ---
 
 const listEmployeesInputSchema = z
@@ -229,6 +252,7 @@ const listEmployeesInputSchema = z
     locationId: z.string().optional(),
     isActive: z.boolean().optional(),
     hasExitDate: z.boolean().optional(),
+    probationStatus: z.enum(PROBATION_FILTERS).optional(),
   })
   .optional()
 
@@ -765,6 +789,9 @@ export const employeesRouter = createTRPCRouter({
         return {
           items: employees.map((emp) => {
             const base = mapEmployeeToOutput(emp)
+            const probation = (emp as unknown as {
+              probation: z.infer<typeof probationInfoSchema>
+            }).probation
             const rel = emp as unknown as {
               department?: { id: string; code: string; name: string } | null
               location?: { id: string; code: string; name: string } | null
@@ -772,6 +799,7 @@ export const employeesRouter = createTRPCRouter({
             }
             return {
               ...base,
+              probation,
               department: rel.department ?? null,
               location: rel.location ?? null,
               tariff: rel.tariff ?? null,
@@ -810,8 +838,12 @@ export const employeesRouter = createTRPCRouter({
         )
 
         const base = mapEmployeeToOutput(employee)
+        const probation = (employee as unknown as {
+          probation: z.infer<typeof probationInfoSchema>
+        }).probation
         return {
           ...base,
+          probation,
           department: employee.department
             ? {
                 id: employee.department.id,
@@ -873,6 +905,30 @@ export const employeesRouter = createTRPCRouter({
             updatedAt: card.updatedAt,
           })),
         }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  probationDashboard: tenantProcedure
+    .use(requirePermission(EMPLOYEES_VIEW))
+    .use(applyDataScope())
+    .output(
+      z.object({
+        total: z.number(),
+        items: z.array(probationDashboardItemSchema),
+      })
+    )
+    .query(async ({ ctx }) => {
+      try {
+        const tenantId = ctx.tenantId!
+        const dataScope = (ctx as unknown as { dataScope: DataScope }).dataScope
+
+        return await employeesService.getProbationDashboard(
+          ctx.prisma as unknown as PrismaClient,
+          tenantId,
+          dataScope
+        )
       } catch (err) {
         handleServiceError(err)
       }

@@ -19,6 +19,10 @@ import { requirePermission } from "@/lib/auth/middleware"
 import { permissionIdByKey } from "@/lib/auth/permission-catalog"
 import { handleServiceError } from "@/trpc/errors"
 import * as settingsService from "@/lib/services/system-settings-service"
+import {
+  DEFAULT_PROBATION_MONTHS,
+  DEFAULT_PROBATION_REMINDER_DAYS,
+} from "@/lib/services/probation-service"
 
 // --- Permission Constants ---
 
@@ -45,6 +49,9 @@ const systemSettingsOutputSchema = z.object({
   serverAliveThresholdMinutes: z.number().nullable(),
   serverAliveNotifyAdmins: z.boolean(),
   deliveryNoteStockMode: z.string(),
+  probationDefaultMonths: z.number().int(),
+  probationRemindersEnabled: z.boolean(),
+  probationReminderDays: z.array(z.number().int()),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -87,6 +94,9 @@ const updateSettingsInputSchema = z.object({
     .optional(),
   serverAliveNotifyAdmins: z.boolean().optional(),
   deliveryNoteStockMode: z.enum(["MANUAL", "CONFIRM", "AUTO"]).optional(),
+  probationDefaultMonths: z.number().int().min(0).optional(),
+  probationRemindersEnabled: z.boolean().optional(),
+  probationReminderDays: z.array(z.number().int()).optional(),
 })
 
 const cleanupDateRangeInputSchema = z.object({
@@ -129,6 +139,12 @@ function mapToOutput(s: Record<string, unknown>) {
       (s.serverAliveThresholdMinutes as number | null) ?? null,
     serverAliveNotifyAdmins: s.serverAliveNotifyAdmins as boolean,
     deliveryNoteStockMode: (s.deliveryNoteStockMode as string) ?? "MANUAL",
+    probationDefaultMonths:
+      (s.probationDefaultMonths as number | null) ?? DEFAULT_PROBATION_MONTHS,
+    probationRemindersEnabled:
+      (s.probationRemindersEnabled as boolean | null) ?? true,
+    probationReminderDays:
+      (s.probationReminderDays as number[] | null) ?? [...DEFAULT_PROBATION_REMINDER_DAYS],
     createdAt: s.createdAt as Date,
     updatedAt: s.updatedAt as Date,
   }

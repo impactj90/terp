@@ -4,16 +4,34 @@
  * Business logic for employee operations.
  * Throws plain Error subclasses that are mapped by handleServiceError.
  */
-import type { PrismaClient } from "@/generated/prisma/client";
-import { Prisma } from "@/generated/prisma/client";
-import type { DataScope } from "@/lib/auth/middleware";
-import { DailyCalcService } from "@/lib/services/daily-calc";
-import { MonthlyCalcService } from "@/lib/services/monthly-calc";
-import * as repo from "./employees-repository";
-import * as auditLog from "./audit-logs-service";
-import type { AuditContext } from "./audit-logs-service";
-import { encryptField } from "./field-encryption";
-import { validateIban, validateTaxId, validateSocialSecurityNumber, validateContributionGroupCode, validateActivityCode, validateTaxClass } from "./payroll-validators";
+import type { PrismaClient } from "@/generated/prisma/client"
+import { Prisma } from "@/generated/prisma/client"
+import type { DataScope } from "@/lib/auth/middleware"
+import {
+  buildEmployeeDataScopeWhere,
+  isEmployeeWithinDataScope,
+} from "@/lib/auth/data-scope"
+import { DailyCalcService } from "@/lib/services/daily-calc"
+import { MonthlyCalcService } from "@/lib/services/monthly-calc"
+import {
+  DEFAULT_PROBATION_MONTHS,
+  getProbationSnapshot,
+  type ProbationFilter,
+  type ProbationSnapshot,
+} from "./probation-service"
+import * as repo from "./employees-repository"
+import * as probationRepo from "./probation-repository"
+import * as auditLog from "./audit-logs-service"
+import type { AuditContext } from "./audit-logs-service"
+import { encryptField } from "./field-encryption"
+import {
+  validateIban,
+  validateTaxId,
+  validateSocialSecurityNumber,
+  validateContributionGroupCode,
+  validateActivityCode,
+  validateTaxClass,
+} from "./payroll-validators"
 
 // --- Error Classes ---
 
@@ -40,8 +58,8 @@ export class EmployeeConflictError extends Error {
 
 export class EmployeeForbiddenError extends Error {
   constructor(message = "Employee not within data scope") {
-    super(message);
-    this.name = "EmployeeForbiddenError";
+    super(message)
+    this.name = "EmployeeForbiddenError"
   }
 }
 
@@ -49,31 +67,69 @@ export class EmployeeForbiddenError extends Error {
 
 function checkDataScope(
   dataScope: DataScope,
-  employee: { id: string; departmentId: string | null },
+  employee: { id: string; departmentId: string | null }
 ): void {
-  if (dataScope.type === "department") {
-    if (
-      !employee.departmentId ||
-      !dataScope.departmentIds.includes(employee.departmentId)
-    ) {
-      throw new EmployeeForbiddenError();
-    }
-  } else if (dataScope.type === "employee") {
-    if (!dataScope.employeeIds.includes(employee.id)) {
-      throw new EmployeeForbiddenError();
-    }
+  if (!isEmployeeWithinDataScope(dataScope, employee)) {
+    throw new EmployeeForbiddenError()
   }
 }
 
 function buildDataScopeWhere(
-  dataScope: DataScope,
+  dataScope: DataScope
 ): Record<string, unknown> | null {
-  if (dataScope.type === "department") {
-    return { departmentId: { in: dataScope.departmentIds } };
-  } else if (dataScope.type === "employee") {
-    return { id: { in: dataScope.employeeIds } };
+  return buildEmployeeDataScopeWhere(dataScope)
+}
+
+function getEmployeeProbationMonths(
+  employee: Record<string, unknown>
+): number | null | undefined {
+  return employee.probationMonths as number | null | undefined
+}
+
+function withProbationSnapshot<T extends { entryDate: Date; exitDate: Date | null }>(
+  employee: T,
+  tenantProbationDefaultMonths: number,
+  today: Date = new Date()
+): T & { probation: ProbationSnapshot } {
+  return {
+    ...employee,
+    probation: getProbationSnapshot({
+      entryDate: employee.entryDate,
+      exitDate: employee.exitDate,
+      employeeProbationMonths: getEmployeeProbationMonths(
+        employee as unknown as Record<string, unknown>
+      ),
+      tenantDefaultMonths: tenantProbationDefaultMonths,
+      today,
+    }),
   }
-  return null;
+}
+
+function reorderByIds<T extends { id: string }>(items: T[], ids: string[]): T[] {
+  const byId = new Map(items.map((item) => [item.id, item]))
+  return ids
+    .map((id) => byId.get(id))
+    .filter((item): item is T => item !== undefined)
+}
+
+function coerceDate(value: Date | string | null | undefined): Date | null {
+  if (!value) {
+    return null
+  }
+
+  return value instanceof Date ? value : new Date(value)
+}
+
+async function getTenantProbationDefaultMonths(
+  prisma: PrismaClient,
+  tenantId: string
+): Promise<number> {
+  const settings = await prisma.systemSetting?.findUnique?.({
+    where: { tenantId },
+    select: { probationDefaultMonths: true },
+  })
+
+  return settings?.probationDefaultMonths ?? DEFAULT_PROBATION_MONTHS
 }
 
 // --- Service Functions ---
@@ -92,15 +148,53 @@ export async function list(
     locationId?: string;
     isActive?: boolean;
     hasExitDate?: boolean;
-  },
+    probationStatus?: ProbationFilter;
+  }
 ) {
-  const page = input?.page ?? 1;
-  const pageSize = input?.pageSize ?? 20;
+  const page = input?.page ?? 1
+  const pageSize = input?.pageSize ?? 20
+  const today = new Date()
+  const tenantProbationDefaultMonths = await getTenantProbationDefaultMonths(
+    prisma,
+    tenantId
+  )
+  const probationStatus = input?.probationStatus ?? "ALL"
+
+  if (probationStatus !== "ALL") {
+    const { ids, total } = await probationRepo.findEmployeeIdsByProbationFilter(
+      prisma,
+      {
+        tenantId,
+        tenantProbationDefaultMonths,
+        dataScope,
+        today,
+        probationFilter: probationStatus,
+        search: input?.search,
+        departmentId: input?.departmentId,
+        costCenterId: input?.costCenterId,
+        employmentTypeId: input?.employmentTypeId,
+        locationId: input?.locationId,
+        isActive: input?.isActive,
+        hasExitDate: input?.hasExitDate,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }
+    )
+
+    const employees = reorderByIds(
+      await repo.findManyByIds(prisma, tenantId, ids),
+      ids
+    ).map((employee) =>
+      withProbationSnapshot(employee, tenantProbationDefaultMonths, today)
+    )
+
+    return { employees, total }
+  }
 
   const where: Record<string, unknown> = {
     tenantId,
     deletedAt: null,
-  };
+  }
 
   // Optional filters
   if (input?.isActive !== undefined) {
@@ -140,14 +234,21 @@ export async function list(
   // Data scope
   const scopeWhere = buildDataScopeWhere(dataScope);
   if (scopeWhere) {
-    Object.assign(where, scopeWhere);
+    Object.assign(where, scopeWhere)
   }
 
-  return repo.findMany(prisma, tenantId, {
+  const { employees, total } = await repo.findMany(prisma, tenantId, {
     where,
     skip: (page - 1) * pageSize,
     take: pageSize,
-  });
+  })
+
+  return {
+    employees: employees.map((employee) =>
+      withProbationSnapshot(employee, tenantProbationDefaultMonths, today)
+    ),
+    total,
+  }
 }
 
 export async function getById(
@@ -156,15 +257,82 @@ export async function getById(
   dataScope: DataScope,
   id: string,
 ) {
-  const employee = await repo.findByIdWithRelations(prisma, tenantId, id);
+  const employee = await repo.findByIdWithRelations(prisma, tenantId, id)
   if (!employee) {
-    throw new EmployeeNotFoundError();
+    throw new EmployeeNotFoundError()
   }
 
   // Check data scope
-  checkDataScope(dataScope, employee);
+  checkDataScope(dataScope, employee)
 
-  return employee;
+  const tenantProbationDefaultMonths = await getTenantProbationDefaultMonths(
+    prisma,
+    tenantId
+  )
+
+  return withProbationSnapshot(employee, tenantProbationDefaultMonths)
+}
+
+export async function getProbationDashboard(
+  prisma: PrismaClient,
+  tenantId: string,
+  dataScope: DataScope,
+  options?: { limit?: number }
+) {
+  const today = new Date()
+  const tenantProbationDefaultMonths = await getTenantProbationDefaultMonths(
+    prisma,
+    tenantId
+  )
+  const { total, items } = await probationRepo.findProbationDashboardRows(
+    prisma,
+    {
+      tenantId,
+      tenantProbationDefaultMonths,
+      dataScope,
+      today,
+      limit: options?.limit ?? 5,
+    }
+  )
+
+  return {
+    total,
+    items: items
+      .map((item) => {
+        const snapshot = getProbationSnapshot({
+          entryDate: coerceDate(item.entryDate),
+          exitDate: coerceDate(item.exitDate),
+          employeeProbationMonths: item.probationMonths,
+          tenantDefaultMonths: tenantProbationDefaultMonths,
+          today,
+        })
+
+        if (!snapshot.endDate || snapshot.daysRemaining === null) {
+          return null
+        }
+
+        return {
+          id: item.id,
+          firstName: item.firstName,
+          lastName: item.lastName,
+          departmentName: item.departmentName,
+          endDate: snapshot.endDate,
+          daysRemaining: snapshot.daysRemaining,
+        }
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          id: string
+          firstName: string
+          lastName: string
+          departmentName: string | null
+          endDate: Date
+          daysRemaining: number
+        } => item !== null
+      ),
+  }
 }
 
 export async function create(

@@ -24,6 +24,7 @@ export {
   useDeleteEmployee,
   useBulkAssignTariff,
 } from './use-employees'
+export { useProbationDashboard } from './use-probation-dashboard'
 
 // Bookings
 export {

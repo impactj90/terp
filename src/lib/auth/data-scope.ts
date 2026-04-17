@@ -41,6 +41,45 @@ export function buildRelatedEmployeeDataScopeWhere(
 }
 
 /**
+ * Builds a Prisma WHERE clause for direct employee queries.
+ *
+ * For "department" scope: { departmentId: { in: departmentIds } }
+ * For "employee" scope: { id: { in: employeeIds } }
+ * For "all" or "tenant": null (no additional filter needed)
+ */
+export function buildEmployeeDataScopeWhere(
+  dataScope: DataScope
+): Record<string, unknown> | null {
+  if (dataScope.type === "department") {
+    return { departmentId: { in: dataScope.departmentIds } }
+  } else if (dataScope.type === "employee") {
+    return { id: { in: dataScope.employeeIds } }
+  }
+  return null
+}
+
+/**
+ * Returns whether a direct employee record falls within the user's data scope.
+ */
+export function isEmployeeWithinDataScope(
+  dataScope: DataScope,
+  employee: { id: string; departmentId: string | null }
+): boolean {
+  if (dataScope.type === "department") {
+    return (
+      !!employee.departmentId
+      && dataScope.departmentIds.includes(employee.departmentId)
+    )
+  }
+
+  if (dataScope.type === "employee") {
+    return dataScope.employeeIds.includes(employee.id)
+  }
+
+  return true
+}
+
+/**
  * Checks that a record with an employeeId falls within the user's data scope.
  * Throws DataScopeForbiddenError if not.
  *

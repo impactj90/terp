@@ -164,6 +164,7 @@ model Tenant {
   employeeCappingExceptions   EmployeeCappingException[]
   vacationBalances            VacationBalance[]
   systemSettings              SystemSetting[]
+  employeeProbationReminders  EmployeeProbationReminder[]
   notifications               Notification[]
   notificationPreferences     NotificationPreference[]
   shifts                      Shift[]
@@ -2007,6 +2008,7 @@ model Employee {
   foreignAssignments     EmployeeForeignAssignment[]
   otherEmployments       EmployeeOtherEmployment[]
   salaryHistory          EmployeeSalaryHistory[]
+  probationReminders     EmployeeProbationReminder[]
 
   // Relations to group/order/activity models
   employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
@@ -3323,6 +3325,9 @@ model SystemSetting {
   serverAliveThresholdMinutes       Int?     @default(30) @map("server_alive_threshold_minutes")
   serverAliveNotifyAdmins           Boolean  @default(true) @map("server_alive_notify_admins")
   deliveryNoteStockMode             String   @default("MANUAL") @map("delivery_note_stock_mode") @db.VarChar(10)
+  probationDefaultMonths            Int      @default(6) @map("probation_default_months")
+  probationRemindersEnabled         Boolean  @default(true) @map("probation_reminders_enabled")
+  probationReminderDays             Int[]    @default([28, 14, 7]) @map("probation_reminder_days")
   createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -3424,6 +3429,25 @@ model NotificationPreference {
   // Indexes
   @@unique([tenantId, userId], map: "notification_preferences_tenant_id_user_id_key")
   @@map("notification_preferences")
+}
+
+// -----------------------------------------------------------------------------
+// EmployeeProbationReminder
+// -----------------------------------------------------------------------------
+// Durable reminder ledger for probation reminder stages.
+model EmployeeProbationReminder {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  employeeId         String   @map("employee_id") @db.Uuid
+  reminderDaysBefore Int      @map("reminder_days_before")
+  probationEndDate   DateTime @map("probation_end_date") @db.Date
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId, reminderDaysBefore, probationEndDate], map: "uq_emp_probation_reminder")
+  @@map("employee_probation_reminders")
 }
 
 // -----------------------------------------------------------------------------

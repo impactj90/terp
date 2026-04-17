@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ProbationBadge } from './probation-badge'
 import { StatusBadge } from './status-badge'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Employee = any
@@ -136,7 +137,7 @@ export function EmployeeDataTable({
             <TableHead className={COL.department}>{t('columnDepartment')}</TableHead>
             <TableHead className={COL.location}>{t('columnLocation')}</TableHead>
             <TableHead className={COL.tariff}>{t('columnTariff')}</TableHead>
-            <TableHead className={`w-24 ${COL.status}`}>{t('columnStatus')}</TableHead>
+            <TableHead className={`w-40 ${COL.status}`}>{t('columnStatus')}</TableHead>
             <TableHead className={`w-28 ${COL.entryDate}`}>{t('columnEntryDate')}</TableHead>
             <TableHead className="w-16">
               <span className="sr-only">{t('columnActions')}</span>
@@ -181,10 +182,13 @@ export function EmployeeDataTable({
                 {employee.tariff?.name || '-'}
               </TableCell>
               <TableCell className={COL.status}>
-                <StatusBadge
-                  isActive={employee.isActive}
-                  exitDate={employee.exitDate}
-                />
+                <div className="flex flex-wrap gap-1">
+                  <StatusBadge
+                    isActive={employee.isActive}
+                    exitDate={employee.exitDate}
+                  />
+                  <ProbationBadge status={employee.probation.status} />
+                </div>
               </TableCell>
               <TableCell className={COL.entryDate}>{formatDate(employee.entryDate)}</TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
@@ -254,7 +258,7 @@ function EmployeeDataTableSkeleton() {
             <TableHead className={COL.tariff}>
               <Skeleton className="h-4 w-16" />
             </TableHead>
-            <TableHead className={`w-24 ${COL.status}`}>
+            <TableHead className={`w-40 ${COL.status}`}>
               <Skeleton className="h-4 w-16" />
             </TableHead>
             <TableHead className={`w-28 ${COL.entryDate}`}>
@@ -291,7 +295,10 @@ function EmployeeDataTableSkeleton() {
                 <Skeleton className="h-4 w-16" />
               </TableCell>
               <TableCell className={COL.status}>
-                <Skeleton className="h-5 w-16 rounded-full" />
+                <div className="flex gap-1">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
               </TableCell>
               <TableCell className={COL.entryDate}>
                 <Skeleton className="h-4 w-20" />

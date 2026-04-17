@@ -23,6 +23,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { ProbationBadge } from '@/components/employees/probation-badge'
 import { StatusBadge } from '@/components/employees/status-badge'
 import { EmployeeFormSheet } from '@/components/employees/employee-form-sheet'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -127,6 +128,7 @@ export default function EmployeeDetailPage() {
                 {employee.firstName} {employee.lastName}
               </h1>
               <StatusBadge isActive={employee.isActive} exitDate={employee.exitDate} />
+              <ProbationBadge status={employee.probation.status} />
             </div>
             <p className="text-muted-foreground truncate">{employee.personnelNumber}</p>
           </div>
@@ -207,6 +209,8 @@ export default function EmployeeDetailPage() {
                 <div className="space-y-3">
                   <DetailRow label={t('labelWeeklyHours')} value={employee.weeklyHours ? t('weeklyHoursValue', { hours: employee.weeklyHours }) : undefined} />
                   <DetailRow label={t('labelVacationDays')} value={employee.vacationDaysPerYear ? t('vacationDaysValue', { days: employee.vacationDaysPerYear }) : undefined} />
+                  <DetailRow label={t('labelProbationMonths')} value={employee.probation.effectiveMonths != null ? t('probationMonthsValue', { months: employee.probation.effectiveMonths }) : undefined} />
+                  <DetailRow label={t('labelProbationEndDate')} value={formatDate(employee.probation.endDate)} />
                 </div>
               </CardContent>
             </Card>

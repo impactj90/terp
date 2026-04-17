@@ -76,6 +76,7 @@ function makeEmployee(
     annualTargetHours: Prisma.Decimal | null
     workDaysPerWeek: Prisma.Decimal | null
     calculationStartDate: Date | null
+    probationMonths: number | null
     deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -128,6 +129,7 @@ function makeEmployee(
     annualTargetHours: null,
     workDaysPerWeek: null,
     calculationStartDate: null,
+    probationMonths: null,
     deletedAt: null,
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
@@ -291,6 +293,45 @@ describe("employees.list", () => {
     expect(result.items).toEqual([])
     expect(result.total).toBe(0)
   })
+
+  it("supports server-side probation filtering and returns computed probation data", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-04-17T00:00:00.000Z"))
+
+    try {
+      const filteredEmployee = makeEmployee({
+        entryDate: new Date("2026-03-01T00:00:00.000Z"),
+        departmentId: DEPT_ID,
+      })
+      const mockPrisma = {
+        systemSetting: {
+          findUnique: vi.fn().mockResolvedValue({
+            probationDefaultMonths: 2,
+          }),
+        },
+        employee: {
+          findMany: vi.fn().mockResolvedValue([filteredEmployee]),
+        },
+        $queryRaw: vi.fn()
+          .mockResolvedValueOnce([{ total: BigInt(1) }])
+          .mockResolvedValueOnce([{ id: EMP_ID }]),
+      }
+      const caller = createCaller(createTestContext(mockPrisma))
+      const result = await caller.list({ probationStatus: "IN_PROBATION" })
+
+      expect(result.total).toBe(1)
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0]!.probation.effectiveMonths).toBe(2)
+      expect(result.items[0]!.probation.endDate).toEqual(
+        new Date("2026-05-01T00:00:00.000Z")
+      )
+      expect(result.items[0]!.probation.status).toBe("ends_in_30_days")
+      expect(result.items[0]!.probation.showBadge).toBe(true)
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 // --- employees.getById tests ---
@@ -354,6 +395,38 @@ describe("employees.getById", () => {
     const caller = createCaller(ctx)
     await expect(caller.getById({ id: EMP_ID })).rejects.toThrow(
       "Employee not within data scope"
+    )
+  })
+
+  it("returns calculated probation end date from tenant defaults", async () => {
+    const emp = {
+      ...makeEmployee({
+        entryDate: new Date("2026-03-01T00:00:00.000Z"),
+      }),
+      probationMonths: null,
+      department: null,
+      costCenter: null,
+      employmentType: null,
+      location: null,
+      contacts: [],
+      cards: [],
+    }
+    const mockPrisma = {
+      systemSetting: {
+        findUnique: vi.fn().mockResolvedValue({
+          probationDefaultMonths: 3,
+        }),
+      },
+      employee: {
+        findFirst: vi.fn().mockResolvedValue(emp),
+      },
+    }
+    const caller = createCaller(createTestContext(mockPrisma))
+    const result = await caller.getById({ id: EMP_ID })
+
+    expect(result.probation.effectiveMonths).toBe(3)
+    expect(result.probation.endDate).toEqual(
+      new Date("2026-06-01T00:00:00.000Z")
     )
   })
 })
