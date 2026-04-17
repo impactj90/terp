@@ -1659,30 +1659,41 @@ export class DailyCalcService {
       dailyValue.netTime
     )
 
+    // Aggregate surcharge results by accountId. `splitOvernightSurcharge`
+    // (and identically-keyed `DayPlanBonus` rows) can produce multiple
+    // SurchargeResult entries pointing at the same account — the
+    // DailyAccountValue unique key (employeeId, valueDate, accountId,
+    // source) would otherwise make the upserts overwrite each other and
+    // only the last result would survive.
+    const aggregated = new Map<string, number>()
+    for (const sr of surchargeResult.surcharges) {
+      aggregated.set(sr.accountId, (aggregated.get(sr.accountId) ?? 0) + sr.minutes)
+    }
+
     // Post all surcharges in a single batch transaction
-    if (surchargeResult.surcharges.length > 0) {
+    if (aggregated.size > 0) {
       await this.prisma.$transaction(
-        surchargeResult.surcharges.map((sr) =>
+        Array.from(aggregated.entries()).map(([accountId, minutes]) =>
           this.prisma.dailyAccountValue.upsert({
             where: {
               employeeId_valueDate_accountId_source: {
                 employeeId,
                 valueDate: date,
-                accountId: sr.accountId,
+                accountId,
                 source: DAV_SOURCE_SURCHARGE,
               },
             },
             create: {
               tenantId,
               employeeId,
-              accountId: sr.accountId,
+              accountId,
               valueDate: date,
-              valueMinutes: sr.minutes,
+              valueMinutes: minutes,
               source: DAV_SOURCE_SURCHARGE,
               dayPlanId: dayPlan.id,
             },
             update: {
-              valueMinutes: sr.minutes,
+              valueMinutes: minutes,
               dayPlanId: dayPlan.id,
               updatedAt: new Date(),
             },

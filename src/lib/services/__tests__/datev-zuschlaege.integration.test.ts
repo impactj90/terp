@@ -568,25 +568,196 @@ describe.sequential("DATEV-Zuschläge integration", () => {
     await recalc.triggerRecalc(TENANT_A, EMP_A, MON)
   })
 
-  it.skip(
-    "known limitation: cross-midnight work pairs produce 0 surcharge (extractWorkPeriods bug)",
-    async () => {
-      // When a shift spans midnight (e.g. Mon 22:00 → Tue 06:00) and the
-      // DayPlan uses `dayChangeBehavior=at_arrival`, the calculation engine
-      // correctly attributes 480 min of netTime to Monday. However, the
-      // BookingPair stored by the pairing layer retains raw times
-      // (inBooking.time=1320, outBooking.time=360), and
-      // `extractWorkPeriods` (src/lib/calculation/surcharges.ts) returns
-      // `{start:1320, end:360}` — an inverted TimePeriod that the
-      // `calculateOverlap` helper interprets as zero minutes.
-      //
-      // Out of scope for pflicht-02-datev-zuschlaege. Tracked as a
-      // follow-up to normalise overnight pairs before extractWorkPeriods
-      // runs. Until then, tenants who need an overnight surcharge must
-      // configure the bonus as a single same-day window (e.g. 18:00-23:59)
-      // or rely on per-day splitting at the booking layer.
-    },
-  )
+  // Cross-midnight overnight night-shift surcharge — the real Pro-Di case.
+  // Fixed by splitting the work period at midnight in extractWorkPeriods /
+  // deductFixedBreak (symmetric with splitOvernightSurcharge).
+  describe.sequential("overnight 22:00 → 06:00 night shift", () => {
+    // Separate tenant + fixtures to keep state isolated from the
+    // same-day tests above.
+    const T_NS = "b0000000-0000-4000-a000-000000000a10"
+    const EMP_NS = "b0000000-0000-4000-a000-000000000b10"
+    const PLAN_NS = "b0000000-0000-4000-a000-000000000c10"
+    const NIGHT_NS = "b0000000-0000-4000-a000-000000000d10"
+    // Mon/Tue dates distinct from the main suite (use same July 2028 month)
+    const NS_MON = new Date(Date.UTC(TEST_YEAR, TEST_MONTH - 1, 10))
+    const NS_TUE = new Date(Date.UTC(TEST_YEAR, TEST_MONTH - 1, 11))
+
+    async function cleanupOvernight() {
+      await prisma.dailyAccountValue
+        .deleteMany({
+          where: { tenantId: T_NS, valueDate: { gte: CLEANUP_FROM, lte: CLEANUP_TO } },
+        })
+        .catch(() => {})
+      await prisma.dailyValue
+        .deleteMany({
+          where: { tenantId: T_NS, valueDate: { gte: CLEANUP_FROM, lte: CLEANUP_TO } },
+        })
+        .catch(() => {})
+      await prisma.booking
+        .deleteMany({
+          where: { tenantId: T_NS, bookingDate: { gte: CLEANUP_FROM, lte: CLEANUP_TO } },
+        })
+        .catch(() => {})
+      await prisma.employeeDayPlan
+        .deleteMany({
+          where: { tenantId: T_NS, planDate: { gte: CLEANUP_FROM, lte: CLEANUP_TO } },
+        })
+        .catch(() => {})
+      await prisma.monthlyValue
+        .deleteMany({ where: { tenantId: T_NS, employeeId: EMP_NS } })
+        .catch(() => {})
+      await prisma.dayPlanBreak
+        .deleteMany({ where: { dayPlanId: PLAN_NS } })
+        .catch(() => {})
+      await prisma.dayPlanBonus
+        .deleteMany({ where: { dayPlanId: PLAN_NS } })
+        .catch(() => {})
+      await prisma.employee
+        .deleteMany({ where: { id: EMP_NS } })
+        .catch(() => {})
+      await prisma.dayPlan.deleteMany({ where: { id: PLAN_NS } }).catch(() => {})
+      await prisma.account.deleteMany({ where: { id: NIGHT_NS } }).catch(() => {})
+      await prisma.tenant.deleteMany({ where: { id: T_NS } }).catch(() => {})
+    }
+
+    beforeAll(async () => {
+      await cleanupOvernight()
+
+      await prisma.tenant.create({
+        data: {
+          id: T_NS,
+          name: "Overnight NS integration",
+          slug: "overnight-ns-it",
+          isActive: true,
+        },
+      })
+      await prisma.account.create({
+        data: {
+          id: NIGHT_NS,
+          tenantId: T_NS,
+          code: "NIGHT",
+          name: "Night Shift Bonus (overnight)",
+          accountType: "bonus",
+          unit: "minutes",
+          isSystem: false,
+          isActive: true,
+          isPayrollRelevant: true,
+          payrollCode: "1015",
+        },
+      })
+      await prisma.dayPlan.create({
+        data: {
+          id: PLAN_NS,
+          tenantId: T_NS,
+          code: "NS-OVERNIGHT",
+          name: "Overnight NS",
+          planType: "fixed",
+          comeFrom: 1320,
+          comeTo: 1380,
+          goFrom: 300,
+          goTo: 360,
+          regularHours: 480,
+          dayChangeBehavior: "at_arrival",
+          noBookingBehavior: "error",
+          isActive: true,
+        },
+      })
+      // Overnight night bonus 22:00 – 06:00 at 25 %
+      await prisma.dayPlanBonus.create({
+        data: {
+          dayPlanId: PLAN_NS,
+          accountId: NIGHT_NS,
+          timeFrom: 1320,
+          timeTo: 360,
+          calculationType: "percentage",
+          valueMinutes: 25,
+          appliesOnHoliday: false,
+          sortOrder: 0,
+        },
+      })
+      // Fixed break 22:30 – 23:00 (30 min) — exercises the deductFixedBreak
+      // cross-midnight path on the evening half of the split work window.
+      await prisma.dayPlanBreak.create({
+        data: {
+          dayPlanId: PLAN_NS,
+          breakType: "fixed",
+          startTime: 1350,
+          endTime: 1380,
+          duration: 30,
+          autoDeduct: true,
+          isPaid: false,
+          minutesDifference: false,
+          sortOrder: 0,
+        },
+      })
+      await prisma.employee.create({
+        data: {
+          id: EMP_NS,
+          tenantId: T_NS,
+          personnelNumber: "EMP-NS-OVN",
+          pin: "1010",
+          firstName: "Nacht",
+          lastName: "Arbeiter",
+          isActive: true,
+          entryDate: new Date(Date.UTC(2025, 0, 1)),
+        },
+      })
+      await prisma.employeeDayPlan.createMany({
+        data: [
+          { tenantId: T_NS, employeeId: EMP_NS, planDate: NS_MON, dayPlanId: PLAN_NS, source: "integration_test" },
+          { tenantId: T_NS, employeeId: EMP_NS, planDate: NS_TUE, dayPlanId: PLAN_NS, source: "integration_test" },
+        ],
+      })
+      // Overnight bookings: Mon 22:00 Kommen + Tue 06:00 Gehen.
+      await createBooking(T_NS, EMP_NS, NS_MON, kommenBookingTypeId, 1320)
+      await createBooking(T_NS, EMP_NS, NS_TUE, gehenBookingTypeId, 360)
+
+      // Run recalc only for Monday — at_arrival attributes the shift to Mon.
+      const recalc = new RecalcService(prisma, undefined, undefined, T_NS)
+      await recalc.triggerRecalc(T_NS, EMP_NS, NS_MON)
+    }, 30000)
+
+    afterAll(async () => {
+      await cleanupOvernight()
+    }, 15000)
+
+    it("attributes the full overnight shift to Monday with 30 min fixed-break deduction", async () => {
+      const dv = await prisma.dailyValue.findFirst({
+        where: { tenantId: T_NS, employeeId: EMP_NS, valueDate: NS_MON },
+      })
+      expect(dv).toBeTruthy()
+      expect(dv!.firstCome).toBe(1320)
+      expect(dv!.lastGo).toBe(360)
+      expect(dv!.bookingCount).toBe(2)
+      // gross = 480 min (22:00 → 06:00), minus 30 min break = 450 min net.
+      // Tolerate ±1 for rounding across the pairing layer.
+      expect(dv!.netTime).toBeGreaterThanOrEqual(449)
+      expect(dv!.netTime).toBeLessThanOrEqual(450)
+      expect(dv!.breakTime).toBeGreaterThanOrEqual(30)
+    })
+
+    it("persists DailyAccountValue with source=surcharge on NIGHT = 120 min", async () => {
+      const rows = await prisma.dailyAccountValue.findMany({
+        where: {
+          tenantId: T_NS,
+          employeeId: EMP_NS,
+          accountId: NIGHT_NS,
+          source: "surcharge",
+        },
+      })
+      expect(rows.length).toBeGreaterThan(0)
+      const totalMinutes = rows.reduce((sum, r) => sum + r.valueMinutes, 0)
+      // Surcharge is computed against the RAW work period (before break
+      // subtraction). Work 22:00→06:00 splits into [1320,1440] + [0,360]
+      // (= 120 + 360 min). Surcharge window 22:00→06:00 splits into the
+      // same two halves. Cross-product overlap = 120 + 360. With
+      // percentage=25, each split config floors independently:
+      //   evening: floor(120 * 25 / 100) = 30
+      //   morning: floor(360 * 25 / 100) = 90
+      //   total: 120 min
+      expect(totalMinutes).toBe(120)
+    })
+  })
 
   it("global migration: default_payroll_wages codes 1003/1004/1005 use the account:-prefix", async () => {
     const wages = await prisma.defaultPayrollWage.findMany({

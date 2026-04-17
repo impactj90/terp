@@ -152,8 +152,16 @@ export function deductFixedBreak(pairs: BookingPair[], cfg: BreakConfig): number
     const workStart = pair.inBooking.time
     const workEnd = pair.outBooking.time
 
-    const overlap = calculateOverlap(workStart, workEnd, breakStart, breakEnd)
-    totalOverlap += overlap
+    if (workStart < workEnd) {
+      // Same-day pair
+      totalOverlap += calculateOverlap(workStart, workEnd, breakStart, breakEnd)
+    } else if (workStart > workEnd) {
+      // Cross-midnight pair — calculate overlap against both halves at
+      // the midnight boundary. (Symmetric with extractWorkPeriods.)
+      totalOverlap += calculateOverlap(workStart, 1440, breakStart, breakEnd)
+      totalOverlap += calculateOverlap(0, workEnd, breakStart, breakEnd)
+    }
+    // workStart === workEnd: zero-duration pair, skip defensively.
   }
 
   // Deduct the lesser of configured duration or actual overlap

@@ -155,8 +155,12 @@ export function validateSurchargeConfig(config: SurchargeConfig): string[] {
  * Extracts TimePeriod slices from BookingPairs.
  * Only includes complete work pairs (both in and out bookings present).
  *
+ * Cross-midnight pairs (inBooking.time > outBooking.time, e.g. 22:00 →
+ * 06:00) are split at midnight into two same-day windows — symmetric with
+ * splitOvernightSurcharge. Downstream `calculateOverlap` expects end > start.
+ *
  * @param pairs - Array of booking pairs
- * @returns Array of work periods
+ * @returns Array of work periods (may exceed `pairs.length` when cross-midnight pairs are split)
  */
 export function extractWorkPeriods(pairs: BookingPair[]): TimePeriod[] {
   const periods: TimePeriod[] = []
@@ -171,10 +175,19 @@ export function extractWorkPeriods(pairs: BookingPair[]): TimePeriod[] {
       continue
     }
 
-    periods.push({
-      start: pair.inBooking.time,
-      end: pair.outBooking.time,
-    })
+    const startTime = pair.inBooking.time
+    const endTime = pair.outBooking.time
+
+    if (startTime < endTime) {
+      // Same-day pair — emit one period
+      periods.push({ start: startTime, end: endTime })
+    } else if (startTime > endTime) {
+      // Cross-midnight pair — emit two periods at the midnight boundary
+      // so the downstream overlap calculation sees end > start.
+      periods.push({ start: startTime, end: 1440 })
+      periods.push({ start: 0, end: endTime })
+    }
+    // startTime === endTime: zero-duration pair, skip defensively.
   }
 
   return periods

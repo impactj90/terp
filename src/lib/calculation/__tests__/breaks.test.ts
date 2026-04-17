@@ -202,6 +202,37 @@ describe("deductFixedBreak", () => {
   it("overlap exceeds duration - capped", () => {
     expect(deductFixedBreak([makePair(480, 1020)], makeFixedCfg(720, 780, 30))).toBe(30)
   })
+
+  // Cross-midnight work pairs (e.g. Mon 22:00 → Tue 06:00) must deduct
+  // fixed breaks that fall into either half of the split work window.
+  describe("cross-midnight work pair", () => {
+    // Work pair 22:00–06:00 (inTime=1320 > outTime=360, overnight)
+    const overnight = () => makePair(1320, 360)
+
+    it("break 22:30–23:00 during the evening half → 30 min deduction", () => {
+      expect(
+        deductFixedBreak([overnight()], makeFixedCfg(1350, 1380, 30)),
+      ).toBe(30)
+    })
+
+    it("break 03:00–03:30 during the morning half → 30 min deduction", () => {
+      expect(
+        deductFixedBreak([overnight()], makeFixedCfg(180, 210, 30)),
+      ).toBe(30)
+    })
+
+    it("break 12:00–13:00 (noon, outside work) → 0 deduction", () => {
+      expect(
+        deductFixedBreak([overnight()], makeFixedCfg(720, 780, 60)),
+      ).toBe(0)
+    })
+
+    it("regression: same-day pair still deducts correctly", () => {
+      expect(
+        deductFixedBreak([makePair(480, 1020)], makeFixedCfg(720, 750, 30)),
+      ).toBe(30)
+    })
+  })
 })
 
 describe("calculateMinimumBreak", () => {

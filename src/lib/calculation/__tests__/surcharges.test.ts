@@ -220,6 +220,66 @@ describe("calculateSurcharges", () => {
     expect(result.surcharges).toHaveLength(1)
     expect(result.surcharges[0]!.minutes).toBe(60)
   })
+
+  // Cross-midnight: work period spans midnight and surcharge config also
+  // spans midnight. Both are pre-split (surcharge via splitOvernightSurcharge,
+  // work via extractWorkPeriods). calculateSurcharges operates on the
+  // cross-product of same-day sub-windows.
+  it("overnight 22:00-06:00 night surcharge @ 25% on 480 min night work", () => {
+    // Surcharge config pre-split into evening + morning halves
+    const configs: SurchargeConfig[] = splitOvernightSurcharge(
+      makeSurchargeConfig({
+        accountId: "night-1",
+        accountCode: "NIGHT",
+        timeFrom: 1320, // 22:00
+        timeTo: 360, // 06:00 (overnight)
+        calculationType: "percentage",
+        valueMinutes: 25,
+      }),
+    )
+    // Work period pre-split (matches extractWorkPeriods output for a
+    // Mon 22:00 → Tue 06:00 pair credited to Monday).
+    const workPeriods: TimePeriod[] = [
+      { start: 1320, end: 1440 },
+      { start: 0, end: 360 },
+    ]
+
+    const result = calculateSurcharges(workPeriods, configs, false, 0, 480)
+
+    // Two configs are produced by the split, each matches one work half.
+    // With percentage=25 on 120 min + 360 min overlap split across them,
+    // each config floors independently:
+    //   evening: floor(120 * 25 / 100) = 30
+    //   morning: floor(360 * 25 / 100) = 90
+    //   total: 120 min
+    expect(result.totalMinutes).toBe(120)
+    // Both split configs share the same accountId so we get two entries.
+    expect(result.surcharges.every((s) => s.accountId === "night-1")).toBe(true)
+    expect(
+      result.surcharges.reduce((sum, s) => sum + s.minutes, 0),
+    ).toBe(120)
+  })
+
+  it("overnight per_minute night surcharge = full night overlap minutes", () => {
+    const configs: SurchargeConfig[] = splitOvernightSurcharge(
+      makeSurchargeConfig({
+        accountId: "night-1",
+        accountCode: "NIGHT",
+        timeFrom: 1320,
+        timeTo: 360,
+        calculationType: "per_minute",
+        valueMinutes: 0,
+      }),
+    )
+    const workPeriods: TimePeriod[] = [
+      { start: 1320, end: 1440 },
+      { start: 0, end: 360 },
+    ]
+
+    const result = calculateSurcharges(workPeriods, configs, false, 0, 480)
+    // 120 + 360 = 480 min total
+    expect(result.totalMinutes).toBe(480)
+  })
 })
 
 describe("validateSurchargeConfig", () => {
@@ -370,6 +430,97 @@ describe("extractWorkPeriods", () => {
 
     const periods = extractWorkPeriods(pairs)
     expect(periods).toHaveLength(0)
+  })
+
+  // Cross-midnight coverage — symmetric with splitOvernightSurcharge.
+  // Overnight pairs (inBooking.time > outBooking.time, e.g. 22:00→06:00)
+  // must be split into two same-day windows so calculateOverlap works.
+  describe("cross-midnight", () => {
+    it("splits overnight work pair into [start,1440] + [0,end]", () => {
+      const pairs: BookingPair[] = [
+        {
+          inBooking: { id: "1", time: 1320, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "2", time: 360, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 480,
+        },
+      ]
+
+      const periods = extractWorkPeriods(pairs)
+      expect(periods).toHaveLength(2)
+      expect(periods[0]).toEqual({ start: 1320, end: 1440 })
+      expect(periods[1]).toEqual({ start: 0, end: 360 })
+    })
+
+    it("keeps same-day work pair as one period (regression guard)", () => {
+      const pairs: BookingPair[] = [
+        {
+          inBooking: { id: "1", time: 480, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "2", time: 1020, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 540,
+        },
+      ]
+
+      const periods = extractWorkPeriods(pairs)
+      expect(periods).toHaveLength(1)
+      expect(periods[0]).toEqual({ start: 480, end: 1020 })
+    })
+
+    it("handles exact-midnight end (22:00 → 24:00)", () => {
+      const pairs: BookingPair[] = [
+        {
+          inBooking: { id: "1", time: 1320, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "2", time: 0, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 120,
+        },
+      ]
+
+      const periods = extractWorkPeriods(pairs)
+      // startTime(1320) > endTime(0) → still treated as cross-midnight.
+      // Second half is [0, 0] — zero-length, harmless in calculateOverlap.
+      expect(periods).toHaveLength(2)
+      expect(periods[0]).toEqual({ start: 1320, end: 1440 })
+      expect(periods[1]).toEqual({ start: 0, end: 0 })
+    })
+
+    it("skips zero-duration work pair defensively", () => {
+      const pairs: BookingPair[] = [
+        {
+          inBooking: { id: "1", time: 480, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "2", time: 480, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 0,
+        },
+      ]
+
+      const periods = extractWorkPeriods(pairs)
+      expect(periods).toHaveLength(0)
+    })
+
+    it("mixes same-day and overnight pairs", () => {
+      const pairs: BookingPair[] = [
+        {
+          inBooking: { id: "a1", time: 480, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "a2", time: 720, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 240,
+        },
+        {
+          inBooking: { id: "b1", time: 1320, direction: "in", category: "work", pairId: null },
+          outBooking: { id: "b2", time: 360, direction: "out", category: "work", pairId: null },
+          category: "work",
+          duration: 480,
+        },
+      ]
+
+      const periods = extractWorkPeriods(pairs)
+      expect(periods).toHaveLength(3)
+      expect(periods[0]).toEqual({ start: 480, end: 720 })
+      expect(periods[1]).toEqual({ start: 1320, end: 1440 })
+      expect(periods[2]).toEqual({ start: 0, end: 360 })
+    })
   })
 })
 
