@@ -21,9 +21,9 @@ import { GET } from "../route"
 
 // --- Constants ---
 
-const TEST_TENANT_ID = "f0000000-0000-4000-a000-000000000707"
+const TEST_TENANT_ID = "f0000000-0000-4000-a000-000000000971"
 const TEST_TENANT_SLUG = "escalation-integration"
-const APPROVER_ID = "a0000000-0000-4000-a000-000000000701"
+const APPROVER_ID = "a0000000-0000-4000-a000-000000000971"
 const CRON_SECRET = "escalation-test-cron-secret"
 
 function makeRequest() {

@@ -128,16 +128,19 @@ describe("recovery codes", () => {
   })
 
   it("returns matched=false on a wrong code without mutating the list", async () => {
-    const plain = generateRecoveryCodes()
+    const plain = generateRecoveryCodes(1)
     const hashed = await hashRecoveryCodes(plain)
     const before = [...hashed]
-    const result = await consumeRecoveryCode(hashed, "ABCDE-FGHIJ")
+    const wrongCode = plain[0]!.endsWith("A")
+      ? `${plain[0]!.slice(0, -1)}B`
+      : `${plain[0]!.slice(0, -1)}A`
+    const result = await consumeRecoveryCode(hashed, wrongCode)
     expect(result.matched).toBe(false)
     expect(result.remaining).toEqual(before)
   })
 
   it("consumed code can only be used once", async () => {
-    const plain = generateRecoveryCodes()
+    const plain = generateRecoveryCodes(1)
     const hashed = await hashRecoveryCodes(plain)
 
     const first = await consumeRecoveryCode(hashed, plain[0]!)

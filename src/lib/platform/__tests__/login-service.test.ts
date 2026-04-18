@@ -374,13 +374,19 @@ describe("mfaVerifyStep", () => {
   })
 
   it("5 × bad recovery code → 6th attempt is rate-limited even with a correct password", async () => {
+    const singleStoredCode = generateRecoveryCodes(1)
+    _db.users[0]!.recoveryCodes = await hashRecoveryCodes(singleStoredCode)
+    const wrongRecoveryCode = singleStoredCode[0]!.endsWith("A")
+      ? `${singleStoredCode[0]!.slice(0, -1)}B`
+      : `${singleStoredCode[0]!.slice(0, -1)}A`
+
     // Replay the same challenge token five times with bad codes.
     for (let i = 0; i < 5; i++) {
       await expect(
         mfaVerifyStep(
           prisma,
           challengeToken,
-          { recoveryCode: "AAAAA-BBBBB" },
+          { recoveryCode: wrongRecoveryCode },
           IP,
           UA
         )

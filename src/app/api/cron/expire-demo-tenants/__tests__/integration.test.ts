@@ -27,7 +27,7 @@ const NON_DEMO_ID = "f0000000-0000-4000-a000-000000001003"
 const CRON_SECRET = "expire-demo-tenants-test-secret"
 
 const NOW = new Date("2026-04-09T12:00:00.000Z")
-const FUTURE_EXPIRES_AT = new Date("2026-04-16T12:00:00.000Z") // +7 days
+const FUTURE_EXPIRES_AT = new Date("2099-04-16T12:00:00.000Z") // remains in the future for GET(), which uses the real current date
 const PAST_EXPIRES_AT = new Date("2026-04-08T12:00:00.000Z") // -1 day
 
 function makeRequest() {
