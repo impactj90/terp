@@ -50,6 +50,7 @@ export function BankStatementHistorySheet({ open, onOpenChange }: Props) {
         }),
       )
       setConfirmId(null)
+      onOpenChange(false)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       toast.error(t('imports.deleteError', { message: msg }))

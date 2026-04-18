@@ -19,19 +19,24 @@ export function useDeleteBankStatement() {
   const queryClient = useQueryClient()
   return useMutation({
     ...trpc.bankStatements.delete.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.billing.payments.openItems.list.queryKey(),
-      })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.list.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.bankTransactions.getById.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.billing.payments.openItems.list.queryKey(),
+        }),
+      ])
     },
   })
 }
@@ -41,16 +46,21 @@ export function useImportBankStatement() {
   const queryClient = useQueryClient()
   return useMutation({
     ...trpc.bankStatements.import.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
-      })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.list.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.bankTransactions.list.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.bankStatements.bankTransactions.counts.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.billing.payments.openItems.list.queryKey(),
+        }),
+      ])
     },
   })
 }
