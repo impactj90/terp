@@ -501,6 +501,151 @@ export async function lookupPrice(
   return null
 }
 
+// --- Copy Price List ---
+
+/**
+ * Copy all entries (article-bound and itemKey-only) from one price list to another.
+ * Match-key for duplicate detection: articleId + itemKey + minQuantity.
+ * When overwrite=true, all existing entries in the target list are deleted first.
+ */
+export async function copyPriceList(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: { sourceId: string; targetId: string; overwrite?: boolean },
+  audit?: AuditContext
+) {
+  const source = await repo.findById(prisma, tenantId, input.sourceId)
+  if (!source) throw new BillingPriceListNotFoundError("Source price list not found")
+  const target = await repo.findById(prisma, tenantId, input.targetId)
+  if (!target) throw new BillingPriceListNotFoundError("Target price list not found")
+  if (source.id === target.id) {
+    throw new BillingPriceListValidationError("Source and target must differ")
+  }
+
+  const sourceEntries = await prisma.billingPriceListEntry.findMany({
+    where: { priceListId: input.sourceId },
+  })
+
+  let copied = 0
+  let skipped = 0
+
+  await prisma.$transaction(async (tx) => {
+    if (input.overwrite) {
+      await tx.billingPriceListEntry.deleteMany({
+        where: { priceListId: input.targetId },
+      })
+    }
+
+    for (const entry of sourceEntries) {
+      if (!input.overwrite) {
+        const existing = await tx.billingPriceListEntry.findFirst({
+          where: {
+            priceListId: input.targetId,
+            articleId: entry.articleId,
+            itemKey: entry.itemKey,
+            minQuantity: entry.minQuantity,
+          },
+        })
+        if (existing) {
+          skipped++
+          continue
+        }
+      }
+
+      await tx.billingPriceListEntry.create({
+        data: {
+          priceListId: input.targetId,
+          articleId: entry.articleId,
+          itemKey: entry.itemKey,
+          description: entry.description,
+          unitPrice: entry.unitPrice,
+          minQuantity: entry.minQuantity,
+          unit: entry.unit,
+          validFrom: entry.validFrom,
+          validTo: entry.validTo,
+        },
+      })
+      copied++
+    }
+  })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "copy",
+      entityType: "billing_price_list",
+      entityId: input.targetId,
+      entityName: target.name,
+      changes: {
+        sourceId: input.sourceId,
+        sourceName: source.name,
+        copied,
+        skipped,
+        overwrite: !!input.overwrite,
+      },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch((err) => console.error("[AuditLog] Failed:", err))
+  }
+
+  return { copied, skipped }
+}
+
+// --- Bulk Price Adjustment ---
+
+/**
+ * Bulk adjust all prices in a price list by a percentage.
+ * Adjusts both article-bound and itemKey-only entries — the scope is the
+ * entire price list. Users who need partial scope should split the list.
+ */
+export async function adjustPrices(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: { priceListId: string; adjustmentPercent: number },
+  audit?: AuditContext
+) {
+  const pl = await repo.findById(prisma, tenantId, input.priceListId)
+  if (!pl) throw new BillingPriceListNotFoundError()
+
+  const entries = await prisma.billingPriceListEntry.findMany({
+    where: { priceListId: input.priceListId },
+  })
+
+  const multiplier = 1 + input.adjustmentPercent / 100
+  let adjustedCount = 0
+
+  await prisma.$transaction(async (tx) => {
+    for (const entry of entries) {
+      const newPrice = Math.round(entry.unitPrice * multiplier * 100) / 100
+      await tx.billingPriceListEntry.update({
+        where: { id: entry.id },
+        data: { unitPrice: newPrice },
+      })
+      adjustedCount++
+    }
+  })
+
+  if (audit) {
+    await auditLog.log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "adjust_prices",
+      entityType: "billing_price_list",
+      entityId: input.priceListId,
+      entityName: pl.name,
+      changes: {
+        adjustmentPercent: input.adjustmentPercent,
+        adjustedCount,
+      },
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    }).catch((err) => console.error("[AuditLog] Failed:", err))
+  }
+
+  return { adjustedCount }
+}
+
 // Helper: Find best matching entry in a price list
 async function findBestEntry(
   prisma: PrismaClient,

@@ -402,4 +402,313 @@ describe("billing-price-list-service", () => {
       )
     })
   })
+
+  describe("adjustPrices", () => {
+    const ARTICLE_ID = "d0000000-0000-4000-a000-000000000001"
+
+    const mockArticleEntry = {
+      id: ENTRY_ID,
+      priceListId: PL_ID,
+      articleId: ARTICLE_ID,
+      itemKey: null,
+      description: null,
+      unitPrice: 100,
+      minQuantity: null,
+      unit: "Stk",
+      validFrom: null,
+      validTo: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const mockFreetextEntry = {
+      id: ENTRY_ID_2,
+      priceListId: PL_ID,
+      articleId: null,
+      itemKey: "beratung_std",
+      description: "Beratung pro Stunde",
+      unitPrice: 120,
+      minQuantity: null,
+      unit: "Std",
+      validFrom: null,
+      validTo: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    it("adjusts by positive percentage (+5%)", async () => {
+      const txUpdateMock = vi.fn().mockResolvedValue({ ...mockArticleEntry, unitPrice: 105 })
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(mockPriceList) },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([mockArticleEntry]),
+          update: txUpdateMock,
+        },
+      })
+
+      const result = await service.adjustPrices(prisma, TENANT_ID, {
+        priceListId: PL_ID,
+        adjustmentPercent: 5,
+      }, { userId: USER_ID, ipAddress: null, userAgent: null })
+
+      expect(result).toEqual({ adjustedCount: 1 })
+      expect(txUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { unitPrice: 105 } })
+      )
+    })
+
+    it("adjusts by negative percentage (-3%)", async () => {
+      const txUpdateMock = vi.fn().mockResolvedValue({ ...mockArticleEntry, unitPrice: 97 })
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(mockPriceList) },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([mockArticleEntry]),
+          update: txUpdateMock,
+        },
+      })
+
+      const result = await service.adjustPrices(prisma, TENANT_ID, {
+        priceListId: PL_ID,
+        adjustmentPercent: -3,
+      })
+
+      expect(result).toEqual({ adjustedCount: 1 })
+      expect(txUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { unitPrice: 97 } })
+      )
+    })
+
+    it("rounds adjusted prices to 2 decimal places", async () => {
+      // 33.33 * 1.10 = 36.663 -> should round to 36.66
+      const entry = { ...mockArticleEntry, unitPrice: 33.33 }
+      const txUpdateMock = vi.fn().mockResolvedValue(entry)
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(mockPriceList) },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([entry]),
+          update: txUpdateMock,
+        },
+      })
+
+      await service.adjustPrices(prisma, TENANT_ID, {
+        priceListId: PL_ID,
+        adjustmentPercent: 10,
+      })
+
+      expect(txUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { unitPrice: 36.66 } })
+      )
+    })
+
+    it("adjusts both article-bound and itemKey-only (freetext) entries", async () => {
+      const txUpdateMock = vi.fn().mockResolvedValue(mockFreetextEntry)
+      const findManyMock = vi.fn().mockResolvedValue([mockArticleEntry, mockFreetextEntry])
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(mockPriceList) },
+        billingPriceListEntry: {
+          findMany: findManyMock,
+          update: txUpdateMock,
+        },
+      })
+
+      const result = await service.adjustPrices(prisma, TENANT_ID, {
+        priceListId: PL_ID,
+        adjustmentPercent: 10,
+      })
+
+      expect(result).toEqual({ adjustedCount: 2 })
+      // Entry query must not filter on articleId — freetext entries are included
+      expect(findManyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { priceListId: PL_ID },
+        })
+      )
+      // Freetext entry: 120 * 1.10 = 132
+      expect(txUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: ENTRY_ID_2 },
+          data: { unitPrice: 132 },
+        })
+      )
+    })
+
+    it("rejects price list from another tenant", async () => {
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(null) },
+      })
+
+      await expect(
+        service.adjustPrices(prisma, TENANT_ID, {
+          priceListId: PL_ID,
+          adjustmentPercent: 5,
+        })
+      ).rejects.toThrow(service.BillingPriceListNotFoundError)
+    })
+  })
+
+  describe("copyPriceList", () => {
+    const ARTICLE_ID = "d0000000-0000-4000-a000-000000000001"
+    const targetList = { ...mockPriceList, id: PL_ID_2, name: "Zielliste" }
+
+    const articleEntry = {
+      id: ENTRY_ID,
+      priceListId: PL_ID,
+      articleId: ARTICLE_ID,
+      itemKey: null,
+      description: null,
+      unitPrice: 100,
+      minQuantity: null,
+      unit: "Stk",
+      validFrom: null,
+      validTo: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const freetextEntry = {
+      ...articleEntry,
+      id: ENTRY_ID_2,
+      articleId: null,
+      itemKey: "beratung_std",
+      description: "Beratung pro Stunde",
+      unitPrice: 120,
+      unit: "Std",
+    }
+
+    it("copies both article and itemKey-only entries", async () => {
+      const createMock = vi.fn().mockResolvedValue(articleEntry)
+      const findFirstEntryMock = vi.fn().mockResolvedValue(null)
+      const prisma = createMockPrisma({
+        billingPriceList: {
+          findFirst: vi.fn()
+            .mockResolvedValueOnce(mockPriceList)
+            .mockResolvedValueOnce(targetList),
+        },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([articleEntry, freetextEntry]),
+          findFirst: findFirstEntryMock,
+          create: createMock,
+        },
+      })
+
+      const result = await service.copyPriceList(prisma, TENANT_ID, {
+        sourceId: PL_ID,
+        targetId: PL_ID_2,
+      })
+
+      expect(result).toEqual({ copied: 2, skipped: 0 })
+      expect(createMock).toHaveBeenCalledTimes(2)
+      // Freetext entry carries itemKey through
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            priceListId: PL_ID_2,
+            itemKey: "beratung_std",
+            articleId: null,
+            unitPrice: 120,
+          }),
+        })
+      )
+    })
+
+    it("skips entries that already exist in target when overwrite=false", async () => {
+      const createMock = vi.fn().mockResolvedValue(articleEntry)
+      // First entry: already exists; second: not
+      const findFirstEntryMock = vi.fn()
+        .mockResolvedValueOnce({ id: "existing" })
+        .mockResolvedValueOnce(null)
+
+      const prisma = createMockPrisma({
+        billingPriceList: {
+          findFirst: vi.fn()
+            .mockResolvedValueOnce(mockPriceList)
+            .mockResolvedValueOnce(targetList),
+        },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([articleEntry, freetextEntry]),
+          findFirst: findFirstEntryMock,
+          create: createMock,
+        },
+      })
+
+      const result = await service.copyPriceList(prisma, TENANT_ID, {
+        sourceId: PL_ID,
+        targetId: PL_ID_2,
+      })
+
+      expect(result).toEqual({ copied: 1, skipped: 1 })
+      expect(createMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("deletes target entries when overwrite=true", async () => {
+      const deleteManyMock = vi.fn().mockResolvedValue({ count: 3 })
+      const prisma = createMockPrisma({
+        billingPriceList: {
+          findFirst: vi.fn()
+            .mockResolvedValueOnce(mockPriceList)
+            .mockResolvedValueOnce(targetList),
+        },
+        billingPriceListEntry: {
+          findMany: vi.fn().mockResolvedValue([articleEntry]),
+          deleteMany: deleteManyMock,
+          create: vi.fn().mockResolvedValue(articleEntry),
+        },
+      })
+
+      await service.copyPriceList(prisma, TENANT_ID, {
+        sourceId: PL_ID,
+        targetId: PL_ID_2,
+        overwrite: true,
+      })
+
+      expect(deleteManyMock).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { priceListId: PL_ID_2 } })
+      )
+    })
+
+    it("rejects when source and target are identical", async () => {
+      const prisma = createMockPrisma({
+        billingPriceList: {
+          findFirst: vi.fn().mockResolvedValue(mockPriceList),
+        },
+      })
+
+      await expect(
+        service.copyPriceList(prisma, TENANT_ID, {
+          sourceId: PL_ID,
+          targetId: PL_ID,
+        })
+      ).rejects.toThrow(service.BillingPriceListValidationError)
+    })
+
+    it("rejects when source price list is from another tenant", async () => {
+      const prisma = createMockPrisma({
+        billingPriceList: { findFirst: vi.fn().mockResolvedValue(null) },
+      })
+
+      await expect(
+        service.copyPriceList(prisma, TENANT_ID, {
+          sourceId: PL_ID,
+          targetId: PL_ID_2,
+        })
+      ).rejects.toThrow(service.BillingPriceListNotFoundError)
+    })
+
+    it("rejects when target price list is from another tenant", async () => {
+      const prisma = createMockPrisma({
+        billingPriceList: {
+          findFirst: vi.fn()
+            .mockResolvedValueOnce(mockPriceList)
+            .mockResolvedValueOnce(null),
+        },
+      })
+
+      await expect(
+        service.copyPriceList(prisma, TENANT_ID, {
+          sourceId: PL_ID,
+          targetId: PL_ID_2,
+        })
+      ).rejects.toThrow(service.BillingPriceListNotFoundError)
+    })
+  })
 })

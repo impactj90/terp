@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Pencil, Star, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, Pencil, Percent, Star, Trash2 } from 'lucide-react'
 import {
   useBillingPriceList,
   useDeleteBillingPriceList,
@@ -13,6 +13,8 @@ import {
 } from '@/hooks'
 import { PriceListFormSheet } from './price-list-form-sheet'
 import { PriceListEntriesTable } from './price-list-entries-table'
+import { PriceListBulkAdjustDialog } from './price-list-bulk-adjust-dialog'
+import { PriceListCopyDialog } from './price-list-copy-dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
@@ -49,6 +51,8 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
 
   const [showEditSheet, setShowEditSheet] = React.useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false)
+  const [showAdjustDialog, setShowAdjustDialog] = React.useState(false)
+  const [showCopyDialog, setShowCopyDialog] = React.useState(false)
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
@@ -132,6 +136,22 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
         <Button
           variant="outline"
           size="sm"
+          onClick={() => setShowAdjustDialog(true)}
+        >
+          <Percent className="h-4 w-4 mr-1" />
+          {t('adjustPrices')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCopyDialog(true)}
+        >
+          <Copy className="h-4 w-4 mr-1" />
+          {t('copyPriceList')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setShowDeleteDialog(true)}
           className="text-destructive"
         >
@@ -202,6 +222,19 @@ export function PriceListDetail({ id }: PriceListDetailProps) {
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         editItem={pl as unknown as Record<string, unknown>}
+      />
+
+      <PriceListBulkAdjustDialog
+        open={showAdjustDialog}
+        onOpenChange={setShowAdjustDialog}
+        priceListId={pl.id}
+      />
+
+      <PriceListCopyDialog
+        open={showCopyDialog}
+        onOpenChange={setShowCopyDialog}
+        sourceId={pl.id}
+        sourceName={pl.name}
       />
 
       <ConfirmDialog

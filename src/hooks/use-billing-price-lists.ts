@@ -151,6 +151,32 @@ export function useDeleteBillingPriceListEntry() {
   })
 }
 
+export function useCopyBillingPriceList() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.billing.priceLists.copyPriceList.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.entries.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.getById.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.list.queryKey() })
+    },
+  })
+}
+
+export function useAdjustBillingPrices() {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...trpc.billing.priceLists.adjustPrices.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.entries.list.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.getById.queryKey() })
+      queryClient.invalidateQueries({ queryKey: trpc.billing.priceLists.list.queryKey() })
+    },
+  })
+}
+
 export function useBulkImportBillingPriceListEntries() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()

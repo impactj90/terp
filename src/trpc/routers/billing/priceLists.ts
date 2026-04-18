@@ -308,6 +308,51 @@ export const billingPriceListsRouter = createTRPCRouter({
       }
     }),
 
+  // --- Copy Price List ---
+  copyPriceList: billingProcedure
+    .use(requirePermission(PL_MANAGE))
+    .input(
+      z.object({
+        sourceId: uuid,
+        targetId: uuid,
+        overwrite: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await priceListService.copyPriceList(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  // --- Bulk Price Adjustment ---
+  adjustPrices: billingProcedure
+    .use(requirePermission(PL_MANAGE))
+    .input(
+      z.object({
+        priceListId: uuid,
+        adjustmentPercent: z.number().min(-99).max(999),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await priceListService.adjustPrices(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input,
+          { userId: ctx.user!.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   // --- Price Lookup ---
   lookupPrice: billingProcedure
     .use(requirePermission(PL_VIEW))
