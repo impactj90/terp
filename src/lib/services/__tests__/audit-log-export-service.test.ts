@@ -189,7 +189,13 @@ describe("exportCsv", () => {
         userId: USER_ID,
         action: "export",
         entityType: "audit_log",
-        entityId: "batch",
+        // Synthetic batch UUID (randomUUID) — audit_logs.entity_id is
+        // UUID NOT NULL in Postgres, so a string literal like "batch"
+        // would be rejected and the write silently swallowed by the
+        // service's .catch().
+        entityId: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        ),
       })
     )
   })

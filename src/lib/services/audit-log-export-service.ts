@@ -5,6 +5,7 @@
  * Both formats use server-side generation and return data for direct download.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
+import { randomUUID } from "crypto"
 import * as repo from "./audit-logs-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
@@ -157,7 +158,10 @@ export async function exportCsv(
         userId: audit.userId,
         action: "export",
         entityType: "audit_log",
-        entityId: "batch",
+        // Synthetic batch ID — export is a virtual entity, not a single
+        // audit log row. `entity_id` is @db.Uuid NOT NULL, so any string
+        // literal (e.g. "batch") fails silently via the .catch() below.
+        entityId: randomUUID(),
         entityName: `Audit-Log CSV Export (${total} Eintraege)`,
         metadata: { format: "csv", filters: input, count: total },
         ipAddress: audit.ipAddress ?? null,
@@ -242,7 +246,8 @@ export async function exportPdf(
         userId: audit.userId,
         action: "export",
         entityType: "audit_log",
-        entityId: "batch",
+        // Synthetic batch ID (see CSV export above for rationale).
+        entityId: randomUUID(),
         entityName: `Audit-Log PDF Export (${total} Eintraege)`,
         metadata: { format: "pdf", filters: input, count: total },
         ipAddress: audit.ipAddress ?? null,

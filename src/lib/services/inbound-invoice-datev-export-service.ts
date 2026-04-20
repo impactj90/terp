@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client"
+import { randomUUID } from "crypto"
 import * as iconv from "iconv-lite"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
@@ -294,7 +295,10 @@ export async function exportToCsv(
         userId: audit.userId,
         action: "export",
         entityType: "inbound_invoice",
-        entityId: "batch",
+        // Synthetic batch ID — DATEV export is a virtual entity, no
+        // single invoice to link to. `entity_id` is @db.Uuid NOT NULL,
+        // so any string literal fails silently via the .catch() below.
+        entityId: randomUUID(),
         entityName: `DATEV Export (${invoices.length} Rechnungen)`,
         changes: {
           exportedInvoices: {
