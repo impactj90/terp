@@ -14,6 +14,7 @@ import { billingPaymentsRouter } from "./payments"
 import { billingPriceListsRouter } from "./priceLists"
 import { billingRecurringInvoicesRouter } from "./recurringInvoices"
 import { remindersRouter } from "./reminders"
+import { billingOutgoingInvoiceBookRouter } from "./outgoingInvoiceBook"
 
 export const billingRouter = createTRPCRouter({
   documents: billingDocumentsRouter,
@@ -24,4 +25,5 @@ export const billingRouter = createTRPCRouter({
   priceLists: billingPriceListsRouter,
   recurringInvoices: billingRecurringInvoicesRouter,
   reminders: remindersRouter,
+  outgoingInvoiceBook: billingOutgoingInvoiceBookRouter,
 })

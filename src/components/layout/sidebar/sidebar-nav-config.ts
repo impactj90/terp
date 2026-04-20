@@ -438,6 +438,13 @@ export const navConfig: NavSection[] = [
         permissions: ['billing_recurring.view'],
       },
       {
+        titleKey: 'billingOutgoingInvoiceBook',
+        href: '/orders/outgoing-invoice-book',
+        icon: BookOpen,
+        module: 'billing',
+        permissions: ['outgoing_invoice_book.view'],
+      },
+      {
         titleKey: 'billingDunning',
         href: '/orders/dunning',
         icon: AlertCircle,

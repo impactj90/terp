@@ -273,6 +273,10 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("billing_recurring.manage", "billing_recurring", "manage", "Manage recurring invoice templates"),
   p("billing_recurring.generate", "billing_recurring", "generate", "Generate invoices from recurring templates"),
 
+  // Rechnungsausgangsbuch (Outgoing Invoice Book — StB-Report)
+  p("outgoing_invoice_book.view", "outgoing_invoice_book", "view", "View Rechnungsausgangsbuch"),
+  p("outgoing_invoice_book.export", "outgoing_invoice_book", "export", "Export Rechnungsausgangsbuch PDF/CSV"),
+
   // Mahnwesen (Dunning)
   p("dunning.view", "dunning", "view", "View dunning proposal, runs, history, settings"),
   p("dunning.create", "dunning", "create", "Create dunning runs and edit draft reminders"),

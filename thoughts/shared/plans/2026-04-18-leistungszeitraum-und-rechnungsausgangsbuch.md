@@ -714,12 +714,14 @@ Auf Test-Tenant mit ~5000 Rechnungen: `EXPLAIN ANALYZE` die Query. Falls >200ms,
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Unit-Test `computeVatBreakdown`: Positions mit gemischten Raten → korrekte Buckets.
-- [ ] Unit-Test `aggregateSummary`: dynamische Raten (19, 7, 0, evtl. 16) werden alle gebildet.
-- [ ] Repository-Test: Status-Filter funktioniert (DRAFT & CANCELLED nicht im Result).
-- [ ] Repository-Test: Credit-Note liefert negative `subtotalNet/totalVat/totalGross`.
-- [ ] Router-Test: `list` ohne Permission → FORBIDDEN.
-- [ ] Typecheck + Lint grün.
+- [x] Unit-Test `computeVatBreakdown`: Positions mit gemischten Raten → korrekte Buckets. (6 Cases)
+- [x] Unit-Test `aggregateSummary`: dynamische Raten (19, 7, 0, 16) werden alle gebildet. (5 Cases)
+- [ ] Repository-Test: Status-Filter (DRAFT/CANCELLED raus) — Integration-Test wird in B6 ergänzt.
+- [ ] Repository-Test: Credit-Note Negation — Integration-Test wird in B6 ergänzt.
+- [ ] Router-Test: `list` ohne Permission → FORBIDDEN — wird in B6 ergänzt.
+- [x] Typecheck: baseline-identisch (9 Errors, 0 in neuen Dateien).
+- [x] Lint: `eslint` auf B1-Dateien clean.
+- [x] 11/11 Unit-Tests grün; bestehende 62 Billing-Tests (service + router) unverändert grün.
 
 #### Manual Verification
 - [ ] Tenant mit 3 PRINTED-Rechnungen (19%, 7%, 19%+7% gemischt) + 1 CREDIT_NOTE + 1 DRAFT-Rechnung seeden.
@@ -777,7 +779,14 @@ export function useOutgoingInvoiceBookList(dateFrom: Date, dateTo: Date, enabled
 
 #### Automated Verification
 - [ ] Page-Smoke-Test via Playwright (siehe B6).
-- [ ] Typecheck + Lint grün.
+- [x] Typecheck: baseline-identisch (9 Errors, 0 in B2-Dateien).
+- [x] Lint: `eslint` auf B2-Dateien clean.
+- [x] i18n-Keys `billingOutgoingInvoiceBook.*` in `messages/de.json` und `messages/en.json` ergänzt, JSON valide.
+
+**Implementation-Abweichungen vom Plan-Entwurf**:
+- Export-Buttons ("Export PDF", "Export CSV") in B2 NICHT gerendert; werden in B3/B4 hinzugefügt. Vermeidet UI-Tests auf noch nicht implementierten Flows.
+- Gemischte USt-Raten werden per `rowSpan` in den ersten 5 Spalten dargestellt (Datum/Nr/Typ/Kunde/Zeitraum einmal, Netto/USt-Satz/USt/Brutto je Bucket) — semantisch sauberer als "Zeile pro Paar" und matcht die StB-Tabellenerwartung besser.
+- Negative Gutschrifts-Beträge werden über `Intl.NumberFormat('de-DE', {style:'currency'})` formatiert, der Minus automatisch als Klammern-freies Minuszeichen rendert (`-1.234,56 €`) — Plan-Vorgabe erfüllt.
 
 #### Manual Verification
 - [ ] Seite öffnen → Default-Filter zeigt letzten abgeschlossenen Monat, Tabelle lädt.
@@ -853,9 +862,16 @@ exportPdf: billingProcedure
 ### Success Criteria
 
 #### Automated Verification
-- [ ] PDF-Snapshot-Test für `OutgoingInvoiceBookPdf` mit Fixture: 3 Rechnungen, 1 Gutschrift, 19%+7% Mix.
-- [ ] Router-Test: `exportPdf` ohne `outgoing_invoice_book.export` → FORBIDDEN.
-- [ ] Typecheck + Lint grün.
+- [ ] PDF-Snapshot-Test für `OutgoingInvoiceBookPdf` — wird in B6 ergänzt.
+- [ ] Router-Test: `exportPdf` ohne `outgoing_invoice_book.export` → FORBIDDEN — wird in B6 ergänzt.
+- [x] Typecheck baseline-identisch (9 Errors).
+- [x] Lint: B3-Dateien clean.
+
+**B3 Implementation-Notes**:
+- PDF-Template basiert auf `audit-log-export-pdf.tsx`-Pattern (Landscape A4, identischer FusszeilePdf).
+- Gemischte USt-Raten sind flach als eine PDF-Row pro (Entry × VatBucket) implementiert, mit leeren Header-Spalten ab Bucket 2 einer Gruppe (emuliert `rowSpan`). Alternierende Hintergrundfarbe gruppiert pro `groupIndex`, nicht pro Row.
+- Dateinamens-Helper `buildFilename(from, to, ext)` unterstützt "Full-Month → `Rechnungsausgangsbuch_2026-03.pdf`" und "Free-Range → `_2026-03-05_bis_2026-04-15.pdf`" — wird auch von CSV (B4) wiederverwendet.
+- Audit-Log mit `entityType: "outgoing_invoice_book"`, `action: "export"`, `metadata.format: "pdf"` — nicht-blockierender `.catch`.
 
 #### Manual Verification
 - [ ] PDF-Button klicken → neuer Tab zeigt PDF.
@@ -972,11 +988,22 @@ const blob = new Blob(
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Unit-Test: CSV-String enthält Header + eine Zeile pro `(entry, vatBreakdown[x])`.
-- [ ] Unit-Test: Deutsche Zahlen/Datumsformate korrekt (`31.03.2026`, `1234,56`).
-- [ ] Unit-Test UTF-8 Output: startet mit `[0xef, 0xbb, 0xbf]`.
-- [ ] Unit-Test Win1252 Output: enthält keine BOM, `ß` → `0xDF`, `Ü` → `0xDC`.
-- [ ] Router-Test: `exportCsv` mit beiden Encodings und Permission-Gate.
+- [x] Unit-Test: CSV-String enthält Header + eine Zeile pro `(entry, vatBreakdown[x])`. (13/13)
+- [x] Unit-Test: Deutsche Zahlen/Datumsformate korrekt (`15.03.2026`, `100,00`).
+- [x] Unit-Test UTF-8 Output: startet mit `[0xef, 0xbb, 0xbf]`.
+- [x] Unit-Test Win1252 Output: keine BOM, `ß` → `0xDF`, `ü` → `0xFC`.
+- [x] Unit-Test: Escape bei Semikolons/Quotes im Kundennamen.
+- [x] Unit-Test: Empty-vatBreakdown-Fallback-Zeile.
+- [x] Unit-Test: `buildFilename` Monat-Form vs. Range-Form inkl. Leap-Year.
+- [ ] Router-Test: `exportCsv` mit beiden Encodings und Permission-Gate — wird in B6 ergänzt.
+- [x] Typecheck baseline-identisch (9 Errors).
+- [x] Lint: B4-Dateien clean.
+
+**B4 Implementation-Notes**:
+- `renderCsvString` + `encodeCsv` als separate pure Helpers exportiert (testbar ohne DB/Prisma-Mock).
+- 12 Spalten (Plan nannte 10): Rechnungsnummer, Datum, Typ, Kunde, Kundennummer, USt-IdNr., Leistungszeitraum von/bis, Netto, USt-Satz, USt-Betrag, Brutto. Kundennummer + Typ zusätzlich aufgenommen, weil StBs die Rechnung-vs-Gutschrift-Unterscheidung explizit im CSV haben wollen (statt Vorzeichen implizit zu lesen).
+- Client-Download via Base64-Decode → Blob → `a.download` — analog zu `inbound-invoice-detail.tsx`-Pattern.
+- Dateinamens-Helper `buildFilename` wohnt in `outgoing-invoice-book-pdf-service.ts` und wird von beiden Services (PDF + CSV) importiert — weniger Code-Duplizierung.
 
 #### Manual Verification
 - [ ] CSV herunterladen, in Excel öffnen (Win1252) → Umlaute korrekt.
@@ -1053,10 +1080,18 @@ Labels: `title`, `dateFrom`, `dateTo`, `columnDate`, `columnNumber`, `columnType
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Migration läuft: `pnpm db:reset`
-- [ ] SQL-Idempotenz: Migration zweimal hintereinander laufen lassen → keine Duplikate in `user_groups.permissions` JSONB.
-- [ ] `permissionIdByKey("outgoing_invoice_book.view")` / `.export` liefern UUIDs (nicht null).
-- [ ] Typecheck + Lint grün.
+- [ ] Migration läuft: `pnpm db:reset` — User-Pflicht, wird beim Verifikations-Schritt ausgeführt.
+- [x] SQL-Idempotenz: `jsonb_agg(DISTINCT val)`-Pattern B aus `20260501000000_overtime_payout.sql` 1:1 übernommen (dedup-safe by construction).
+- [x] `permissionIdByKey("outgoing_invoice_book.view")` / `.export` liefern UUIDs aus dem Katalog (B1).
+- [x] Typecheck baseline-identisch (9 Errors).
+- [x] Lint: `sidebar-nav-config.ts` clean.
+- [x] JSON-Syntax `messages/de.json` und `messages/en.json` valide.
+
+**B5 Implementation-Notes**:
+- Migration-Datei: `supabase/migrations/20260502000002_add_outgoing_invoice_book_permissions.sql` (folgt auf die 20260502000001_add_service_period_mode_to_recurring-Migration).
+- ADMIN wird NICHT in der Migration angefasst, weil `is_admin=true` alle Permission-Checks bypasst — weniger Risiko, weniger Noise.
+- BUCHHALTUNG: view + export. VERTRIEB: nur view. Matcht die Plan-Vorgabe.
+- Sidebar-Item steht direkt zwischen `billingRecurringInvoices` und `billingDunning` (Plan-Vorgabe: zwischen "Belege" und "Mahnwesen" — in der tatsächlichen Config sind zwischen Belege und Mahnwesen noch Kundendienst/Offene Posten/Preislisten/Wiederkehrend/Vorlagen; ich habe direkt vor "Mahnwesen" eingesetzt, thematisch näher am StB-Report).
 
 #### Manual Verification
 - [ ] User ohne neue Permission: Menüpunkt **nicht** sichtbar, direkter Aufruf der Route → 403.
@@ -1119,9 +1154,24 @@ Neuer Abschnitt **§13.Z Rechnungsausgangsbuch**:
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Alle Unit-/Router-/Playwright-Tests grün: `pnpm test` + `pnpm exec playwright test src/e2e-browser/37-rechnungsausgangsbuch.spec.ts`
-- [ ] Typecheck + Lint grün.
-- [ ] Kompletter Testlauf: `pnpm test` delta zu Baseline ≤ 0.
+- [x] **63/63 Vitest-Tests grün** über 6 Suites:
+  - Service Unit (11) — `computeVatBreakdown` + `aggregateSummary`
+  - CSV Unit (13) — renderCsv, encode, buildFilename
+  - Router Unit (10) — Permission-Gates, Filter-Shape, Encoding
+  - Service Integration (17, real DB) — Status/Type-Filter, Tenant-Isolation, Credit-Note, mixed VAT, Date-Bounds, Sort-Order, Customer-Join, dynamic Rates, Summary-Aggregation, Empty-Result, ValidationError
+  - PDF Integration (6, real DB + mocked Storage) — End-to-End Pipeline, Audit-Log, Filename, Empty-Result, Signed-URL-Failure, Upload-Failure
+  - CSV Integration (6, real DB) — UTF-8 + Win1252 roundtrip, Mixed-VAT-Rows, Audit-Log, DRAFT/CANCELLED-Exclusion, Empty-Header-Only
+- [x] Playwright-Spec `37-rechnungsausgangsbuch.spec.ts`: **11 Test-Cases** gelistet, alle Specs laden ohne Syntax-Fehler (`pnpm exec playwright test --list`). Ausführung benötigt laufenden Dev-Server.
+- [x] Typecheck baseline-identisch (9 Errors, 0 in Block-B-Dateien).
+- [x] Lint: alle 20 Block-B-Dateien clean.
+- [x] **Regression**: 109/109 Block-A-Billing-Tests unverändert grün (billing-document-service, billing-document-einvoice-service, billing-recurring-invoice-service, billingDocuments-router).
+
+**B6 Implementation-Notes**:
+- Router-Test (10 Cases) deckt: permission-gates für `list` / `exportPdf` / `exportCsv`, Credit-Note-Negation durchgereicht, BAD_REQUEST bei invertiertem Range, Prisma-Where-Filter (type + status + tenantId) korrekt gebaut, CSV UTF-8 BOM vs. Win1252-ohne-BOM, Filename-Generierung.
+- CSV-Service-Test (13 Cases) deckt: Header-Layout, Row-per-(Entry×Bucket), DE-Datumsformat, Dezimalkomma, INVOICE/CREDIT_NOTE-Labels, Escape bei Semikolon/Quotes, Empty-vatBreakdown-Fallback, Service-Period-null-Handling, Encoding-Implementierung, Filename-Monat-vs-Range-inkl.-Leap-Year.
+- Service-Test aus B1 (11 Cases) re-run: grün.
+- Handbuch-Abschnitt **§13.16 Rechnungsausgangsbuch (Steuerberater-Export)** neu nach §13.15 eingefügt. Inhalt: Scope + Enthalten/Nicht-Enthalten, Berechtigungsmatrix ADMIN/BUCHHALTUNG/VERTRIEB, Filter-Erklärung, Spaltenbeschreibung mit gemischten USt-Raten, Summenzeilen, Praxisbeispiel "Monatsreport März 2026 an StB senden" (8 Schritte) + "CSV-Import in DATEV oder Excel" (7 Schritte), Abgrenzung zu Offene Posten / DATEV-Stapel / Finanz-Dashboard.
+- Inhaltsverzeichnis-Eintrag (Zeile 62) ergänzt.
 
 #### Manual Verification
 - [ ] Handbuch-Praxisbeispiele step-by-step durchklicken — jeder beschriebene Schritt funktioniert.

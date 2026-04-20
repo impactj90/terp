@@ -864,6 +864,13 @@ export {
   useCancelBillingPayment,
 } from './use-billing-payments'
 
+// Rechnungsausgangsbuch (Outgoing Invoice Book)
+export {
+  useOutgoingInvoiceBookList,
+  useExportOutgoingInvoiceBookPdf,
+  useExportOutgoingInvoiceBookCsv,
+} from './use-outgoing-invoice-book'
+
 // Inbound Invoice Payments
 export {
   useInboundInvoicePayments,

@@ -60,6 +60,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
     - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
     - [13.15 Leistungszeitraum (§14 UStG)](#1315-leistungszeitraum-14-ustg)
+    - [13.16 Rechnungsausgangsbuch (Steuerberater-Export)](#1316-rechnungsausgangsbuch-steuerberater-export)
 14. [Lagerverwaltung — Artikelstamm](#14-lagerverwaltung--artikelstamm)
     - [14.1 Artikelliste](#141-artikelliste)
     - [14.2 Artikeldetailseite](#142-artikeldetailseite)
@@ -6895,6 +6896,98 @@ Sobald entweder ein Leistungszeitraum-Feld oder `Liefertermin` gesetzt wird, ver
 8. ✅ Rechnung abgeschlossen
 9. **"PDF herunterladen"** zeigt unter dem Rechnungsdatum: *Leistungszeitraum: 01.03.2026 – 31.03.2026*
 10. Bei aktivierter E-Rechnung enthaelt das eingebettete XML zusaetzlich `cac:InvoicePeriod`
+
+---
+
+### 13.16 Rechnungsausgangsbuch (Steuerberater-Export)
+
+**Was ist es?** Eine tabellarische Zusammenstellung aller finalisierten Ausgangsrechnungen und Gutschriften in einem gewaehlten Zeitraum, mit USt-Aufschluesselung und Ein-Klick-Export als PDF und CSV. Das Rechnungsausgangsbuch ersetzt das manuelle Abtippen von Rechnungen in die Umsatzsteuer-Voranmeldung.
+
+**Wozu dient es?** Steuerberater fordern monatlich eine geordnete Liste aller ausgestellten Rechnungen mit Netto-, USt- und Brutto-Summen pro USt-Satz. Terp liefert diese Liste fuer jeden Monat (oder freien Zeitraum) per Knopfdruck.
+
+**Enthalten sind:**
+- Finalisierte Rechnungen (Status `PRINTED` / `FORWARDED`)
+- Finalisierte Gutschriften (als negative Betraege)
+- **NICHT enthalten**: Angebote, Lieferscheine, Auftragsbestaetigungen, Entwuerfe (`DRAFT`), Stornierungen (`CANCELLED`)
+
+#### Zugriff & Berechtigung
+
+📍 Auftraege > **Rechnungsausgangsbuch**
+
+| Gruppe        | Anzeigen | Export PDF/CSV |
+|---------------|---------|----------------|
+| ADMIN         | ✅      | ✅             |
+| BUCHHALTUNG   | ✅      | ✅             |
+| VERTRIEB      | ✅      | ❌             |
+| Andere        | ❌      | ❌             |
+
+Die zugehoerigen Berechtigungen heissen `outgoing_invoice_book.view` und `outgoing_invoice_book.export`.
+
+#### Filter
+
+- **Von / Bis**: Zwei Datumseingaben mit Kalenderpicker. Inklusiv bounds.
+- **Schnellauswahl-Buttons**:
+  - **Vormonat** — letzter vollstaendig abgeschlossener Monat (Standard beim Oeffnen der Seite).
+  - **Aktueller Monat** — 1. des laufenden Monats bis letzter Tag des Monats.
+  - **Aktuelles Jahr** — 1. Januar bis 31. Dezember des laufenden Jahres.
+
+#### Tabellen-Spalten
+
+| Spalte | Beschreibung |
+|--------|---|
+| Datum | `documentDate` der Rechnung |
+| Nummer | Belegnummer (z. B. `RE-42`) |
+| Typ | Rechnung oder Gutschrift |
+| Kunde | Firmenname aus der verknuepften CRM-Adresse |
+| Leistungszeitraum | `servicePeriodFrom – servicePeriodTo`, oder `—` wenn leer |
+| Netto, USt-Satz, USt, Brutto | Pro USt-Satz im Beleg je eine Zeile |
+
+Bei gemischten USt-Saetzen (z. B. 19 % + 7 %) wird der Beleg in mehreren Zeilen dargestellt — einmal je Steuersatz.
+
+#### Summenzeilen
+
+Am Ende der Tabelle:
+- Je USt-Satz eine **Summenzeile** (z. B. "Summe 19 %: Netto / USt / Brutto").
+- Eine fett gesetzte **Gesamt-Zeile** mit Netto-/USt-/Brutto-Gesamtsummen.
+
+#### Praxisbeispiel: Monatsreport Maerz 2026 als PDF an den Steuerberater
+
+📍 Auftraege > **Rechnungsausgangsbuch**
+
+1. Anmelden als User mit `BUCHHALTUNG`-Gruppe
+2. Seitenleiste: **Fakturierung > Rechnungsausgangsbuch**
+3. Schnellauswahl-Button **"Vormonat"** klicken (Annahme: heute ist April → Filter wird auf `01.03.2026 – 31.03.2026` gesetzt)
+4. Tabelle zeigt alle PRINTED-Rechnungen + Gutschriften des Monats Maerz
+5. Klick auf **"Export PDF"**
+6. Neuer Browser-Tab oeffnet die PDF-Datei (Signed URL, 60 s gueltig)
+7. PDF enthaelt: Briefkopf (Logo, Firmenname), Zeitraum-Header, Tabelle, Summenblock pro USt-Satz, Gesamt-Zeile, Fusszeile
+8. PDF speichern und als Anhang per E-Mail an den Steuerberater senden
+
+#### Praxisbeispiel: CSV-Import in DATEV oder Excel
+
+📍 Auftraege > **Rechnungsausgangsbuch**
+
+1. Zeitraum einstellen (z. B. "Vormonat")
+2. Button **"Export CSV"** klicken
+3. Dropdown zeigt zwei Optionen:
+   - **UTF-8 (Standard)** — fuer LibreOffice, moderne Excel-Versionen, cloud-basierte Tools
+   - **Windows-1252 (Excel/DATEV)** — fuer aeltere Excel-Versionen und DATEV-Importer, die UTF-8 nicht zuverlaessig lesen
+4. Gewuenschtes Encoding anklicken → CSV-Datei wird heruntergeladen
+5. Dateiname: `Rechnungsausgangsbuch_2026-03.csv` bei Monatsexport, sonst `Rechnungsausgangsbuch_2026-03-15_bis_2026-04-15.csv`
+6. CSV enthaelt Spalten: Rechnungsnummer, Datum, Typ, Kunde, Kundennummer, USt-IdNr., Leistungszeitraum von/bis, Netto, USt-Satz, USt-Betrag, Brutto
+7. Semikolon-getrennt (deutsches Excel-Standardformat), Zahlen mit Komma als Dezimaltrennzeichen, Datumsformat `TT.MM.JJJJ`
+
+#### Was das Rechnungsausgangsbuch NICHT ist
+
+- **Keine Liste offener Posten** — dafuer gibt es das Modul **Offene Posten** unter Fakturierung.
+- **Kein DATEV-Buchungsstapel** — der StB bekommt eine Liste, kein Buchungsstapel im DATEV-EXTF-Format. Das Eingangsrechnungs-Modul hat einen solchen Stapel fuer Eingangsrechnungen; ein analoger Debitoren-Stapel fuer Ausgangsrechnungen ist ein separates Ticket.
+- **Kein Finanz-Dashboard** — KPIs, OPOS-Aging, Umsatz-Grafiken gehoeren ins separate Finanz-Dashboard (Ticket ZMI-164).
+
+#### Hinweise zur Praxis
+
+- Die Liste sortiert nach `Datum` aufsteigend, dann nach Belegnummer. Das matcht die Reihenfolge, die Steuerberater im Buchungsjournal erwarten.
+- Gutschriften werden mit **negativen** Betraegen angezeigt (sowohl in der Tabelle als auch im PDF / CSV). Dadurch ergibt die Gesamtsumme automatisch den korrekten Netto-Umsatz nach Gutschriften.
+- Jeder Export wird im Audit-Log mitgeschrieben (`action=export`, `entityType=outgoing_invoice_book`).
 
 ---
 
