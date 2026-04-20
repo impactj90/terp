@@ -113,7 +113,7 @@ function buildPaymentTermsNote(
 }
 
 // Build the UBL-namespaced JSON that @e-invoice-eu/core expects
-function buildInvoiceData(
+export function buildInvoiceData(
   doc: BillingDocument & { positions: BillingDocumentPosition[] },
   tenantConfig: BillingTenantConfig,
   address: CrmAddress
@@ -226,6 +226,22 @@ function buildInvoiceData(
       "cbc:InvoiceTypeCode": typeCode,
       "cbc:DocumentCurrencyCode": "EUR",
       ...(address.leitwegId ? { "cbc:BuyerReference": address.leitwegId } : {}),
+
+      // §14 UStG Leistungszeitraum — BT-73 (StartDate) / BT-74 (EndDate).
+      // Only emitted when at least one of the two is set; each sub-tag is
+      // conditionally included so the EN16931 schema stays happy.
+      ...(doc.servicePeriodFrom || doc.servicePeriodTo
+        ? {
+            "cac:InvoicePeriod": {
+              ...(doc.servicePeriodFrom
+                ? { "cbc:StartDate": formatDate(doc.servicePeriodFrom) }
+                : {}),
+              ...(doc.servicePeriodTo
+                ? { "cbc:EndDate": formatDate(doc.servicePeriodTo) }
+                : {}),
+            },
+          }
+        : {}),
 
       "cac:AccountingSupplierParty": {
         "cac:Party": {

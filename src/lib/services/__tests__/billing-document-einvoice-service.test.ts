@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { validateEInvoiceRequirements } from "../billing-document-einvoice-service"
+import { validateEInvoiceRequirements, buildInvoiceData } from "../billing-document-einvoice-service"
 import type { BillingTenantConfig, BillingDocument, BillingDocumentPosition, CrmAddress } from "@/generated/prisma/client"
 
 const TENANT_ID = "a0000000-0000-4000-a000-000000000100"
@@ -235,6 +235,61 @@ describe("billing-document-einvoice-service", () => {
         makeAddress()
       )
       expect(result).toContain("Mindestens eine Artikelposition")
+    })
+  })
+
+  describe("buildInvoiceData — cac:InvoicePeriod (§14 UStG BT-73/74)", () => {
+    // Helper: peek at the inner ubl:Invoice object regardless of how the
+    // library-facing cast hides it from the compiler.
+    function ublInvoice(
+      result: ReturnType<typeof buildInvoiceData>,
+    ): Record<string, unknown> {
+      return (result as unknown as { "ubl:Invoice": Record<string, unknown> })[
+        "ubl:Invoice"
+      ]
+    }
+
+    it("emits both StartDate and EndDate when both fields are set", () => {
+      const doc = makeDocument({
+        servicePeriodFrom: new Date("2026-03-01"),
+        servicePeriodTo: new Date("2026-03-31"),
+      })
+      const result = buildInvoiceData(doc, makeTenantConfig(), makeAddress())
+      const inv = ublInvoice(result)
+      expect(inv["cac:InvoicePeriod"]).toEqual({
+        "cbc:StartDate": "2026-03-01",
+        "cbc:EndDate": "2026-03-31",
+      })
+    })
+
+    it("emits only StartDate when only servicePeriodFrom is set", () => {
+      const doc = makeDocument({
+        servicePeriodFrom: new Date("2026-03-01"),
+        servicePeriodTo: null,
+      })
+      const result = buildInvoiceData(doc, makeTenantConfig(), makeAddress())
+      const inv = ublInvoice(result)
+      expect(inv["cac:InvoicePeriod"]).toEqual({ "cbc:StartDate": "2026-03-01" })
+    })
+
+    it("emits only EndDate when only servicePeriodTo is set", () => {
+      const doc = makeDocument({
+        servicePeriodFrom: null,
+        servicePeriodTo: new Date("2026-03-31"),
+      })
+      const result = buildInvoiceData(doc, makeTenantConfig(), makeAddress())
+      const inv = ublInvoice(result)
+      expect(inv["cac:InvoicePeriod"]).toEqual({ "cbc:EndDate": "2026-03-31" })
+    })
+
+    it("omits cac:InvoicePeriod entirely when both fields are null", () => {
+      const doc = makeDocument({
+        servicePeriodFrom: null,
+        servicePeriodTo: null,
+      })
+      const result = buildInvoiceData(doc, makeTenantConfig(), makeAddress())
+      const inv = ublInvoice(result)
+      expect(inv).not.toHaveProperty("cac:InvoicePeriod")
     })
   })
 })

@@ -60,6 +60,8 @@ export async function generateAndStorePdf(
       documentDate: doc.documentDate,
       deliveryDate: doc.deliveryDate,
       orderDate: doc.orderDate,
+      servicePeriodFrom: (doc as Record<string, unknown>).servicePeriodFrom as Date | string | null,
+      servicePeriodTo: (doc as Record<string, unknown>).servicePeriodTo as Date | string | null,
       headerText: (doc as Record<string, unknown>).headerText as string | null,
       footerText: (doc as Record<string, unknown>).footerText as string | null,
       subtotalNet: doc.subtotalNet,

@@ -677,4 +677,162 @@ describe("billing-document-service", () => {
       expect(result.totalGross).toBe(410.5)
     })
   })
+
+  describe("validateServicePeriod", () => {
+    it("accepts both values null", () => {
+      expect(() => service.validateServicePeriod(null, null)).not.toThrow()
+    })
+
+    it("accepts only from", () => {
+      expect(() => service.validateServicePeriod(new Date("2026-03-01"), null)).not.toThrow()
+    })
+
+    it("accepts only to", () => {
+      expect(() => service.validateServicePeriod(null, new Date("2026-03-31"))).not.toThrow()
+    })
+
+    it("accepts from == to (single-day period)", () => {
+      const d = new Date("2026-03-15")
+      expect(() => service.validateServicePeriod(d, d)).not.toThrow()
+    })
+
+    it("accepts from < to", () => {
+      expect(() => service.validateServicePeriod(
+        new Date("2026-03-01"),
+        new Date("2026-03-31"),
+      )).not.toThrow()
+    })
+
+    it("rejects from > to", () => {
+      expect(() => service.validateServicePeriod(
+        new Date("2026-03-31"),
+        new Date("2026-03-01"),
+      )).toThrow("servicePeriodFrom muss ≤ servicePeriodTo sein")
+    })
+  })
+
+  describe("create with servicePeriod", () => {
+    it("persists servicePeriodFrom/To on new document", async () => {
+      const prisma = createMockPrisma()
+      ;(prisma.crmAddress.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockAddress)
+      ;(prisma.numberSequence.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({
+        prefix: "R-",
+        nextValue: 2,
+      })
+      ;(prisma.billingDocument.create as ReturnType<typeof vi.fn>).mockImplementation(
+        ({ data }: { data: Record<string, unknown> }) => Promise.resolve({ ...mockDocument, ...data })
+      )
+
+      const from = new Date("2026-03-01")
+      const to = new Date("2026-03-31")
+      await service.create(
+        prisma,
+        TENANT_ID,
+        {
+          type: "INVOICE",
+          addressId: ADDRESS_ID,
+          servicePeriodFrom: from,
+          servicePeriodTo: to,
+        },
+        USER_ID,
+        AUDIT,
+      )
+
+      expect(prisma.billingDocument.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            servicePeriodFrom: from,
+            servicePeriodTo: to,
+          }),
+        }),
+      )
+    })
+
+    it("rejects when servicePeriodFrom > servicePeriodTo", async () => {
+      const prisma = createMockPrisma()
+      await expect(
+        service.create(
+          prisma,
+          TENANT_ID,
+          {
+            type: "INVOICE",
+            addressId: ADDRESS_ID,
+            servicePeriodFrom: new Date("2026-03-31"),
+            servicePeriodTo: new Date("2026-03-01"),
+          },
+          USER_ID,
+          AUDIT,
+        ),
+      ).rejects.toThrow("servicePeriodFrom muss ≤ servicePeriodTo sein")
+    })
+  })
+
+  describe("update with servicePeriod", () => {
+    it("persists servicePeriodFrom/To on existing draft", async () => {
+      const prisma = createMockPrisma()
+      const updated = {
+        ...mockDocument,
+        servicePeriodFrom: new Date("2026-03-01"),
+        servicePeriodTo: new Date("2026-03-31"),
+      }
+      ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockDocument)
+        .mockResolvedValueOnce(updated)
+      ;(prisma.billingDocument.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
+
+      const result = await service.update(
+        prisma,
+        TENANT_ID,
+        {
+          id: DOC_ID,
+          servicePeriodFrom: new Date("2026-03-01"),
+          servicePeriodTo: new Date("2026-03-31"),
+        },
+        AUDIT,
+      )
+
+      expect(result?.servicePeriodFrom).toEqual(new Date("2026-03-01"))
+      expect(result?.servicePeriodTo).toEqual(new Date("2026-03-31"))
+    })
+
+    it("rejects when incoming range is inverted", async () => {
+      const prisma = createMockPrisma()
+      ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocument)
+
+      await expect(
+        service.update(
+          prisma,
+          TENANT_ID,
+          {
+            id: DOC_ID,
+            servicePeriodFrom: new Date("2026-03-31"),
+            servicePeriodTo: new Date("2026-03-01"),
+          },
+          AUDIT,
+        ),
+      ).rejects.toThrow("servicePeriodFrom muss ≤ servicePeriodTo sein")
+    })
+
+    it("rejects when only servicePeriodFrom is changed and crosses existing servicePeriodTo", async () => {
+      const prisma = createMockPrisma()
+      // Existing doc already has servicePeriodTo = 2026-03-31, user sends from = 2026-04-01
+      ;(prisma.billingDocument.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockDocument,
+        servicePeriodFrom: new Date("2026-03-01"),
+        servicePeriodTo: new Date("2026-03-31"),
+      })
+
+      await expect(
+        service.update(
+          prisma,
+          TENANT_ID,
+          {
+            id: DOC_ID,
+            servicePeriodFrom: new Date("2026-04-01"),
+          },
+          AUDIT,
+        ),
+      ).rejects.toThrow("servicePeriodFrom muss ≤ servicePeriodTo sein")
+    })
+  })
 })

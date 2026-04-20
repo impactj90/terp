@@ -1,4 +1,8 @@
-import type { PrismaClient, BillingRecurringInterval } from "@/generated/prisma/client"
+import type {
+  PrismaClient,
+  BillingRecurringInterval,
+  BillingRecurringServicePeriodMode,
+} from "@/generated/prisma/client"
 import * as repo from "./billing-recurring-invoice-repository"
 import * as billingDocRepo from "./billing-document-repository"
 import * as billingDocService from "./billing-document-service"
@@ -44,6 +48,70 @@ export function calculateNextDueDate(
   return next
 }
 
+// --- Pure Helper: calculateServicePeriod (exported for unit testing) ---
+//
+// Computes the §14 UStG Leistungszeitraum [from, to] for an invoice generated
+// from a recurring template. `documentDate` is typically `template.nextDueDate`.
+//
+// - IN_ARREARS (default): the interval BEFORE documentDate is billed.
+//   e.g. generate on 2026-04-01 MONTHLY → 2026-03-01 .. 2026-03-31.
+// - IN_ADVANCE: the interval STARTING ON documentDate is billed.
+//   e.g. generate on 2026-04-01 MONTHLY → 2026-04-01 .. 2026-04-30.
+//
+// Uses local-date arithmetic (not UTC) so DST boundaries don't shift the day.
+
+export function calculateServicePeriod(
+  documentDate: Date,
+  interval: BillingRecurringInterval,
+  mode: BillingRecurringServicePeriodMode,
+): { from: Date; to: Date } {
+  const reference = mode === "IN_ARREARS"
+    ? shiftByInterval(documentDate, interval, -1)
+    : documentDate
+  return intervalBounds(reference, interval)
+}
+
+function shiftByInterval(d: Date, interval: BillingRecurringInterval, direction: 1 | -1): Date {
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  switch (interval) {
+    case "MONTHLY":
+      next.setMonth(next.getMonth() + direction)
+      break
+    case "QUARTERLY":
+      next.setMonth(next.getMonth() + 3 * direction)
+      break
+    case "SEMI_ANNUALLY":
+      next.setMonth(next.getMonth() + 6 * direction)
+      break
+    case "ANNUALLY":
+      next.setFullYear(next.getFullYear() + direction)
+      break
+  }
+  return next
+}
+
+function intervalBounds(
+  d: Date,
+  interval: BillingRecurringInterval,
+): { from: Date; to: Date } {
+  const y = d.getFullYear()
+  const m = d.getMonth()
+  switch (interval) {
+    case "MONTHLY":
+      return { from: new Date(y, m, 1), to: new Date(y, m + 1, 0) }
+    case "QUARTERLY": {
+      const q = Math.floor(m / 3)
+      return { from: new Date(y, q * 3, 1), to: new Date(y, q * 3 + 3, 0) }
+    }
+    case "SEMI_ANNUALLY": {
+      const h = m < 6 ? 0 : 6
+      return { from: new Date(y, h, 1), to: new Date(y, h + 6, 0) }
+    }
+    case "ANNUALLY":
+      return { from: new Date(y, 0, 1), to: new Date(y, 11, 31) }
+  }
+}
+
 // --- Helper: calculate position totalPrice ---
 
 function calculatePositionTotal(
@@ -59,7 +127,8 @@ function calculatePositionTotal(
 }
 
 const RECURRING_INVOICE_TRACKED_FIELDS = [
-  "name", "contactId", "interval", "startDate", "endDate",
+  "name", "contactId", "interval", "servicePeriodMode",
+  "startDate", "endDate",
   "autoGenerate", "isActive", "deliveryType", "deliveryTerms",
   "paymentTermDays", "discountPercent", "discountDays",
   "notes", "internalNotes",
@@ -99,6 +168,7 @@ export async function create(
     addressId: string
     contactId?: string
     interval: BillingRecurringInterval
+    servicePeriodMode?: BillingRecurringServicePeriodMode
     startDate: Date
     endDate?: Date
     autoGenerate?: boolean
@@ -158,6 +228,7 @@ export async function create(
     addressId: input.addressId,
     contactId: input.contactId || null,
     interval: input.interval,
+    servicePeriodMode: input.servicePeriodMode ?? "IN_ARREARS",
     startDate: input.startDate,
     endDate: input.endDate || null,
     nextDueDate: input.startDate, // First due date = start date
@@ -193,6 +264,7 @@ export async function update(
     name?: string
     contactId?: string | null
     interval?: BillingRecurringInterval
+    servicePeriodMode?: BillingRecurringServicePeriodMode
     startDate?: Date
     endDate?: Date | null
     autoGenerate?: boolean
@@ -212,7 +284,8 @@ export async function update(
 
   const data: Record<string, unknown> = {}
   const fields = [
-    "name", "contactId", "interval", "startDate", "endDate",
+    "name", "contactId", "interval", "servicePeriodMode",
+    "startDate", "endDate",
     "autoGenerate", "deliveryType", "deliveryTerms",
     "paymentTermDays", "discountPercent", "discountDays",
     "notes", "internalNotes", "positionTemplate",
@@ -340,7 +413,14 @@ export async function generate(
     // 1. Generate invoice number
     const number = await numberSeqService.getNextNumber(tx, tenantId, "invoice")
 
-    // 2. Create BillingDocument of type INVOICE
+    // 2. Compute §14 UStG Leistungszeitraum from template mode + interval
+    const servicePeriod = calculateServicePeriod(
+      template.nextDueDate,
+      template.interval,
+      template.servicePeriodMode,
+    )
+
+    // 3. Create BillingDocument of type INVOICE
     const invoiceDoc = await billingDocRepo.create(tx, {
       tenantId,
       number,
@@ -348,6 +428,8 @@ export async function generate(
       addressId: template.addressId,
       contactId: template.contactId,
       documentDate: template.nextDueDate,
+      servicePeriodFrom: servicePeriod.from,
+      servicePeriodTo: servicePeriod.to,
       deliveryType: template.deliveryType,
       deliveryTerms: template.deliveryTerms,
       paymentTermDays: template.paymentTermDays,

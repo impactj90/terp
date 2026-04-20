@@ -16,6 +16,7 @@ const mockTemplate = {
   addressId: ADDRESS_ID,
   contactId: null,
   interval: "MONTHLY" as const,
+  servicePeriodMode: "IN_ARREARS" as const,
   startDate: new Date("2026-01-01"),
   endDate: null,
   nextDueDate: new Date("2026-03-01"),
@@ -101,6 +102,73 @@ describe("billing-recurring-invoice-service", () => {
       const result = service.calculateNextDueDate(new Date("2026-01-01"), "ANNUALLY")
       expect(result.getFullYear()).toBe(2027)
       expect(result.getMonth()).toBe(0) // January
+    })
+  })
+
+  // --- calculateServicePeriod ---
+  describe("calculateServicePeriod", () => {
+    function parts(d: Date) {
+      return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() }
+    }
+
+    it("MONTHLY / IN_ARREARS: April generates period = previous month", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 3, 1), "MONTHLY", "IN_ARREARS")
+      expect(parts(from)).toEqual({ y: 2026, m: 3, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 3, d: 31 })
+    })
+
+    it("MONTHLY / IN_ADVANCE: April generates period = April", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 3, 1), "MONTHLY", "IN_ADVANCE")
+      expect(parts(from)).toEqual({ y: 2026, m: 4, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 4, d: 30 })
+    })
+
+    it("QUARTERLY / IN_ARREARS: April generates Q1 (Jan–Mar)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 3, 1), "QUARTERLY", "IN_ARREARS")
+      expect(parts(from)).toEqual({ y: 2026, m: 1, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 3, d: 31 })
+    })
+
+    it("QUARTERLY / IN_ADVANCE: April generates Q2 (Apr–Jun)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 3, 1), "QUARTERLY", "IN_ADVANCE")
+      expect(parts(from)).toEqual({ y: 2026, m: 4, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 6, d: 30 })
+    })
+
+    it("SEMI_ANNUALLY / IN_ARREARS: July generates H1 (Jan–Jun)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 6, 1), "SEMI_ANNUALLY", "IN_ARREARS")
+      expect(parts(from)).toEqual({ y: 2026, m: 1, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 6, d: 30 })
+    })
+
+    it("SEMI_ANNUALLY / IN_ADVANCE: July generates H2 (Jul–Dec)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 6, 1), "SEMI_ANNUALLY", "IN_ADVANCE")
+      expect(parts(from)).toEqual({ y: 2026, m: 7, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 12, d: 31 })
+    })
+
+    it("ANNUALLY / IN_ARREARS: Jan 2026 generates 2025", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 0, 15), "ANNUALLY", "IN_ARREARS")
+      expect(parts(from)).toEqual({ y: 2025, m: 1, d: 1 })
+      expect(parts(to)).toEqual({ y: 2025, m: 12, d: 31 })
+    })
+
+    it("ANNUALLY / IN_ADVANCE: Jan 2026 generates 2026", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 0, 15), "ANNUALLY", "IN_ADVANCE")
+      expect(parts(from)).toEqual({ y: 2026, m: 1, d: 1 })
+      expect(parts(to)).toEqual({ y: 2026, m: 12, d: 31 })
+    })
+
+    it("MONTHLY / IN_ARREARS: handles Jan→Dec year boundary (Jan 2026 → Dec 2025)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2026, 0, 1), "MONTHLY", "IN_ARREARS")
+      expect(parts(from)).toEqual({ y: 2025, m: 12, d: 1 })
+      expect(parts(to)).toEqual({ y: 2025, m: 12, d: 31 })
+    })
+
+    it("MONTHLY / IN_ADVANCE: handles Feb leap year (2024 → 29 days)", () => {
+      const { from, to } = service.calculateServicePeriod(new Date(2024, 1, 1), "MONTHLY", "IN_ADVANCE")
+      expect(parts(from)).toEqual({ y: 2024, m: 2, d: 1 })
+      expect(parts(to)).toEqual({ y: 2024, m: 2, d: 29 })
     })
   })
 
@@ -234,6 +302,64 @@ describe("billing-recurring-invoice-service", () => {
       const result = await service.generate(prisma, TENANT_ID, REC_ID, USER_ID)
       expect(result).toBeDefined()
       expect(prisma.$transaction).toHaveBeenCalled()
+    })
+
+    it("persists servicePeriodFrom/To computed from template mode + interval (IN_ARREARS MONTHLY)", async () => {
+      const createSpy = vi.fn().mockResolvedValue({ id: DOC_ID })
+      const prisma = createMockPrisma({
+        billingRecurringInvoice: {
+          findFirst: vi.fn().mockResolvedValue({
+            ...mockTemplate,
+            interval: "MONTHLY",
+            servicePeriodMode: "IN_ARREARS",
+            nextDueDate: new Date(2026, 3, 1), // 2026-04-01 local
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        billingDocument: {
+          create: createSpy,
+          findFirst: vi.fn().mockResolvedValue({ id: DOC_ID }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+      })
+      await service.generate(prisma, TENANT_ID, REC_ID, USER_ID)
+      const createCall = createSpy.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+      const from = createCall.data.servicePeriodFrom as Date
+      const to = createCall.data.servicePeriodTo as Date
+      expect(from.getFullYear()).toBe(2026)
+      expect(from.getMonth()).toBe(2) // March
+      expect(from.getDate()).toBe(1)
+      expect(to.getFullYear()).toBe(2026)
+      expect(to.getMonth()).toBe(2) // March
+      expect(to.getDate()).toBe(31)
+    })
+
+    it("persists servicePeriodFrom/To from IN_ADVANCE MONTHLY as current month", async () => {
+      const createSpy = vi.fn().mockResolvedValue({ id: DOC_ID })
+      const prisma = createMockPrisma({
+        billingRecurringInvoice: {
+          findFirst: vi.fn().mockResolvedValue({
+            ...mockTemplate,
+            interval: "MONTHLY",
+            servicePeriodMode: "IN_ADVANCE",
+            nextDueDate: new Date(2026, 3, 1), // 2026-04-01 local
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        billingDocument: {
+          create: createSpy,
+          findFirst: vi.fn().mockResolvedValue({ id: DOC_ID }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+      })
+      await service.generate(prisma, TENANT_ID, REC_ID, USER_ID)
+      const createCall = createSpy.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+      const from = createCall.data.servicePeriodFrom as Date
+      const to = createCall.data.servicePeriodTo as Date
+      expect(from.getMonth()).toBe(3) // April
+      expect(from.getDate()).toBe(1)
+      expect(to.getMonth()).toBe(3) // April
+      expect(to.getDate()).toBe(30)
     })
 
     it("throws when template is inactive", async () => {

@@ -59,6 +59,7 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.12 Verkaufspreislisten](#1312-verkaufspreislisten)
     - [13.13 Wiederkehrende Rechnungen](#1313-wiederkehrende-rechnungen)
     - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
+    - [13.15 Leistungszeitraum (§14 UStG)](#1315-leistungszeitraum-14-ustg)
 14. [Lagerverwaltung — Artikelstamm](#14-lagerverwaltung--artikelstamm)
     - [14.1 Artikelliste](#141-artikelliste)
     - [14.2 Artikeldetailseite](#142-artikeldetailseite)
@@ -6522,6 +6523,18 @@ Tabelle mit Spalten:
 | **Kontaktperson** | Ansprechpartner aus der Adresse | Kein Kontakt auf der Rechnung |
 | **Enddatum** | Vertragsenddatum | Vorlage laeuft unbefristet weiter |
 | **Automatisch generieren** | Checkbox. Voreinstellung: **deaktiviert** | Rechnungen muessen manuell generiert werden. Der taegliche Cron-Job ignoriert diese Vorlage. |
+| **Abrechnung Leistungszeitraum** | Dropdown: **Nachtraeglich** (Standard) oder **Im Voraus**. Bestimmt, fuer welches Intervall der §14-UStG-Leistungszeitraum auf der generierten Rechnung automatisch gesetzt wird. | Standard "Nachtraeglich" wird verwendet |
+
+**Abrechnungsmodus im Detail:**
+
+| Modus | Bedeutung | Passt zu |
+|-------|-----------|----------|
+| **Nachtraeglich** | Generierung im April rechnet **Maerz** ab. Das Intervall vor `Naechste Faelligkeit` wird als Leistungszeitraum gesetzt. | Reinigung, Wartung, SaaS-Nachbelastung |
+| **Im Voraus** | Generierung im April rechnet **April** ab. Das Intervall ab `Naechste Faelligkeit` wird als Leistungszeitraum gesetzt. | Miete, Abo, Vorauszahlung |
+
+> Beispiel MONTHLY/Nachtraeglich mit naechster Faelligkeit 01.04.2026: erzeugte Rechnung erhaelt Leistungszeitraum 01.03.2026 — 31.03.2026.
+> Beispiel MONTHLY/Im Voraus mit naechster Faelligkeit 01.04.2026: erzeugte Rechnung erhaelt Leistungszeitraum 01.04.2026 — 30.04.2026.
+> Dasselbe Muster gilt fuer QUARTERLY, SEMI_ANNUALLY und ANNUALLY — jeweils das komplette Quartal, Halbjahr oder Kalenderjahr.
 
 **Konditionen (alle optional):**
 
@@ -6815,6 +6828,73 @@ Fuer Rechnungen und Gutschriften, die **vor Aktivierung** der E-Rechnung abgesch
 1. **"PDF herunterladen"** klicken
 2. PDF per E-Mail an den Kunden versenden
 3. Die PDF enthaelt das eingebettete XML -- der Kunde braucht keine separate Datei
+
+### 13.15 Leistungszeitraum (§14 UStG)
+
+**Was ist es?** Zwei optionale Datumsfelder **"Leistungszeitraum von"** und **"Leistungszeitraum bis"** auf Rechnungen und Gutschriften. Sie geben an, in welchem Zeitraum die berechnete Leistung erbracht wurde.
+
+**Wozu dient es?** §14 Abs. 4 Nr. 6 UStG verlangt auf einer Rechnung entweder den **Leistungstag** (Liefertermin) oder den **Leistungszeitraum**. Ohne eine dieser Angaben kann das Finanzamt die Rechnung als nicht vorsteuerabzugsberechtigt abweisen.
+
+> Modul: **Billing**
+>
+> Berechtigung: `billing_documents.edit` (Feld bearbeiten), `billing_documents.finalize` (Beleg abschliessen)
+>
+> Sichtbarkeit: Nur bei Belegen vom Typ **Rechnung** oder **Gutschrift**. Bei Angebot / Auftragsbestaetigung / Lieferschein / Leistungsschein erscheint die Eingabekarte nicht.
+
+📍 Auftraege > Belege > Beleg oeffnen > Seitenleiste > Karte **"Leistungszeitraum"**
+
+Die Karte steht **ueber** der Konditionen-Karte. Solange der Beleg im Status **Entwurf** ist, koennen beide Datumsfelder frei ausgefuellt oder wieder geleert werden. Nach dem Abschliessen (Status Abgeschlossen / PRINTED) sind die Felder schreibgeschuetzt und werden im deutschen Datumsformat TT.MM.JJJJ angezeigt.
+
+**Validierung:**
+- `Leistungszeitraum von` muss kleiner oder gleich `Leistungszeitraum bis` sein. Eine inverse Eingabe wird vom Server abgelehnt.
+- Beide Felder sind **optional** -- Terp schreibt nichts vor.
+
+#### Wo taucht der Leistungszeitraum auf?
+
+**1. PDF:** Wenn mindestens eines der beiden Felder gesetzt ist, erscheint unter den Beleg-Kopfdaten eine neue Zeile:
+
+> *Leistungszeitraum: 01.03.2026 – 31.03.2026*
+
+Ist nur **von** gesetzt, wird *bis* als Gedankenstrich dargestellt, und umgekehrt.
+
+**2. E-Rechnung (ZUGFeRD / XRechnung):** Bei aktivierter E-Rechnung werden die Daten zusaetzlich als `cac:InvoicePeriod` / `cbc:StartDate` (BT-73) und `cbc:EndDate` (BT-74) in das XML geschrieben. Buchhaltungssoftware des Empfaengers kann den Zeitraum so automatisch uebernehmen.
+
+**3. Rechnungsausgangsbuch:** Der Zeitraum wird als eigene Spalte im Steuerberater-Report aufgefuehrt (siehe separates Kapitel).
+
+#### Warnung beim Abschliessen
+
+Wenn eine Rechnung oder Gutschrift abgeschlossen wird und **weder Leistungszeitraum noch Liefertermin** gesetzt sind, erscheint im Abschluss-Dialog eine gelbe Warnung:
+
+> *Leistungszeitraum fehlt — Weder Leistungszeitraum noch Liefertermin sind gesetzt. §14 UStG verlangt eine der beiden Angaben.*
+
+Die Warnung ist **kein Hard-Block**. Der Ersteller kann trotzdem auf "Abschliessen" klicken und uebernimmt damit die Verantwortung dafuer, dass die Rechnung §14-konform ist (z. B. weil der Leistungstag implizit durch das Rechnungsdatum bei einer Einzellieferung abgedeckt ist).
+
+Sobald entweder ein Leistungszeitraum-Feld oder `Liefertermin` gesetzt wird, verschwindet die Warnung.
+
+#### Wann was ausfuellen?
+
+| Situation | Empfehlung |
+|-----------|------------|
+| Einzelkauf: Ware verkauft und am selben Tag bezahlt | Nichts aendern. Rechnungsdatum = Leistungstag. |
+| Einzelleistung an konkretem Tag | Feld **Liefertermin** auf den Leistungstag setzen. Leistungszeitraum leer lassen. |
+| Reinigung / Wartung fuer Monat Maerz | Leistungszeitraum **01.03. — 31.03.** |
+| Mietvertrag April | Leistungszeitraum **01.04. — 30.04.** |
+| Projekt Q1 2026 | Leistungszeitraum **01.01. — 31.03.** |
+
+> Bei wiederkehrenden Rechnungen wird der Leistungszeitraum automatisch beim Generieren gefuellt — siehe §13.13, Abschnitt "Abrechnungsmodus".
+
+#### Praxisbeispiel: Monatsreinigung Maerz abrechnen
+
+1. 📍 Auftraege > Belege > **"Neuer Beleg"**
+2. Typ: **Rechnung**, Kunde auswaehlen
+3. Position hinzufuegen: "Monatsreinigung Maerz 2026", Menge 1, Einheit Pausch., Preis 450 EUR, MwSt 19%
+4. In der Seitenleiste **"Leistungszeitraum von"**: `01.03.2026`
+5. **"Leistungszeitraum bis"**: `31.03.2026`
+6. **"Abschliessen"**
+7. Kein Warnhinweis (Leistungszeitraum ist gesetzt)
+8. ✅ Rechnung abgeschlossen
+9. **"PDF herunterladen"** zeigt unter dem Rechnungsdatum: *Leistungszeitraum: 01.03.2026 – 31.03.2026*
+10. Bei aktivierter E-Rechnung enthaelt das eingebettete XML zusaetzlich `cac:InvoicePeriod`
 
 ---
 

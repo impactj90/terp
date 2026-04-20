@@ -96,6 +96,8 @@ export async function create(
     orderDate?: Date | null
     documentDate?: Date
     deliveryDate?: Date | null
+    servicePeriodFrom?: Date | null
+    servicePeriodTo?: Date | null
     deliveryType?: string | null
     deliveryTerms?: string | null
     paymentTermDays?: number | null

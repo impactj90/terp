@@ -216,6 +216,50 @@ describe("billing.documents.create", () => {
       caller.create({ type: "OFFER", addressId: ADDRESS_ID })
     ).rejects.toThrow("Insufficient permissions")
   })
+
+  it("accepts and forwards servicePeriodFrom/To to the service", async () => {
+    const prisma = {
+      crmAddress: { findFirst: vi.fn().mockResolvedValue(mockAddress) },
+      billingDocument: {
+        create: vi.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ ...mockDocument, ...data, type: "INVOICE" }),
+        ),
+      },
+      numberSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: "R-", nextValue: 2 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await caller.create({
+      type: "INVOICE",
+      addressId: ADDRESS_ID,
+      servicePeriodFrom: new Date("2026-03-01"),
+      servicePeriodTo: new Date("2026-03-31"),
+    })
+    expect(prisma.billingDocument.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          servicePeriodFrom: new Date("2026-03-01"),
+          servicePeriodTo: new Date("2026-03-31"),
+        }),
+      }),
+    )
+  })
+
+  it("rejects when servicePeriodFrom > servicePeriodTo", async () => {
+    const prisma = {
+      crmAddress: { findFirst: vi.fn().mockResolvedValue(mockAddress) },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await expect(
+      caller.create({
+        type: "INVOICE",
+        addressId: ADDRESS_ID,
+        servicePeriodFrom: new Date("2026-03-31"),
+        servicePeriodTo: new Date("2026-03-01"),
+      }),
+    ).rejects.toThrow("servicePeriodFrom muss ≤ servicePeriodTo sein")
+  })
 })
 
 describe("billing.documents.update", () => {
@@ -246,6 +290,70 @@ describe("billing.documents.update", () => {
     await expect(
       caller.update({ id: DOC_ID, notes: "test" })
     ).rejects.toThrow("Insufficient permissions")
+  })
+
+  it("accepts and forwards servicePeriodFrom/To to the service", async () => {
+    const prisma = {
+      billingDocument: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(mockDocument)
+          .mockResolvedValueOnce({
+            ...mockDocument,
+            servicePeriodFrom: new Date("2026-03-01"),
+            servicePeriodTo: new Date("2026-03-31"),
+          }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await caller.update({
+      id: DOC_ID,
+      servicePeriodFrom: new Date("2026-03-01"),
+      servicePeriodTo: new Date("2026-03-31"),
+    })
+    expect(prisma.billingDocument.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          servicePeriodFrom: new Date("2026-03-01"),
+          servicePeriodTo: new Date("2026-03-31"),
+        }),
+      }),
+    )
+  })
+
+  it("accepts null values to clear servicePeriodFrom/To", async () => {
+    const prisma = {
+      billingDocument: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce({
+            ...mockDocument,
+            servicePeriodFrom: new Date("2026-03-01"),
+            servicePeriodTo: new Date("2026-03-31"),
+          })
+          .mockResolvedValueOnce({
+            ...mockDocument,
+            servicePeriodFrom: null,
+            servicePeriodTo: null,
+          }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    }
+    const caller = createCaller(createTestContext(prisma))
+    await caller.update({
+      id: DOC_ID,
+      servicePeriodFrom: null,
+      servicePeriodTo: null,
+    })
+    expect(prisma.billingDocument.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          servicePeriodFrom: null,
+          servicePeriodTo: null,
+        }),
+      }),
+    )
   })
 })
 

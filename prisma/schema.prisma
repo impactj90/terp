@@ -671,6 +671,13 @@ enum BillingRecurringInterval {
   @@map("billing_recurring_interval")
 }
 
+enum BillingRecurringServicePeriodMode {
+  IN_ARREARS
+  IN_ADVANCE
+
+  @@map("billing_recurring_service_period_mode")
+}
+
 enum BillingServiceCaseStatus {
   OPEN
   IN_PROGRESS
@@ -882,6 +889,8 @@ model BillingDocument {
   orderDate           DateTime?              @map("order_date") @db.Timestamptz(6)
   documentDate        DateTime               @default(now()) @map("document_date") @db.Timestamptz(6)
   deliveryDate        DateTime?              @map("delivery_date") @db.Timestamptz(6)
+  servicePeriodFrom   DateTime?              @map("service_period_from") @db.Date
+  servicePeriodTo     DateTime?              @map("service_period_to") @db.Date
 
   // Terms & Conditions
   deliveryType        String?                @map("delivery_type")
@@ -1262,6 +1271,7 @@ model BillingRecurringInvoice {
   addressId       String                   @map("address_id") @db.Uuid
   contactId       String?                  @map("contact_id") @db.Uuid
   interval        BillingRecurringInterval
+  servicePeriodMode BillingRecurringServicePeriodMode @default(IN_ARREARS) @map("service_period_mode")
   startDate       DateTime                 @map("start_date") @db.Timestamptz(6)
   endDate         DateTime?                @map("end_date") @db.Timestamptz(6)
   nextDueDate     DateTime                 @map("next_due_date") @db.Timestamptz(6)

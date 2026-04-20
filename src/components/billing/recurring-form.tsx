@@ -34,6 +34,11 @@ const INTERVALS = [
   { value: 'ANNUALLY', key: 'intervalAnnually' },
 ]
 
+const SERVICE_PERIOD_MODES = [
+  { value: 'IN_ARREARS', key: 'servicePeriodModeInArrears' },
+  { value: 'IN_ADVANCE', key: 'servicePeriodModeInAdvance' },
+] as const
+
 interface RecurringFormProps {
   editId?: string
 }
@@ -51,6 +56,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
   const [addressId, setAddressId] = React.useState('')
   const [contactId, setContactId] = React.useState('')
   const [interval, setInterval] = React.useState('MONTHLY')
+  const [servicePeriodMode, setServicePeriodMode] = React.useState<'IN_ARREARS' | 'IN_ADVANCE'>('IN_ARREARS')
   const [startDate, setStartDate] = React.useState('')
   const [endDate, setEndDate] = React.useState('')
   const [autoGenerate, setAutoGenerate] = React.useState(false)
@@ -77,6 +83,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
       setAddressId(d.addressId || '')
       setContactId(d.contactId || '')
       setInterval(d.interval || 'MONTHLY')
+      setServicePeriodMode((d.servicePeriodMode as 'IN_ARREARS' | 'IN_ADVANCE') || 'IN_ARREARS')
       setStartDate(d.startDate ? new Date(d.startDate).toISOString().slice(0, 10) : '')
       setEndDate(d.endDate ? new Date(d.endDate).toISOString().slice(0, 10) : '')
       setAutoGenerate(d.autoGenerate ?? false)
@@ -118,6 +125,7 @@ export function RecurringForm({ editId }: RecurringFormProps) {
       addressId,
       contactId: contactId || undefined,
       interval: interval as "MONTHLY" | "QUARTERLY" | "SEMI_ANNUALLY" | "ANNUALLY",
+      servicePeriodMode,
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : undefined,
       autoGenerate,
@@ -233,6 +241,27 @@ export function RecurringForm({ editId }: RecurringFormProps) {
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="rec-service-period-mode">{t('servicePeriodModeLabel')}</Label>
+                <Select
+                  value={servicePeriodMode}
+                  onValueChange={(v) => setServicePeriodMode(v as 'IN_ARREARS' | 'IN_ADVANCE')}
+                >
+                  <SelectTrigger id="rec-service-period-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICE_PERIOD_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {t(m.key as Parameters<typeof t>[0])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('servicePeriodModeHint')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

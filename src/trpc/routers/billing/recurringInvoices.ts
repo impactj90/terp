@@ -42,11 +42,14 @@ const positionTemplateSchema = z.array(z.object({
   vatRate: z.number().min(0).max(100).optional(),
 }))
 
+const servicePeriodModeEnum = z.enum(["IN_ARREARS", "IN_ADVANCE"])
+
 const createInput = z.object({
   name: z.string().min(1).max(255),
   addressId: uuid,
   contactId: uuid.optional(),
   interval: z.enum(["MONTHLY", "QUARTERLY", "SEMI_ANNUALLY", "ANNUALLY"]),
+  servicePeriodMode: servicePeriodModeEnum.optional(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
   autoGenerate: z.boolean().optional(),
@@ -65,6 +68,7 @@ const updateInput = z.object({
   name: z.string().min(1).max(255).optional(),
   contactId: uuid.nullable().optional(),
   interval: z.enum(["MONTHLY", "QUARTERLY", "SEMI_ANNUALLY", "ANNUALLY"]).optional(),
+  servicePeriodMode: servicePeriodModeEnum.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().nullable().optional(),
   autoGenerate: z.boolean().optional(),

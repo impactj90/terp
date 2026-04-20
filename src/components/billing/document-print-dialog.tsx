@@ -35,6 +35,7 @@ interface DocumentFinalizeDialogProps {
   documentType: string
   eInvoiceEnabled?: boolean
   eInvoiceMissingFields?: string[]
+  missingServicePeriod?: boolean
 }
 
 export function DocumentFinalizeDialog({
@@ -45,6 +46,7 @@ export function DocumentFinalizeDialog({
   documentType,
   eInvoiceEnabled,
   eInvoiceMissingFields,
+  missingServicePeriod,
 }: DocumentFinalizeDialogProps) {
   const finalizeMutation = useFinalizeBillingDocument()
   const isOrderConfirmation = documentType === 'ORDER_CONFIRMATION'
@@ -297,6 +299,19 @@ export function DocumentFinalizeDialog({
               </p>
               <p className="text-sm text-muted-foreground mt-1">
                 Die E-Rechnung (XML) wird nicht erstellt. Der Beleg wird trotzdem abgeschlossen und das PDF generiert.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {missingServicePeriod && (documentType === 'INVOICE' || documentType === 'CREDIT_NOTE') && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <p className="font-medium">Leistungszeitraum fehlt</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Weder Leistungszeitraum noch Liefertermin sind gesetzt. §14 UStG verlangt eine der beiden Angaben.
+                Der Beleg kann trotzdem abgeschlossen werden — bitte prüfen, ob dies gewünscht ist.
               </p>
             </AlertDescription>
           </Alert>

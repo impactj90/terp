@@ -42,6 +42,12 @@ pnpm typecheck
 pnpm lint
 ```
 
+**Fix `EACCES` on `pnpm db:generate`**: if `src/generated/prisma/{internal,models}/` is root-owned after a prior Docker-based Prisma run, reset ownership without sudo:
+
+```bash
+docker run --rm -v ./src/generated:/t alpine chown -R $(id -u):$(id -g) /t
+```
+
 ### Dev Login Credentials
 
 After `pnpm db:reset`, two test users are available:

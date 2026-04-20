@@ -56,6 +56,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
+import { parseInputDate, formatInputDate, formatDisplayDate } from '@/lib/date'
 
 // --- Helpers ---
 
@@ -186,6 +187,44 @@ function EditableField({
   )
 }
 
+// --- Sidebar editable date field (blur-save, local-timezone-safe) ---
+
+function EditableDateField({
+  label,
+  value,
+  field,
+  editable,
+  onSave,
+}: {
+  label: string
+  value: Date | string | null | undefined
+  field: string
+  editable: boolean
+  onSave: (field: string, val: Date | null) => void
+}) {
+  if (!editable) {
+    return (
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-xs">{label}</span>
+        <span className="text-xs">{value != null ? formatDisplayDate(value) : '-'}</span>
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-0.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        className="h-7 text-xs"
+        type="date"
+        defaultValue={formatInputDate(value)}
+        onBlur={(e) => {
+          onSave(field, parseInputDate(e.target.value))
+        }}
+      />
+    </div>
+  )
+}
+
 // --- Main Component ---
 
 interface DocumentEditorProps {
@@ -248,6 +287,15 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     return missing
   }, [tenantConfig, doc])
 
+  // §14 UStG warning: Rechnung / Gutschrift ohne Leistungszeitraum UND ohne
+  // Liefertermin → soft warning im Finalize-Dialog (kein Hard-Block).
+  const missingServicePeriod = React.useMemo(() => {
+    if (!doc) return false
+    if (doc.type !== 'INVOICE' && doc.type !== 'CREDIT_NOTE') return false
+    const d = doc as Record<string, unknown>
+    return !d.servicePeriodFrom && !d.servicePeriodTo && !d.deliveryDate
+  }, [doc])
+
   if (isLoading) {
     return <div className="flex items-center justify-center p-8 text-muted-foreground">{t('loading')}</div>
   }
@@ -296,7 +344,10 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     }
   }
 
-  const handleSidebarField = (field: string, val: string | number | null) => {
+  const handleSidebarField = (
+    field: string,
+    val: string | number | Date | null,
+  ) => {
     updateMutation.mutate({ id: doc.id, [field]: val })
   }
 
@@ -811,6 +862,31 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                   </CardContent>
                 </Card>
 
+                {/* Leistungszeitraum (§14 UStG) — nur Rechnung / Gutschrift */}
+                {(doc.type === 'INVOICE' || doc.type === 'CREDIT_NOTE') && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">{t('servicePeriod')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <EditableDateField
+                        label={t('servicePeriodFrom')}
+                        value={(doc as Record<string, unknown>).servicePeriodFrom as Date | string | null | undefined}
+                        field="servicePeriodFrom"
+                        editable={isDraft}
+                        onSave={handleSidebarField}
+                      />
+                      <EditableDateField
+                        label={t('servicePeriodTo')}
+                        value={(doc as Record<string, unknown>).servicePeriodTo as Date | string | null | undefined}
+                        field="servicePeriodTo"
+                        editable={isDraft}
+                        onSave={handleSidebarField}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Konditionen */}
                 <Card>
                   <CardHeader className="pb-2">
@@ -889,6 +965,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         documentType={doc.type}
         eInvoiceEnabled={tenantConfig?.eInvoiceEnabled}
         eInvoiceMissingFields={eInvoiceMissingFields}
+        missingServicePeriod={missingServicePeriod}
       />
       <DocumentForwardDialog
         open={showForwardDialog}

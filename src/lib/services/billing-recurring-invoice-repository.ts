@@ -1,4 +1,8 @@
-import type { PrismaClient, BillingRecurringInterval } from "@/generated/prisma/client"
+import type {
+  PrismaClient,
+  BillingRecurringInterval,
+  BillingRecurringServicePeriodMode,
+} from "@/generated/prisma/client"
 
 // --- Includes ---
 const LIST_INCLUDE = {
@@ -70,6 +74,7 @@ export async function create(
     addressId: string
     contactId?: string | null
     interval: BillingRecurringInterval
+    servicePeriodMode?: BillingRecurringServicePeriodMode
     startDate: Date
     endDate?: Date | null
     nextDueDate: Date
@@ -89,6 +94,7 @@ export async function create(
     data: {
       name: data.name,
       interval: data.interval,
+      ...(data.servicePeriodMode ? { servicePeriodMode: data.servicePeriodMode } : {}),
       startDate: data.startDate,
       endDate: data.endDate,
       nextDueDate: data.nextDueDate,

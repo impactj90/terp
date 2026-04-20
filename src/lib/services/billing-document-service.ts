@@ -87,6 +87,19 @@ function assertDraft(status: BillingDocumentStatus) {
   }
 }
 
+// --- Helper: validate servicePeriodFrom <= servicePeriodTo ---
+
+export function validateServicePeriod(
+  from: Date | null | undefined,
+  to: Date | null | undefined,
+): void {
+  if (from && to && from > to) {
+    throw new BillingDocumentValidationError(
+      "servicePeriodFrom muss ≤ servicePeriodTo sein"
+    )
+  }
+}
+
 // --- Helper: recalculate document totals ---
 
 export async function recalculateTotals(
@@ -151,6 +164,7 @@ function calculatePositionTotal(
 
 const DOCUMENT_TRACKED_FIELDS = [
   "contactId", "documentDate", "deliveryDate",
+  "servicePeriodFrom", "servicePeriodTo",
   "headerText", "footerText", "subject", "status",
 ]
 
@@ -202,6 +216,8 @@ export async function create(
     orderDate?: Date
     documentDate?: Date
     deliveryDate?: Date
+    servicePeriodFrom?: Date | null
+    servicePeriodTo?: Date | null
     deliveryType?: string
     deliveryTerms?: string
     paymentTermDays?: number
@@ -219,6 +235,8 @@ export async function create(
   createdById: string,
   audit: AuditContext
 ) {
+  validateServicePeriod(input.servicePeriodFrom, input.servicePeriodTo)
+
   // Validate address belongs to tenant
   const address = await prisma.crmAddress.findFirst({
     where: { id: input.addressId, tenantId },
@@ -303,6 +321,8 @@ export async function create(
       orderDate: input.orderDate || null,
       documentDate: input.documentDate || new Date(),
       deliveryDate: input.deliveryDate || null,
+      servicePeriodFrom: input.servicePeriodFrom ?? null,
+      servicePeriodTo: input.servicePeriodTo ?? null,
       deliveryType: input.deliveryType || null,
       deliveryTerms: input.deliveryTerms || null,
       paymentTermDays,
@@ -348,6 +368,8 @@ export async function update(
     orderDate?: Date | null
     documentDate?: Date
     deliveryDate?: Date | null
+    servicePeriodFrom?: Date | null
+    servicePeriodTo?: Date | null
     deliveryType?: string | null
     deliveryTerms?: string | null
     paymentTermDays?: number | null
@@ -367,11 +389,21 @@ export async function update(
   const existing = await repo.findById(prisma, tenantId, input.id)
   if (!existing) throw new BillingDocumentNotFoundError()
 
+  // Resolve effective values (incoming overrides existing, undefined keeps existing)
+  const effectiveFrom = input.servicePeriodFrom !== undefined
+    ? input.servicePeriodFrom
+    : (existing as { servicePeriodFrom: Date | null }).servicePeriodFrom
+  const effectiveTo = input.servicePeriodTo !== undefined
+    ? input.servicePeriodTo
+    : (existing as { servicePeriodTo: Date | null }).servicePeriodTo
+  validateServicePeriod(effectiveFrom, effectiveTo)
+
   const data: Record<string, unknown> = {}
   const fields = [
     "contactId", "deliveryAddressId", "invoiceAddressId",
     "inquiryId",
     "orderDate", "documentDate", "deliveryDate",
+    "servicePeriodFrom", "servicePeriodTo",
     "deliveryType", "deliveryTerms",
     "paymentTermDays", "discountPercent", "discountDays",
     "discountPercent2", "discountDays2",

@@ -56,6 +56,8 @@ interface BillingDocumentPdfProps {
     documentDate: Date | string
     deliveryDate?: Date | string | null
     orderDate?: Date | string | null
+    servicePeriodFrom?: Date | string | null
+    servicePeriodTo?: Date | string | null
     headerText?: string | null
     footerText?: string | null
     subtotalNet: number
@@ -136,6 +138,14 @@ export function BillingDocumentPdf({ document: doc, address, tenantConfig }: Bil
           {doc.orderDate && (
             <Text style={styles.docInfoText}>Auftragsdatum: {formatDate(doc.orderDate)}</Text>
           )}
+          {(doc.type === "INVOICE" || doc.type === "CREDIT_NOTE") &&
+            (doc.servicePeriodFrom || doc.servicePeriodTo) && (
+              <Text style={styles.docInfoText}>
+                Leistungszeitraum: {doc.servicePeriodFrom ? formatDate(doc.servicePeriodFrom) : "—"}
+                {" – "}
+                {doc.servicePeriodTo ? formatDate(doc.servicePeriodTo) : "—"}
+              </Text>
+            )}
         </View>
 
         {/* Header Text */}
