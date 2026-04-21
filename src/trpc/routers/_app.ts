@@ -115,6 +115,7 @@ import { overtimePayoutsRouter } from "./overtimePayouts"
 import { employeeOvertimePayoutOverridesRouter } from "./employeeOvertimePayoutOverrides"
 import { overtimeRequestsRouter } from "./overtimeRequests"
 import { overtimeRequestConfigRouter } from "./overtimeRequestConfig"
+import { serviceObjectsRouter } from "./serviceObjects"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -227,6 +228,7 @@ export const appRouter = createTRPCRouter({
   employeeOvertimePayoutOverrides: employeeOvertimePayoutOverridesRouter,
   overtimeRequests: overtimeRequestsRouter,
   overtimeRequestConfig: overtimeRequestConfigRouter,
+  serviceObjects: serviceObjectsRouter,
 })
 
 /** Type-only export for client-side inference. */

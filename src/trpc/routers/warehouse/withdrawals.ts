@@ -21,7 +21,13 @@ const WH_STOCK_MANAGE = permissionIdByKey("wh_stock.manage")!
 const whProcedure = tenantProcedure.use(requireModule("warehouse"))
 
 // --- Input Schemas ---
-const referenceTypeEnum = z.enum(["ORDER", "DOCUMENT", "MACHINE", "NONE"])
+const referenceTypeEnum = z.enum([
+  "ORDER",
+  "DOCUMENT",
+  "MACHINE",
+  "SERVICE_OBJECT",
+  "NONE",
+])
 
 // --- Router ---
 export const whWithdrawalsRouter = createTRPCRouter({
@@ -34,6 +40,7 @@ export const whWithdrawalsRouter = createTRPCRouter({
         referenceType: referenceTypeEnum,
         referenceId: z.string().optional(),
         machineId: z.string().optional(),
+        serviceObjectId: z.string().uuid().optional(),
         notes: z.string().optional(),
       })
     )
@@ -63,6 +70,7 @@ export const whWithdrawalsRouter = createTRPCRouter({
         referenceType: referenceTypeEnum,
         referenceId: z.string().optional(),
         machineId: z.string().optional(),
+        serviceObjectId: z.string().uuid().optional(),
         items: z
           .array(
             z.object({
@@ -122,6 +130,7 @@ export const whWithdrawalsRouter = createTRPCRouter({
         orderId: z.string().uuid().optional(),
         documentId: z.string().uuid().optional(),
         machineId: z.string().optional(),
+        serviceObjectId: z.string().uuid().optional(),
         dateFrom: z.string().optional(),
         dateTo: z.string().optional(),
         page: z.number().int().min(1).default(1),

@@ -211,6 +211,8 @@ model Tenant {
   crmCorrespondenceAttachments CrmCorrespondenceAttachment[]
   crmInquiries                CrmInquiry[]
   crmTasks                    CrmTask[]
+  serviceObjects              ServiceObject[]
+  serviceObjectAttachments    ServiceObjectAttachment[]
   billingDocuments            BillingDocument[]
   billingDocumentTemplates    BillingDocumentTemplate[]
   billingTenantConfig         BillingTenantConfig?
@@ -522,6 +524,7 @@ model CrmAddress {
   inboundInvoices          InboundInvoice[]
   reminders                Reminder[]
   bankTransactionSuggestions BankTransaction[]
+  serviceObjects           ServiceObject[]
 
   @@unique([tenantId, number], map: "uq_crm_addresses_tenant_number")
   @@index([tenantId], map: "idx_crm_addresses_tenant_id")
@@ -860,6 +863,135 @@ model CrmTaskAssignee {
   @@index([employeeId])
   @@index([teamId])
   @@map("crm_task_assignees")
+}
+
+// -----------------------------------------------------------------------------
+// ServiceObject
+// -----------------------------------------------------------------------------
+// Plan: 2026-04-21-serviceobjekte-stammdaten.md
+//
+// Top-level master-data entity for service objects (machines, equipment,
+// buildings, systems, components) that a service provider maintains at a
+// customer's site. Industry-agnostic; vocabulary kept neutral.
+//
+// Self-referential adjacency-list hierarchy (SITE > BUILDING > SYSTEM >
+// EQUIPMENT > COMPONENT). Mandatory customer reference (CrmAddress with
+// type CUSTOMER or BOTH). Siblings in a hierarchy must share the same
+// customer.
+enum ServiceObjectKind {
+  SITE
+  BUILDING
+  SYSTEM
+  EQUIPMENT
+  COMPONENT
+
+  @@map("service_object_kind")
+}
+
+enum ServiceObjectStatus {
+  OPERATIONAL
+  DEGRADED
+  IN_MAINTENANCE
+  OUT_OF_SERVICE
+  DECOMMISSIONED
+
+  @@map("service_object_status")
+}
+
+enum BuildingUsage {
+  OFFICE
+  WAREHOUSE
+  PRODUCTION
+  RETAIL
+  RESIDENTIAL
+  MIXED
+  OTHER
+
+  @@map("building_usage")
+}
+
+model ServiceObject {
+  id                 String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String                    @map("tenant_id") @db.Uuid
+
+  number             String                    @db.VarChar(50)
+  name               String                    @db.VarChar(255)
+  description        String?                   @db.Text
+
+  kind               ServiceObjectKind         @default(EQUIPMENT)
+  parentId           String?                   @map("parent_id") @db.Uuid
+
+  customerAddressId  String                    @map("customer_address_id") @db.Uuid
+
+  internalNumber     String?                   @map("internal_number") @db.VarChar(100)
+
+  // Technical equipment fields (SYSTEM / EQUIPMENT / COMPONENT)
+  manufacturer       String?                   @db.VarChar(255)
+  model              String?                   @db.VarChar(255)
+  serialNumber       String?                   @map("serial_number") @db.VarChar(255)
+
+  // Shared between BUILDING and technical kinds
+  yearBuilt          Int?                      @map("year_built")
+  inServiceSince     DateTime?                 @map("in_service_since") @db.Date
+
+  // SITE-specific fields (physical location / Liegenschaft)
+  siteStreet         String?                   @map("site_street") @db.VarChar(255)
+  siteZip            String?                   @map("site_zip") @db.VarChar(20)
+  siteCity           String?                   @map("site_city") @db.VarChar(100)
+  siteCountry        String?                   @map("site_country") @db.VarChar(10)
+  siteAreaSqm        Int?                      @map("site_area_sqm")
+
+  // BUILDING-specific fields
+  floorCount         Int?                      @map("floor_count")
+  floorAreaSqm       Int?                      @map("floor_area_sqm")
+  buildingUsage      BuildingUsage?            @map("building_usage")
+
+  status             ServiceObjectStatus       @default(OPERATIONAL)
+  isActive           Boolean                   @default(true) @map("is_active")
+
+  qrCodePayload      String?                   @map("qr_code_payload") @db.Text
+
+  customFields       Json?                     @map("custom_fields") @db.JsonB
+
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById        String?                   @map("created_by_id") @db.Uuid
+
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent             ServiceObject?            @relation("ServiceObjectTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children           ServiceObject[]           @relation("ServiceObjectTree")
+  customerAddress    CrmAddress                @relation(fields: [customerAddressId], references: [id])
+  attachments        ServiceObjectAttachment[]
+  orders             Order[]
+  stockMovements     WhStockMovement[]
+
+  @@unique([tenantId, number], map: "uq_service_objects_tenant_number")
+  @@index([tenantId], map: "idx_service_objects_tenant")
+  @@index([tenantId, customerAddressId], map: "idx_service_objects_tenant_customer")
+  @@index([tenantId, parentId], map: "idx_service_objects_tenant_parent")
+  @@index([tenantId, isActive], map: "idx_service_objects_tenant_active")
+  @@index([tenantId, kind], map: "idx_service_objects_tenant_kind")
+  @@map("service_objects")
+}
+
+model ServiceObjectAttachment {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String         @map("tenant_id") @db.Uuid
+  serviceObjectId   String         @map("service_object_id") @db.Uuid
+
+  filename          String         @db.VarChar(255)
+  storagePath       String         @map("storage_path") @db.Text
+  mimeType          String         @map("mime_type") @db.VarChar(100)
+  sizeBytes         Int            @map("size_bytes")
+
+  uploadedAt        DateTime       @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  uploadedById      String?        @map("uploaded_by_id") @db.Uuid
+
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceObject     ServiceObject  @relation(fields: [serviceObjectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, serviceObjectId], map: "idx_service_object_attachments_tenant_object")
+  @@map("service_object_attachments")
 }
 
 // -----------------------------------------------------------------------------
@@ -2347,10 +2479,12 @@ model Order {
   isActive           Boolean   @default(true) @map("is_active")
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  serviceObjectId    String?   @map("service_object_id") @db.Uuid
 
   // Relations
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   costCenter          CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  serviceObject       ServiceObject?    @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
@@ -2364,6 +2498,7 @@ model Order {
   @@index([tenantId, isActive], map: "idx_orders_tenant_active")
   @@index([tenantId, status], map: "idx_orders_tenant_status")
   @@index([costCenterId], map: "idx_orders_cost_center")
+  @@index([tenantId, serviceObjectId], map: "idx_orders_tenant_service_object")
   @@map("orders")
 }
 
@@ -5393,6 +5528,7 @@ model WhStockMovement {
   orderId                  String?             @map("order_id") @db.Uuid
   inventorySessionId       String?             @map("inventory_session_id") @db.Uuid
   machineId                String?             @map("machine_id")
+  serviceObjectId          String?             @map("service_object_id") @db.Uuid
 
   reason                   String?
   notes                    String?
@@ -5403,12 +5539,14 @@ model WhStockMovement {
   article       WhArticle        @relation(fields: [articleId], references: [id])
   purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   stocktake     WhStocktake?     @relation(fields: [inventorySessionId], references: [id], onDelete: SetNull)
+  serviceObject ServiceObject?   @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, articleId])
   @@index([tenantId, type])
   @@index([tenantId, date])
   @@index([tenantId, purchaseOrderId])
   @@index([tenantId, machineId])
+  @@index([tenantId, serviceObjectId])
   @@map("wh_stock_movements")
 }
 

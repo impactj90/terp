@@ -681,4 +681,129 @@ describe("wh-withdrawal-service", () => {
       )
     })
   })
+
+  // ===========================================================================
+  // SERVICE_OBJECT parallel path
+  // (Plan 2026-04-21-serviceobjekte-stammdaten.md, Phase D)
+  // ===========================================================================
+
+  describe("SERVICE_OBJECT reference type", () => {
+    const SERVICE_OBJECT_ID = "50000000-0000-4000-a000-000000000001"
+
+    it("create persists serviceObjectId and leaves machineId null", async () => {
+      const prisma = createMockPrisma()
+      await service.createWithdrawal(
+        prisma,
+        TENANT_ID,
+        {
+          articleId: ARTICLE_ID,
+          quantity: 5,
+          referenceType: "SERVICE_OBJECT",
+          serviceObjectId: SERVICE_OBJECT_ID,
+        },
+        USER_ID,
+        audit
+      )
+      const call = (prisma.whStockMovement.create as ReturnType<typeof vi.fn>).mock
+        .calls[0]![0]
+      expect(call.data.serviceObjectId).toBe(SERVICE_OBJECT_ID)
+      expect(call.data.machineId).toBeNull()
+      expect(call.data.orderId).toBeNull()
+    })
+
+    it("create with MACHINE leaves serviceObjectId null (regression)", async () => {
+      const prisma = createMockPrisma()
+      await service.createWithdrawal(
+        prisma,
+        TENANT_ID,
+        {
+          articleId: ARTICLE_ID,
+          quantity: 5,
+          referenceType: "MACHINE",
+          machineId: "MACH-007",
+        },
+        USER_ID,
+        audit
+      )
+      const call = (prisma.whStockMovement.create as ReturnType<typeof vi.fn>).mock
+        .calls[0]![0]
+      expect(call.data.machineId).toBe("MACH-007")
+      expect(call.data.serviceObjectId).toBeNull()
+    })
+
+    it("createBatch persists serviceObjectId on every movement", async () => {
+      const prisma = createMockPrisma({
+        whArticle: {
+          findFirst: vi.fn().mockImplementation(async (args: { where: { id: string } }) => ({
+            ...mockArticle,
+            id: args.where.id,
+            currentStock: 50,
+          })),
+          update: vi.fn().mockResolvedValue(mockArticle),
+        },
+      })
+      await service.createBatchWithdrawal(
+        prisma,
+        TENANT_ID,
+        {
+          referenceType: "SERVICE_OBJECT",
+          serviceObjectId: SERVICE_OBJECT_ID,
+          items: [
+            { articleId: ARTICLE_ID, quantity: 1 },
+            { articleId: ARTICLE_ID_2, quantity: 2 },
+          ],
+        },
+        USER_ID,
+        audit
+      )
+      const calls = (prisma.whStockMovement.create as ReturnType<typeof vi.fn>).mock
+        .calls
+      expect(calls).toHaveLength(2)
+      for (const c of calls) {
+        expect(c[0].data.serviceObjectId).toBe(SERVICE_OBJECT_ID)
+      }
+    })
+
+    it("cancelWithdrawal copies serviceObjectId into the reversal", async () => {
+      const prisma = createMockPrisma({
+        whStockMovement: {
+          findFirst: vi.fn().mockResolvedValue({
+            ...mockWithdrawalMovement,
+            machineId: null,
+            serviceObjectId: SERVICE_OBJECT_ID,
+          }),
+          create: vi.fn().mockResolvedValue({
+            ...mockWithdrawalMovement,
+            id: "rev-1",
+            quantity: 5,
+            serviceObjectId: SERVICE_OBJECT_ID,
+          }),
+        },
+      })
+      await service.cancelWithdrawal(prisma, TENANT_ID, MOVEMENT_ID, USER_ID, audit)
+      const createCall = (prisma.whStockMovement.create as ReturnType<typeof vi.fn>).mock
+        .calls[0]![0]
+      expect(createCall.data.serviceObjectId).toBe(SERVICE_OBJECT_ID)
+    })
+
+    it("listWithdrawals filters by serviceObjectId", async () => {
+      const prisma = createMockPrisma({
+        whStockMovement: {
+          findMany: vi.fn().mockResolvedValue([]),
+          count: vi.fn().mockResolvedValue(0),
+        },
+      })
+      await service.listWithdrawals(prisma, TENANT_ID, {
+        serviceObjectId: SERVICE_OBJECT_ID,
+        page: 1,
+        pageSize: 10,
+      })
+      const call = (prisma.whStockMovement.findMany as ReturnType<typeof vi.fn>).mock
+        .calls[0]![0]
+      expect(call.where).toMatchObject({
+        tenantId: TENANT_ID,
+        serviceObjectId: SERVICE_OBJECT_ID,
+      })
+    })
+  })
 })

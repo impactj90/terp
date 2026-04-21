@@ -5063,3 +5063,306 @@ VALUES
   ('20000000-0000-0000-0000-000000000001', 'core', NOW(), '00000000-0000-0000-0000-000000000001'),
   ('20000000-0000-0000-0000-000000000001', 'crm',  NOW(), '00000000-0000-0000-0000-000000000001')
 ON CONFLICT DO NOTHING;
+
+-- =============================================================
+-- Service Objects (plan 2026-04-21-serviceobjekte-stammdaten.md)
+-- =============================================================
+--
+-- Demonstrates all 5 kinds + hierarchy across 3 customers:
+--  K-1 (Müller Maschinenbau): SITE → 2× BUILDING → SYSTEM + EQUIPMENT → COMPONENT
+--  K-2 (Schmidt & Partner):   SYSTEM (standalone)
+--  K-3 (Weber Elektrotechnik): SITE → BUILDING + EQUIPMENT
+
+-- ----- K-1 Müller Maschinenbau -----
+
+-- Level 1: SITE
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    site_street, site_zip, site_city, site_country, site_area_sqm,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000001-0000-4000-a000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-SITE-01',
+    'Werk Nord Augsburg',
+    'Hauptproduktionsstandort Müller Maschinenbau',
+    'SITE',
+    NULL,
+    'c1000000-0000-4000-a000-000000000001',
+    'Industriestraße 42',
+    '86167',
+    'Augsburg',
+    'DE',
+    25000,
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-SITE-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Level 2: BUILDINGs
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    year_built, in_service_since,
+    floor_count, floor_area_sqm, building_usage,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES
+(
+    '50000001-0000-4000-a000-000000000002',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-BLD-01',
+    'Produktionshalle A',
+    'Hauptproduktionshalle mit Montage und Kältetechnik',
+    'BUILDING',
+    '50000001-0000-4000-a000-000000000001',
+    'c1000000-0000-4000-a000-000000000001',
+    1985,
+    '1986-03-01',
+    2,
+    8500,
+    'PRODUCTION',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-BLD-01',
+    '00000000-0000-0000-0000-000000000001'
+),
+(
+    '50000001-0000-4000-a000-000000000003',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-BLD-02',
+    'Verwaltungsgebäude',
+    'Büro- und Empfangsbereich',
+    'BUILDING',
+    '50000001-0000-4000-a000-000000000001',
+    'c1000000-0000-4000-a000-000000000001',
+    2010,
+    '2011-01-15',
+    4,
+    1800,
+    'OFFICE',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-BLD-02',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Level 3: SYSTEM + EQUIPMENT (unter Produktionshalle A)
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    manufacturer, model, serial_number, year_built, in_service_since,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES
+(
+    '50000001-0000-4000-a000-000000000004',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-ANL-01',
+    'Kälteanlage Halle A',
+    'Zentrale Kälteversorgung für Produktionsprozess',
+    'SYSTEM',
+    '50000001-0000-4000-a000-000000000002',
+    'c1000000-0000-4000-a000-000000000001',
+    'Siemens',
+    'Refrig-500XL',
+    'SMS-2018-445821',
+    2018,
+    '2018-09-12',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-ANL-01',
+    '00000000-0000-0000-0000-000000000001'
+),
+(
+    '50000001-0000-4000-a000-000000000005',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-GER-01',
+    'Gabelstapler Halle A',
+    'Elektro-Gabelstapler für innerbetrieblichen Transport',
+    'EQUIPMENT',
+    '50000001-0000-4000-a000-000000000002',
+    'c1000000-0000-4000-a000-000000000001',
+    'Linde',
+    'E25-HL',
+    'LND-2020-009912',
+    2020,
+    '2020-11-05',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-GER-01',
+    '00000000-0000-0000-0000-000000000001'
+),
+(
+    '50000001-0000-4000-a000-000000000006',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-GER-02',
+    'CNC-Drehmaschine',
+    'Wartungsintensive CNC-Drehmaschine — aktuell in Wartung',
+    'EQUIPMENT',
+    '50000001-0000-4000-a000-000000000002',
+    'c1000000-0000-4000-a000-000000000001',
+    'DMG MORI',
+    'NLX 2500',
+    'DMG-2019-778123',
+    2019,
+    '2019-05-20',
+    'IN_MAINTENANCE',
+    true,
+    'TERP:SO:100000:MUE-GER-02',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Level 4: COMPONENT (unter Kälteanlage)
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    manufacturer, model, serial_number, year_built, in_service_since,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000001-0000-4000-a000-000000000007',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-KOMP-01',
+    'Verdichter Kälteanlage',
+    'Ersatzverdichter nach Austausch 2022',
+    'COMPONENT',
+    '50000001-0000-4000-a000-000000000004',
+    'c1000000-0000-4000-a000-000000000001',
+    'Bitzer',
+    '4TES-9Y-40P',
+    'BTZ-2022-223344',
+    2022,
+    '2022-06-10',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:MUE-KOMP-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ----- K-2 Schmidt & Partner: standalone system -----
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    manufacturer, model, serial_number, year_built, in_service_since,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000002-0000-4000-a000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    'SCH-ANL-01',
+    'Klimaanlage Hauptsitz',
+    'Klimatisierung Büroräume Berlin',
+    'SYSTEM',
+    NULL,
+    'c1000000-0000-4000-a000-000000000002',
+    'Mitsubishi Electric',
+    'PUMY-P140',
+    'MHI-2019-881177',
+    2019,
+    '2019-04-15',
+    'DEGRADED',
+    true,
+    'TERP:SO:100000:SCH-ANL-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ----- K-3 Weber Elektrotechnik: site + building + equipment -----
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    site_street, site_zip, site_city, site_country, site_area_sqm,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000003-0000-4000-a000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    'WEB-SITE-01',
+    'Werksgelände Stuttgart',
+    NULL,
+    'SITE',
+    NULL,
+    'c1000000-0000-4000-a000-000000000003',
+    'Siemensallee 8',
+    '70173',
+    'Stuttgart',
+    'DE',
+    15000,
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:WEB-SITE-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    year_built, in_service_since, floor_count, floor_area_sqm, building_usage,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000003-0000-4000-a000-000000000002',
+    '10000000-0000-0000-0000-000000000001',
+    'WEB-BLD-01',
+    'Produktionsgebäude',
+    NULL,
+    'BUILDING',
+    '50000003-0000-4000-a000-000000000001',
+    'c1000000-0000-4000-a000-000000000003',
+    1995,
+    '1996-06-01',
+    3,
+    4200,
+    'PRODUCTION',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:WEB-BLD-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    manufacturer, model, serial_number, year_built, in_service_since,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000003-0000-4000-a000-000000000003',
+    '10000000-0000-0000-0000-000000000001',
+    'WEB-GER-01',
+    'EMV-Prüfstand',
+    'Kalibriert jährlich durch externen Dienstleister',
+    'EQUIPMENT',
+    '50000003-0000-4000-a000-000000000002',
+    'c1000000-0000-4000-a000-000000000003',
+    'Keysight',
+    'N9030B',
+    'KS-2021-554411',
+    2021,
+    '2021-08-22',
+    'OPERATIONAL',
+    true,
+    'TERP:SO:100000:WEB-GER-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Example of decommissioned + inactive object for filter demo (K-1)
+INSERT INTO service_objects (
+    id, tenant_id, number, name, description, kind, parent_id, customer_address_id,
+    manufacturer, model, serial_number, year_built, in_service_since,
+    status, is_active, qr_code_payload, created_by_id
+) VALUES (
+    '50000001-0000-4000-a000-000000000099',
+    '10000000-0000-0000-0000-000000000001',
+    'MUE-ALT-01',
+    'Alte Stanzmaschine',
+    'Ausgemustert 2023, Ersatzteillager',
+    'EQUIPMENT',
+    NULL,
+    'c1000000-0000-4000-a000-000000000001',
+    'Schuler',
+    'MSD 160',
+    'SCH-1992-001',
+    1992,
+    '1993-02-10',
+    'DECOMMISSIONED',
+    false,
+    'TERP:SO:100000:MUE-ALT-01',
+    '00000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (id) DO NOTHING;

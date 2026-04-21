@@ -413,6 +413,13 @@ export const navConfig: NavSection[] = [
         module: 'crm',
         permissions: ['crm_addresses.view'],
       },
+      {
+        titleKey: 'crmServiceObjects',
+        href: '/serviceobjects',
+        icon: Wrench,
+        module: 'crm',
+        permissions: ['service_objects.view'],
+      },
     ],
   },
   {

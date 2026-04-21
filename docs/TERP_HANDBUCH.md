@@ -5624,6 +5624,153 @@ Optionaler Datumsfilter (Von / Bis) schränkt den Auswertungszeitraum ein.
 
 ---
 
+## 12a. Serviceobjekte — Stammdaten, Hierarchie, Anhänge, QR-Code
+
+**Was ist es?** Serviceobjekte sind die konkreten Anlagen, Geräte oder Gewerke, die ein mobiler Service-Dienstleister bei seinen Kunden betreut: Aufzüge, Brandmeldezentralen, Kälteanlagen, Tore, Photovoltaik-Anlagen, Wärmepumpen, Maschinen in der Produktion. Jedes Serviceobjekt wird als eigene Stammdatenzeile mit eindeutiger Nummer erfasst, einem Kunden (CRM-Adresse mit Typ Kunde/Beides) fest zugeordnet und kann hierarchisch in andere Objekte eingebettet werden (SITE → BUILDING → SYSTEM → EQUIPMENT → COMPONENT).
+
+**Wozu dient es?** Jede Wartung, Lagerentnahme, Korrespondenz oder später auch Rechnung lässt sich damit exakt einem Objekt zuordnen — nicht mehr nur einem Kunden oder einem Freitext-Maschinenbezeichner. Jedes Objekt bekommt automatisch einen deterministischen QR-Code-Inhalt (`TERP:SO:<tenant-short>:<nummer>`); Etiketten können als PDF im Avery-Standardformat ausgedruckt werden.
+
+⚠️ Modul: Das CRM-Modul muss aktiviert sein.
+
+⚠️ Berechtigung: „Serviceobjekte anzeigen" (Lesen), „Serviceobjekte erstellen und bearbeiten" (Schreiben), „Serviceobjekte löschen" (Löschen).
+
+📍 Seitenleiste → **CRM** → **Serviceobjekte**
+
+### Typen (Kinds) und ihre Felder
+
+Jedes Serviceobjekt hat einen Typ. Das Formular zeigt je nach Typ **nur die passenden Felder** an — so gibt es z. B. kein „Hersteller" für einen Standort und keine „Nutzfläche" für ein Gerät. Die Auswahl eines anderen Typs leert bereits ausgefüllte, nun nicht mehr passende Felder automatisch.
+
+| Feldgruppe | Standort | Gebäude | Anlage | Gerät | Komponente |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Nummer, Bezeichnung, Kunde, Status, Beschreibung (Basis, immer) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Standort-Adresse (Straße, PLZ/Ort, Land) + Fläche (m²) | ✓ | – | – | – | – |
+| Baujahr | – | ✓ | ✓ | ✓ | ✓ |
+| Inbetriebnahme / **Bezugsdatum** (bei Gebäude) | – | ✓ | ✓ | ✓ | ✓ |
+| Etagen, Nutzfläche, Nutzungsart (Büro, Lager, Produktion, …) | – | ✓ | – | – | – |
+| Hersteller, Modell, Seriennummer | – | – | ✓ | ✓ | ✓ |
+
+**Nutzungsarten (Gebäude)**: Büro, Lager, Produktion, Einzelhandel, Wohnen, Gemischt, Sonstiges.
+
+**Hierarchie-Regel**: Parent + Child müssen demselben Kunden gehören. Technisch lässt sich jeder Typ unter jedem anderen anlegen, aber semantisch sinnvoll ist: SITE → BUILDING → SYSTEM → EQUIPMENT → COMPONENT.
+
+### Praxisbeispiel: Eine Kältemaschine (Gerät) anlegen
+
+1. 📍 Seitenleiste → **CRM** → **Serviceobjekte**
+2. „Neu" klicken
+3. **Nummer**: `KÄL-001`
+4. **Bezeichnung**: `Kältemaschine Halle 2`
+5. **Typ**: `Gerät`
+6. **Kunde**: Kunden aus der Liste auswählen (z. B. „Müller Maschinenbau GmbH")
+7. Unter „Technische Angaben": Hersteller (z. B. `Siemens`), Modell, Seriennummer
+8. Baujahr (z. B. `2018`) und Inbetriebnahme (Datum) eintragen
+9. Status auf „Betriebsbereit" belassen
+10. „Anlegen" klicken
+11. ✅ Das Objekt erscheint in der Liste mit deutschem Typ-Badge „Gerät" und QR-Code-Payload
+
+### Praxisbeispiel: Ein Gebäude anlegen (Gebäudereinigung, DGUV-Prüfungen)
+
+1. 📍 **CRM** → **Serviceobjekte** → „Neu"
+2. **Nummer**: `BLD-001`
+3. **Bezeichnung**: `Bürogebäude Ost`
+4. **Typ**: `Gebäude`
+5. **Kunde** auswählen
+6. ✅ Beachte: Die Felder Hersteller/Modell/Seriennummer **verschwinden**, stattdessen erscheinen „Gebäude-Angaben".
+7. **Baujahr**: `2015`, **Bezugsdatum**: `2015-09-01` (Label heißt bei Gebäude *Bezugsdatum* statt *Inbetriebnahme*)
+8. **Etagen**: `5`, **Nutzfläche**: `1800` (m²), **Nutzungsart**: `Büro`
+9. „Anlegen"
+
+### Praxisbeispiel: Einen Standort anlegen (Liegenschaft für Grünpflege)
+
+1. 📍 **CRM** → **Serviceobjekte** → „Neu"
+2. **Nummer**: `SITE-NORD`, **Bezeichnung**: `Werksgelände Nord`
+3. **Typ**: `Standort`
+4. ✅ Beachte: Es erscheinen „Standort-Angaben" mit Straße, PLZ/Ort, Land, Fläche. Keine technischen Felder, kein Baujahr.
+5. **Straße**: `Industriestraße 42`, **PLZ**: `86167`, **Ort**: `Augsburg`, **Land**: `DE`
+6. **Fläche (m²)**: `25000`
+7. „Anlegen"
+
+### Praxisbeispiel: Typ eines bestehenden Objekts ändern
+
+1. Detailseite eines Geräts (z. B. `KÄL-001`) öffnen → „Bearbeiten"
+2. **Typ** auf `Gebäude` umstellen
+3. ✅ Beachte: Die technischen Felder (Hersteller/Modell/Seriennummer) verschwinden sofort aus dem Formular, bereits eingetragene Werte werden verworfen.
+4. „Speichern"
+5. ✅ In der Datenbank sind die nicht mehr passenden Spalten auf `NULL` gesetzt (Audit-Log dokumentiert den Wechsel inkl. Feld-Diffs).
+
+### Praxisbeispiel: Untergeordnetes Bauteil anlegen
+
+1. Über „Neu" ein neues Objekt anlegen
+2. Nummer `KÄL-001-VERD` eingeben, Name `Verdichter`, Typ `Komponente`
+3. Denselben Kunden wählen wie das Parent-Objekt (z. B. „Müller Maschinenbau GmbH")
+4. Sobald ein Kunde ausgewählt ist, erscheint der Dropdown **„Übergeordnetes Objekt"**. Dort das Parent-Objekt (z. B. `KÄL-001 — Kältemaschine Halle 2`) wählen. Der Dropdown listet nur aktive Objekte desselben Kunden; der aktuelle Datensatz selbst ist ausgeschlossen.
+5. „Anlegen"
+6. ✅ Die Hierarchie ist in der Baum-Ansicht des Kunden sichtbar; Zyklen (z. B. Parent zeigt indirekt wieder auf sich selbst) werden serverseitig mit *„Circular reference detected"* abgelehnt.
+7. **Alternative Wege zur Hierarchie-Pflege**: CSV-Import mit `parentNumber`-Spalte (Bulk), oder nachträglich via „Bearbeiten" am Objekt.
+
+### Praxisbeispiel: Baum-Ansicht nutzen
+
+1. 📍 Seitenleiste → **CRM** → **Serviceobjekte** → „Baum-Ansicht"
+2. Kunden auswählen
+3. ✅ Alle Serviceobjekte des Kunden werden als einklappbarer Baum gerendert
+4. Jeder Knoten zeigt Nummer, Bezeichnung und den deutschen Typ-Badge (Standort/Gebäude/Anlage/Gerät/Komponente)
+5. Per Klick auf ein Objekt gelangt man zur Detailseite
+
+### Statuswerte
+
+Jedes Serviceobjekt hat einen Status (in der Liste als farbiger Badge sichtbar):
+
+| Wert | Bedeutung |
+|---|---|
+| **Betriebsbereit** | Regulär im Einsatz |
+| **Eingeschränkt** | Läuft, aber mit Mängeln |
+| **In Wartung** | Wartung läuft aktuell |
+| **Außer Betrieb** | Vorübergehend nicht nutzbar |
+| **Stillgelegt** | Dauerhaft ausgemustert |
+
+### Praxisbeispiel: Datei-Anhänge hochladen
+
+1. Auf der Detailseite des Serviceobjekts den Tab **„Anhänge"** öffnen
+2. „Hochladen" klicken
+3. Datei wählen (PDF, Bild, DOCX, XLSX, max. 10 MB — erlaubte MIME-Typen werden bei Ablehnung angezeigt)
+4. ✅ Datei wird per Signed-URL direkt in den Storage-Bucket `serviceobject-attachments` geladen
+5. Download- und Löschen-Aktionen stehen pro Anhang bereit
+6. Pro Serviceobjekt sind maximal 20 Anhänge erlaubt
+
+### Praxisbeispiel: QR-Etikett drucken
+
+1. Auf der Detailseite „QR-Etikett" klicken
+2. ✅ PDF im Avery-Format öffnet sich im neuen Tab
+3. Etikett enthält Nummer, Bezeichnung und Kundenname
+4. Physisches Etikett am Objekt anbringen
+
+### Praxisbeispiel: QR-Code im Feld scannen
+
+1. Der bestehende Warehouse-QR-Scanner erkennt jetzt zusätzlich `TERP:SO:…` (neben `TERP:ART:…`)
+2. Gescannt wird nur innerhalb der zugehörigen Tenant-Kennung — fremde Mandanten-Codes werden abgewiesen
+
+### Praxisbeispiel: Lagerentnahme einem Serviceobjekt zuordnen
+
+1. 📍 Seitenleiste → **Lagerentnahmen**
+2. Im Schritt „Referenztyp" die neue Karte **„Serviceobjekt"** wählen
+3. Serviceobjekt über den Picker auswählen (mit Suche über Nummer/Name/Seriennummer)
+4. Artikel und Menge erfassen, Entnahme abschließen
+5. ✅ Die Bewegung wird in `wh_stock_movements` mit `service_object_id` gespeichert (parallel zum alten `machine_id`-Freitext)
+
+### Praxisbeispiel: CSV-Import von 20 Objekten
+
+1. 📍 **CRM** → **Serviceobjekte** → „CSV-Import"
+2. CSV mit mindestens `number,name,customerAddressNumber` als Pflichtspalten wählen; optional `kind,parentNumber,…`
+3. „Vorschau" klicken — rote Zeilen zeigen Fehler (unbekannter Kunde, Duplikat, Zyklus, falsches `kind`)
+4. Fehler beheben und neu hochladen oder direkt „Importieren" klicken, wenn keine Fehler vorhanden
+5. ✅ Topologischer Sort sorgt dafür, dass Eltern-Objekte vor ihren Kindern angelegt werden
+
+### Soft-Delete vs. Hard-Delete
+
+- Wenn ein Serviceobjekt mit einem Auftrag oder einer Lagerbewegung verknüpft ist (oder untergeordnete Objekte hat), wird beim Löschen **nur deaktiviert** (`isActive = false`); die verknüpften Daten bleiben intakt.
+- Ohne Verknüpfungen wird der Datensatz **endgültig gelöscht** (inklusive Anhänge — Storage-Bucket wird entsprechend bereinigt).
+
+---
+
 ## 13. Belege & Fakturierung
 
 **Was ist es?** Das Belegmodul bildet die gesamte kaufmännische Belegkette ab -- vom Angebot über Auftragsbestätigung und Lieferschein bis zur Rechnung und Gutschrift. Jeder Beleg enthält Positionen (Artikel, Freitext, Zwischensummen) mit automatischer Berechnung.

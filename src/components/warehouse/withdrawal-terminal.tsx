@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table'
 import {
   Check, ClipboardList, FileText, Wrench, PackageMinus,
-  PackageOpen, ArrowRight, RotateCcw, Loader2,
+  PackageOpen, ArrowRight, RotateCcw, Loader2, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ArticleSearchPopover } from './article-search-popover'
@@ -25,9 +25,15 @@ import type { WithdrawalArticleInfo } from './withdrawal-article-row'
 import {
   useCreateBatchWhWithdrawal,
 } from '@/hooks/use-wh-withdrawals'
+import { ServiceObjectPicker } from '@/components/serviceobjects/service-object-picker'
 
 type Step = 1 | 2 | 3
-type ReferenceType = 'ORDER' | 'DOCUMENT' | 'MACHINE' | 'NONE'
+type ReferenceType =
+  | 'ORDER'
+  | 'DOCUMENT'
+  | 'MACHINE'
+  | 'SERVICE_OBJECT'
+  | 'NONE'
 
 interface WithdrawalItem {
   articleId: string
@@ -40,6 +46,7 @@ interface WithdrawalState {
   referenceType: ReferenceType
   referenceId: string
   machineId: string
+  serviceObjectId: string
   items: WithdrawalItem[]
   notes: string
 }
@@ -75,6 +82,12 @@ const REF_TYPE_CONFIG: Array<{
     icon: Wrench,
   },
   {
+    value: 'SERVICE_OBJECT',
+    labelKey: 'refTypeServiceObject',
+    descKey: 'refTypeServiceObjectDesc',
+    icon: Building2,
+  },
+  {
     value: 'NONE',
     labelKey: 'refTypeNone',
     descKey: 'refTypeNoneDesc',
@@ -87,6 +100,7 @@ const initialState: WithdrawalState = {
   referenceType: 'NONE',
   referenceId: '',
   machineId: '',
+  serviceObjectId: '',
   items: [],
   notes: '',
 }
@@ -101,12 +115,20 @@ export function WithdrawalTerminal() {
   const setStep = (step: Step) => setState((s) => ({ ...s, step }))
 
   const selectReferenceType = (referenceType: ReferenceType) => {
-    setState((s) => ({ ...s, referenceType, referenceId: '', machineId: '' }))
+    setState((s) => ({
+      ...s,
+      referenceType,
+      referenceId: '',
+      machineId: '',
+      serviceObjectId: '',
+    }))
   }
 
   const canProceedFromStep1 = () => {
     if (state.referenceType === 'NONE') return true
     if (state.referenceType === 'MACHINE') return state.machineId.trim().length > 0
+    if (state.referenceType === 'SERVICE_OBJECT')
+      return state.serviceObjectId.trim().length > 0
     return state.referenceId.trim().length > 0
   }
 
@@ -157,10 +179,18 @@ export function WithdrawalTerminal() {
     try {
       await batchMutation.mutateAsync({
         referenceType: state.referenceType,
-        referenceId: state.referenceType !== 'NONE' && state.referenceType !== 'MACHINE'
-          ? state.referenceId || undefined
-          : undefined,
-        machineId: state.referenceType === 'MACHINE' ? state.machineId || undefined : undefined,
+        referenceId:
+          state.referenceType === 'ORDER' || state.referenceType === 'DOCUMENT'
+            ? state.referenceId || undefined
+            : undefined,
+        machineId:
+          state.referenceType === 'MACHINE'
+            ? state.machineId || undefined
+            : undefined,
+        serviceObjectId:
+          state.referenceType === 'SERVICE_OBJECT'
+            ? state.serviceObjectId || undefined
+            : undefined,
         items: state.items.map((item) => ({
           articleId: item.articleId,
           quantity: item.quantity,
@@ -198,6 +228,8 @@ export function WithdrawalTerminal() {
 
   const getReferenceValue = (): string => {
     if (state.referenceType === 'MACHINE') return state.machineId
+    if (state.referenceType === 'SERVICE_OBJECT')
+      return state.serviceObjectId || '\u2014'
     if (state.referenceType === 'NONE') return t('refTypeNone')
     return state.referenceId || '\u2014'
   }
@@ -316,21 +348,40 @@ export function WithdrawalTerminal() {
               <CardContent className="pt-4 pb-4 space-y-3">
                 <div>
                   <Label className="text-sm font-medium">
-                    {state.referenceType === 'MACHINE' ? t('labelMachineId') : t('labelReference')}
+                    {state.referenceType === 'MACHINE'
+                      ? t('labelMachineId')
+                      : state.referenceType === 'SERVICE_OBJECT'
+                        ? 'Serviceobjekt'
+                        : t('labelReference')}
                   </Label>
-                  <Input
-                    value={state.referenceType === 'MACHINE' ? state.machineId : state.referenceId}
-                    onChange={(e) => {
-                      if (state.referenceType === 'MACHINE') {
-                        setState((s) => ({ ...s, machineId: e.target.value }))
-                      } else {
-                        setState((s) => ({ ...s, referenceId: e.target.value }))
+                  {state.referenceType === 'SERVICE_OBJECT' ? (
+                    <div className="mt-1.5 w-full sm:max-w-md">
+                      <ServiceObjectPicker
+                        value={state.serviceObjectId || null}
+                        onChange={(id) =>
+                          setState((s) => ({ ...s, serviceObjectId: id ?? '' }))
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      value={
+                        state.referenceType === 'MACHINE'
+                          ? state.machineId
+                          : state.referenceId
                       }
-                    }}
-                    placeholder={getReferencePlaceholder()}
-                    className="mt-1.5 w-full sm:max-w-md font-mono text-base sm:text-sm"
-                    autoFocus
-                  />
+                      onChange={(e) => {
+                        if (state.referenceType === 'MACHINE') {
+                          setState((s) => ({ ...s, machineId: e.target.value }))
+                        } else {
+                          setState((s) => ({ ...s, referenceId: e.target.value }))
+                        }
+                      }}
+                      placeholder={getReferencePlaceholder()}
+                      className="mt-1.5 w-full sm:max-w-md font-mono text-base sm:text-sm"
+                      autoFocus
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>

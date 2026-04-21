@@ -95,6 +95,11 @@ public = false
 file_size_limit = "5MiB"
 allowed_mime_types = ["application/xml", "text/xml"]
 
+[storage.buckets.serviceobject-attachments]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+
 [auth]
 enabled = true
 # Base URL the app is served from. Used by auth.admin.generateLink() as the

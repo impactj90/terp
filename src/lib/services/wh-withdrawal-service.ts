@@ -28,7 +28,12 @@ export class WhWithdrawalValidationError extends Error {
 
 // --- Types ---
 
-type ReferenceType = "ORDER" | "DOCUMENT" | "MACHINE" | "NONE"
+type ReferenceType =
+  | "ORDER"
+  | "DOCUMENT"
+  | "MACHINE"
+  | "SERVICE_OBJECT"
+  | "NONE"
 
 interface CreateWithdrawalInput {
   articleId: string
@@ -36,6 +41,7 @@ interface CreateWithdrawalInput {
   referenceType: ReferenceType
   referenceId?: string
   machineId?: string
+  serviceObjectId?: string
   notes?: string
 }
 
@@ -43,17 +49,28 @@ interface CreateBatchWithdrawalInput {
   referenceType: ReferenceType
   referenceId?: string
   machineId?: string
+  serviceObjectId?: string
   items: Array<{ articleId: string; quantity: number }>
   notes?: string
 }
 
 // --- Helper ---
 
-function resolveReferences(referenceType: ReferenceType, referenceId?: string, machineId?: string) {
+function resolveReferences(
+  referenceType: ReferenceType,
+  referenceId?: string,
+  machineId?: string,
+  serviceObjectId?: string
+) {
   return {
     orderId: referenceType === "ORDER" ? (referenceId ?? null) : null,
     documentId: referenceType === "DOCUMENT" ? (referenceId ?? null) : null,
-    machineId: referenceType === "MACHINE" ? (machineId || referenceId || null) : null,
+    machineId:
+      referenceType === "MACHINE" ? (machineId || referenceId || null) : null,
+    serviceObjectId:
+      referenceType === "SERVICE_OBJECT"
+        ? (serviceObjectId || referenceId || null)
+        : null,
   }
 }
 
@@ -92,7 +109,12 @@ export async function createWithdrawal(
     const newStock = previousStock - input.quantity
 
     // 5. Resolve reference fields
-    const refs = resolveReferences(input.referenceType, input.referenceId, input.machineId)
+    const refs = resolveReferences(
+      input.referenceType,
+      input.referenceId,
+      input.machineId,
+      input.serviceObjectId
+    )
 
     // 6. Create stock movement (negative quantity)
     const movement = await (tx as unknown as PrismaClient).whStockMovement.create({
@@ -106,6 +128,7 @@ export async function createWithdrawal(
         orderId: refs.orderId,
         documentId: refs.documentId,
         machineId: refs.machineId,
+        serviceObjectId: refs.serviceObjectId,
         notes: input.notes ?? null,
         createdById: userId,
       },
@@ -188,7 +211,12 @@ export async function createBatchWithdrawal(
       const newStock = previousStock - item.quantity
 
       // 5. Resolve reference fields
-      const refs = resolveReferences(input.referenceType, input.referenceId, input.machineId)
+      const refs = resolveReferences(
+        input.referenceType,
+        input.referenceId,
+        input.machineId,
+        input.serviceObjectId
+      )
 
       // 6. Create stock movement (negative quantity)
       const movement = await (tx as unknown as PrismaClient).whStockMovement.create({
@@ -202,6 +230,7 @@ export async function createBatchWithdrawal(
           orderId: refs.orderId,
           documentId: refs.documentId,
           machineId: refs.machineId,
+          serviceObjectId: refs.serviceObjectId,
           notes: input.notes ?? null,
           createdById: userId,
         },
@@ -298,6 +327,7 @@ export async function cancelWithdrawal(
         orderId: movement.orderId,
         documentId: movement.documentId,
         machineId: movement.machineId,
+        serviceObjectId: movement.serviceObjectId,
         reason: `Storno of movement ${movementId}`,
         notes: movement.notes,
         createdById: userId,
@@ -347,6 +377,7 @@ export async function listWithdrawals(
     orderId?: string
     documentId?: string
     machineId?: string
+    serviceObjectId?: string
     dateFrom?: string
     dateTo?: string
     page: number
@@ -368,6 +399,10 @@ export async function listWithdrawals(
 
   if (params.machineId) {
     where.machineId = params.machineId
+  }
+
+  if (params.serviceObjectId) {
+    where.serviceObjectId = params.serviceObjectId
   }
 
   if (params.dateFrom || params.dateTo) {

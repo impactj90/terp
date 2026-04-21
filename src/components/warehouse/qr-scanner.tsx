@@ -14,7 +14,14 @@ interface QrScannerProps {
   onManualInput?: (articleNumber: string) => void
   enabled?: boolean
   className?: string
+  /**
+   * Accepted QR payload prefixes. Defaults to Article + ServiceObject.
+   * Use `['TERP:ART:']` to keep a legacy call-site single-purpose.
+   */
+  allowedPrefixes?: string[]
 }
+
+const DEFAULT_PREFIXES = ['TERP:ART:', 'TERP:SO:']
 
 /**
  * QR Scanner Component
@@ -29,6 +36,7 @@ export function QrScanner({
   onManualInput,
   enabled = true,
   className,
+  allowedPrefixes = DEFAULT_PREFIXES,
 }: QrScannerProps) {
   const t = useTranslations('warehouseScanner')
   const scannerRef = React.useRef<HTMLDivElement>(null)
@@ -67,8 +75,8 @@ export function QrScanner({
       if (now - lastScanRef.current < 500) return
       lastScanRef.current = now
 
-      // Validate TERP:ART: prefix
-      if (decodedText.startsWith('TERP:ART:')) {
+      // Validate prefix (TERP:ART: / TERP:SO: by default)
+      if (allowedPrefixes.some((p) => decodedText.startsWith(p))) {
         // Vibration feedback
         navigator.vibrate?.(200)
         // Audio feedback
@@ -78,7 +86,7 @@ export function QrScanner({
         onError?.(t('invalidQrCode'))
       }
     },
-    [onScan, onError, playBeep, t]
+    [onScan, onError, playBeep, t, allowedPrefixes]
   )
 
   // Initialize scanner
@@ -187,7 +195,7 @@ export function QrScanner({
       if (!value) return
 
       // If it looks like a full QR code, resolve as QR
-      if (value.startsWith('TERP:ART:')) {
+      if (allowedPrefixes.some((p) => value.startsWith(p))) {
         navigator.vibrate?.(200)
         playBeep()
         onScan(value)
@@ -198,7 +206,7 @@ export function QrScanner({
       }
       setManualValue('')
     },
-    [manualValue, onScan, onManualInput, playBeep]
+    [manualValue, onScan, onManualInput, playBeep, allowedPrefixes]
   )
 
   return (

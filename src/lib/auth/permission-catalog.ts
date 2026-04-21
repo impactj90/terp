@@ -254,6 +254,11 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("crm_tasks.edit", "crm_tasks", "edit", "Edit CRM tasks and messages"),
   p("crm_tasks.delete", "crm_tasks", "delete", "Delete CRM tasks and messages"),
 
+  // Service Objects (Plan 2026-04-21-serviceobjekte-stammdaten.md)
+  p("service_objects.view", "service_objects", "view", "Serviceobjekte anzeigen"),
+  p("service_objects.manage", "service_objects", "manage", "Serviceobjekte erstellen und bearbeiten"),
+  p("service_objects.delete", "service_objects", "delete", "Serviceobjekte löschen"),
+
   // Billing Documents
   p("billing_documents.view", "billing_documents", "view", "View billing documents"),
   p("billing_documents.create", "billing_documents", "create", "Create billing documents"),

@@ -6,11 +6,14 @@
  * No DB storage needed -- QR content is derived from tenant + article data.
  */
 import type { PrismaClient } from "@/generated/prisma/client"
-import QRCode from "qrcode"
 import { renderToBuffer } from "@react-pdf/renderer"
 import * as storage from "@/lib/supabase/storage"
 import React from "react"
 import { QrLabelPdf, type LabelFormat } from "@/lib/pdf/qr-label-pdf"
+import {
+  buildQrContent as buildQrContentShared,
+  generateQrDataUrl as generateQrDataUrlShared,
+} from "./qr-utils"
 
 // --- Error Classes ---
 
@@ -48,7 +51,7 @@ const SIGNED_URL_EXPIRY_SECONDS = 300 // 5 minutes
  * Format: TERP:ART:{first 6 chars of tenantId}:{articleNumber}
  */
 export function buildQrContent(tenantId: string, articleNumber: string): string {
-  return `TERP:ART:${tenantId.substring(0, 6)}:${articleNumber}`
+  return buildQrContentShared("ART", tenantId, articleNumber)
 }
 
 /**
@@ -58,7 +61,7 @@ export async function generateQrDataUrl(
   content: string,
   size?: number
 ): Promise<string> {
-  return QRCode.toDataURL(content, { width: size ?? 150, margin: 1 })
+  return generateQrDataUrlShared(content, size)
 }
 
 // --- DB-backed Functions ---
