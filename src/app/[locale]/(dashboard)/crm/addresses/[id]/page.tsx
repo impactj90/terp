@@ -31,6 +31,8 @@ import { TaskList } from '@/components/crm/task-list'
 import { BillingDocumentList } from '@/components/billing/document-list'
 import { ServiceCaseList } from '@/components/billing/service-case-list'
 import { AddressGroupSection } from '@/components/crm/address-group-section'
+import { ServiceObjectTreeView } from '@/components/serviceobjects/service-object-tree-view'
+import { useServiceObjectTree } from '@/hooks/use-service-objects'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -264,6 +266,7 @@ export default function CrmAddressDetailPage() {
           <TabsTrigger value="tasks">{t('tabTasks')}</TabsTrigger>
           <TabsTrigger value="documents">{t('tabDocuments')}</TabsTrigger>
           <TabsTrigger value="serviceCases">{t('tabServiceCases')}</TabsTrigger>
+          <TabsTrigger value="serviceObjects">{t('tabServiceObjects')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -410,6 +413,10 @@ export default function CrmAddressDetailPage() {
         <TabsContent value="serviceCases" className="mt-6">
           <ServiceCaseList addressId={address.id} />
         </TabsContent>
+
+        <TabsContent value="serviceObjects" className="mt-6">
+          <CrmAddressServiceObjectsTab customerAddressId={address.id} />
+        </TabsContent>
       </Tabs>
 
       {/* Edit Sheet */}
@@ -489,5 +496,31 @@ export default function CrmAddressDetailPage() {
         variant="destructive"
       />
     </div>
+  )
+}
+
+function CrmAddressServiceObjectsTab({
+  customerAddressId,
+}: {
+  customerAddressId: string
+}) {
+  const { data, isLoading } = useServiceObjectTree(customerAddressId)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-8 w-2/3" />
+      </div>
+    )
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <ServiceObjectTreeView nodes={data ?? []} />
+      </CardContent>
+    </Card>
   )
 }

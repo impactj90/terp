@@ -178,4 +178,25 @@ export const whWithdrawalsRouter = createTRPCRouter({
         handleServiceError(err)
       }
     }),
+
+  listByServiceObject: whProcedure
+    .use(requirePermission(WH_STOCK_VIEW))
+    .input(
+      z.object({
+        serviceObjectId: z.string().uuid(),
+        limit: z.number().int().min(1).max(200).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return await withdrawalService.listByServiceObject(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.serviceObjectId,
+          { limit: input.limit }
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
 })

@@ -291,7 +291,7 @@ export const whArticlesRouter = createTRPCRouter({
     .use(requirePermission(WH_VIEW))
     .input(
       z.object({
-        query: z.string().min(1).max(255),
+        query: z.string().max(255).optional().default(""),
         limit: z.number().int().min(1).max(50).optional().default(10),
       })
     )

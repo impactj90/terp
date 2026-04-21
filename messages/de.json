@@ -4948,6 +4948,9 @@
     "fieldStatus": "Status",
     "fieldCustomer": "Kunde",
     "fieldCostCenter": "Kostenstelle",
+    "fieldServiceObject": "Serviceobjekt",
+    "serviceObjectPlaceholder": "Serviceobjekt wählen…",
+    "serviceObjectHint": "Optional. Verknüpft den Auftrag mit einem konkreten Serviceobjekt — Zeitbuchungen erscheinen dann in dessen Historie.",
     "fieldBillingRate": "Stundensatz",
     "fieldValidFrom": "Gültig ab",
     "fieldValidTo": "Gültig bis",
@@ -5660,6 +5663,7 @@
     "tabTasks": "Aufgaben",
     "tabDocuments": "Belege",
     "tabServiceCases": "Kundendienst",
+    "tabServiceObjects": "Serviceobjekte",
     "comingSoon": "In Vorbereitung",
     "contactsTitle": "Kontaktpersonen",
     "addContact": "Kontakt hinzufügen",
@@ -6454,6 +6458,7 @@
     "typeAdjustment": "Korrektur",
     "typeInventory": "Inventur",
     "typeReturn": "Rücklieferung",
+    "typeDeliveryNote": "Lieferschein",
     "filterArticle": "Artikel filtern",
     "filterType": "Art filtern",
     "filterAllTypes": "Alle Arten",
@@ -8789,6 +8794,44 @@
       "rejected": "Antrag abgelehnt",
       "cancelled": "Antrag zurückgezogen",
       "actionFailed": "Aktion fehlgeschlagen"
+    }
+  },
+  "serviceObjects": {
+    "tabs": {
+      "history": "Historie"
+    },
+    "history": {
+      "ordersSection": "Einsätze",
+      "movementsSection": "Materialentnahmen",
+      "emptyOrders": "Keine Einsätze für dieses Serviceobjekt.",
+      "emptyMovements": "Keine Materialentnahmen für dieses Serviceobjekt.",
+      "loadMore": "Mehr laden",
+      "colCode": "Auftrag",
+      "colName": "Bezeichnung",
+      "colStatus": "Status",
+      "colValidFrom": "Start",
+      "colValidTo": "Ende",
+      "colTechnicians": "Techniker",
+      "colHours": "Std.",
+      "colBookings": "Buchungen",
+      "colLastBooking": "Letzte Buchung",
+      "colDate": "Datum",
+      "colType": "Art",
+      "colArticle": "Artikel",
+      "colQuantity": "Menge",
+      "colUser": "Benutzer",
+      "colReason": "Grund",
+      "totals": {
+        "orderCount": "{count, plural, =0 {Keine Einsätze} =1 {1 Einsatz} other {# Einsätze}}",
+        "totalHours": "{hours} h insgesamt",
+        "movementCount": "{count, plural, =0 {Keine Entnahmen} =1 {1 Entnahme} other {# Entnahmen}}"
+      }
+    },
+    "lastService": {
+      "title": "Letzter Einsatz",
+      "empty": "Noch kein Einsatz erfasst",
+      "daysAgo": "{days, plural, =0 {heute} =1 {vor 1 Tag} other {vor # Tagen}}",
+      "viewHistory": "Zur Historie"
     }
   }
 }

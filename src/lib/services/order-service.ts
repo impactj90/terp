@@ -47,12 +47,28 @@ function parseDate(dateStr: string): Date {
   return new Date(dateStr + "T00:00:00Z")
 }
 
+async function validateServiceObject(
+  prisma: PrismaClient,
+  tenantId: string,
+  serviceObjectId: string
+) {
+  const so = await prisma.serviceObject.findFirst({
+    where: { id: serviceObjectId, tenantId },
+    select: { id: true },
+  })
+  if (!so) {
+    throw new OrderValidationError(
+      "Service object not found for this tenant"
+    )
+  }
+}
+
 // --- Service Functions ---
 
 export async function list(
   prisma: PrismaClient,
   tenantId: string,
-  params?: { isActive?: boolean; status?: string }
+  params?: { isActive?: boolean; status?: string; serviceObjectId?: string }
 ) {
   return repo.findMany(prisma, tenantId, params)
 }
@@ -82,6 +98,7 @@ export async function create(
     billingRatePerHour?: number
     validFrom?: string
     validTo?: string
+    serviceObjectId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -107,6 +124,11 @@ export async function create(
   const description = input.description?.trim() || null
   const customer = input.customer?.trim() || null
 
+  // Service object cross-tenant check
+  if (input.serviceObjectId) {
+    await validateServiceObject(prisma, tenantId, input.serviceObjectId)
+  }
+
   // Create order
   const created = await repo.create(prisma, {
     tenantId,
@@ -123,6 +145,7 @@ export async function create(
         : undefined,
     validFrom: input.validFrom ? parseDate(input.validFrom) : undefined,
     validTo: input.validTo ? parseDate(input.validTo) : undefined,
+    serviceObjectId: input.serviceObjectId ?? null,
   })
 
   if (audit) {
@@ -162,6 +185,7 @@ export async function update(
     validFrom?: string | null
     validTo?: string | null
     isActive?: boolean
+    serviceObjectId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -249,6 +273,14 @@ export async function update(
   // Handle isActive update
   if (input.isActive !== undefined) {
     data.isActive = input.isActive
+  }
+
+  // Handle serviceObjectId update (nullable)
+  if (input.serviceObjectId !== undefined) {
+    if (input.serviceObjectId !== null) {
+      await validateServiceObject(prisma, tenantId, input.serviceObjectId)
+    }
+    data.serviceObjectId = input.serviceObjectId
   }
 
   await repo.update(prisma, tenantId, input.id, data)

@@ -16,7 +16,7 @@ const orderInclude = {
 export async function findMany(
   prisma: PrismaClient,
   tenantId: string,
-  params?: { isActive?: boolean; status?: string }
+  params?: { isActive?: boolean; status?: string; serviceObjectId?: string }
 ) {
   const where: Record<string, unknown> = { tenantId }
 
@@ -26,11 +26,42 @@ export async function findMany(
   if (params?.status !== undefined) {
     where.status = params.status
   }
+  if (params?.serviceObjectId !== undefined) {
+    where.serviceObjectId = params.serviceObjectId
+  }
 
   return prisma.order.findMany({
     where,
     orderBy: { code: "asc" },
     include: orderInclude,
+  })
+}
+
+export async function findManyByServiceObject(
+  prisma: PrismaClient,
+  tenantId: string,
+  serviceObjectId: string,
+  limit: number
+) {
+  return prisma.order.findMany({
+    where: { tenantId, serviceObjectId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      costCenter: { select: { id: true, code: true, name: true } },
+      assignments: {
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              personnelNumber: true,
+            },
+          },
+        },
+      },
+    },
   })
 }
 
@@ -72,6 +103,7 @@ export async function create(
     billingRatePerHour?: Prisma.Decimal
     validFrom?: Date
     validTo?: Date
+    serviceObjectId?: string | null
   }
 ) {
   return prisma.order.create({ data })

@@ -30,6 +30,9 @@ import {
   useUpdateOrder,
   useCostCenters,
 } from '@/hooks'
+import { useServiceObject } from '@/hooks/use-service-objects'
+import { ServiceObjectPicker } from '@/components/serviceobjects/service-object-picker'
+
 interface Order {
   id: string
   code: string
@@ -47,6 +50,8 @@ interface Order {
   valid_to?: string | null
   isActive?: boolean
   is_active?: boolean
+  serviceObjectId?: string | null
+  service_object_id?: string | null
 }
 
 interface OrderFormSheetProps {
@@ -67,6 +72,7 @@ interface FormState {
   validFrom: string
   validTo: string
   isActive: boolean
+  serviceObjectId: string | null
 }
 
 const INITIAL_STATE: FormState = {
@@ -80,6 +86,7 @@ const INITIAL_STATE: FormState = {
   validFrom: '',
   validTo: '',
   isActive: true,
+  serviceObjectId: null,
 }
 
 export function OrderFormSheet({
@@ -98,14 +105,49 @@ export function OrderFormSheet({
   const { data: costCentersData } = useCostCenters({ enabled: open })
   const costCenters = costCentersData?.data ?? []
 
+  // Track the last SO id we auto-filled the customer from, so we only
+  // override the customer field when the user actively changes the SO —
+  // not when they edit the customer after the fact, and not on first
+  // render of an existing order.
+  const lastAutoFilledSoIdRef = React.useRef<string | null>(null)
+  const soQuery = useServiceObject(
+    form.serviceObjectId ?? '',
+    !!form.serviceObjectId
+  )
+  const selectedCompany = (
+    soQuery.data as { customerAddress?: { company?: string } } | undefined
+  )?.customerAddress?.company ?? null
+
+  // Auto-fill the customer field when the user actively changes the SO.
+  // The ref is seeded with the *original* serviceObjectId on open so the
+  // initial SO-query response doesn't overwrite the persisted customer
+  // string; only a later user pick (different from the initial value)
+  // triggers the fill.
+  React.useEffect(() => {
+    if (!open) return
+    const soId = form.serviceObjectId
+    if (!soId) return
+    if (lastAutoFilledSoIdRef.current === soId) return
+    if (!selectedCompany) return
+    setForm((prev) => ({ ...prev, customer: selectedCompany }))
+    lastAutoFilledSoIdRef.current = soId
+  }, [open, form.serviceObjectId, selectedCompany])
+
   React.useEffect(() => {
     if (open) {
+      // Seed the ref with the initially persisted SO id (null for new
+      // orders). Ensures we don't overwrite the customer string on load.
+      const initialSoId = order
+        ? (order.serviceObjectId ?? order.service_object_id ?? null)
+        : null
+      lastAutoFilledSoIdRef.current = initialSoId
       if (order) {
         const ccId = order.costCenterId ?? order.cost_center_id ?? ''
         const rate = order.billingRatePerHour ?? order.billing_rate_per_hour
         const vFrom = order.validFrom ?? order.valid_from
         const vTo = order.validTo ?? order.valid_to
         const active = order.isActive ?? order.is_active ?? true
+        const soId = order.serviceObjectId ?? order.service_object_id ?? null
         setForm({
           code: order.code || '',
           name: order.name || '',
@@ -117,6 +159,7 @@ export function OrderFormSheet({
           validFrom: vFrom ? String(vFrom).split('T')[0] ?? '' : '',
           validTo: vTo ? String(vTo).split('T')[0] ?? '' : '',
           isActive: active,
+          serviceObjectId: soId,
         })
       } else {
         setForm(INITIAL_STATE)
@@ -161,6 +204,7 @@ export function OrderFormSheet({
           validFrom: form.validFrom || undefined,
           validTo: form.validTo || undefined,
           isActive: form.isActive,
+          serviceObjectId: form.serviceObjectId,
         })
       } else {
         await createMutation.mutateAsync({
@@ -173,6 +217,7 @@ export function OrderFormSheet({
           billingRatePerHour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
           validFrom: form.validFrom || undefined,
           validTo: form.validTo || undefined,
+          serviceObjectId: form.serviceObjectId ?? undefined,
         })
       }
 
@@ -298,6 +343,21 @@ export function OrderFormSheet({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2" data-testid="order-service-object-field">
+                <Label>{t('fieldServiceObject')}</Label>
+                <ServiceObjectPicker
+                  value={form.serviceObjectId}
+                  onChange={(id) =>
+                    setForm((prev) => ({ ...prev, serviceObjectId: id }))
+                  }
+                  placeholder={t('serviceObjectPlaceholder')}
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('serviceObjectHint')}
+                </p>
               </div>
             </div>
 

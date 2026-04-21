@@ -8,15 +8,19 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslations } from 'next-intl'
 import { useWhArticleMovements } from '@/hooks/use-wh-stock-movements'
+import {
+  Building2, ClipboardList, FileText, Wrench, Package,
+} from 'lucide-react'
 
-type MovementType = 'GOODS_RECEIPT' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'INVENTORY' | 'RETURN'
+type MovementType = 'GOODS_RECEIPT' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'INVENTORY' | 'RETURN' | 'DELIVERY_NOTE'
 
-const typeVariants: Record<MovementType, 'green' | 'red' | 'yellow' | 'blue' | 'purple'> = {
+const typeVariants: Record<MovementType, 'green' | 'red' | 'yellow' | 'blue' | 'purple' | 'cyan'> = {
   GOODS_RECEIPT: 'green',
   WITHDRAWAL: 'red',
   ADJUSTMENT: 'yellow',
   INVENTORY: 'blue',
   RETURN: 'purple',
+  DELIVERY_NOTE: 'cyan',
 }
 
 const typeKeys: Record<MovementType, string> = {
@@ -25,6 +29,7 @@ const typeKeys: Record<MovementType, string> = {
   ADJUSTMENT: 'typeAdjustment',
   INVENTORY: 'typeInventory',
   RETURN: 'typeReturn',
+  DELIVERY_NOTE: 'typeDeliveryNote',
 }
 
 function formatDate(date: string | Date | null | undefined): string {
@@ -41,6 +46,66 @@ function formatDate(date: string | Date | null | undefined): string {
 function formatQuantity(qty: number): string {
   if (qty > 0) return `+${qty}`
   return `${qty}`
+}
+
+function ReferenceDisplay({ movement }: {
+  movement: {
+    purchaseOrder?: { id: string; number: string } | null
+    serviceObjectId?: string | null
+    serviceObject?: { id: string; number: string; name: string } | null
+    orderId?: string | null
+    documentId?: string | null
+    machineId?: string | null
+  }
+}) {
+  if (movement.purchaseOrder) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <Package className="h-3.5 w-3.5 text-sky-500" />
+        <span className="font-mono">{movement.purchaseOrder.number}</span>
+      </div>
+    )
+  }
+  if (movement.serviceObjectId) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <Building2 className="h-3.5 w-3.5 text-emerald-500" />
+        {movement.serviceObject ? (
+          <span>
+            <span className="font-mono">{movement.serviceObject.number}</span>{' '}
+            <span className="text-muted-foreground">{movement.serviceObject.name}</span>
+          </span>
+        ) : (
+          <span className="font-mono">{movement.serviceObjectId.slice(0, 8)}...</span>
+        )}
+      </div>
+    )
+  }
+  if (movement.orderId) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <ClipboardList className="h-3.5 w-3.5 text-blue-500" />
+        <span className="font-mono">{movement.orderId.slice(0, 8)}...</span>
+      </div>
+    )
+  }
+  if (movement.documentId) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <FileText className="h-3.5 w-3.5 text-violet-500" />
+        <span className="font-mono">{movement.documentId.slice(0, 8)}...</span>
+      </div>
+    )
+  }
+  if (movement.machineId) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <Wrench className="h-3.5 w-3.5 text-amber-500" />
+        <span className="font-mono">{movement.machineId}</span>
+      </div>
+    )
+  }
+  return <span className="text-xs text-muted-foreground">{'—'}</span>
 }
 
 interface ArticleMovementsTabProps {
@@ -91,6 +156,7 @@ export function ArticleMovementsTab({ articleId }: ArticleMovementsTabProps) {
               <TableHead className="w-[100px] text-right">{t('colNewStock')}</TableHead>
               <TableHead>{t('colReference')}</TableHead>
               <TableHead>{t('colReason')}</TableHead>
+              <TableHead>{t('colCreatedBy')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,16 +182,13 @@ export function ArticleMovementsTab({ articleId }: ArticleMovementsTabProps) {
                     {movement.newStock}
                   </TableCell>
                   <TableCell>
-                    {movement.purchaseOrder ? (
-                      <span className="text-sm font-mono">
-                        {movement.purchaseOrder.number}
-                      </span>
-                    ) : (
-                      '\u2014'
-                    )}
+                    <ReferenceDisplay movement={movement} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {movement.reason || '\u2014'}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {movement.createdBy?.displayName ?? '\u2014'}
                   </TableCell>
                 </TableRow>
               )

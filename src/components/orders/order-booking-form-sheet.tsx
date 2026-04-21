@@ -27,9 +27,9 @@ import {
 import {
   useCreateOrderBooking,
   useUpdateOrderBooking,
-  useEmployees,
   useActivities,
 } from '@/hooks'
+import { EmployeePicker } from '@/components/employees/employee-picker'
 import type { components } from '@/types/legacy-api-types'
 
 type OrderBooking = components['schemas']['OrderBooking']
@@ -78,9 +78,7 @@ export function OrderBookingFormSheet({
 
   const createMutation = useCreateOrderBooking()
   const updateMutation = useUpdateOrderBooking()
-  const { data: employeesData } = useEmployees({ isActive: true, enabled: open })
   const { data: activitiesData } = useActivities({ isActive: true, enabled: open })
-  const employees = employeesData?.items ?? []
   const activities = activitiesData?.data ?? []
 
   React.useEffect(() => {
@@ -184,25 +182,14 @@ export function OrderBookingFormSheet({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>{t('fieldEmployee')} *</Label>
-                <Select
-                  value={form.employeeId || '__none__'}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, employeeId: value === '__none__' ? '' : value }))
+                <EmployeePicker
+                  value={form.employeeId || null}
+                  onChange={(id) =>
+                    setForm((prev) => ({ ...prev, employeeId: id ?? '' }))
                   }
+                  placeholder={t('employeePlaceholder')}
                   disabled={isSubmitting || isEdit}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('employeePlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">{t('selectEmployee')}</SelectItem>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               <div className="space-y-2">

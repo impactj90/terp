@@ -9,6 +9,7 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as userDisplayNameService from "./user-display-name-service"
 
 // --- Error Classes ---
 
@@ -419,6 +420,9 @@ export async function listWithdrawals(
         article: {
           select: { id: true, number: true, name: true, unit: true },
         },
+        serviceObject: {
+          select: { id: true, number: true, name: true },
+        },
       },
       orderBy: { date: "desc" },
       skip: (params.page - 1) * params.pageSize,
@@ -427,7 +431,48 @@ export async function listWithdrawals(
     prisma.whStockMovement.count({ where }),
   ])
 
-  return { items, total }
+  const createdByIds = items
+    .map((m) => m.createdById)
+    .filter((id): id is string => id !== null)
+  const userMap = await userDisplayNameService.resolveMany(
+    prisma,
+    tenantId,
+    createdByIds
+  )
+  const enriched = items.map((m) => ({
+    ...m,
+    createdBy: m.createdById
+      ? {
+          userId: m.createdById,
+          displayName:
+            userMap.get(m.createdById)?.displayName ?? "Unbekannt",
+        }
+      : null,
+  }))
+
+  return { items: enriched, total }
+}
+
+export async function listByServiceObject(
+  prisma: PrismaClient,
+  tenantId: string,
+  serviceObjectId: string,
+  params?: { limit?: number }
+) {
+  return prisma.whStockMovement.findMany({
+    where: {
+      tenantId,
+      type: { in: ["WITHDRAWAL", "DELIVERY_NOTE"] },
+      serviceObjectId,
+    },
+    include: {
+      article: {
+        select: { id: true, number: true, name: true, unit: true },
+      },
+    },
+    orderBy: { date: "desc" },
+    take: params?.limit ?? 50,
+  })
 }
 
 export async function listByOrder(

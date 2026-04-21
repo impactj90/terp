@@ -43,12 +43,12 @@ export function useWhArticle(id: string, enabled = true) {
   )
 }
 
-export function useWhArticleSearch(query: string) {
+export function useWhArticleSearch(query: string, enabled = true) {
   const trpc = useTRPC()
   return useQuery(
     trpc.warehouse.articles.search.queryOptions(
-      { query: query || " " },
-      { enabled: query.length >= 1 }
+      { query, limit: 25 },
+      { enabled }
     )
   )
 }

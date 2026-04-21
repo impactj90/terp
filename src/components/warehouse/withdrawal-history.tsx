@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  ClipboardList, FileText, Wrench, PackageMinus, Undo2, History, ChevronLeft, ChevronRight,
+  ClipboardList, FileText, Wrench, PackageMinus, Undo2, History, ChevronLeft, ChevronRight, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
@@ -35,7 +35,13 @@ function formatQuantity(qty: number): string {
 }
 
 function ReferenceDisplay({ movement }: {
-  movement: { orderId?: string | null; documentId?: string | null; machineId?: string | null }
+  movement: {
+    orderId?: string | null
+    documentId?: string | null
+    machineId?: string | null
+    serviceObjectId?: string | null
+    serviceObject?: { id: string; number: string; name: string } | null
+  }
 }) {
   if (movement.orderId) {
     return (
@@ -58,6 +64,21 @@ function ReferenceDisplay({ movement }: {
       <div className="flex items-center gap-1.5 text-xs">
         <Wrench className="h-3.5 w-3.5 text-amber-500" />
         <span className="font-mono">{movement.machineId}</span>
+      </div>
+    )
+  }
+  if (movement.serviceObjectId) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <Building2 className="h-3.5 w-3.5 text-emerald-500" />
+        {movement.serviceObject ? (
+          <span>
+            <span className="font-mono">{movement.serviceObject.number}</span>{' '}
+            <span className="text-muted-foreground">{movement.serviceObject.name}</span>
+          </span>
+        ) : (
+          <span className="font-mono">{movement.serviceObjectId.slice(0, 8)}...</span>
+        )}
       </div>
     )
   }
@@ -169,7 +190,14 @@ export function WithdrawalHistory() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-muted-foreground">{formatDate(movement.date)}</span>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">{formatDate(movement.date)}</span>
+                      {movement.createdBy?.displayName && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {movement.createdBy.displayName}
+                        </span>
+                      )}
+                    </div>
                     {!isReversal && (
                       <Button
                         variant="ghost"
@@ -195,7 +223,8 @@ export function WithdrawalHistory() {
                   <TableHead>{t('colArticle')}</TableHead>
                   <TableHead className="w-[100px] text-right">{t('colQuantity')}</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
-                  <TableHead className="w-[160px]">{t('colReference')}</TableHead>
+                  <TableHead className="w-[200px]">{t('colReference')}</TableHead>
+                  <TableHead className="w-[140px]">{t('colUser')}</TableHead>
                   <TableHead className="w-[100px]">{t('colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -243,6 +272,11 @@ export function WithdrawalHistory() {
                       </TableCell>
                       <TableCell>
                         <ReferenceDisplay movement={movement} />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {movement.createdBy?.displayName ?? (
+                          <span className="text-muted-foreground">{'—'}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {!isReversal && (

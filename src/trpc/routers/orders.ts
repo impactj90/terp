@@ -51,6 +51,7 @@ const orderOutputSchema = z.object({
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  serviceObjectId: z.string().nullable(),
 })
 
 type OrderOutput = z.infer<typeof orderOutputSchema>
@@ -67,6 +68,7 @@ const createOrderInputSchema = z.object({
   billingRatePerHour: z.number().min(0).max(999999.99).optional(),
   validFrom: z.string().date().optional(),
   validTo: z.string().date().optional(),
+  serviceObjectId: z.string().uuid().nullable().optional(),
 })
 
 const updateOrderInputSchema = z.object({
@@ -81,6 +83,7 @@ const updateOrderInputSchema = z.object({
   validFrom: z.string().date().nullable().optional(),
   validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
+  serviceObjectId: z.string().uuid().nullable().optional(),
 })
 
 // --- Helpers ---
@@ -104,6 +107,7 @@ function mapOrderToOutput(
     isActive: boolean
     createdAt: Date
     updatedAt: Date
+    serviceObjectId: string | null
     costCenter?: { id: string; code: string; name: string } | null
   }
 ): OrderOutput {
@@ -124,6 +128,7 @@ function mapOrderToOutput(
     isActive: o.isActive,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
+    serviceObjectId: o.serviceObjectId,
   }
 }
 
@@ -146,6 +151,7 @@ export const ordersRouter = createTRPCRouter({
         .object({
           isActive: z.boolean().optional(),
           status: z.string().max(50).optional(),
+          serviceObjectId: z.string().uuid().optional(),
         })
         .optional()
     )

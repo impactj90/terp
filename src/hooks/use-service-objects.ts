@@ -22,10 +22,13 @@ export function useServiceObjects(
     isActive?: boolean
     page?: number
     pageSize?: number
-  } = {}
+  } = {},
+  enabled = true
 ) {
   const trpc = useTRPC()
-  return useQuery(trpc.serviceObjects.list.queryOptions(params))
+  return useQuery(
+    trpc.serviceObjects.list.queryOptions(params, { enabled })
+  )
 }
 
 export function useServiceObject(id: string, enabled = true) {
@@ -44,6 +47,20 @@ export function useServiceObjectTree(customerAddressId: string, enabled = true) 
     trpc.serviceObjects.getTree.queryOptions(
       { customerAddressId },
       { enabled: enabled && !!customerAddressId }
+    )
+  )
+}
+
+export function useServiceObjectHistory(
+  id: string,
+  params?: { limit?: number },
+  enabled = true
+) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.serviceObjects.getHistory.queryOptions(
+      { id, limit: params?.limit ?? 50 },
+      { enabled: enabled && !!id }
     )
   )
 }

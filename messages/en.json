@@ -4948,6 +4948,9 @@
     "fieldStatus": "Status",
     "fieldCustomer": "Customer",
     "fieldCostCenter": "Cost Center",
+    "fieldServiceObject": "Service Object",
+    "serviceObjectPlaceholder": "Select service object…",
+    "serviceObjectHint": "Optional. Links this order to a specific service object — time entries will show up in that object's history.",
     "fieldBillingRate": "Billing Rate per Hour",
     "fieldValidFrom": "Valid From",
     "fieldValidTo": "Valid To",
@@ -5660,6 +5663,7 @@
     "tabTasks": "Tasks",
     "tabDocuments": "Documents",
     "tabServiceCases": "Service Cases",
+    "tabServiceObjects": "Service Objects",
     "comingSoon": "Coming Soon",
     "contactsTitle": "Contact Persons",
     "addContact": "Add Contact",
@@ -6454,6 +6458,7 @@
     "typeAdjustment": "Adjustment",
     "typeInventory": "Inventory",
     "typeReturn": "Return",
+    "typeDeliveryNote": "Delivery Note",
     "filterArticle": "Filter by article",
     "filterType": "Filter by type",
     "filterAllTypes": "All Types",
@@ -8789,6 +8794,44 @@
       "rejected": "Request rejected",
       "cancelled": "Request cancelled",
       "actionFailed": "Action failed"
+    }
+  },
+  "serviceObjects": {
+    "tabs": {
+      "history": "History"
+    },
+    "history": {
+      "ordersSection": "Jobs",
+      "movementsSection": "Stock Movements",
+      "emptyOrders": "No jobs for this service object.",
+      "emptyMovements": "No stock movements for this service object.",
+      "loadMore": "Load more",
+      "colCode": "Job",
+      "colName": "Name",
+      "colStatus": "Status",
+      "colValidFrom": "Start",
+      "colValidTo": "End",
+      "colTechnicians": "Technicians",
+      "colHours": "Hrs.",
+      "colBookings": "Entries",
+      "colLastBooking": "Last entry",
+      "colDate": "Date",
+      "colType": "Type",
+      "colArticle": "Article",
+      "colQuantity": "Qty.",
+      "colUser": "User",
+      "colReason": "Reason",
+      "totals": {
+        "orderCount": "{count, plural, =0 {No jobs} =1 {1 job} other {# jobs}}",
+        "totalHours": "{hours} h total",
+        "movementCount": "{count, plural, =0 {No movements} =1 {1 movement} other {# movements}}"
+      }
+    },
+    "lastService": {
+      "title": "Last service",
+      "empty": "No service recorded yet",
+      "daysAgo": "{days, plural, =0 {today} =1 {1 day ago} other {# days ago}}",
+      "viewHistory": "View history"
     }
   }
 }

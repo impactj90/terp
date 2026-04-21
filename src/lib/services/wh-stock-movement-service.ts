@@ -8,6 +8,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./wh-stock-movement-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as userDisplayNameService from "./user-display-name-service"
 
 // --- Error Classes ---
 
@@ -57,7 +58,25 @@ export async function listByArticle(
     throw new WhStockMovementNotFoundError("Article not found")
   }
 
-  return repo.findByArticle(prisma, tenantId, articleId)
+  const items = await repo.findByArticle(prisma, tenantId, articleId)
+  const createdByIds = items
+    .map((m) => m.createdById)
+    .filter((id): id is string => !!id)
+  const userMap = await userDisplayNameService.resolveMany(
+    prisma,
+    tenantId,
+    createdByIds
+  )
+  return items.map((m) => ({
+    ...m,
+    createdBy: m.createdById
+      ? {
+          userId: m.createdById,
+          displayName:
+            userMap.get(m.createdById)?.displayName ?? "Unbekannt",
+        }
+      : null,
+  }))
 }
 
 export async function listRecent(

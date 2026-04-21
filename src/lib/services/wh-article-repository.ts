@@ -213,14 +213,20 @@ export async function search(
   query: string,
   limit: number = 10
 ) {
+  const trimmed = query.trim()
+  const hasQuery = trimmed.length > 0
   return prisma.whArticle.findMany({
     where: {
       tenantId,
       isActive: true,
-      OR: [
-        { number: { startsWith: query, mode: "insensitive" } },
-        { name: { contains: query, mode: "insensitive" } },
-      ],
+      ...(hasQuery
+        ? {
+            OR: [
+              { number: { startsWith: trimmed, mode: "insensitive" } },
+              { name: { contains: trimmed, mode: "insensitive" } },
+            ],
+          }
+        : {}),
     },
     select: {
       id: true,

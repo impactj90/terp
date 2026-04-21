@@ -52,6 +52,20 @@ export function useWhWithdrawalsByDocument(documentId: string, enabled = true) {
   )
 }
 
+export function useWhWithdrawalsByServiceObject(
+  serviceObjectId: string,
+  params?: { limit?: number },
+  enabled = true
+) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.warehouse.withdrawals.listByServiceObject.queryOptions(
+      { serviceObjectId, limit: params?.limit ?? 50 },
+      { enabled: enabled && !!serviceObjectId }
+    )
+  )
+}
+
 // ==================== Mutation Hooks ====================
 
 export function useCreateWhWithdrawal() {
@@ -69,6 +83,12 @@ export function useCreateWhWithdrawal() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.warehouse.withdrawals.listByDocument.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.withdrawals.listByServiceObject.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.serviceObjects.getHistory.queryKey(),
       })
       // Invalidate stock movements
       queryClient.invalidateQueries({
@@ -104,6 +124,12 @@ export function useCreateBatchWhWithdrawal() {
       queryClient.invalidateQueries({
         queryKey: trpc.warehouse.withdrawals.listByDocument.queryKey(),
       })
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.withdrawals.listByServiceObject.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.serviceObjects.getHistory.queryKey(),
+      })
       // Invalidate stock movements
       queryClient.invalidateQueries({
         queryKey: trpc.warehouse.stockMovements.movements.list.queryKey(),
@@ -137,6 +163,12 @@ export function useCancelWhWithdrawal() {
       })
       queryClient.invalidateQueries({
         queryKey: trpc.warehouse.withdrawals.listByDocument.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.warehouse.withdrawals.listByServiceObject.queryKey(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: trpc.serviceObjects.getHistory.queryKey(),
       })
       // Invalidate stock movements
       queryClient.invalidateQueries({

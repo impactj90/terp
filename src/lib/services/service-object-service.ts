@@ -15,6 +15,10 @@ import type {
 import * as repo from "./service-object-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as orderRepo from "./order-repository"
+import * as whWithdrawalService from "./wh-withdrawal-service"
+import * as orderBookingAggregator from "./order-booking-aggregator"
+import * as userDisplayNameService from "./user-display-name-service"
 
 // --- Audit-Tracked Fields ---
 
@@ -776,4 +780,134 @@ export async function deleteServiceObject(
       .catch((err) => console.error("[AuditLog] Failed:", err))
   }
   return { success: true, mode: "hard" }
+}
+
+// --- History Aggregation ---
+
+export type OrderHistoryItem = {
+  id: string
+  code: string
+  name: string
+  status: string
+  validFrom: Date | null
+  validTo: Date | null
+  createdAt: Date
+  assignedEmployees: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    personnelNumber: string
+  }>
+  summary: {
+    totalMinutes: number
+    bookingCount: number
+    lastBookingDate: Date | null
+  }
+}
+
+export type StockMovementHistoryItem = {
+  id: string
+  articleNumber: string
+  articleName: string
+  type: "WITHDRAWAL" | "RETURN" | "DELIVERY_NOTE"
+  quantity: number
+  date: Date
+  createdBy: { userId: string; displayName: string } | null
+  reason: string | null
+  notes: string | null
+}
+
+export type ServiceObjectHistoryResult = {
+  orders: OrderHistoryItem[]
+  stockMovements: StockMovementHistoryItem[]
+  totals: { orderCount: number; totalMinutes: number; movementCount: number }
+}
+
+export async function getHistoryByServiceObject(
+  prisma: PrismaClient,
+  tenantId: string,
+  serviceObjectId: string,
+  params?: { limit?: number }
+): Promise<ServiceObjectHistoryResult> {
+  const limit = params?.limit ?? 50
+
+  // 1. Existence + tenant scope check
+  await getServiceObjectById(prisma, tenantId, serviceObjectId)
+
+  // 2. Parallel queries for orders + movements
+  const [orders, movements] = await Promise.all([
+    orderRepo.findManyByServiceObject(prisma, tenantId, serviceObjectId, limit),
+    whWithdrawalService.listByServiceObject(prisma, tenantId, serviceObjectId, {
+      limit,
+    }),
+  ])
+
+  // 3. Aggregate booking summaries + user names in parallel
+  const orderIds = orders.map((o) => o.id)
+  const createdByIds = movements
+    .map((m) => m.createdById)
+    .filter((id): id is string => id !== null)
+
+  const [summaryMap, userMap] = await Promise.all([
+    orderBookingAggregator.getBookingSummariesByOrders(
+      prisma,
+      tenantId,
+      orderIds
+    ),
+    userDisplayNameService.resolveMany(prisma, tenantId, createdByIds),
+  ])
+
+  // 4. Map to output shapes
+  const orderItems: OrderHistoryItem[] = orders.map((o) => ({
+    id: o.id,
+    code: o.code,
+    name: o.name,
+    status: o.status,
+    validFrom: o.validFrom,
+    validTo: o.validTo,
+    createdAt: o.createdAt,
+    assignedEmployees: (o.assignments ?? []).map((a) => ({
+      id: a.employee.id,
+      firstName: a.employee.firstName,
+      lastName: a.employee.lastName,
+      personnelNumber: a.employee.personnelNumber,
+    })),
+    summary: summaryMap.get(o.id) ?? {
+      totalMinutes: 0,
+      bookingCount: 0,
+      lastBookingDate: null,
+    },
+  }))
+
+  const movementItems: StockMovementHistoryItem[] = movements.map((m) => ({
+    id: m.id,
+    articleNumber: m.article.number,
+    articleName: m.article.name,
+    type: m.type as "WITHDRAWAL" | "RETURN" | "DELIVERY_NOTE",
+    quantity: m.quantity,
+    date: m.date,
+    createdBy: m.createdById
+      ? {
+          userId: m.createdById,
+          displayName:
+            userMap.get(m.createdById)?.displayName ?? "Unbekannt",
+        }
+      : null,
+    reason: m.reason,
+    notes: m.notes,
+  }))
+
+  const totalMinutes = orderItems.reduce(
+    (sum, o) => sum + o.summary.totalMinutes,
+    0
+  )
+  return {
+    orders: orderItems,
+    stockMovements: movementItems,
+    totals: {
+      orderCount: orderItems.length,
+      totalMinutes,
+      movementCount: movementItems.length,
+    },
+  }
 }

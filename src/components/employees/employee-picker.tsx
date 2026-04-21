@@ -6,66 +6,67 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import {
-  useServiceObjects,
-  useServiceObject,
-} from '@/hooks/use-service-objects'
+import { useEmployees, useEmployee } from '@/hooks/use-employees'
 
 interface Props {
   value: string | null
   onChange: (id: string | null) => void
-  customerAddressId?: string
   placeholder?: string
   searchPlaceholder?: string
   emptyLabel?: string
   clearLabel?: string
   disabled?: boolean
   allowClear?: boolean
+  /** Scope the list to active employees only (default true). */
+  activeOnly?: boolean
   id?: string
 }
 
-export function ServiceObjectPicker({
+export function EmployeePicker({
   value,
   onChange,
-  customerAddressId,
-  placeholder = 'Serviceobjekt wählen…',
-  searchPlaceholder = 'Nummer, Name, Seriennummer…',
+  placeholder = 'Mitarbeiter wählen…',
+  searchPlaceholder = 'Name, Personalnummer…',
   emptyLabel = 'Kein Treffer',
   clearLabel = 'Auswahl entfernen',
   disabled,
   allowClear = true,
+  activeOnly = true,
   id,
 }: Props) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
 
-  // Search results — only fetched while popover is open to avoid an
-  // extra query on every mount of the form.
-  const { data, isLoading } = useServiceObjects(
-    {
-      customerAddressId,
-      isActive: true,
-      search: search.trim() || undefined,
-      pageSize: 50,
-    },
-    // enabled flag: fetch only when the popover is open
-    open
-  )
+  // Only fetch while the popover is open.
+  const listQuery = useEmployees({
+    enabled: open,
+    isActive: activeOnly ? true : undefined,
+    search: search.trim() || undefined,
+    pageSize: 50,
+  })
 
   const items = (
-    data?.items as Array<{ id: string; number: string; name: string }> | undefined
+    listQuery.data?.items as
+      | Array<{
+          id: string
+          firstName: string
+          lastName: string
+          personnelNumber: string
+        }>
+      | undefined
   ) ?? []
 
-  // Separately resolve the currently-selected SO for the trigger label.
-  // We can't assume the selected SO is in the paginated list.
-  const selectedQuery = useServiceObject(value ?? '', !!value)
+  // Resolve the currently-selected employee for the trigger label so it
+  // still renders correctly when the selected employee isn't in the
+  // current paginated search result.
+  const selectedQuery = useEmployee(value ?? '', !!value)
   const selected = selectedQuery.data as
-    | { id: string; number: string; name: string }
+    | { id: string; firstName: string; lastName: string; personnelNumber: string }
     | undefined
 
   const selectedLabel =
     selected && selected.id === value
-      ? `${selected.number} — ${selected.name}`
+      ? `${selected.firstName} ${selected.lastName} (${selected.personnelNumber})`
       : null
 
   return (
@@ -117,7 +118,7 @@ export function ServiceObjectPicker({
               {clearLabel}
             </button>
           )}
-          {isLoading ? (
+          {listQuery.isLoading ? (
             <p className="px-2 py-4 text-center text-sm text-muted-foreground">
               …
             </p>
@@ -149,10 +150,10 @@ export function ServiceObjectPicker({
                     )}
                   />
                   <span className="flex-1 truncate">
+                    <span>{opt.firstName} {opt.lastName}</span>{' '}
                     <span className="font-mono text-xs text-muted-foreground">
-                      {opt.number}
-                    </span>{' '}
-                    <span>{opt.name}</span>
+                      ({opt.personnelNumber})
+                    </span>
                   </span>
                 </button>
               )

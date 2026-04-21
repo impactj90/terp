@@ -71,6 +71,9 @@ export async function findByArticle(
       purchaseOrder: {
         select: { id: true, number: true },
       },
+      serviceObject: {
+        select: { id: true, number: true, name: true },
+      },
     },
     orderBy: { date: "desc" },
     take: limit,

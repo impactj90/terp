@@ -108,6 +108,27 @@ export const serviceObjectsRouter = createTRPCRouter({
       }
     }),
 
+  getHistory: serviceObjectProcedure
+    .use(requirePermission(SO_VIEW))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        limit: z.number().int().min(1).max(200).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return await serviceObjectService.getHistoryByServiceObject(
+          ctx.prisma as unknown as PrismaClient,
+          ctx.tenantId!,
+          input.id,
+          { limit: input.limit }
+        )
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
   create: serviceObjectProcedure
     .use(requirePermission(SO_MANAGE))
     .input(

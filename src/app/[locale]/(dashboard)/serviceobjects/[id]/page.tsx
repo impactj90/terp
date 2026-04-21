@@ -17,11 +17,15 @@ import {
 import { ServiceObjectFormSheet } from '@/components/serviceobjects/service-object-form-sheet'
 import { AttachmentList } from '@/components/serviceobjects/attachment-list'
 import { QrLabelButton } from '@/components/serviceobjects/qr-label-button'
+import { LastServiceCard } from '@/components/serviceobjects/last-service-card'
+import { ServiceObjectHistoryTab } from '@/components/serviceobjects/service-object-history-tab'
 import {
   kindLabel,
   statusLabel,
   buildingUsageLabel,
 } from '@/components/serviceobjects/labels'
+
+type TabValue = 'overview' | 'history' | 'tree' | 'attachments'
 
 export default function ServiceObjectDetailPage() {
   const params = useParams<{ id: string }>()
@@ -31,6 +35,7 @@ export default function ServiceObjectDetailPage() {
   const del = useDeleteServiceObject()
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState<TabValue>('overview')
 
   if (isLoading || !obj) {
     return (
@@ -88,14 +93,22 @@ export default function ServiceObjectDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as TabValue)}
+      >
         <TabsList>
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
+          <TabsTrigger value="history">Historie</TabsTrigger>
           <TabsTrigger value="tree">Hierarchie</TabsTrigger>
           <TabsTrigger value="attachments">Anhänge</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-4">
+          <LastServiceCard
+            serviceObjectId={id}
+            onViewHistory={() => setActiveTab('history')}
+          />
           <Card>
             <CardHeader>
               <CardTitle>Stammdaten</CardTitle>
@@ -197,6 +210,10 @@ export default function ServiceObjectDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <ServiceObjectHistoryTab serviceObjectId={id} />
         </TabsContent>
 
         <TabsContent value="tree">

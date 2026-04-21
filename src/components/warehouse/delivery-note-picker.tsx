@@ -6,67 +6,66 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import {
-  useServiceObjects,
-  useServiceObject,
-} from '@/hooks/use-service-objects'
+import { useBillingDocuments, useBillingDocumentById } from '@/hooks/use-billing-documents'
 
-interface Props {
+interface DeliveryNotePickerProps {
   value: string | null
   onChange: (id: string | null) => void
-  customerAddressId?: string
   placeholder?: string
   searchPlaceholder?: string
   emptyLabel?: string
   clearLabel?: string
   disabled?: boolean
-  allowClear?: boolean
   id?: string
 }
 
-export function ServiceObjectPicker({
+type DeliveryNoteItem = {
+  id: string
+  documentNumber: string | null
+  subject: string | null
+  documentDate: string | Date | null
+}
+
+/**
+ * Combobox-style picker for delivery notes (Lieferscheine).
+ * Mirrors the ServiceObjectPicker UX: click to open, default list visible,
+ * type to filter, click to select.
+ */
+export function DeliveryNotePicker({
   value,
   onChange,
-  customerAddressId,
-  placeholder = 'Serviceobjekt wählen…',
-  searchPlaceholder = 'Nummer, Name, Seriennummer…',
+  placeholder = 'Lieferschein wählen…',
+  searchPlaceholder = 'Nummer oder Betreff…',
   emptyLabel = 'Kein Treffer',
   clearLabel = 'Auswahl entfernen',
   disabled,
-  allowClear = true,
   id,
-}: Props) {
+}: DeliveryNotePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
 
-  // Search results — only fetched while popover is open to avoid an
-  // extra query on every mount of the form.
-  const { data, isLoading } = useServiceObjects(
-    {
-      customerAddressId,
-      isActive: true,
-      search: search.trim() || undefined,
-      pageSize: 50,
-    },
-    // enabled flag: fetch only when the popover is open
-    open
-  )
+  const { data, isLoading } = useBillingDocuments({
+    type: 'DELIVERY_NOTE',
+    search: search.trim() || undefined,
+    pageSize: 50,
+    enabled: open,
+  })
 
-  const items = (
-    data?.items as Array<{ id: string; number: string; name: string }> | undefined
-  ) ?? []
+  const items =
+    ((data as unknown as { items?: DeliveryNoteItem[] } | undefined)?.items as
+      | DeliveryNoteItem[]
+      | undefined) ?? []
 
-  // Separately resolve the currently-selected SO for the trigger label.
-  // We can't assume the selected SO is in the paginated list.
-  const selectedQuery = useServiceObject(value ?? '', !!value)
-  const selected = selectedQuery.data as
-    | { id: string; number: string; name: string }
-    | undefined
+  // Resolve selected document separately so the trigger keeps its label even
+  // when the search list is filtered or closed.
+  const selectedQuery = useBillingDocumentById(value ?? '', !!value)
+  const selected = selectedQuery.data as DeliveryNoteItem | undefined
+
+  const formatLabel = (d: DeliveryNoteItem) =>
+    `${d.documentNumber ?? '—'}${d.subject ? ` — ${d.subject}` : ''}`
 
   const selectedLabel =
-    selected && selected.id === value
-      ? `${selected.number} — ${selected.name}`
-      : null
+    selected && selected.id === value ? formatLabel(selected) : null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -83,9 +82,7 @@ export function ServiceObjectPicker({
             !value && 'text-muted-foreground',
           )}
         >
-          <span className="truncate">
-            {selectedLabel ?? placeholder}
-          </span>
+          <span className="truncate">{selectedLabel ?? placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -103,7 +100,7 @@ export function ServiceObjectPicker({
           />
         </div>
         <div className="max-h-60 overflow-y-auto px-1 pb-1">
-          {allowClear && value && (
+          {value && (
             <button
               type="button"
               className="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground"
@@ -150,9 +147,11 @@ export function ServiceObjectPicker({
                   />
                   <span className="flex-1 truncate">
                     <span className="font-mono text-xs text-muted-foreground">
-                      {opt.number}
-                    </span>{' '}
-                    <span>{opt.name}</span>
+                      {opt.documentNumber ?? '—'}
+                    </span>
+                    {opt.subject ? (
+                      <span className="ml-2">{opt.subject}</span>
+                    ) : null}
                   </span>
                 </button>
               )
