@@ -53,6 +53,9 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12.9 Praxisbeispiel: Kundenanfrage anlegen und abschließen](#129-praxisbeispiel-kundenanfrage-anlegen-und-abschließen)
     - [12.10 Aufgaben & Nachrichten](#1210-aufgaben--nachrichten)
     - [12.11 Auswertungen](#1211-auswertungen)
+12a. [Serviceobjekte — Stammdaten, Hierarchie, Anhänge, QR-Code](#12a-serviceobjekte--stammdaten-hierarchie-anhänge-qr-code)
+    - [12a.1 Einsatz-Historie einsehen](#12a1-einsatz-historie-einsehen)
+    - [12a.2 Praxisbeispiel: Ersten Wartungsrundgang protokollieren](#12a2-praxisbeispiel-ersten-wartungsrundgang-protokollieren)
 13. [Belege & Fakturierung](#13-belege--fakturierung)
     - [13.1 Belegtypen](#131-belegtypen)
     - [13.2 Belegliste](#132-belegliste)
@@ -5768,6 +5771,144 @@ Jedes Serviceobjekt hat einen Status (in der Liste als farbiger Badge sichtbar):
 
 - Wenn ein Serviceobjekt mit einem Auftrag oder einer Lagerbewegung verknüpft ist (oder untergeordnete Objekte hat), wird beim Löschen **nur deaktiviert** (`isActive = false`); die verknüpften Daten bleiben intakt.
 - Ohne Verknüpfungen wird der Datensatz **endgültig gelöscht** (inklusive Anhänge — Storage-Bucket wird entsprechend bereinigt).
+
+### 12a.1 Einsatz-Historie einsehen
+
+Auf der Detailseite eines Serviceobjekts gibt es einen eigenen Tab **„Historie"**, der alle jemals auf diesem Objekt gebuchten Aufträge und alle zugeordneten Materialentnahmen zusammenführt.
+
+#### „Letzter Einsatz" (Übersicht-Tab)
+
+Oben auf dem Tab „Übersicht" liegt die Karte **„Letzter Einsatz"**. Sie zeigt auf einen Blick:
+
+- das Datum der letzten Zeitbuchung
+- die zugewiesenen Techniker
+- die Summen-Stunden der jüngsten Auftrag-Einsätze
+- ein Badge **„vor X Tagen"** (relatives Alter der letzten Buchung)
+- einen Button **„Zur Historie"**, der direkt in den Historie-Tab wechselt
+
+Ist noch kein Einsatz erfasst, erscheint der Hinweis „Noch kein Einsatz erfasst".
+
+#### Praxisbeispiel: Techniker scannt QR → Einsatz-Historie prüfen
+
+1. Techniker scannt den QR-Code am Serviceobjekt mit der Terp-App oder dem Scanner-Terminal
+2. Die Detailseite öffnet sich unter `/serviceobjects/<id>`
+3. ✅ Die Karte „Letzter Einsatz" zeigt sofort das Datum, den Techniker und die Stunden der letzten Wartung
+4. Klick auf **„Zur Historie"** wechselt zum Tab **„Historie"**
+5. Sektion „Einsätze" listet alle Aufträge mit Code, Bezeichnung, Status, Zeitraum, Technikerliste, Stunden (Summe aller Zeitbuchungen) und Anzahl Buchungen
+6. Sektion „Materialentnahmen" listet alle Withdrawals mit Datum, Artikel, Menge, dem ausführenden Benutzer und optional Grund/Notizen
+7. Die Totals-Zeile pro Sektion zeigt Zählsummen (z. B. „3 Einsätze · 4.5 h insgesamt")
+
+#### Praxisbeispiel: Vom Kunden zum Serviceobjekt navigieren
+
+1. 📍 **CRM** → **Adressen** → Kundenadresse öffnen
+2. Auf den Tab **„Serviceobjekte"** klicken (letzter Tab nach „Kundendienst")
+3. ✅ Alle beim Kunden erfassten Serviceobjekte werden als Hierarchie-Baum angezeigt
+4. Klick auf einen Eintrag führt zurück zur Detailseite des Serviceobjekts
+
+#### Praxisbeispiel: Lagerentnahmen-Verlauf mit Serviceobjekt-Referenz prüfen
+
+1. 📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Verlauf"**
+2. ✅ Die Tabelle listet alle Entnahmen, Lieferschein-Buchungen und Stornos chronologisch
+3. ✅ In der **Referenz-Spalte** werden Entnahmen, die einem Serviceobjekt zugeordnet wurden, als `Nummer — Bezeichnung` angezeigt (z. B. `KÄL-001 — Kältemaschine Halle 2`) — nicht mehr als UUID-Kürzel oder `—`
+4. ✅ Die neue Spalte **„Benutzer"** zeigt den Namen der Person, die die Entnahme gebucht hat (z. B. „Hans Müller"); gelöschte oder fremd-tenant Benutzer erscheinen als „Unbekannt"
+5. ✅ Bewegungen vom Typ `DELIVERY_NOTE` (Lagerbuchung aus einem Lieferschein) bekommen jetzt ein eigenes Badge **„Lieferschein"** (vorher ohne Badge)
+
+#### Praxisbeispiel: Lagerbewegungen im Artikel-Detail prüfen
+
+1. 📍 Seitenleiste → **Lager** → **Artikel** → Artikel öffnen (z. B. `ART-4711`)
+2. Tab **„Lagerbewegungen"** öffnen
+3. ✅ Die Tabelle zeigt alle Bewegungen des Artikels — Spalten: Datum, Typ (Wareneingang/Entnahme/Rücklauf/**Lieferschein**/…), Menge, Vorher, Nachher, Referenz, Grund und jetzt zusätzlich **„Benutzer"**
+4. ✅ Bewegungen vom Typ `DELIVERY_NOTE` bekommen ein Badge **„Lieferschein"** — vorher wurde hier kein Badge gerendert
+5. 💡 Tipp: Für eine objektbezogene Sicht (alle Entnahmen für genau ein Serviceobjekt) den Tab **„Historie"** auf der Serviceobjekt-Detailseite nutzen (siehe oben)
+
+### 12a.2 Praxisbeispiel: Ersten Wartungsrundgang protokollieren
+
+**Szenario:** Der Kunde „Müller Maschinenbau GmbH" betreibt eine Kältemaschine in Halle 2. Der Techniker Hans Müller fährt zum Quartalsservice raus, tauscht eine Dichtung und entnimmt dafür drei Schrauben aus dem Lager. Am Ende sollen Büro und Technik an jeder Station im System die Einsatz-Historie nachvollziehen können.
+
+*Vorbedingung:* Die Module **CRM**, **Aufträge** und **Lager** sind aktiv. Der Kunde „Müller Maschinenbau GmbH" existiert bereits als CRM-Adresse. Der Artikel `ART-SCHR-M8` (Schraube M8) ist im Artikelstamm hinterlegt und hat Bestand.
+
+#### Schritt 1 — Serviceobjekt anlegen
+
+1. 📍 Seitenleiste → **CRM** → **Serviceobjekte** → **„Neu"**
+2. **Nummer**: `KÄL-001`
+3. **Bezeichnung**: `Kältemaschine Halle 2`
+4. **Typ**: `Gerät`
+5. **Kunde**: `Müller Maschinenbau GmbH` auswählen
+6. Hersteller `Siemens`, Baujahr `2018`, Inbetriebnahme `2018-06-01` eintragen
+7. 📍 „Anlegen"
+8. ✅ Das Objekt erscheint in der Liste mit Typ-Badge „Gerät". Auf der Detailseite öffnet der Reiter **„Übersicht"** die Karte **„Letzter Einsatz"** mit dem Hinweis *„Noch kein Einsatz erfasst"* — das ist korrekt, denn die Historie ist leer.
+
+#### Schritt 2 — Auftrag anlegen und mit dem Serviceobjekt verknüpfen
+
+1. 📍 Seitenleiste → Verwaltung → **Aufträge** → Tab **„Aufträge"** → **„Neuer Auftrag"**
+2. **Code**: `WT-2026-001`, **Name**: `Quartalswartung Q1/2026`
+3. **Kunde**: `Müller Maschinenbau GmbH`, **Kostenstelle**: passende Kostenstelle wählen
+4. **Serviceobjekt**: Über den Picker `KÄL-001 — Kältemaschine Halle 2` suchen und auswählen
+5. Stundensatz `85,00`, Gültig ab `01.01.2026`, Gültig bis `31.03.2026`
+6. Status `Aktiv`
+7. 📍 „Speichern"
+8. ✅ Der Auftrag ist angelegt. Das Feld **„Serviceobjekt"** im Auftragsformular ist der Schlüssel, der die Verbindung zur Historie herstellt — ohne dieses Feld erscheinen Zeitbuchungen nicht auf der Serviceobjekt-Detailseite.
+
+💡 **Hinweis:** Aktivität (z. B. `WARTUNG`) und Mitarbeiter-Zuweisung (`Hans Müller` als Mitarbeiter) werden wie in **§10.1.1** beschrieben auf den Tabs „Aktivitäten" und „Zuweisungen" des Auftrags gepflegt.
+
+#### Schritt 3 — Zeit auf den Auftrag buchen
+
+1. 📍 Auftragsdetailseite `WT-2026-001` → Tab **„Buchungen"** → **„Neue Buchung"**
+2. **Mitarbeiter**: `Hans Müller`
+3. **Aktivität**: `WARTUNG`
+4. **Datum**: `15.02.2026`
+5. **Stunden** `2`, **Minuten** `30`
+6. **Beschreibung**: `Dichtung am Verdichter getauscht, Funktionsprüfung OK`
+7. 📍 „Speichern"
+8. ✅ Die Buchung erscheint in der Tabelle mit Quelle-Badge „Manuell".
+
+#### Schritt 4 — Materialentnahme dem Serviceobjekt zuordnen
+
+1. 📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Neue Entnahme"**
+2. Im Schritt „Referenztyp" die Karte **„Serviceobjekt"** wählen
+3. Im Serviceobjekt-Picker `KÄL-001` suchen und auswählen
+4. Artikel `ART-SCHR-M8` (Schraube M8), Menge `3`
+5. Grund/Notiz: `Ersatz für korrodierte Dichtungsschrauben`
+6. 📍 „Entnahme abschließen"
+7. ✅ Die Bewegung ist in `wh_stock_movements` mit `service_object_id = KÄL-001` gespeichert. Parallel kann ein Kollege statt der Desktop-Oberfläche auch den mobilen QR-Scanner nutzen (siehe §20b.4).
+
+#### Schritt 5 — Ergebnis auf der Serviceobjekt-Detailseite prüfen
+
+1. 📍 Seitenleiste → **CRM** → **Serviceobjekte** → `KÄL-001` öffnen
+2. Tab **„Übersicht"** → Karte **„Letzter Einsatz"**
+3. ✅ Die Karte zeigt jetzt:
+   - Datum `15.02.2026`
+   - Techniker `Hans Müller`
+   - `2:30 h` (oder `2.5 h`)
+   - Badge `vor X Tagen`
+4. 📍 Klick auf **„Zur Historie"**
+5. ✅ Tab **„Historie"** öffnet sich:
+   - Sektion **„Einsätze"**: 1 Zeile mit `WT-2026-001`, Status `Aktiv`, Zeitraum `01.01.2026 – 31.03.2026`, Techniker `Hans Müller`, Stunden `2:30`, Buchungen `1`
+   - Sektion **„Materialentnahmen"**: 1 Zeile mit Datum `heute`, Typ-Badge `Entnahme`, Artikel `ART-SCHR-M8 — Schraube M8`, Menge `−3`, Benutzer `Hans Müller`
+   - Totals-Zeilen: `1 Einsatz · 2.5 h insgesamt` und `1 Entnahme`
+
+#### Schritt 6 — Vom Kunden navigieren (Büro-Perspektive)
+
+1. 📍 **CRM** → **Adressen** → `Müller Maschinenbau GmbH` öffnen
+2. Auf den letzten Tab **„Serviceobjekte"** (neunter Tab, nach „Kundendienst") klicken
+3. ✅ Der Hierarchie-Baum listet `KÄL-001 — Kältemaschine Halle 2`
+4. 📍 Klick auf den Eintrag → Sprung zurück zur Serviceobjekt-Detailseite
+
+#### Schritt 7 — Lagerentnahme-Verlauf prüfen (Warehouse-Perspektive)
+
+1. 📍 Seitenleiste → **Lager** → **Lagerentnahmen** → Tab **„Verlauf"**
+2. ✅ Die soeben gebuchte Entnahme erscheint als Zeile mit:
+   - Referenz-Spalte `KÄL-001 — Kältemaschine Halle 2` (als Name, nicht als UUID)
+   - Benutzer-Spalte `Hans Müller`
+   - Typ-Badge `Entnahme`
+
+#### Schritt 8 — Artikel-Lagerbewegungen prüfen
+
+1. 📍 Seitenleiste → **Lager** → **Artikel** → `ART-SCHR-M8` öffnen
+2. Tab **„Lagerbewegungen"**
+3. ✅ Neue Zeile mit `−3` Stück, Benutzer `Hans Müller`, Typ `Entnahme`
+
+**Ergebnis:** Ein kompletter Wartungsrundgang — Auftrag, Zeitbuchung, Material — ist am Serviceobjekt, am Kunden, im Lager-Verlauf und im Artikel-Detail konsistent sichtbar. Beim nächsten QR-Scan am Objekt sieht der Techniker sofort, was zuletzt geschah, und muss das Büro nicht mehr zurückrufen.
 
 ---
 
