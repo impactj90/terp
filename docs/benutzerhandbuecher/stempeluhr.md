@@ -102,6 +102,25 @@ Dienstgänge sind für arbeitsbezogene Aktivitäten außerhalb des Büros (z.B. 
 4. Überprüfen Sie Ihre Tagesübersicht, um Ihre Stunden zu bestätigen
 5. Der Buchungsverlauf zeigt alle Einträge des Tages
 
+### Nach dem Ausstempeln weiterarbeiten (Reopen)
+
+Ob ein zweites Einstempeln am selben Tag möglich ist, hängt von der **Tenant-Einstellung "Reopen-Antragspflicht"** ab (siehe [Überstundenantrag-Konfiguration](./ueberstundenantrag-konfiguration.md)):
+
+**Reopen-Antragspflicht aktiviert** (Default):
+Die Stempeluhr blockiert das erneute Einstempeln nach dem Ausstempeln mit der Fehlermeldung **`reopen_not_approved`**. Sie benötigen einen vorher genehmigten Reopen-Antrag.
+1. Stempeln Sie **nicht** versuchsweise — das erzeugt nur einen Fehler-Toast.
+2. Navigieren Sie zu **[Überstundenanträge](./ueberstundenantraege.md)**.
+3. Stellen Sie einen neuen Antrag vom Typ "Zeiterfassung wieder öffnen" für das heutige Datum.
+4. Informieren Sie ggf. Ihren Schichtleiter, damit die Genehmigung zeitnah erfolgt.
+5. Sobald der Antrag genehmigt ist, erlaubt die Stempeluhr das **Einstempeln** ohne weitere Hinweise.
+
+**Reopen-Antragspflicht deaktiviert**:
+Die Stempeluhr bleibt offen — Sie können nach dem Ausstempeln einfach erneut **Einstempeln** klicken. Der Tag wird im Hintergrund weiterberechnet.
+
+> **Hinweis**: Pausen und Dienstgänge (nicht-Arbeits-Buchungen) sind vom Reopen-Gate **nicht** betroffen; diese können Sie weiterhin normal buchen.
+
+Unabhängig vom Modus erscheint Mehrarbeit ohne genehmigten Antrag automatisch im [Korrekturassistent](./korrekturassistent.md) unter **`UNAPPROVED_OVERTIME`** — HR kann dort eine rückwirkende Genehmigung erteilen.
+
 ### Administrator: Für anderen Mitarbeiter stempeln
 
 1. Navigieren Sie zur Stempeluhr
@@ -156,6 +175,10 @@ Die Stempeluhr beeinflusst direkt mehrere andere Teile des Systems:
 **Ursache**: Netzwerkverbindungsprobleme oder Sitzungs-Timeout.
 **Lösung**: Überprüfen Sie Ihre Internetverbindung. Versuchen Sie, die Seite zu aktualisieren und sich bei Bedarf erneut anzumelden.
 
+### Einstempeln nach Ausstempeln wirft "reopen_not_approved"
+**Ursache**: Die Reopen-Antragspflicht ist im Tenant aktiv und es liegt kein genehmigter Reopen-Antrag vor.
+**Lösung**: Stellen Sie einen Reopen-Antrag unter [Überstundenanträge](./ueberstundenantraege.md) und warten Sie die Genehmigung ab.
+
 ### Pausenzeit erscheint zu lang
 **Ursache**: Sie haben möglicherweise vergessen, eine frühere Pause zu beenden.
 **Lösung**: Überprüfen Sie den Buchungsverlauf. Kontaktieren Sie Ihren Admin, wenn Korrekturen erforderlich sind.
@@ -167,6 +190,9 @@ Die Stempeluhr beeinflusst direkt mehrere andere Teile des Systems:
 ## Verwandte Module
 
 - **[Stundenzettel](./stundenzettel.md)** - Detaillierte Zeiteinträge anzeigen und bearbeiten
+- **[Überstundenanträge](./ueberstundenantraege.md)** - Reopen-Anträge nach dem Ausstempeln stellen
+- **[Überstundenantrag-Konfiguration](./ueberstundenantrag-konfiguration.md)** - (Admin) Reopen-Antragspflicht ein-/ausschalten
+- **[Korrekturassistent](./korrekturassistent.md)** - Ungenehmigte Mehrarbeit erkennen und nachträglich genehmigen
 - **[Dashboard](./dashboard.md)** - Tagesübersicht und Schnellstatistiken sehen
 - **[Abwesenheiten](./abwesenheiten.md)** - Freizeit beantragen anstatt zu stempeln
 - **[Tagespläne](./tagesplaene.md)** - (Admin) Tägliche Sollstunden konfigurieren

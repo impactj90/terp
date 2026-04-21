@@ -113,6 +113,8 @@ import { datevOnboardingRouter } from "./datevOnboarding"
 import { bankStatementsRouter } from "./bankStatements"
 import { overtimePayoutsRouter } from "./overtimePayouts"
 import { employeeOvertimePayoutOverridesRouter } from "./employeeOvertimePayoutOverrides"
+import { overtimeRequestsRouter } from "./overtimeRequests"
+import { overtimeRequestConfigRouter } from "./overtimeRequestConfig"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -223,6 +225,8 @@ export const appRouter = createTRPCRouter({
   bankStatements: bankStatementsRouter,
   overtimePayouts: overtimePayoutsRouter,
   employeeOvertimePayoutOverrides: employeeOvertimePayoutOverridesRouter,
+  overtimeRequests: overtimeRequestsRouter,
+  overtimeRequestConfig: overtimeRequestConfigRouter,
 })
 
 /** Type-only export for client-side inference. */

@@ -139,6 +139,11 @@ export const navConfig: NavSection[] = [
         icon: CalendarOff,
       },
       {
+        titleKey: 'overtimeRequests',
+        href: '/overtime-requests',
+        icon: Timer,
+      },
+      {
         titleKey: 'vacation',
         href: '/vacation',
         icon: Palmtree,
@@ -246,6 +251,18 @@ export const navConfig: NavSection[] = [
             href: '/admin/approvals',
             icon: ClipboardCheck,
             permissions: ['absences.approve'],
+          },
+          {
+            titleKey: 'overtimeApprovals',
+            href: '/admin/overtime-approvals',
+            icon: ClipboardCheck,
+            permissions: ['overtime.approve'],
+          },
+          {
+            titleKey: 'overtimeRequestConfig',
+            href: '/admin/overtime-request-config',
+            icon: Settings2,
+            permissions: ['settings.manage'],
           },
           {
             titleKey: 'absenceTypes',

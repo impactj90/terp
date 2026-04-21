@@ -50,8 +50,12 @@ export function usePermissionChecker() {
       }
       if (isAdmin) return true
       return keys.some((key) => {
+        // Match either the UUID form (production) or the raw key form
+        // (legacy/seed data) — mirrors the backend hasPermission() fallback.
         const id = catalogMap.get(key)
-        return id ? allowedSet.has(id) : false
+        if (id && allowedSet.has(id)) return true
+        if (allowedSet.has(key)) return true
+        return false
       })
     },
     [isAuthenticated, currentPermissionsQuery.data, isAdmin, catalogMap, allowedSet]

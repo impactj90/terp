@@ -42,6 +42,7 @@ const ERR_NO_BOOKINGS = "NO_BOOKINGS"
 const ERR_INVALID_TIME = "INVALID_TIME"
 const ERR_DUPLICATE_IN_TIME = "DUPLICATE_IN_TIME"
 const ERR_NO_MATCHING_SHIFT = "NO_MATCHING_SHIFT"
+const ERR_UNAPPROVED_OVERTIME = "UNAPPROVED_OVERTIME"
 
 // Warning codes
 const WARN_CROSS_MIDNIGHT = "CROSS_MIDNIGHT"
@@ -107,6 +108,7 @@ function defaultCorrectionMessages(tenantId: string) {
     { tenantId, code: ERR_INVALID_TIME, defaultText: "Invalid time value", severity: "error", description: "A booking has a time value outside the valid range" },
     { tenantId, code: ERR_DUPLICATE_IN_TIME, defaultText: "Duplicate arrival time", severity: "error", description: "Multiple arrival bookings at the same time" },
     { tenantId, code: ERR_NO_MATCHING_SHIFT, defaultText: "No matching time plan found", severity: "error", description: "No day plan matches the booking times for shift detection" },
+    { tenantId, code: ERR_UNAPPROVED_OVERTIME, defaultText: "Unapproved overtime", severity: "error", description: "Overtime without an approved request." },
     // Warning codes (mapped to "hint" severity)
     { tenantId, code: WARN_CROSS_MIDNIGHT, defaultText: "Shift spans midnight", severity: "hint", description: "The work shift crosses midnight into the next day" },
     { tenantId, code: WARN_MAX_TIME_REACHED, defaultText: "Maximum work time reached", severity: "hint", description: "Net time was capped at the maximum allowed" },
@@ -526,6 +528,37 @@ export const correctionAssistantRouter = createTRPCRouter({
             hasMore,
           },
         }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * Approve-as-overtime: turn a DailyValue row flagged with
+   * UNAPPROVED_OVERTIME into an approved PLANNED OvertimeRequest and
+   * trigger recalc so the row clears from the correction-assistant view.
+   */
+  approveAsOvertime: tenantProcedure
+    .use(requirePermission(CORRECTIONS_MANAGE))
+    .input(
+      z.object({
+        employeeId: z.string(),
+        date: z.string().date(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const tenantId = ctx.tenantId!
+        return await correctionAssistantService.approveAsOvertime(
+          ctx.prisma,
+          tenantId,
+          input,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          }
+        )
       } catch (err) {
         handleServiceError(err)
       }

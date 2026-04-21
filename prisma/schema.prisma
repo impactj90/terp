@@ -296,6 +296,10 @@ model Tenant {
   overtimePayouts                 OvertimePayout[]
   employeeOvertimePayoutOverrides EmployeeOvertimePayoutOverride[]
 
+  // Overtime requests (migration 20260503000000)
+  overtimeRequests      OvertimeRequest[]
+  overtimeRequestConfig OvertimeRequestConfig?
+
   // Template polish (Phase 4)
   exportTemplateSnapshots ExportTemplateSnapshot[]
   exportTemplateSchedules ExportTemplateSchedule[]
@@ -2047,6 +2051,7 @@ model Employee {
   hrPersonnelFileEntries  HrPersonnelFileEntry[]
   overtimePayouts                OvertimePayout[]
   overtimePayoutOverrides        EmployeeOvertimePayoutOverride[]
+  overtimeRequests               OvertimeRequest[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -3070,6 +3075,77 @@ model EmployeeOvertimePayoutOverride {
   @@index([tenantId])
   @@index([employeeId])
   @@map("employee_overtime_payout_overrides")
+}
+
+// -----------------------------------------------------------------------------
+// OvertimeRequest
+// -----------------------------------------------------------------------------
+// Migration: 20260503000000
+//
+// Dual-flow overtime request: PLANNED (prospective) and REOPEN (reactive
+// re-open of closed day for new in-bookings).
+//
+// CHECK constraints (enforced at DB level only):
+//   - request_type IN ('PLANNED', 'REOPEN')
+//   - status IN ('pending', 'approved', 'rejected', 'cancelled')
+//
+// Partial unique index (cannot be modeled in Prisma, enforced at DB level):
+//   - overtime_requests_active_reopen: UNIQUE
+//     ON (tenant_id, employee_id, request_date)
+//     WHERE request_type = 'REOPEN' AND status = 'approved'
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model OvertimeRequest {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  employeeId          String    @map("employee_id") @db.Uuid
+  requestType         String    @map("request_type") @db.VarChar(20)
+  requestDate         DateTime  @map("request_date") @db.Date
+  plannedMinutes      Int       @map("planned_minutes")
+  actualMinutes       Int?      @map("actual_minutes")
+  reason              String    @db.Text
+  status              String    @default("pending") @db.VarChar(20)
+  approvedBy          String?   @map("approved_by") @db.Uuid
+  approvedAt          DateTime? @map("approved_at") @db.Timestamptz(6)
+  rejectionReason     String?   @map("rejection_reason") @db.Text
+  arbzgWarnings       String[]  @map("arbzg_warnings")
+  arbzgOverrideReason String?   @map("arbzg_override_reason") @db.Text
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId, requestDate])
+  @@index([tenantId, status])
+  @@index([tenantId, employeeId, status, requestType])
+  @@map("overtime_requests")
+}
+
+// -----------------------------------------------------------------------------
+// OvertimeRequestConfig
+// -----------------------------------------------------------------------------
+// Migration: 20260503000000
+//
+// Singleton per tenant (UNIQUE on tenant_id). Holds approval policy for
+// OvertimeRequest lifecycle.
+//
+// Trigger: update_updated_at_column() auto-sets updated_at on UPDATE
+model OvertimeRequestConfig {
+  id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                    String   @unique @map("tenant_id") @db.Uuid
+  approvalRequired            Boolean  @default(true) @map("approval_required")
+  leadTimeHours               Int      @default(0) @map("lead_time_hours")
+  monthlyWarnThresholdMinutes Int?     @map("monthly_warn_threshold_minutes")
+  escalationThresholdMinutes  Int?     @map("escalation_threshold_minutes")
+  reopenRequired              Boolean  @default(true) @map("reopen_required")
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("overtime_request_config")
 }
 
 // -----------------------------------------------------------------------------

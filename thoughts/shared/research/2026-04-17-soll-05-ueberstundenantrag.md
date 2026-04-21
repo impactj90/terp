@@ -7,8 +7,9 @@ repository: terp
 topic: "soll-05 Überstundenantrag — Ist-Zustand im Code (Approval-Workflow, Booking, DailyCalc, Korrekturassistent, Notifications, Permissions, ArbZG)"
 tags: [research, codebase, overtime-request, approval-workflow, absences, correction-assistant, daily-calc, notifications, permissions, arbzg, pubsub]
 status: complete
-last_updated: 2026-04-17
+last_updated: 2026-04-18
 last_updated_by: impactj90
+last_updated_note: "Architektur-Entscheidungen ergänzt; Open Questions als resolved/deferred markiert"
 ---
 
 # Research: soll-05 Überstundenantrag — Ist-Zustand im Code
@@ -461,12 +462,47 @@ Jede State-Transition ruft drei Hooks (best-effort, je in `try/catch`):
 - `thoughts/shared/research/2026-03-08-ZMI-TICKET-240-absence-service-router.md` — Absence-Service-Struktur
 - `thoughts/shared/research/2026-01-29-ZMI-TICKET-012-correction-assistant-and-errors.md` — Korrekturassistent-Struktur
 
-## Open Questions
+## Architektur-Entscheidungen (2026-04-18, verbindlich für den Plan)
 
-- **Mehrstufige Genehmigung**: Das Ticket fordert konfigurierbare Mehrstufigkeit (z.B. „ab 4h auch HR"). Das existierende `InboundInvoiceApprovalPolicy`-Pattern (`stepOrder` + `approverGroupId`) ist die nächstliegende vorhandene Struktur, ist aber heute auf Rechnungsbeträge zugeschnitten, nicht auf Überstundenminuten.
-- **Vertretungsregel bei Abwesenheit des Genehmigers**: Heute gibt es keine aktive „Abwesend"-Zustandsprüfung im `findApproverUserIds`-Flow. Ein Fallback-Mechanismus („wenn Schichtleiter im Urlaub → HR") existiert nicht; müsste gegen `AbsenceDay` live abgefragt werden.
-- **Reaktiver Flow („Zeiterfassung wieder öffnen")**: Das Booking-Modell hat kein Lock-Konzept auf Tagesebene. Ein Reopen würde nur bedeuten, dass der MA neue Booking-Paare anlegen darf — es gibt nichts „aufzusperren", da bei jedem Recalc stateless neu gerechnet wird. Die Semantik „Antrag bewilligt = MA darf neues IN-Booking erstellen" ist heute nicht existent und würde vermutlich über einen Pre-Insert-Check auf einen aktiven `OvertimeRequest` mit `requestType=REOPEN` laufen müssen.
-- **Verwertungswunsch (ACCOUNT/PAYOUT/TIME_OFF) im Payout-Flow**: Der heute implementierte Payout ist tarifregel-getrieben und monats-final. Die im Ticket geforderte per-Antrag-Wahl müsste entweder (a) einen neuen Feld auf `OvertimeRequest` speichern und erst bei Monats-Close ausgewertet werden, oder (b) einen neuen Antragstyp mit direktem Saldo-Eingriff ermöglichen.
-- **Korrekturassistent `UNAPPROVED_OVERTIME`**: `DailyValue.errorCodes` enthält heute die 14 Engine-Codes. Für einen neuen Code müsste sowohl der Engine-Katalog (`src/lib/calculation/errors.ts`), die Service-Warning-Liste (`correction-assistant-service.ts:55-62`), der Mapping-Case (`mapCorrectionErrorType`) als auch beide `defaultCorrectionMessages`-Kataloge (Service+Router) erweitert werden — Diese Doppelkatalog-Struktur ist ein bestehendes Artefakt.
-- **ArbZG-Berechnung (48h/6-Monats-Schnitt)**: Kein existierender Mechanismus für mehrtägige / 6-Monats-Rolling-Fenster-Aggregationen im Calc-Layer. `MonthlyValue` aggregiert pro Monat, nicht rolling.
-- **Tenantweite Approver-Liste vs. Department-Filter**: Heute liefert `findApproverUserIds` _alle_ Berechtigten tenantweit. Department/Team-spezifische Approver (z.B. „Schichtleiter genau dieser Abteilung") würden eine erweiterte Query oder einen neuen `ApprovalRule`-Pfad erfordern.
+Die folgenden Entscheidungen wurden nach Abschluss des Research getroffen und reduzieren den Ticket-Scope von XL auf L.
+
+### D1 — Approver-Modell: Permission-basiert, tenantweit
+- Neuer Permission-Key `overtime.approve` in `src/lib/auth/permission-catalog.ts` (nach Zeile 99), analog zu `absences.approve`.
+- `findOvertimeApproverUserIds()` als 1:1-Spiegelung von `absences-repository.ts:463-480` — JSONB-Containment (`ug.permissions @> '["overtime.approve"]'::jsonb`) tenantweit, ohne Department/Team-Filter.
+- **Kein `approverRole`-Enum**, kein Team-Scope in Phase 1.
+- **`ApprovalRule` entfällt als eigenständiges Modell in Phase 1.** Mehrstufigkeit (z.B. „ab 4h auch HR") wird umgesetzt über:
+  - zweiten Permission-Key `overtime.approve.escalated`
+  - Threshold-Feld `escalationThresholdMinutes Int?` auf `OvertimeRequestConfig` (Singleton-Pattern, `@@unique([tenantId])`, analog zu `SystemSetting`/`BillingTenantConfig`)
+- Keine Policy-Tabelle wie `InboundInvoiceApprovalPolicy`.
+
+### D2 — Verwertungswunsch: NICHT Teil dieses Tickets
+- `OvertimeRequest` hat **kein** `utilizationType`-Feld.
+- Modell-Felder in Phase 1: `requestType (PLANNED|REOPEN)`, `requestDate`, `plannedMinutes`, `actualMinutes?`, `reason String`, `status`, `approvedBy?`, `approvedAt?`, `rejectionReason?`, `arbzgWarnings String[]`, `arbzgOverrideReason String?`.
+- Verwertung bleibt tarifregel-getrieben und monats-final über den bestehenden Ticket-3-Pfad (Commit `5316ef2f`).
+- MA-Antrag enthält nur `reason`, keine Verwertungswahl.
+- Ein per-Antrag-Verwertungswunsch ist **Post-Launch (Ticket 3.1)** und nicht Bestandteil dieses Plans.
+- Ticket-Akzeptanzkriterium 1 (Verwertungswunsch im Antragsformular) **entfällt**.
+
+### D3 — ArbZG Phase 1: §3 Tages-10h, §5 11h-Ruhezeit, §9 Sonn-/Feiertag
+- `ArbZGValidator.validate(employeeId, date, plannedAdditionalMinutes) → Warnings[]` implementiert **drei** Regeln:
+  - §3 ArbZG Tages-10h: gelesen aus `empDayPlan.dayPlan.maxNetWorkTime` (bestehender Tenant-Cap in `day-plans-service.ts:186`), **nicht hardcoded**.
+  - §5 ArbZG 11h-Ruhezeit: letzte Ausstempelung aus `Booking`-Range des Vortages vs. erste geplante Zusatz-Arbeit.
+  - §9 ArbZG Sonn-/Feiertag: Wochentag + `Holiday`-Flag-Check.
+- **48h/6-Monats-Schnitt (§3 Abs. 2 ArbZG) ist explizit Out of Scope** — eigenes Post-Launch-Ticket; kein Rolling-Window-Aggregat auf `MonthlyValue`-Ebene.
+- Keine Sondergruppen-Regeln (JArbSchG/Jugendliche, MuSchG/Mutterschutz) in Phase 1.
+- ArbZG-Warnings sind **reine Warnungen**, kein harter Block. Override durch Genehmiger mit Pflicht-`arbzgOverrideReason`.
+- Ticket-Akzeptanzkriterium 5 reduziert von vier auf drei Regeln.
+
+### Abgeleitete Implementierungs-Punkte
+- **UNAPPROVED_OVERTIME**-Code: ergänzt an vier Stellen (`src/lib/calculation/errors.ts`, `correction-assistant-service.ts:55-62` Warning-Liste, `mapCorrectionErrorType` Case, beide `defaultCorrectionMessages` DE+EN). **Additiv**, kein Aufräumen der bestehenden Doppelkatalog-Struktur in diesem Ticket.
+- **`daily-calc.ts`-Integration**: in `calculateWithBookings()` nach `result.overtime`-Compute (`calculator.ts:153`), vor `resultToDailyValue()` (`daily-calc.ts:1346`), prüfen: wenn `overtime > 0` UND kein `OvertimeRequest` mit `status="approved"` für `(tenantId, employeeId, requestDate)` ⇒ `"UNAPPROVED_OVERTIME"` in `errorCodes` pushen. Batch-Lookup im `buildCalcInput`-Pfad, um N+1 zu vermeiden.
+- **Status-State-Machine**: strikt nach `absences-repository.ts:315-331`-Pattern — `updateIfStatus(expectedStatus, data)` mit `updateMany`-CAS; `count === 0 ⇒ ValidationError`.
+- **Notifications**: nach `absences-service.ts:18-39`-Pattern — `prisma.notification.create` mit `type: "approvals"` + `publishUnreadCountUpdate()` in best-effort `try/catch`.
+- **Reopen-Pre-Insert-Check**: kein Lock-Konzept auf Booking. Umsetzung als Pre-Insert-Check in `bookings-service.create` (oder Repository) vor Insert eines `direction="in"`-Bookings auf einen Tag mit bereits vorhandenem OUT-Booking ⇒ `overtimeRequestRepo.hasActiveReopen(tenantId, employeeId, bookingDate)` muss `true` liefern, sonst `BookingValidationError`.
+
+### Deferred / Post-Launch (nicht Bestandteil dieses Plans)
+- **Vertretungsregel bei Abwesenheit des Genehmigers**: Heute gibt es keine aktive „Abwesend"-Prüfung im `findApproverUserIds`-Flow. Post-Launch, ggf. mit Live-Query gegen `AbsenceDay`.
+- **Department-/Team-spezifische Approver** („Schichtleiter genau dieser Abteilung"): Tenantweite Permission-Liste reicht in Phase 1.
+- **Per-Antrag-Verwertungswunsch (ACCOUNT/PAYOUT/TIME_OFF)**: siehe D2 — Ticket 3.1.
+- **§3 Abs. 2 ArbZG 48h/6-Monats-Schnitt**: siehe D3 — eigenes Ticket.
+- **Echte Policy-Tabelle (`ApprovalRule`)** für Mehrstufigkeit: siehe D1 — Threshold-Feld auf Singleton-Config reicht in Phase 1.

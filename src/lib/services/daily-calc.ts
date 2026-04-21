@@ -28,6 +28,7 @@ import {
   extractWorkPeriods,
   calculateSurcharges,
   ShiftDetector,
+  ERR_UNAPPROVED_OVERTIME,
 } from "@/lib/calculation"
 import type {
   CalculationInput,
@@ -1167,6 +1168,30 @@ export class DailyCalcService {
     // 5. Add holiday warning if applicable
     if (isHoliday) {
       result.warnings.push("WORKED_ON_HOLIDAY")
+    }
+
+    // 5b. UNAPPROVED_OVERTIME: overtime > 0 without an approved OvertimeRequest.
+    if (result.overtime > 0) {
+      const dateKey = date.toISOString().slice(0, 10)
+      let isApproved = false
+      if (context) {
+        isApproved = context.approvedOvertimeDates.has(dateKey)
+      } else {
+        // Single-day recalc path (no batch context) — issue the query directly.
+        const approvedCount = await this.prisma.overtimeRequest.count({
+          where: {
+            tenantId,
+            employeeId,
+            status: "approved",
+            requestDate: date,
+          },
+        })
+        isApproved = approvedCount > 0
+      }
+      if (!isApproved) {
+        result.errorCodes.push(ERR_UNAPPROVED_OVERTIME)
+        result.hasError = true
+      }
     }
 
     // 6. Convert to DailyValueInput

@@ -36,8 +36,10 @@
 -- Run via: pnpm db:reset (applies seed.sql after migrations)
 --
 -- Dev credentials:
---   admin@dev.local / dev-password-admin
---   user@dev.local  / dev-password-user
+--   admin@dev.local    / dev-password-admin    (is_admin=true, bypass)
+--   user@dev.local     / dev-password-user     (MA, can request overtime)
+--   approver@dev.local / dev-password-approver (overtime.approve only)
+--   hr@dev.local       / dev-password-hr       (overtime.approve + overtime.approve_escalated + settings.manage + corrections.manage)
 
 -- Tenant ID used throughout
 -- 10000000-0000-0000-0000-000000000001
@@ -106,6 +108,68 @@ INSERT INTO auth.identities (
   NOW(), NOW(), NOW()
 ) ON CONFLICT (provider_id, provider) DO NOTHING;
 
+-- Approver (overtime.approve only — for escalation-gate negative tests)
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new, email_change_token_current
+) VALUES (
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  'approver@dev.local',
+  crypt('dev-password-approver', gen_salt('bf')),
+  NOW(), '{"display_name": "Dev Approver"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  NOW(), NOW(),
+  '', '',
+  '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, user_id, identity_data, provider, provider_id,
+  last_sign_in_at, created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000003',
+  jsonb_build_object('sub', '00000000-0000-0000-0000-000000000003', 'email', 'approver@dev.local'),
+  'email', '00000000-0000-0000-0000-000000000003',
+  NOW(), NOW(), NOW()
+) ON CONFLICT (provider_id, provider) DO NOTHING;
+
+-- HR (overtime.approve + overtime.approve_escalated + settings.manage + corrections.manage)
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new, email_change_token_current
+) VALUES (
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  'hr@dev.local',
+  crypt('dev-password-hr', gen_salt('bf')),
+  NOW(), '{"display_name": "Dev HR"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  NOW(), NOW(),
+  '', '',
+  '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, user_id, identity_data, provider, provider_id,
+  last_sign_in_at, created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000004',
+  jsonb_build_object('sub', '00000000-0000-0000-0000-000000000004', 'email', 'hr@dev.local'),
+  'email', '00000000-0000-0000-0000-000000000004',
+  NOW(), NOW(), NOW()
+) ON CONFLICT (provider_id, provider) DO NOTHING;
+
 -- =============================================================
 -- 2. Dev tenant
 -- =============================================================
@@ -142,7 +206,33 @@ VALUES (
   'Users',
   'user',
   'Standard user access',
-  '["time_tracking.view_own", "time_tracking.edit", "absences.request"]'::jsonb,
+  '["time_tracking.view_own", "time_tracking.edit", "absences.request", "overtime.request"]'::jsonb,
+  false, false, true,
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- Approver: overtime.approve only (escalation gate should block escalated requests)
+INSERT INTO user_groups (id, tenant_id, name, code, description, permissions, is_admin, is_system, is_active, created_at, updated_at)
+VALUES (
+  '20000000-0000-0000-0000-000000000003',
+  '10000000-0000-0000-0000-000000000001',
+  'Approver',
+  'approver',
+  'Can approve non-escalated overtime requests',
+  '["time_tracking.view_own", "time_tracking.view_all", "overtime.approve"]'::jsonb,
+  false, false, true,
+  NOW(), NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- HR: escalated + settings + corrections (can do everything non-admin related to overtime)
+INSERT INTO user_groups (id, tenant_id, name, code, description, permissions, is_admin, is_system, is_active, created_at, updated_at)
+VALUES (
+  '20000000-0000-0000-0000-000000000004',
+  '10000000-0000-0000-0000-000000000001',
+  'HR',
+  'hr',
+  'HR: approve escalated overtime, manage settings and corrections',
+  '["time_tracking.view_own", "time_tracking.view_all", "overtime.approve", "overtime.approve_escalated", "settings.manage", "corrections.manage"]'::jsonb,
   false, false, true,
   NOW(), NOW()
 ) ON CONFLICT (id) DO NOTHING;
@@ -177,6 +267,34 @@ VALUES (
   role = EXCLUDED.role,
   updated_at = NOW();
 
+-- Approver user linked to Markus Braun (EMP007)
+INSERT INTO users (id, email, username, display_name, role, is_active, tenant_id, user_group_id, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000003',
+  'approver@dev.local', 'approver@dev.local', 'Dev Approver', 'user', true,
+  '10000000-0000-0000-0000-000000000001',
+  '20000000-0000-0000-0000-000000000003',
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  tenant_id = EXCLUDED.tenant_id,
+  user_group_id = EXCLUDED.user_group_id,
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
+-- HR user linked to Julia Hoffmann (EMP008)
+INSERT INTO users (id, email, username, display_name, role, is_active, tenant_id, user_group_id, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000004',
+  'hr@dev.local', 'hr@dev.local', 'Dev HR', 'user', true,
+  '10000000-0000-0000-0000-000000000001',
+  '20000000-0000-0000-0000-000000000004',
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  tenant_id = EXCLUDED.tenant_id,
+  user_group_id = EXCLUDED.user_group_id,
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
 -- =============================================================
 -- 5. User-tenant access
 -- =============================================================
@@ -184,7 +302,9 @@ VALUES (
 INSERT INTO user_tenants (user_id, tenant_id, role, created_at)
 VALUES
   ('00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'admin', NOW()),
-  ('00000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'member', NOW())
+  ('00000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'member', NOW())
 ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 -- =============================================================
@@ -222,6 +342,8 @@ ON CONFLICT (id) DO NOTHING;
 
 UPDATE users SET employee_id = '00000000-0000-0000-0000-000000000011' WHERE id = '00000000-0000-0000-0000-000000000001';
 UPDATE users SET employee_id = '00000000-0000-0000-0000-000000000012' WHERE id = '00000000-0000-0000-0000-000000000002';
+UPDATE users SET employee_id = '00000000-0000-0000-0000-000000000017' WHERE id = '00000000-0000-0000-0000-000000000003'; -- Approver → Markus Braun
+UPDATE users SET employee_id = '00000000-0000-0000-0000-000000000018' WHERE id = '00000000-0000-0000-0000-000000000004'; -- HR → Julia Hoffmann
 
 -- =============================================================
 -- 8. Departments (hierarchy: Company -> IT, HR, Finance, Ops; IT -> Dev, Infra)

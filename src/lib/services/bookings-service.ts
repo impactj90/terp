@@ -11,6 +11,8 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./bookings-repository"
 import type { DataScopeFilter } from "./bookings-repository"
 import * as monthlyValuesRepo from "./monthly-values-repository"
+import * as overtimeRequestRepo from "./overtime-request-repository"
+import * as overtimeRequestConfigService from "./overtime-request-config-service"
 import { RecalcService } from "./recalc"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
@@ -390,6 +392,34 @@ export async function createBooking(
 
   // Block mutations in closed months
   await assertMonthNotClosed(prisma, tenantId, input.employeeId, bookingDate)
+
+  // Reopen gate: an IN work-booking on a day that already has an OUT work-
+  // booking requires an active approved REOPEN OvertimeRequest, unless the
+  // tenant has disabled the reopen policy (OvertimeRequestConfig.reopenRequired).
+  if (bookingType.direction === "in" && bookingType.category === "work") {
+    const dayOuts = await prisma.booking.count({
+      where: {
+        tenantId,
+        employeeId: input.employeeId,
+        bookingDate,
+        bookingType: { direction: "out", category: "work" },
+      },
+    })
+    if (dayOuts > 0) {
+      const config = await overtimeRequestConfigService.getOrCreate(prisma, tenantId)
+      if (config.reopenRequired) {
+        const allowed = await overtimeRequestRepo.hasActiveReopen(
+          prisma,
+          tenantId,
+          input.employeeId,
+          bookingDate
+        )
+        if (!allowed) {
+          throw new BookingValidationError("reopen_not_approved")
+        }
+      }
+    }
+  }
 
   // Create booking
   const booking = await repo.create(prisma, {

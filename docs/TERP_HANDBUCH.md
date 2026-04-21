@@ -25,6 +25,16 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
    - [6.6 Praxisbeispiel: 3-Schicht-Betrieb einrichten (Früh / Spät / Nacht)](#66-praxisbeispiel-3-schicht-betrieb-einrichten-früh--spät--nacht)
 7. [Urlaub & Abwesenheiten](#7-urlaub--abwesenheiten)
    - [7.8 Praxisbeispiel: Urlaubskonto einrichten und Jahreswechsel durchführen](#78-praxisbeispiel-urlaubskonto-einrichten-und-jahreswechsel-durchführen)
+7a. [Überstundenanträge (Vorab + Reaktiv)](#7a-überstundenanträge-vorab--reaktiv)
+   - [7a.1 Zwei Flüsse](#7a1-zwei-flüsse)
+   - [7a.2 ArbZG-Validierung](#7a2-arbzg-validierung)
+   - [7a.3 Konfiguration pro Tenant](#7a3-konfiguration-pro-tenant)
+   - [7a.4 Korrekturassistent-Integration](#7a4-korrekturassistent-integration)
+   - [7a.5 Reopen-Gate in der Stempeluhr](#7a5-reopen-gate-in-der-stempeluhr)
+   - [7a.6 Praxisbeispiel: Vorab-Antrag](#7a6-praxisbeispiel-vorab-antrag)
+   - [7a.7 Praxisbeispiel: Reaktiv-Antrag](#7a7-praxisbeispiel-reaktiv-antrag)
+   - [7a.8 Praxisbeispiel: Admin schaltet Reopen-Antragspflicht um](#7a8-praxisbeispiel-admin-schaltet-reopen-antragspflicht-um)
+   - [7a.9 Audit-Trail](#7a9-audit-trail)
 8. [Aufgaben des Managers](#8-aufgaben-des-managers)
    - [8.3.1 Praxisbeispiel: Ersten Monat abschließen und DATEV-Export erstellen](#831-praxisbeispiel-ersten-monat-abschließen-und-datev-export-erstellen)
 9. [Automatisierung — Was passiert im Hintergrund?](#9-automatisierung--was-passiert-im-hintergrund)
@@ -282,6 +292,7 @@ Die Seitenleiste ist in mehrere Bereiche gegliedert. Menüpunkte erscheinen nur,
 | Stempeluhr | `/time-clock` | Ein-/Ausstempeln |
 | Zeitnachweis | `/timesheet` | Eigene Buchungen und Tageswerte |
 | Abwesenheiten | `/absences` | Urlaub beantragen und verwalten |
+| Überstundenanträge | `/overtime-requests` | Überstunden vorab beantragen oder Zeiterfassung wieder öffnen |
 | Urlaub | `/vacation` | Urlaubskonto und Jahresübersicht |
 | Monatsauswertung | `/monthly-evaluation` | Monatszusammenfassung |
 | Jahresübersicht | `/year-overview` | Jahreszusammenfassung |
@@ -316,6 +327,8 @@ Die Menüpunkte sind in aufklappbare Untergruppen gegliedert:
 | Menüpunkt | Berechtigung |
 |-----------|-------------|
 | Genehmigungen | Abwesenheiten genehmigen |
+| Überstunden-Genehmigungen | Überstunden genehmigen (`overtime.approve`) |
+| Überstundenantrag-Konfiguration | Einstellungen verwalten (`settings.manage`) |
 | Abwesenheitsarten | Abwesenheitsarten verwalten |
 | Urlaubskonten | Abwesenheiten verwalten |
 | Urlaubskonfiguration | Abwesenheitsarten verwalten |
@@ -565,6 +578,9 @@ Es gibt genau zwei Rollen:
 | **Abwesenheiten** | Beantragen | Abwesenheitsanträge stellen |
 | | Genehmigen | Anträge annehmen oder ablehnen |
 | | Verwalten | Alle Abwesenheiten bearbeiten und löschen |
+| **Überstunden** | `overtime.request` | Überstundenantrag stellen |
+| | `overtime.approve` | Überstundenanträge genehmigen/ablehnen |
+| | `overtime.approve_escalated` | Anträge oberhalb der Eskalations-Schwelle genehmigen |
 | **Konfiguration** | Tagespläne, Wochenpläne, Tarife | Arbeitszeitmodelle einrichten |
 | | Abteilungen, Teams, Standorte | Organisationsstruktur pflegen |
 | | Buchungstypen, Abwesenheitstypen | Stempel- und Abwesenheitsarten konfigurieren |
@@ -3278,6 +3294,126 @@ Alternativ die Vorschaufunktion nutzen:
 | **Genommen** | Bereits verbrauchte Urlaubstage | 0 Tage |
 
 💡 **Hinweis:** Ab 2027 bekommt Anna den vollen Anspruch (30 Tage + 2 Altersbonus = 32), da sie nun ein volles Kalenderjahr beschäftigt ist.
+
+---
+
+## 7a. Überstundenanträge (Vorab + Reaktiv)
+
+**Was ist es?** Ein formalisierter Workflow, mit dem Mitarbeiter geplante Überstunden vorab beantragen oder eine bereits beendete Zeiterfassung wieder öffnen können („Zeiterfassung wieder öffnen"). Beide Flüsse laufen durch eine Genehmigung (Schichtleiter/HR), berücksichtigen die ArbZG-Regeln (§§ 3, 5, 9) und schreiben einen vollständigen Audit-Trail.
+
+**Wozu dient es?** Vor der Einführung wurden Überstunden im Gespräch vereinbart und erst bei der Monatsauswertung sichtbar. Dieser Workflow gibt HR einen klaren Compliance-Nachweis und schützt Mitarbeiter: Jede Mehrarbeit muss vor dem Antritt (oder unmittelbar nach Feierabend im Reaktiv-Modus) genehmigt werden, sonst erscheint der Tag automatisch als `UNAPPROVED_OVERTIME` im Korrekturassistent.
+
+⚠️ Berechtigungen:
+- `overtime.request` — Antrag stellen
+- `overtime.approve` — Antrag genehmigen/ablehnen
+- `overtime.approve_escalated` — Anträge oberhalb der Eskalations-Schwelle freigeben
+
+📍 Seitenleiste → **Hauptmenü** → **Überstundenanträge** (`/overtime-requests`) für den Mitarbeiter
+📍 Seitenleiste → **Verwaltung → Abwesenheiten** → **Überstunden-Genehmigungen** (`/admin/overtime-approvals`) für den Genehmiger
+📍 Seitenleiste → **Verwaltung → Abwesenheiten** → **Überstundenantrag-Konfiguration** (`/admin/overtime-request-config`) für den Administrator
+
+### 7a.1 Zwei Flüsse
+
+| Flusstyp | Wann nutzen? | Was passiert? |
+|---|---|---|
+| **Geplant (PLANNED)** | Überstunden sind absehbar (Projekt-Deadline, Messe, Wartung) | Antrag vor dem Tag → Genehmiger erhält Benachrichtigung → nach Freigabe darf Mitarbeiter die Überstunden leisten |
+| **Wiederöffnung (REOPEN)** | Mitarbeiter hat ausgestempelt, muss spontan weiterarbeiten | Antrag sofort stellen → Genehmiger erhält Benachrichtigung → nach Freigabe erlaubt die Stempeluhr erneutes Einstempeln |
+
+### 7a.2 ArbZG-Validierung
+
+Das System prüft bei Antragserstellung **und** bei Genehmigung drei Regeln:
+
+| Code | § | Bedeutung |
+|---|---|---|
+| `DAILY_MAX_EXCEEDED` | § 3 ArbZG | Summe aus Soll-Zeit + beantragter Zusatzzeit überschreitet den Tages-Cap (typisch 600 min / 10 h) |
+| `REST_TIME_VIOLATED` | § 5 ArbZG | Zwischen dem letzten Ausstempeln am Vortag und dem Tagesbeginn liegen < 11 h |
+| `SUNDAY_WORK` | § 9 ArbZG | Beantragter Tag ist Sonntag oder gesetzlicher Feiertag |
+
+Warnungen sind **kein Block** — der Genehmiger kann trotzdem freigeben, muss dann aber eine **schriftliche Override-Begründung** eintragen, die dauerhaft am Antrag und im Audit-Log gespeichert wird.
+
+> **Nicht in Phase 1 implementiert**: 48h/6-Monats-Schnitt (§ 3 Abs. 2 ArbZG), Jugendarbeitsschutz (JArbSchG), Mutterschutz (MuSchG).
+
+### 7a.3 Konfiguration pro Tenant
+
+Alle Einstellungen leben auf einer Singleton-Config (`OvertimeRequestConfig`) und sind über `/admin/overtime-request-config` erreichbar:
+
+| Einstellung | Default | Wirkung |
+|---|---|---|
+| **Genehmigungspflicht** | aktiv | Wenn deaktiviert, werden Anträge automatisch genehmigt (keine Benachrichtigung an Genehmiger) |
+| **Reopen-Antragspflicht** | aktiv | Wenn aktiv: Stempeluhr blockt 2. Einstempeln ohne genehmigten REOPEN. Wenn deaktiviert: Stempeluhr bleibt offen und REOPEN-Radio wird im MA-Formular ausgeblendet |
+| **Vorlaufzeit (Stunden)** | 0 | Mindestabstand zwischen Antrag und Zieldatum |
+| **Monatliche Warnschwelle (Minuten)** | — | Dashboard-/Auswertungs-Warnung bei Überschreitung |
+| **Eskalationsschwelle (Minuten)** | — | Anträge ≥ Schwelle benötigen `overtime.approve_escalated` |
+
+**Destruktiver Flip**: Beim Deaktivieren der Reopen-Antragspflicht erscheint ein Bestätigungs-Dialog mit der Anzahl der aktuell ausstehenden REOPEN-Anträge; diese werden nach Bestätigung automatisch auf Status „Zurückgezogen" gesetzt. Bereits genehmigte REOPENs bleiben historisch erhalten.
+
+### 7a.4 Korrekturassistent-Integration
+
+Wenn ein Mitarbeiter ohne Antrag länger arbeitet (Tages-Netto > Soll und kein genehmigter Antrag für den Tag), erscheint im [Korrekturassistent](/admin/correction-assistant) automatisch eine Zeile mit Code **`UNAPPROVED_OVERTIME`** (Severity Fehler).
+
+HR-Aktionen im Detail-Sheet:
+
+- **„Als Überstunden genehmigen"** (Button nur bei `UNAPPROVED_OVERTIME`) → erzeugt rückwirkend einen genehmigten Planungs-Antrag mit den tatsächlich geleisteten Überstunden als `plannedMinutes`, triggert Neuberechnung, Fehler-Zeile verschwindet.
+- **„Ignorieren"** → Überstunden verfallen bewusst, keine Antrags-Zeile entsteht.
+- **„Mit Mitarbeiter klären"** → Zeile bleibt offen, Entscheidung später.
+
+Diese Erkennung läuft **unabhängig** von der Reopen-Antragspflicht — auch bei deaktiviertem Gate sehen HR ungenehmigte Mehrarbeit weiterhin im Korrekturassistent.
+
+### 7a.5 Reopen-Gate in der Stempeluhr
+
+Wenn die Reopen-Antragspflicht aktiv ist, prüft die Stempeluhr bei jedem Arbeits-Einstempeln:
+
+1. Hat der Tag bereits ein Arbeits-Ausstempeln? → wenn ja, Gate greift
+2. Existiert für (Tenant, Mitarbeiter, Datum) ein approved `REOPEN`-Antrag? → wenn ja, durchlassen
+3. Andernfalls: `BookingValidationError("reopen_not_approved")` → Fehler-Toast in der UI
+
+Ein DB-seitiges Partial-Unique-Index verhindert, dass mehrere aktive genehmigte REOPENs pro Tag existieren; die Lookup-Query für das Gate wird darüber als Fast-Path bedient.
+
+**Pausen und Dienstgänge** sind vom Gate nicht betroffen — nur Bookings mit `direction=in, category=work` lösen die Prüfung aus.
+
+### 7a.6 Praxisbeispiel: Vorab-Antrag
+
+1. Mitarbeiter plant am 25.04. einen Kundentermin bis 19 Uhr (Soll-Ende 17 Uhr).
+2. Am 23.04. öffnet er **Überstundenanträge → Neuer Antrag** (PLANNED, 25.04., 120 min, „Kundentermin geht bis 19 Uhr").
+3. System prüft ArbZG → keine Warnungen (10 h Cap nicht überschritten, genug Ruhezeit, kein Sonntag).
+4. Antrag ist „Ausstehend", Schichtleiter erhält In-App-Benachrichtigung.
+5. Schichtleiter öffnet **Überstunden-Genehmigungen**, klickt "Genehmigen" → Antrag „Genehmigt", Mitarbeiter wird informiert.
+6. Am 25.04. stempelt der Mitarbeiter wie gewohnt; die 2 Stunden Überstunden gelten als genehmigt und erscheinen **nicht** im Korrekturassistent.
+
+### 7a.7 Praxisbeispiel: Reaktiv-Antrag
+
+1. Mitarbeiter hat um 17:00 ausgestempelt. Um 17:10 ruft ein Kunde mit dringendem Problem an.
+2. Er öffnet **Überstundenanträge → Neuer Antrag** (REOPEN, heute, geschätzt 60 min, „Kunde X: Produktion steht").
+3. Antrag „Ausstehend", Schichtleiter sieht Notiz direkt.
+4. Schichtleiter genehmigt binnen 3 Minuten.
+5. Mitarbeiter kehrt zur Stempeluhr zurück, klickt **Einstempeln** → geht durch (Gate erkennt genehmigten REOPEN).
+6. Er arbeitet bis 18:05, stempelt aus. Tag zeigt 50 Minuten Mehrarbeit als genehmigt.
+
+### 7a.8 Praxisbeispiel: Admin schaltet Reopen-Antragspflicht um
+
+1. Firma wächst, Compliance wird wichtiger. Admin öffnet **Überstundenantrag-Konfiguration**.
+2. Aktuell stehen 3 pending REOPEN-Anträge aus der letzten Woche im System (Reopen-Antragspflicht war deaktiviert, aber irgendjemand hatte testweise Anträge gestellt).
+3. Admin aktiviert den Switch **Reopen-Antragspflicht** (false → true) → kein Dialog (nicht destruktiv).
+4. Klick auf **Speichern** → Toast „Einstellungen gespeichert".
+5. Ab sofort blockt die Stempeluhr erneutes Einstempeln nach Ausstempeln.
+6. Die 3 offenen Anträge bleiben historisch sichtbar, können vom Schichtleiter regulär genehmigt oder abgelehnt werden.
+
+Beim umgekehrten Weg (true → false) kämen diese 3 Anträge in den Bestätigungs-Dialog und würden bei Bestätigung automatisch storniert.
+
+### 7a.9 Audit-Trail
+
+Jede Aktion erzeugt einen Eintrag in `audit_logs`:
+
+| Action | Trigger |
+|---|---|
+| `create_overtime_request` | Antrag erstellt |
+| `approve_overtime_request` | Antrag genehmigt (inkl. ArbZG-Override-Begründung) |
+| `reject_overtime_request` | Antrag abgelehnt (inkl. Ablehnungsgrund) |
+| `cancel_overtime_request` | Mitarbeiter zieht Antrag selbst zurück |
+| `approve_as_overtime` | HR genehmigt `UNAPPROVED_OVERTIME` rückwirkend |
+| `update` (entity_type `overtime_request_config`) | Admin ändert Konfiguration |
+
+Auto-Cancellation beim Reopen-Antragspflicht-Flip erzeugt **keine** einzelnen Audit-Einträge — nur der `update`-Eintrag auf der Konfiguration dokumentiert die Änderung.
 
 ---
 

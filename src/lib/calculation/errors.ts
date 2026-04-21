@@ -44,6 +44,9 @@ export const ERR_DUPLICATE_IN_TIME = "DUPLICATE_IN_TIME"
 /** No day plan matched the booking times */
 export const ERR_NO_MATCHING_SHIFT = "NO_MATCHING_SHIFT"
 
+/** Overtime recorded without an approved OvertimeRequest */
+export const ERR_UNAPPROVED_OVERTIME = "UNAPPROVED_OVERTIME"
+
 // --- Warning codes ---
 
 /** Shift spans midnight */
@@ -86,6 +89,7 @@ const ERROR_CODES = new Set([
   ERR_INVALID_TIME,
   ERR_DUPLICATE_IN_TIME,
   ERR_NO_MATCHING_SHIFT,
+  ERR_UNAPPROVED_OVERTIME,
 ])
 
 /**

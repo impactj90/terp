@@ -83,11 +83,14 @@
     "timeClock": "Time Clock",
     "timesheet": "Timesheet",
     "absences": "Absences",
+    "overtimeRequests": "Overtime Requests",
     "vacation": "Vacation",
     "monthlyEvaluation": "Monthly Evaluation",
     "yearOverview": "Year Overview",
     "management": "Management",
     "approvals": "Approvals",
+    "overtimeApprovals": "Overtime Approvals",
+    "overtimeRequestConfig": "Overtime Request Config",
     "employees": "Employees",
     "teams": "Teams",
     "departments": "Departments",
@@ -294,6 +297,9 @@
     "correctionAssistant": "Correction Assistant",
     "monthlyValues": "Monthly Values",
     "overtimePayouts": "Overtime Payouts",
+    "overtimeRequests": "Overtime Requests",
+    "overtimeApprovals": "Overtime Approvals",
+    "overtimeRequestConfig": "Overtime Request Config",
     "payrollExports": "Payroll Exports",
     "exportInterfaces": "Export Interfaces",
     "exportTemplates": "Export Templates",
@@ -8653,6 +8659,132 @@
       "deniedMatch": "No permission to match bank transactions.",
       "deniedIgnore": "No permission to ignore bank transactions.",
       "deniedUnmatch": "No permission to undo matches."
+    }
+  },
+  "overtime_requests": {
+    "page": {
+      "title": "Overtime requests",
+      "subtitle": "Request planned overtime or reopen a closed day.",
+      "newRequest": "New request",
+      "myRequests": "My requests",
+      "noRequests": "No requests yet."
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "requestType": {
+      "PLANNED": "Planned",
+      "REOPEN": "Reopen"
+    },
+    "form": {
+      "title": "Overtime request",
+      "description": "Enter reason and additional minutes.",
+      "requestType": {
+        "label": "Type",
+        "planned": "Planned overtime",
+        "plannedHint": "Request in advance for an upcoming day.",
+        "reopen": "Reopen time tracking",
+        "reopenHint": "Allow a second clock-in after you already clocked out."
+      },
+      "requestDate": {
+        "label": "Date"
+      },
+      "plannedMinutes": {
+        "label": "Additional minutes",
+        "hint": "How many minutes above target work time."
+      },
+      "reason": {
+        "label": "Reason",
+        "placeholder": "Why is the overtime needed?"
+      },
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "submitting": "Submitting...",
+      "arbzgWarningsTitle": "ArbZG warnings",
+      "arbzgWarningsDescription": "These warnings will be shown to the approver."
+    },
+    "detail": {
+      "title": "Request details",
+      "employee": "Employee",
+      "date": "Date",
+      "plannedMinutes": "Planned minutes",
+      "type": "Type",
+      "status": "Status",
+      "reason": "Reason",
+      "arbzgWarnings": "ArbZG warnings",
+      "approver": "Approved by",
+      "approvedAt": "Approved at",
+      "rejectionReason": "Rejection reason",
+      "overrideReason": "ArbZG override",
+      "cancel": "Cancel request",
+      "close": "Close"
+    },
+    "arbzg": {
+      "DAILY_MAX_EXCEEDED": "Daily maximum (10h) will be exceeded.",
+      "REST_TIME_VIOLATED": "Mandatory rest time (11h) is violated.",
+      "SUNDAY_WORK": "Work on Sunday or public holiday.",
+      "overrideRequired": "Override reason is required to approve despite ArbZG warnings.",
+      "overrideReasonLabel": "Override reason",
+      "overrideReasonPlaceholder": "Why are the ArbZG warnings being overridden?"
+    },
+    "approver": {
+      "queue": {
+        "title": "Overtime approvals",
+        "subtitle": "Pending overtime requests to approve or reject.",
+        "empty": "No pending requests.",
+        "approve": "Approve",
+        "reject": "Reject",
+        "rejectDialogTitle": "Reject request",
+        "rejectDialogDescription": "Provide a reason for rejection.",
+        "rejectReasonLabel": "Rejection reason"
+      }
+    },
+    "admin": {
+      "config": {
+        "title": "Overtime request — configuration",
+        "subtitle": "Per-tenant approval policy, lead time and escalation threshold.",
+        "approvalRequired": "Approval required",
+        "approvalRequiredHint": "When disabled, requests are auto-approved.",
+        "leadTimeHours": "Lead time (hours)",
+        "leadTimeHoursHint": "Minimum lead time between request and target date.",
+        "monthlyWarnThresholdMinutes": "Monthly warn threshold (minutes)",
+        "monthlyWarnThresholdMinutesHint": "Warn when exceeding this monthly total.",
+        "escalationThresholdMinutes": "Escalation threshold (minutes)",
+        "escalationThresholdMinutesHint": "Requests above this value require escalated approval.",
+        "reopenRequired": "Require reopen approval",
+        "reopenRequiredHint": "Requires an approved reopen request before clocking in again after clocking out. When disabled, the time clock stays open.",
+        "disableConfirmTitle": "Disable reopen approval requirement?",
+        "disableConfirmBody": "{count, plural, =0{All pending reopen requests will be} one{# pending reopen request will be} other{# pending reopen requests will be}} automatically cancelled.",
+        "disableConfirmContinue": "Continue",
+        "disableConfirmCancel": "Cancel",
+        "save": "Save",
+        "saved": "Settings saved"
+      }
+    },
+    "correctionAssistant": {
+      "approveAsOvertime": "Approve as overtime",
+      "approvedToast": "Overtime approved retroactively"
+    },
+    "notification": {
+      "submitted": {
+        "title": "New overtime request"
+      },
+      "approved": {
+        "title": "Overtime request approved"
+      },
+      "rejected": {
+        "title": "Overtime request rejected"
+      }
+    },
+    "toast": {
+      "submitted": "Request submitted",
+      "approved": "Request approved",
+      "rejected": "Request rejected",
+      "cancelled": "Request cancelled",
+      "actionFailed": "Action failed"
     }
   }
 }

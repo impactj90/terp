@@ -35,6 +35,12 @@ export interface DailyCalcContext {
   bookingsByDate: Map<string, BookingWithType[]>
   allBookingsExtended: BookingWithType[]
   previousValues: Map<string, { hasError: boolean } | null>
+  /**
+   * Dates (YYYY-MM-DD) for which an approved OvertimeRequest exists.
+   * Used by calculateWithBookings to suppress UNAPPROVED_OVERTIME when
+   * overtime > 0 is already sanctioned.
+   */
+  approvedOvertimeDates: Set<string>
   employeeMaster: {
     dailyTargetHours: Prisma.Decimal | null
     defaultOrderId: string | null
@@ -116,8 +122,14 @@ export async function loadEmployeeCalcContext(
   const extFrom = addDays(fromDate, -1)
   const extTo = addDays(toDate, 1)
 
-  const [dayPlanRows, absenceRows, bookingRows, prevValueRows, empRow] =
-    await Promise.all([
+  const [
+    dayPlanRows,
+    absenceRows,
+    bookingRows,
+    prevValueRows,
+    empRow,
+    approvedOvertimeRows,
+  ] = await Promise.all([
       // Day plans with full includes
       prisma.employeeDayPlan.findMany({
         where: {
@@ -187,6 +199,18 @@ export async function loadEmployeeCalcContext(
           tenantId: true,
         },
       }),
+
+      // Approved overtime requests in the range — used to suppress
+      // UNAPPROVED_OVERTIME.
+      prisma.overtimeRequest.findMany({
+        where: {
+          tenantId,
+          employeeId,
+          status: "approved",
+          requestDate: { gte: fromDate, lte: toDate },
+        },
+        select: { requestDate: true },
+      }),
     ])
 
   // Build day plans map
@@ -222,6 +246,11 @@ export async function loadEmployeeCalcContext(
     previousValues.set(dateKey(pv.valueDate), { hasError: pv.hasError })
   }
 
+  const approvedOvertimeDates = new Set<string>()
+  for (const r of approvedOvertimeRows) {
+    approvedOvertimeDates.add(dateKey(r.requestDate))
+  }
+
   return {
     tenant: tenantCache,
     dayPlans,
@@ -229,6 +258,7 @@ export async function loadEmployeeCalcContext(
     bookingsByDate,
     allBookingsExtended: bookingRows,
     previousValues,
+    approvedOvertimeDates,
     employeeMaster: empRow,
   }
 }

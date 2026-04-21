@@ -4,7 +4,8 @@ import * as React from 'react'
 
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { Mail, User } from 'lucide-react'
+import { toast } from 'sonner'
+import { Check, Loader2, Mail, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -17,6 +18,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import type { CorrectionAssistantItem } from '@/hooks/use-correction-assistant'
+import { useApproveAsOvertime } from '@/hooks'
 import { CorrectionNotifyDialog } from './correction-notify-dialog'
 
 interface CorrectionAssistantDetailSheetProps {
@@ -37,13 +39,33 @@ export function CorrectionAssistantDetailSheet({
   onOpenChange,
 }: CorrectionAssistantDetailSheetProps) {
   const t = useTranslations('correctionAssistant')
+  const tOvertimeCA = useTranslations('overtime_requests.correctionAssistant')
   const router = useRouter()
   const [notifyOpen, setNotifyOpen] = React.useState(false)
+  const approveAsOvertime = useApproveAsOvertime()
+
+  const hasUnapprovedOvertime = item?.errors.some(
+    (e) => e.code === 'UNAPPROVED_OVERTIME'
+  )
 
   const handleGoToEmployee = () => {
     if (item) {
       router.push(`/admin/employees/${item.employeeId}`)
       onOpenChange(false)
+    }
+  }
+
+  const handleApproveAsOvertime = async () => {
+    if (!item) return
+    try {
+      await approveAsOvertime.mutateAsync({
+        employeeId: item.employeeId,
+        date: item.valueDate,
+      })
+      toast.success(tOvertimeCA('approvedToast'))
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error')
     }
   }
 
@@ -113,23 +135,39 @@ export function CorrectionAssistantDetailSheet({
           </ScrollArea>
         ) : null}
 
-        <SheetFooter className="flex-row gap-2 border-t pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-            {t('detail.close')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setNotifyOpen(true)}
-            disabled={!item}
-            className="flex-1"
-          >
-            <Mail className="mr-2 h-4 w-4" />
-            {t('detail.notifyEmployee')}
-          </Button>
-          <Button onClick={handleGoToEmployee} disabled={!item} className="flex-1">
-            <User className="mr-2 h-4 w-4" />
-            {t('detail.goToEmployee')}
-          </Button>
+        <SheetFooter className="flex-col gap-2 border-t pt-4">
+          {hasUnapprovedOvertime ? (
+            <Button
+              onClick={handleApproveAsOvertime}
+              disabled={approveAsOvertime.isPending}
+              className="w-full"
+            >
+              {approveAsOvertime.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              {tOvertimeCA('approveAsOvertime')}
+            </Button>
+          ) : null}
+          <div className="flex flex-row gap-2 w-full">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              {t('detail.close')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setNotifyOpen(true)}
+              disabled={!item}
+              className="flex-1"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              {t('detail.notifyEmployee')}
+            </Button>
+            <Button onClick={handleGoToEmployee} disabled={!item} className="flex-1">
+              <User className="mr-2 h-4 w-4" />
+              {t('detail.goToEmployee')}
+            </Button>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>

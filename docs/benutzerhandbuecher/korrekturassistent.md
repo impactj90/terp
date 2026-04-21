@@ -53,6 +53,7 @@ Der **Korrekturassistent** hilft bei der Identifikation und Behebung von Problem
 | **Nachtarbeit** | Unerwartete Nachtarbeit |
 | **Wochenendarbeit** | Arbeit am Wochenende |
 | **Ungerade Buchungen** | Unpaarige Buchungen |
+| **Ungenehmigte Überstunden** (`UNAPPROVED_OVERTIME`) | Überstunden ohne genehmigten Antrag |
 
 ### 5. Korrektur-Dialog
 Bei Klick auf "Beheben":
@@ -60,6 +61,16 @@ Bei Klick auf "Beheben":
 - **Korrekturvorschlag**: Empfohlene Aktion
 - **Manuelle Eingabe**: Alternative Korrektur
 - **Bestätigen**: Korrektur anwenden
+
+#### Spezialaktion für `UNAPPROVED_OVERTIME`
+Wenn die gewählte Zeile den Code `UNAPPROVED_OVERTIME` trägt, erscheint im Detail-Sheet ein zusätzlicher Button **"Als Überstunden genehmigen"**. Ein Klick darauf:
+
+1. Erzeugt im Hintergrund einen rückwirkend genehmigten Überstundenantrag (Typ "Geplant") mit den am Tag tatsächlich geleisteten Überstunden als Minuten.
+2. Setzt den Antrag direkt auf "Genehmigt" mit dem aktuellen Benutzer als Approver.
+3. Startet eine Neuberechnung des Tages — `UNAPPROVED_OVERTIME` verschwindet aus der Liste.
+4. Schreibt einen Audit-Eintrag mit der Aktion `approve_as_overtime`.
+
+Diese Aktion ist der **schnelle Weg** für HR, einmalige Überschreitungen zu sanktionieren, ohne den vollen Antragsworkflow rückwirkend durchlaufen zu müssen.
 
 ### 6. Korrekturmeldungen-Verwaltung
 Anpassung der Meldungstexte:
@@ -94,6 +105,19 @@ Anpassung der Meldungstexte:
 4. Bestätigen Sie
 5. Das Problem wird nicht mehr angezeigt
 
+### Ungenehmigte Überstunden nachträglich genehmigen
+
+1. Filtern Sie die Liste auf Code `UNAPPROVED_OVERTIME` oder Severity "Fehler".
+2. Klicken Sie auf die betroffene Zeile — das Detail-Sheet öffnet sich.
+3. Klicken Sie auf **"Als Überstunden genehmigen"** im Footer.
+4. Sie erhalten die Bestätigung "Überstunden nachträglich genehmigt" und das Sheet schließt sich.
+5. Die Zeile verschwindet nach Neuladen aus der Liste.
+6. Unter **Überstundenanträge** erscheint ein neuer Antrag mit Status "Genehmigt" und dem aktuellen Benutzer als Genehmiger.
+
+Alternativ (für Ablehnung oder Klärung):
+- **Ignorieren**: Eintrag verschwindet aus der Liste, ohne dass ein Antrag entsteht — nutzen Sie dies **nur**, wenn die Überstunden tatsächlich verfallen sollen.
+- **Mit Mitarbeiter klären**: Eintrag bleibt offen, Sie sprechen direkt mit dem MA und entscheiden später.
+
 ### Nach Typ filtern
 
 1. Nutzen Sie den **Problemtyp-Filter**
@@ -114,6 +138,8 @@ Anpassung der Meldungstexte:
 | **Buchungen** | Neue/geänderte Buchungen |
 | **Tageswerte** | Neuberechnung |
 | **Monatswerte** | Aktualisierung |
+| **Überstundenanträge** | Bei "Als Überstunden genehmigen": neuer Antrag mit Status "Genehmigt" |
+| **Audit-Protokoll** | `approve_as_overtime`-Eintrag beim rückwirkenden Genehmigen |
 
 ## Tipps & Best Practices
 
@@ -141,3 +167,5 @@ Anpassung der Meldungstexte:
 - **[Auswertungen](./auswertungen.md)** - Detaildaten
 - **[Stundenzettel](./stundenzettel.md)** - Manuelle Korrektur
 - **[Monatswerte](./monatswerte.md)** - Monatsdaten
+- **[Überstundenanträge](./ueberstundenantraege.md)** - Vorab-Anträge, die `UNAPPROVED_OVERTIME` gar nicht erst entstehen lassen
+- **[Überstunden-Genehmigungen](./ueberstunden-genehmigungen.md)** - Regulärer Approval-Workflow statt nachträglicher Genehmigung

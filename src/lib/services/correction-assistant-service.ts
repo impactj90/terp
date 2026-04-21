@@ -38,6 +38,7 @@ const ERR_NO_BOOKINGS = "NO_BOOKINGS"
 const ERR_INVALID_TIME = "INVALID_TIME"
 const ERR_DUPLICATE_IN_TIME = "DUPLICATE_IN_TIME"
 const ERR_NO_MATCHING_SHIFT = "NO_MATCHING_SHIFT"
+const ERR_UNAPPROVED_OVERTIME = "UNAPPROVED_OVERTIME"
 
 const WARN_CROSS_MIDNIGHT = "CROSS_MIDNIGHT"
 const WARN_MAX_TIME_REACHED = "MAX_TIME_REACHED"
@@ -98,6 +99,8 @@ function mapCorrectionErrorType(code: string): string {
     case WARN_BOOKINGS_ON_OFF_DAY:
     case WARN_WORKED_ON_HOLIDAY:
       return "off_day_work"
+    case ERR_UNAPPROVED_OVERTIME:
+      return "unapproved_overtime"
     default:
       return "other"
   }
@@ -120,6 +123,7 @@ function defaultCorrectionMessages(tenantId: string) {
     { tenantId, code: ERR_INVALID_TIME, defaultText: "Ungültige Zeitangabe", severity: "error", description: "Eine Buchung hat einen ungültigen Zeitwert" },
     { tenantId, code: ERR_DUPLICATE_IN_TIME, defaultText: "Doppelte Kommen-Buchung", severity: "error", description: "Mehrere Kommen-Buchungen zur gleichen Zeit" },
     { tenantId, code: ERR_NO_MATCHING_SHIFT, defaultText: "Kein passender Tagesplan gefunden", severity: "error", description: "Kein Tagesplan passt zu den Buchungszeiten" },
+    { tenantId, code: ERR_UNAPPROVED_OVERTIME, defaultText: "Ungenehmigte Überstunden", severity: "error", description: "Überstunden ohne genehmigten Antrag. Im Korrekturassistent nachträglich genehmigen oder ablehnen." },
     // --- Hinweise (warnings) ---
     { tenantId, code: WARN_CROSS_MIDNIGHT, defaultText: "Schicht über Mitternacht", severity: "hint", description: "Die Arbeitsschicht geht über Mitternacht hinaus" },
     { tenantId, code: WARN_MAX_TIME_REACHED, defaultText: "Maximale Arbeitszeit erreicht", severity: "hint", description: "Nettozeit wurde auf das erlaubte Maximum begrenzt" },
@@ -403,4 +407,95 @@ export async function listItems(
       hasMore,
     },
   }
+}
+
+// ---------------------------------------------------------------------------
+// Approve-as-overtime action (clears UNAPPROVED_OVERTIME from the
+// correction-assistant view by creating an approved PLANNED OvertimeRequest).
+// ---------------------------------------------------------------------------
+
+export class CorrectionAssistantValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "CorrectionAssistantValidationError"
+  }
+}
+
+export class CorrectionAssistantNotFoundError extends Error {
+  constructor(message = "Daily value not found") {
+    super(message)
+    this.name = "CorrectionAssistantNotFoundError"
+  }
+}
+
+export async function approveAsOvertime(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: { employeeId: string; date: string },
+  audit: AuditContext
+) {
+  const date = new Date(`${input.date}T00:00:00.000Z`)
+  if (Number.isNaN(date.getTime())) {
+    throw new CorrectionAssistantValidationError("Invalid date")
+  }
+
+  const dailyValue = await prisma.dailyValue.findFirst({
+    where: { tenantId, employeeId: input.employeeId, valueDate: date },
+    select: { overtime: true },
+  })
+  if (!dailyValue) {
+    throw new CorrectionAssistantNotFoundError()
+  }
+  if (dailyValue.overtime <= 0) {
+    throw new CorrectionAssistantValidationError(
+      "No overtime to approve on this day"
+    )
+  }
+
+  // DailyValue.overtime is stored as minutes — direct assignment, no conversion.
+  const plannedMinutes = dailyValue.overtime
+
+  const created = await prisma.overtimeRequest.create({
+    data: {
+      tenantId,
+      employeeId: input.employeeId,
+      requestType: "PLANNED",
+      requestDate: date,
+      plannedMinutes,
+      reason: "Nachträglich genehmigt via Korrekturassistent",
+      status: "approved",
+      approvedBy: audit.userId,
+      approvedAt: new Date(),
+      arbzgWarnings: [],
+      createdBy: audit.userId,
+    },
+  })
+
+  // Trigger recalc so UNAPPROVED_OVERTIME clears.
+  try {
+    const { RecalcService } = await import("@/lib/services/recalc")
+    const service = new RecalcService(prisma, undefined, undefined, tenantId)
+    await service.triggerRecalc(tenantId, input.employeeId, date)
+  } catch (error) {
+    console.error(
+      `Recalc failed after approveAsOvertime for employee ${input.employeeId} on ${input.date}:`,
+      error
+    )
+  }
+
+  await auditLog
+    .log(prisma, {
+      tenantId,
+      userId: audit.userId,
+      action: "approve_as_overtime",
+      entityType: "overtime_request",
+      entityId: created.id,
+      entityName: null,
+      changes: null,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    })
+    .catch((err) => console.error("[AuditLog] Failed:", err))
+
+  return created
 }

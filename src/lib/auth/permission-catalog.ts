@@ -97,6 +97,14 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("absences.request", "absences", "request", "Request absences"),
   p("absences.approve", "absences", "approve", "Approve absences"),
   p("absences.manage", "absences", "manage", "Manage absences"),
+  p("overtime.request", "overtime", "request", "Request overtime"),
+  p("overtime.approve", "overtime", "approve", "Approve overtime requests"),
+  p(
+    "overtime.approve_escalated",
+    "overtime",
+    "approve_escalated",
+    "Approve escalated overtime requests (above configured threshold)"
+  ),
   p("day_plans.manage", "day_plans", "manage", "Manage day plans"),
   p("week_plans.manage", "week_plans", "manage", "Manage week plans"),
   p("tariffs.manage", "tariffs", "manage", "Manage tariffs"),

@@ -13,6 +13,7 @@ Diese Module stehen allen Mitarbeitern zur Verfügung.
 | [Stempeluhr](./stempeluhr.md) | Arbeitszeit erfassen (Ein-/Ausstempeln) |
 | [Stundenzettel](./stundenzettel.md) | Zeitbuchungen anzeigen und verwalten |
 | [Abwesenheiten](./abwesenheiten.md) | Urlaub und Abwesenheiten beantragen |
+| [Überstundenanträge](./ueberstundenantraege.md) | Geplante Überstunden oder Wiederöffnung beantragen |
 | [Urlaub](./urlaub.md) | Urlaubsguthaben und -historie |
 | [Monatsauswertung](./monatsauswertung.md) | Monatliche Zusammenfassung |
 | [Jahresübersicht](./jahresuebersicht.md) | Jahresstatistiken und Gleitzeit |
@@ -55,6 +56,8 @@ Diese Module stehen Administratoren zur Verfügung.
 | [Buchungsarten](./buchungsarten.md) | Stempelaktionen definieren |
 | [Urlaubskonfiguration](./urlaubskonfiguration.md) | Urlaubsberechnungsregeln |
 | [Urlaubssalden](./urlaubssalden.md) | Urlaubskontingente verwalten |
+| [Überstunden-Genehmigungen](./ueberstunden-genehmigungen.md) | Überstundenanträge genehmigen/ablehnen |
+| [Überstundenantrag-Konfiguration](./ueberstundenantrag-konfiguration.md) | Approval-Policy für Überstunden pro Tenant |
 
 ### Berechnung & Aufträge
 
@@ -118,4 +121,4 @@ Bei Problemen oder Fragen:
 
 ---
 
-*Letzte Aktualisierung: Februar 2026*
+*Letzte Aktualisierung: April 2026*
