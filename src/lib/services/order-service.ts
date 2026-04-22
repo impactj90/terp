@@ -9,6 +9,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as repo from "./order-repository"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import * as serviceScheduleService from "./service-schedule-service"
 
 // --- Audit ---
 
@@ -302,6 +303,37 @@ export async function update(
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  // T-3 ServiceSchedule completion hook
+  // Plan: 2026-04-22-serviceobjekte-wartungsintervalle.md (Phase C)
+  //
+  // Runs AFTER the order update succeeded. Sequential (not in $transaction)
+  // because order-service.update itself doesn't use $transaction — see
+  // "Deviation Note 1" in the plan. Failures are swallowed: the ticket
+  // explicitly specifies that recordCompletion failures must NOT block
+  // the Order update.
+  //
+  // `existing.serviceScheduleId` is available because repo.findById uses
+  // `include: orderInclude` (no root select), so Prisma returns all
+  // scalar columns of Order — including the nullable FK added in Phase A.
+  const statusChanged =
+    data.status === "completed" && existing.status !== "completed"
+  if (statusChanged && existing.serviceScheduleId) {
+    try {
+      await serviceScheduleService.recordCompletion(
+        prisma,
+        tenantId,
+        existing.serviceScheduleId,
+        new Date(),
+        audit,
+      )
+    } catch (err) {
+      console.warn(
+        "[order-service] recordCompletion failed after order completion:",
+        err,
+      )
+    }
   }
 
   // Re-fetch with CostCenter preload
