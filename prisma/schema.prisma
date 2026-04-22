@@ -213,6 +213,7 @@ model Tenant {
   crmTasks                    CrmTask[]
   serviceObjects              ServiceObject[]
   serviceObjectAttachments    ServiceObjectAttachment[]
+  serviceSchedules            ServiceSchedule[]
   billingDocuments            BillingDocument[]
   billingDocumentTemplates    BillingDocumentTemplate[]
   billingTenantConfig         BillingTenantConfig?
@@ -964,6 +965,7 @@ model ServiceObject {
   attachments        ServiceObjectAttachment[]
   orders             Order[]
   stockMovements     WhStockMovement[]
+  schedules          ServiceSchedule[]
 
   @@unique([tenantId, number], map: "uq_service_objects_tenant_number")
   @@index([tenantId], map: "idx_service_objects_tenant")
@@ -992,6 +994,83 @@ model ServiceObjectAttachment {
 
   @@index([tenantId, serviceObjectId], map: "idx_service_object_attachments_tenant_object")
   @@map("service_object_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// ServiceSchedule
+// -----------------------------------------------------------------------------
+// Plan: 2026-04-22-serviceobjekte-wartungsintervalle.md
+//
+// Wartungsplan — recurring maintenance cycle attached to a ServiceObject.
+// Supports two interval types:
+//   - TIME_BASED: next due = lastCompletedAt + intervalValue/unit
+//   - CALENDAR_FIXED: next due = anchorDate advanced past now/lastCompletedAt
+//
+// CHECK constraints (enforced at DB level):
+//   - CALENDAR_FIXED requires anchor_date; TIME_BASED forbids it
+//   - interval_value > 0
+//   - lead_time_days >= 0
+//
+// Trigger: update_service_schedules_updated_at auto-sets updated_at on UPDATE
+model ServiceSchedule {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String   @map("tenant_id") @db.Uuid
+  serviceObjectId       String   @map("service_object_id") @db.Uuid
+
+  // Identifikation
+  name                  String   @db.VarChar(255)
+  description           String?  @db.Text
+
+  // Intervall-Konfiguration
+  intervalType          ServiceScheduleIntervalType @map("interval_type")
+  intervalValue         Int      @map("interval_value")
+  intervalUnit          ServiceScheduleIntervalUnit @map("interval_unit")
+  anchorDate            DateTime? @map("anchor_date") @db.Date
+
+  // Soll-Werte für den erzeugten Auftrag
+  defaultActivityId     String?  @map("default_activity_id") @db.Uuid
+  responsibleEmployeeId String?  @map("responsible_employee_id") @db.Uuid
+  estimatedHours        Decimal? @map("estimated_hours") @db.Decimal(6, 2)
+
+  // Fälligkeit (denormalisiert)
+  lastCompletedAt       DateTime? @map("last_completed_at") @db.Timestamptz(6)
+  nextDueAt             DateTime? @map("next_due_at") @db.Timestamptz(6)
+  leadTimeDays          Int      @default(14) @map("lead_time_days")
+
+  // Lifecycle
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById           String?  @map("created_by_id") @db.Uuid
+  updatedById           String?  @map("updated_by_id") @db.Uuid
+
+  // Relations
+  tenant                Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceObject         ServiceObject @relation(fields: [serviceObjectId], references: [id], onDelete: Cascade)
+  defaultActivity       Activity?     @relation(fields: [defaultActivityId], references: [id], onDelete: SetNull)
+  responsibleEmployee   Employee?     @relation("ServiceScheduleResponsible", fields: [responsibleEmployeeId], references: [id], onDelete: SetNull)
+  generatedOrders       Order[]       @relation("ServiceScheduleOrders")
+
+  @@index([tenantId], map: "idx_service_schedules_tenant")
+  @@index([tenantId, serviceObjectId], map: "idx_service_schedules_tenant_service_object")
+  @@index([tenantId, nextDueAt], map: "idx_service_schedules_tenant_next_due")
+  @@index([tenantId, isActive], map: "idx_service_schedules_tenant_active")
+  @@map("service_schedules")
+}
+
+enum ServiceScheduleIntervalType {
+  TIME_BASED
+  CALENDAR_FIXED
+
+  @@map("service_schedule_interval_type")
+}
+
+enum ServiceScheduleIntervalUnit {
+  DAYS
+  MONTHS
+  YEARS
+
+  @@map("service_schedule_interval_unit")
 }
 
 // -----------------------------------------------------------------------------
@@ -2184,6 +2263,7 @@ model Employee {
   overtimePayouts                OvertimePayout[]
   overtimePayoutOverrides        EmployeeOvertimePayoutOverride[]
   overtimeRequests               OvertimeRequest[]
+  responsibleForSchedules        ServiceSchedule[]          @relation("ServiceScheduleResponsible")
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -2448,6 +2528,7 @@ model Activity {
   tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   defaultForEmployees Employee[]     @relation("EmployeeDefaultActivity")
   orderBookings       OrderBooking[]
+  defaultForSchedules ServiceSchedule[]
 
   @@unique([tenantId, code], map: "activities_tenant_id_code_key")
   @@index([tenantId], map: "idx_activities_tenant")
@@ -2480,11 +2561,13 @@ model Order {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   serviceObjectId    String?   @map("service_object_id") @db.Uuid
+  serviceScheduleId  String?   @map("service_schedule_id") @db.Uuid
 
   // Relations
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   costCenter          CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   serviceObject       ServiceObject?    @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
+  serviceSchedule     ServiceSchedule?  @relation("ServiceScheduleOrders", fields: [serviceScheduleId], references: [id], onDelete: SetNull)
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
@@ -2499,6 +2582,7 @@ model Order {
   @@index([tenantId, status], map: "idx_orders_tenant_status")
   @@index([costCenterId], map: "idx_orders_cost_center")
   @@index([tenantId, serviceObjectId], map: "idx_orders_tenant_service_object")
+  @@index([tenantId, serviceScheduleId], map: "idx_orders_tenant_service_schedule")
   @@map("orders")
 }
 

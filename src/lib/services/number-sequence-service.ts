@@ -62,6 +62,9 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   // keys like "dunning_2026" with prefix "MA-2026-" so the counter
   // resets each calendar year. This entry is kept for documentation.
   dunning: "MA-",
+  // ServiceSchedule-generated maintenance orders
+  // (Plan 2026-04-22-serviceobjekte-wartungsintervalle.md)
+  maintenance_order: "WA-",
 }
 
 export interface TenantPrefixSnapshot {

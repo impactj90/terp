@@ -259,6 +259,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("service_objects.manage", "service_objects", "manage", "Serviceobjekte erstellen und bearbeiten"),
   p("service_objects.delete", "service_objects", "delete", "Serviceobjekte löschen"),
 
+  // Service Schedules — Wartungspläne (Plan 2026-04-22-serviceobjekte-wartungsintervalle.md)
+  p("service_schedules.view", "service_schedules", "view", "Wartungspläne anzeigen"),
+  p("service_schedules.manage", "service_schedules", "manage", "Wartungspläne erstellen und bearbeiten"),
+  p("service_schedules.delete", "service_schedules", "delete", "Wartungspläne löschen"),
+  p("service_schedules.generate_order", "service_schedules", "generate_order", "Auftrag aus Wartungsplan erzeugen"),
+
   // Billing Documents
   p("billing_documents.view", "billing_documents", "view", "View billing documents"),
   p("billing_documents.create", "billing_documents", "create", "Create billing documents"),
