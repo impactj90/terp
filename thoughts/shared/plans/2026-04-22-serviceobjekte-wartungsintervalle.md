@@ -2360,13 +2360,13 @@ In strikter Reihenfolge (jede Schicht baut auf vorige auf):
 ### Success Criteria Phase F
 
 #### Automated Verification:
-- [ ] `pnpm playwright test src/e2e-browser/83-service-object-schedules.spec.ts` grün
-- [ ] Full `pnpm playwright test` Suite grün (keine Regressionen durch neue Navigation)
-- [ ] `pnpm typecheck` + `pnpm lint` + `pnpm build` grün
+- [x] `pnpm playwright test src/e2e-browser/83-service-object-schedules.spec.ts` grün (9/9 tests passing — 4 auth-setup + 5 UC-SO-03 Flows, Run 25.2s)
+- [ ] Full `pnpm playwright test` Suite grün (keine Regressionen durch neue Navigation) — _ausstehend, vom User abgebrochen_
+- [x] `pnpm typecheck` + `pnpm lint` + `pnpm build` grün (alle 8 pre-existing Baseline-Errors unverändert; 0 neue Errors/Warnings in Phase-F-Files)
 
 #### Manual Verification:
-- [ ] Handbuch-Abschnitt 12b existiert direkt nach 12a
-- [ ] Handbuch-TOC aktualisiert
+- [x] Handbuch-Abschnitt 12b existiert direkt nach 12a (Zeilen 5915-6038)
+- [x] Handbuch-TOC aktualisiert (Zeilen 59-65)
 - [ ] Alle 4 Praxisbeispiele step-by-step clickbar (Memory-Feedback `handbook_verification`)
 - [ ] QA-Disponent kann ohne Dev-Hilfe den kompletten Flow (Plan → Generate → Complete → Rollover) durchspielen
 

@@ -56,6 +56,13 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
 12a. [Serviceobjekte — Stammdaten, Hierarchie, Anhänge, QR-Code](#12a-serviceobjekte--stammdaten-hierarchie-anhänge-qr-code)
     - [12a.1 Einsatz-Historie einsehen](#12a1-einsatz-historie-einsehen)
     - [12a.2 Praxisbeispiel: Ersten Wartungsrundgang protokollieren](#12a2-praxisbeispiel-ersten-wartungsrundgang-protokollieren)
+12b. [Wartungspläne — Fälligkeiten & 1-Klick-Auftragserzeugung](#12b-wartungspläne--fälligkeiten--1-klick-auftragserzeugung)
+    - [12b.1 Was ist ein Wartungsplan?](#12b1-was-ist-ein-wartungsplan)
+    - [12b.2 Was bietet ein Wartungsplan?](#12b2-was-bietet-ein-wartungsplan)
+    - [12b.3 Praxisbeispiel: Quartalsservice für eine Kältemaschine anlegen](#12b3-praxisbeispiel-quartalsservice-für-eine-kältemaschine-anlegen)
+    - [12b.4 Praxisbeispiel: Überfällige Wartung erkennen und Auftrag erzeugen](#12b4-praxisbeispiel-überfällige-wartung-erkennen-und-auftrag-erzeugen)
+    - [12b.5 Praxisbeispiel: Wartung als abgeschlossen markieren](#12b5-praxisbeispiel-wartung-als-abgeschlossen-markieren)
+    - [12b.6 Praxisbeispiel: DGUV V3 mit fixem Kalender-Termin](#12b6-praxisbeispiel-dguv-v3-mit-fixem-kalender-termin)
 13. [Belege & Fakturierung](#13-belege--fakturierung)
     - [13.1 Belegtypen](#131-belegtypen)
     - [13.2 Belegliste](#132-belegliste)
@@ -5909,6 +5916,182 @@ Ist noch kein Einsatz erfasst, erscheint der Hinweis „Noch kein Einsatz erfass
 3. ✅ Neue Zeile mit `−3` Stück, Benutzer `Hans Müller`, Typ `Entnahme`
 
 **Ergebnis:** Ein kompletter Wartungsrundgang — Auftrag, Zeitbuchung, Material — ist am Serviceobjekt, am Kunden, im Lager-Verlauf und im Artikel-Detail konsistent sichtbar. Beim nächsten QR-Scan am Objekt sieht der Techniker sofort, was zuletzt geschah, und muss das Büro nicht mehr zurückrufen.
+
+---
+
+## 12b. Wartungspläne — Fälligkeiten & 1-Klick-Auftragserzeugung
+
+**Was ist es?** Ein Wartungsplan (`ServiceSchedule`) gehört zu genau einem Serviceobjekt und beschreibt einen wiederkehrenden Service-Zyklus: Quartalsservice, DGUV V3-Prüfung, Dichtheitsprüfung, jährliche TÜV-Abnahme. Terp berechnet für jeden Plan automatisch die nächste Fälligkeit und listet überfällige und bald fällige Pläne zentral im Dashboard und in einer globalen Dispatcher-Liste.
+
+**Wozu dient es?** Mobile Service-Dienstleister arbeiten typischerweise nach wiederkehrenden Verträgen. Statt Fälligkeiten in Excel zu führen, erzeugt Terp aus jedem Plan per 1-Klick einen neuen Auftrag mit Code `WA-<Nummer>`, Kunde automatisch aus dem Serviceobjekt, Techniker-Zuweisung vorbereitet. Sobald der Auftrag auf „Abgeschlossen" steht, rollt Terp `letzte Ausführung` und `nächste Fälligkeit` automatisch weiter — der nächste Zyklus startet ohne manuellen Eingriff.
+
+⚠️ Modul: Das **CRM-Modul** muss aktiviert sein (dasselbe wie für Serviceobjekte).
+
+⚠️ Berechtigungen:
+
+| Permission | Default-Gruppen |
+|---|---|
+| `service_schedules.view` — Pläne anzeigen | PERSONAL, VERTRIEB, VORGESETZTER, MITARBEITER |
+| `service_schedules.manage` — Pläne erstellen/bearbeiten | PERSONAL, VERTRIEB |
+| `service_schedules.delete` — Pläne löschen | PERSONAL |
+| `service_schedules.generate_order` — Auftrag aus Plan erzeugen | PERSONAL, VERTRIEB |
+
+📍 Drei Einstiegspunkte:
+
+- **Global-Liste** für den Dispatcher: Seitenleiste → **CRM** → **Wartungspläne** (`/serviceobjects/schedules`)
+- **Pro Serviceobjekt**: Serviceobjekt-Detailseite → Tab **„Wartungsplan"** (dritter Tab zwischen „Historie" und „Hierarchie")
+- **Dashboard-Widget „Anstehende Wartungen"** mit Count „X überfällig / Y bald fällig" (nur sichtbar, wenn der User `service_schedules.view` besitzt)
+
+### 12b.1 Was ist ein Wartungsplan?
+
+Jeder Plan hat zwei grundsätzliche Intervall-Typen:
+
+| Intervall-Typ | Bedeutung | Beispiel |
+|---|---|---|
+| **Zeit-basiert** (`TIME_BASED`) | alle X Tage / Monate / Jahre, gemessen ab der letzten Ausführung. Solange der Plan noch nie ausgeführt wurde, ist die Fälligkeit `null` und die Liste zeigt *„Noch nie ausgeführt"*. | Quartalsservice: alle 3 Monate ab letzter Wartung |
+| **Kalender-fix** (`CALENDAR_FIXED`) | rollt auf ein festes Kalenderdatum, unabhängig von der letzten Ausführung. Das Fix-Datum ist Pflicht. | DGUV V3 jedes Jahr zum 01.03. |
+
+Weitere Felder:
+
+- **Bezeichnung** (Pflichtfeld, max. 255 Zeichen)
+- **Beschreibung** (optional)
+- **Standard-Aktivität** (optional; wird beim Plan-Auftrag vorbereitet, aktuell aber noch nicht automatisch in Zeitbuchungen gedefaultet — Folge-Ticket)
+- **Verantwortliche/r Mitarbeitende/r** (optional; wird beim „Auftrag erzeugen" als erste OrderAssignment mit Rolle `worker` angelegt, wenn der User die Checkbox aktiviert lässt)
+- **Geschätzte Stunden** (optional, dezimal)
+- **Vorlaufzeit in Tagen** (Default: 14 Tage — Fenster vor Fälligkeit, ab dem der Plan als „bald fällig" markiert wird)
+- **Aktiv-Flag** (Default: ein; deaktivierte Pläne erzeugen keine Fälligkeiten und erscheinen im Tab „Deaktiviert")
+
+### 12b.2 Was bietet ein Wartungsplan?
+
+- **Automatische Status-Ableitung**: Der Status wird aus `nextDueAt`, `leadTimeDays` und `isActive` berechnet — keine manuelle Pflege nötig. Vier Werte:
+
+  | Status-Badge | Bedingung | Farbe |
+  |---|---|---|
+  | **Überfällig** | `nextDueAt < heute` | rot |
+  | **Bald fällig** | `heute ≤ nextDueAt ≤ heute + Vorlaufzeit` | gelb/amber |
+  | **OK** | `nextDueAt > heute + Vorlaufzeit` oder `nextDueAt = null` | neutral |
+  | **Deaktiviert** | `isActive = false` | grau |
+
+- **1-Klick-Auftragserzeugung**: der Button **„Auftrag erzeugen"** pro Zeile öffnet einen Bestätigungsdialog und legt einen neuen Auftrag mit folgenden Default-Werten an:
+  - **Code**: `WA-<laufende Nummer>` (eigene NumberSequence mit Präfix `WA-`)
+  - **Kunde**: aus dem Serviceobjekt übernommen (`crm_addresses.company`)
+  - **Serviceobjekt**: vorausgefüllt
+  - **Status**: `Aktiv`
+  - **Service-Schedule-Referenz** (`serviceScheduleId`): gesetzt — dadurch wird nach Completion die Fälligkeit aktualisiert
+  - **Erste Zuweisung**: wenn am Plan eine verantwortliche Person hinterlegt ist und die Checkbox „Erste Zuweisung mit … anlegen" aktiv bleibt, wird automatisch eine OrderAssignment mit Rolle `worker` angelegt
+
+- **Automatisches Fortschreiben**: Sobald ein Plan-Auftrag auf Status `completed` gesetzt wird, aktualisiert Terp im selben Schritt:
+  - `lastCompletedAt` = Zeitpunkt der Completion
+  - `nextDueAt` = neu berechnet nach Intervall-Typ
+  
+  Bei TIME_BASED: `lastCompletedAt + intervalValue × intervalUnit`. Bei CALENDAR_FIXED: das nächste Fix-Datum nach heute/`lastCompletedAt`.
+
+- **Tab-Filter**: Die globale Liste hat fünf Tabs (Alle / Überfällig / Bald fällig / OK / Deaktiviert). Der Filter steht in der URL (`?status=overdue`), sodass Deep-Links aus dem Dashboard-Widget und Lesezeichen funktionieren.
+
+- **Dashboard-Widget „Anstehende Wartungen"**: zeigt zwei Zahlen (überfällig + bald fällig) und verlinkt auf die globale Liste. Der Widget-Count nutzt die Default-Vorlaufzeit von 14 Tagen, unabhängig von den individuellen `leadTimeDays` der einzelnen Pläne (bewusste Simplifikation — exakte per-Plan-Counts gibt es in der Liste selbst).
+
+- **Plan-Traceability**: Jeder aus einem Plan erzeugte Auftrag trägt `serviceScheduleId` — eine rückwärts-verfolgbare FK auf `service_schedules`. Wenn ein Plan gelöscht wird, bleiben bereits erzeugte Aufträge erhalten; die FK wird auf `NULL` gesetzt (`ON DELETE SET NULL`).
+
+- **Kein Cron**: Terp erzeugt **keine** Aufträge automatisch im Hintergrund. Die Plan-Liste ist der Arbeitsplatz des Dispatchers — morgens Dashboard öffnen, „X überfällig" sehen, in der Liste per 1-Klick Aufträge erzeugen. Ein Cron-basiertes Auto-Generate mit Monitoring und Alerting ist für ein späteres Ticket geplant.
+
+### 12b.3 Praxisbeispiel: Quartalsservice für eine Kältemaschine anlegen
+
+**Szenario:** Der Kunde „Müller Maschinenbau GmbH" hat eine Kältemaschine `KÄL-001` in Halle 2. Der Servicevertrag sieht einen Wartungsrundgang pro Quartal vor; Techniker Hans Müller ist zuständig.
+
+*Vorbedingung:* Das Serviceobjekt `KÄL-001 — Kältemaschine Halle 2` ist bereits im CRM angelegt (siehe §12a.2). Die Aktivität `WARTUNG` ist im Aktivitätenstamm hinterlegt (Verwaltung → Aktivitäten → „Neu", Code `WARTUNG`, Name `Wartung`). Der Mitarbeiter Hans Müller ist als Employee erfasst.
+
+1. 📍 Seitenleiste → **CRM** → **Serviceobjekte** → `KÄL-001` öffnen
+2. Tab **„Wartungsplan"** (dritter Tab, zwischen „Historie" und „Hierarchie")
+3. ✅ Der Empty-State zeigt: *„Für dieses Serviceobjekt ist noch kein Wartungsplan hinterlegt."*
+4. **„Neuer Wartungsplan"** klicken → Sheet öffnet sich von rechts
+5. Felder ausfüllen:
+   - **Bezeichnung**: `Quartalsservice Kältemaschine`
+   - **Beschreibung** (optional): `Dichtungen, Druckprobe, Ölstand`
+   - **Intervall-Typ**: `Zeit-basiert` (Default)
+   - **Intervall**: `3`, **Einheit**: `Monate`
+   - **Standard-Aktivität**: `WARTUNG — Wartung`
+   - **Verantwortliche/r**: `Hans Müller`
+   - **Geschätzte Stunden**: `2.5`
+   - **Vorlaufzeit (Tage)**: `14` (Default — 14 Tage vor Fälligkeit wird der Plan „bald fällig")
+   - **Aktiv**: Switch bleibt an (Default)
+6. 📍 **„Anlegen"** klicken
+7. ✅ Toast *„Wartungsplan angelegt"* erscheint, Sheet schließt sich
+8. ✅ Der Plan erscheint in der Tab-Liste mit Status **„OK"** (ein neuer TIME_BASED-Plan hat `lastCompletedAt = null` und damit `nextDueAt = null`, die Liste zeigt *„Noch nie ausgeführt"*)
+9. ✅ Der Plan ist zusätzlich in der globalen Liste `/serviceobjects/schedules` im Tab „Alle" sichtbar
+
+### 12b.4 Praxisbeispiel: Überfällige Wartung erkennen und Auftrag erzeugen
+
+**Szenario:** Morgendliche Arbeits-Routine des Dispatchers. Mehrere Wartungen sind fällig; Hans Müller soll als nächstes zu `KÄL-001` fahren.
+
+1. 📍 **Dashboard** (`/dashboard`) öffnen
+2. ✅ Widget **„Anstehende Wartungen"** ist in der oberen Widget-Zeile sichtbar (falls der User `service_schedules.view` hat)
+3. Das Widget zeigt:
+   - große Zahl (überfällig, z. B. `3`)
+   - Zeile *„3 überfällig"* und *„12 bald fällig"*
+   - Button **„Alle anzeigen"** (Deep-Link zu allen Plänen)
+   - Button **„Überfällige anzeigen"** (erscheint nur, wenn Überfälligkeits-Count > 0; Deep-Link zu `/serviceobjects/schedules?status=overdue`)
+4. 📍 **„Überfällige anzeigen"** klicken
+5. ✅ Die globale Liste öffnet sich mit aktivem Tab **„Überfällig"** und rotem Status-Badge pro Zeile
+6. Zeile `Quartalsservice Kältemaschine` (Serviceobjekt `KÄL-001`) klicken — oder direkt den Action-Button **„Auftrag erzeugen"** in der Zeile verwenden
+7. 📍 **„Auftrag erzeugen"** klicken → Dialog öffnet sich von unten
+8. Dialog zeigt:
+   - Plan-Name und Serviceobjekt als Kopfzeile
+   - Checkbox *„Erste Zuweisung mit Hans Müller anlegen"* (aktiv, weil am Plan eine verantwortliche Person hinterlegt ist)
+   - Ist kein/e Verantwortliche/r gepflegt, erscheint statt der Checkbox der Hinweis *„Kein/e Verantwortliche/r am Plan hinterlegt — der Auftrag wird ohne Zuweisung angelegt."*
+9. 📍 **„Auftrag jetzt erzeugen"** klicken
+10. ✅ Toast *„Auftrag WA-42 wurde erzeugt"* (Nummer variiert je nach NumberSequence-Stand)
+11. ✅ Redirect auf die Auftrags-Detailseite `/admin/orders/<uuid>`
+12. ✅ Der Auftrag hat:
+    - **Code**: `WA-42`
+    - **Name**: Plan-Name (`Quartalsservice Kältemaschine`)
+    - **Kunde**: `Müller Maschinenbau GmbH` (aus dem Serviceobjekt übernommen)
+    - **Serviceobjekt**: `KÄL-001 — Kältemaschine Halle 2`
+    - **Status**: `Aktiv`
+    - **Zuweisungen-Tab**: 1 Zeile mit `Hans Müller`, Rolle `worker`
+
+### 12b.5 Praxisbeispiel: Wartung als abgeschlossen markieren
+
+**Szenario:** Hans Müller hat den Rundgang durchgeführt, Zeit gebucht. Der Dispatcher markiert den Auftrag jetzt als abgeschlossen — Terp rollt die Fälligkeit automatisch vorwärts.
+
+*Vorbedingung:* Der aus dem Plan erzeugte Auftrag `WA-42` existiert (siehe §12b.4). Hans Müller hat auf dem Tab „Buchungen" bereits Zeit gebucht (siehe §10.1 für den Zeitbuchungs-Flow).
+
+1. 📍 Seitenleiste → **Verwaltung** → **Aufträge** → `WA-42` öffnen
+2. 📍 Oben rechts **„Bearbeiten"** klicken → Formular-Sheet öffnet sich
+3. **Status**-Select auf **„Abgeschlossen"** stellen
+4. 📍 **„Änderungen speichern"** klicken
+5. ✅ Der Status-Badge in der Kopfzeile zeigt jetzt **„Abgeschlossen"** (grün/neutral)
+6. 📍 Zurück zur **globalen Wartungsplan-Liste** (`/serviceobjects/schedules`)
+7. ✅ Die Zeile `Quartalsservice Kältemaschine` zeigt jetzt:
+   - **Nächste Fälligkeit**: `heute + 3 Monate` im Format `dd.mm.jjjj` (Beispiel: Heute 15.02.2026 → `15.05.2026`)
+   - **Status-Badge**: **„OK"** (weil `15.05.2026 > heute + 14 Tage`)
+   - Nicht mehr *„Noch nie ausgeführt"*
+8. 📍 Auf dem Dashboard zeigt das Widget entsprechend einen Überfälligen weniger (falls der Plan zuvor überfällig war)
+9. 💡 **Unter der Haube**: Der `orderService.update(...)`-Call erkennt den Status-Wechsel `active → completed` und den gesetzten `serviceScheduleId`. Direkt danach wird `serviceScheduleService.recordCompletion(...)` aufgerufen, schreibt `lastCompletedAt`, berechnet `nextDueAt` neu und schreibt einen Audit-Log-Eintrag mit Action `record_completion`. Fehler im Hook blockieren den Order-Update nicht (Try/Catch mit Warn-Log) — der Auftrag ist in jedem Fall als abgeschlossen gespeichert.
+
+### 12b.6 Praxisbeispiel: DGUV V3 mit fixem Kalender-Termin
+
+**Szenario:** Die DGUV V3-Prüfung der ortsfesten elektrischen Anlage im Bürogebäude `BLD-001` muss *jedes Jahr am 1. März* stattfinden — unabhängig davon, wann die letzte Prüfung war (z. B. weil sie früher im Jahr vorgezogen wurde). Hier passt der Intervall-Typ **„Kalender-fix"**.
+
+1. 📍 **CRM** → **Serviceobjekte** → `BLD-001 — Bürogebäude Ost` öffnen
+2. Tab **„Wartungsplan"** → **„Neuer Wartungsplan"**
+3. Felder:
+   - **Bezeichnung**: `DGUV V3 Prüfung`
+   - **Beschreibung**: `Jährliche Prüfung ortsfester elektrischer Anlagen`
+   - **Intervall-Typ**: **„Kalender-fix"**
+   - ✅ Beachte: Sobald „Kalender-fix" gewählt ist, erscheint das zusätzliche Pflichtfeld **„Fix-Datum"**
+   - **Fix-Datum**: `2027-03-01`
+   - **Intervall**: `1`, **Einheit**: `Jahre`
+   - **Standard-Aktivität**: `INSPEKTION — Inspektion` (optional — wenn im Aktivitätenstamm angelegt)
+   - **Verantwortliche/r**: Elektrofachkraft
+   - **Vorlaufzeit (Tage)**: `30` (für DGUV-Termine wollen wir einen Monat im Voraus wissen)
+4. 📍 **„Anlegen"**
+5. ✅ Der Plan erscheint mit **Nächste Fälligkeit: `01.03.2027`**
+6. Beim Jahreswechsel: nach Completion eines DGUV-Auftrags rollt `nextDueAt` automatisch auf `01.03.2028`, dann auf `01.03.2029`, usw. — das Fix-Datum bleibt die Ankerung, das Intervall-1-Jahr bestimmt den Schritt
+7. 💡 **Kalender-fix vs. Zeit-basiert im Vergleich:**
+   - Zeit-basiert wäre falsch: wenn die Prüfung aus Termingründen schon am 15.02. stattfindet, wäre die nächste Fälligkeit dann `15.02.` des Folgejahres — der DGUV-Bezug zum 1. März ginge verloren
+   - Kalender-fix bleibt strikt beim 1. März, egal wann die letzte Ausführung war
+
+**Ergebnis:** Ein festes Wartungs- und Prüfsystem, das ohne Excel-Listen auskommt: Pläne → Dashboard-Überblick → 1-Klick-Auftrag → Zeitbuchung → Completion → automatisches Fortschreiben. Jeder Dispatcher sieht sofort, was überfällig ist; jeder Techniker hat einen klaren Auftrag mit Kontext zum Serviceobjekt.
 
 ---
 
