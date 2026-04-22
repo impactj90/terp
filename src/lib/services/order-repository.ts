@@ -104,6 +104,10 @@ export async function create(
     validFrom?: Date
     validTo?: Date
     serviceObjectId?: string | null
+    // Back-link to a maintenance schedule; populated by
+    // `serviceScheduleService.generateOrder`. Null for non-plan orders.
+    // Plan: 2026-04-22-serviceobjekte-wartungsintervalle.md
+    serviceScheduleId?: string | null
   }
 ) {
   return prisma.order.create({ data })
