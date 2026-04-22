@@ -174,6 +174,7 @@
     "warehouseScanner": "QR Scanner",
     "crmReports": "Reports",
     "crmServiceObjects": "Service Objects",
+    "crmMaintenanceSchedules": "Maintenance Schedules",
     "hrSection": "HR / Personnel",
     "hrPersonnelFile": "Personnel File",
     "hrPersonnelFileCategories": "File Categories",
@@ -8798,7 +8799,8 @@
   },
   "serviceObjects": {
     "tabs": {
-      "history": "History"
+      "history": "History",
+      "schedule": "Maintenance Plan"
     },
     "history": {
       "ordersSection": "Jobs",
@@ -8832,6 +8834,121 @@
       "empty": "No service recorded yet",
       "daysAgo": "{days, plural, =0 {today} =1 {1 day ago} other {# days ago}}",
       "viewHistory": "View history"
+    }
+  },
+  "serviceSchedules": {
+    "title": "Maintenance Schedules",
+    "subtitle": "Due dates, lead times and 1-click order creation per service object.",
+    "titleForServiceObject": "Maintenance schedules for this object",
+    "newSchedule": "New maintenance schedule",
+    "loading": "Loading schedules…",
+    "deleteSuccess": "Maintenance schedule deleted",
+    "deleteError": "Could not delete maintenance schedule",
+    "tabs": {
+      "all": "All",
+      "overdue": "Overdue",
+      "dueSoon": "Due soon",
+      "ok": "OK",
+      "inactive": "Inactive"
+    },
+    "columns": {
+      "serviceObject": "Service object",
+      "name": "Name",
+      "intervalType": "Type",
+      "nextDueAt": "Next due",
+      "status": "Status",
+      "actions": "Action"
+    },
+    "status": {
+      "overdue": "Overdue",
+      "dueSoon": "Due soon",
+      "ok": "OK",
+      "inactive": "Inactive"
+    },
+    "intervalType": {
+      "TIME_BASED": "Time-based",
+      "CALENDAR_FIXED": "Calendar-fixed"
+    },
+    "intervalUnit": {
+      "DAYS": "Days",
+      "MONTHS": "Months",
+      "YEARS": "Years"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "form": {
+      "titleCreate": "New maintenance schedule",
+      "titleEdit": "Edit maintenance schedule",
+      "description": "Required fields: name, interval.",
+      "serviceObject": "Service object",
+      "serviceObjectPlaceholder": "Select service object",
+      "name": "Name",
+      "intervalType": "Interval type",
+      "intervalTypeHelp": "Time-based: every X days/months/years from last completion. Calendar-fixed: year/quarter anchor date.",
+      "intervalValue": "Interval",
+      "intervalUnit": "Unit",
+      "anchorDate": "Anchor date",
+      "defaultActivity": "Default activity",
+      "defaultActivityPlaceholder": "Select activity",
+      "noActivity": "— none —",
+      "responsibleEmployee": "Responsible",
+      "responsibleEmployeePlaceholder": "Select employee",
+      "noEmployee": "— none —",
+      "estimatedHours": "Estimated hours",
+      "leadTimeDays": "Lead time (days)",
+      "leadTimeDaysHelp": "How many days before the due date the schedule is marked 'due soon'.",
+      "isActive": "Active",
+      "isActiveHelp": "Inactive schedules do not produce due dates.",
+      "cancel": "Cancel",
+      "saveButton": "Save",
+      "createButton": "Create",
+      "successCreated": "Maintenance schedule created",
+      "successUpdated": "Maintenance schedule saved",
+      "error": "Save failed",
+      "errorMissingName": "Name is required",
+      "errorMissingServiceObject": "Service object is required",
+      "errorIntervalValue": "Interval must be a positive integer",
+      "errorLeadTimeDays": "Lead time must be ≥ 0",
+      "errorAnchorDateRequired": "Anchor date is required for calendar-fixed schedules",
+      "errorEstimatedHours": "Estimated hours must be a number"
+    },
+    "generateOrder": {
+      "button": "Generate order",
+      "dialogTitle": "Generate maintenance order",
+      "dialogDescription": "A new order with auto-numbering (WA-) will be created.",
+      "createAssignmentCheckbox": "Create initial assignment for {employeeName}",
+      "noResponsibleEmployee": "No responsible employee configured — the order will be created without assignment.",
+      "confirmButton": "Generate now",
+      "cancel": "Cancel",
+      "success": "Order {code} has been created",
+      "error": "Order could not be created",
+      "goToOrder": "Go to order"
+    },
+    "deleteDialog": {
+      "title": "Delete maintenance schedule",
+      "description": "The schedule will be deleted permanently. Already generated orders remain but lose the schedule reference.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "empty": {
+      "global": "No maintenance schedules yet.",
+      "serviceObject": "No maintenance schedule for this service object yet.",
+      "byStatus": "No maintenance schedules with this status."
+    },
+    "widget": {
+      "title": "Upcoming maintenance",
+      "description": "Overdue and soon-due maintenance schedules.",
+      "overdueCount": "{count, plural, =0 {No overdue} =1 {1 overdue} other {# overdue}}",
+      "dueSoonCount": "{count, plural, =0 {None due soon} =1 {1 due soon} other {# due soon}}",
+      "viewAll": "View all",
+      "viewOverdue": "View overdue",
+      "loadError": "Could not load maintenance summary",
+      "retry": "Retry"
+    },
+    "lastCompleted": {
+      "never": "Never executed"
     }
   }
 }

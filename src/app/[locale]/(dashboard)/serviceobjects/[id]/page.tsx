@@ -19,13 +19,14 @@ import { AttachmentList } from '@/components/serviceobjects/attachment-list'
 import { QrLabelButton } from '@/components/serviceobjects/qr-label-button'
 import { LastServiceCard } from '@/components/serviceobjects/last-service-card'
 import { ServiceObjectHistoryTab } from '@/components/serviceobjects/service-object-history-tab'
+import { ServiceObjectScheduleTab } from '@/components/serviceobjects/service-object-schedule-tab'
 import {
   kindLabel,
   statusLabel,
   buildingUsageLabel,
 } from '@/components/serviceobjects/labels'
 
-type TabValue = 'overview' | 'history' | 'tree' | 'attachments'
+type TabValue = 'overview' | 'history' | 'schedule' | 'tree' | 'attachments'
 
 export default function ServiceObjectDetailPage() {
   const params = useParams<{ id: string }>()
@@ -100,6 +101,7 @@ export default function ServiceObjectDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="history">Historie</TabsTrigger>
+          <TabsTrigger value="schedule">Wartungsplan</TabsTrigger>
           <TabsTrigger value="tree">Hierarchie</TabsTrigger>
           <TabsTrigger value="attachments">Anhänge</TabsTrigger>
         </TabsList>
@@ -214,6 +216,10 @@ export default function ServiceObjectDetailPage() {
 
         <TabsContent value="history">
           <ServiceObjectHistoryTab serviceObjectId={id} />
+        </TabsContent>
+
+        <TabsContent value="schedule">
+          <ServiceObjectScheduleTab serviceObjectId={id} />
         </TabsContent>
 
         <TabsContent value="tree">

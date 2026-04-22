@@ -14,6 +14,7 @@ import {
   RecentActivity,
 } from '@/components/dashboard'
 import { ProbationDashboardWidget } from '@/components/dashboard/probation-dashboard-widget'
+import { UpcomingMaintenancesWidget } from '@/components/dashboard/upcoming-maintenances-widget'
 import { PersonnelFileDashboardWidget } from '@/components/hr/personnel-file-dashboard-widget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
@@ -21,13 +22,14 @@ import { UserX } from 'lucide-react'
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
   const { allowed: canViewEmployees, isLoading: permissionLoading } = useHasPermission(['employees.view'])
+  const { allowed: canViewSchedules, isLoading: schedPermLoading } = useHasPermission(['service_schedules.view'])
   const t = useTranslations('dashboard')
 
   // Get employee_id directly from user (set via /auth/me from database)
   const employeeId = user?.employeeId
 
   // Show loading state while fetching auth data
-  if (isLoading || permissionLoading) {
+  if (isLoading || permissionLoading || schedPermLoading) {
     return <DashboardLoadingSkeleton />
   }
 
@@ -72,9 +74,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {(employeeId || canViewEmployees) && (
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+      {(employeeId || canViewEmployees || canViewSchedules) && (
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {employeeId && <PersonnelFileDashboardWidget />}
+          {canViewSchedules && <UpcomingMaintenancesWidget />}
           {canViewEmployees && <ProbationDashboardWidget />}
         </div>
       )}

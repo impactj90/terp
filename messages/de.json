@@ -174,6 +174,7 @@
     "warehouseScanner": "QR-Scanner",
     "crmReports": "Auswertungen",
     "crmServiceObjects": "Serviceobjekte",
+    "crmMaintenanceSchedules": "Wartungspläne",
     "hrSection": "HR / Personal",
     "hrPersonnelFile": "Personalakte",
     "hrPersonnelFileCategories": "Aktenkategorien",
@@ -8798,7 +8799,8 @@
   },
   "serviceObjects": {
     "tabs": {
-      "history": "Historie"
+      "history": "Historie",
+      "schedule": "Wartungsplan"
     },
     "history": {
       "ordersSection": "Einsätze",
@@ -8832,6 +8834,121 @@
       "empty": "Noch kein Einsatz erfasst",
       "daysAgo": "{days, plural, =0 {heute} =1 {vor 1 Tag} other {vor # Tagen}}",
       "viewHistory": "Zur Historie"
+    }
+  },
+  "serviceSchedules": {
+    "title": "Wartungspläne",
+    "subtitle": "Fälligkeiten, Vorlaufzeiten und 1-Klick-Auftragserzeugung pro Serviceobjekt.",
+    "titleForServiceObject": "Wartungspläne dieses Objekts",
+    "newSchedule": "Neuer Wartungsplan",
+    "loading": "Lade Wartungspläne…",
+    "deleteSuccess": "Wartungsplan gelöscht",
+    "deleteError": "Wartungsplan konnte nicht gelöscht werden",
+    "tabs": {
+      "all": "Alle",
+      "overdue": "Überfällig",
+      "dueSoon": "Bald fällig",
+      "ok": "OK",
+      "inactive": "Deaktiviert"
+    },
+    "columns": {
+      "serviceObject": "Serviceobjekt",
+      "name": "Bezeichnung",
+      "intervalType": "Typ",
+      "nextDueAt": "Nächste Fälligkeit",
+      "status": "Status",
+      "actions": "Aktion"
+    },
+    "status": {
+      "overdue": "Überfällig",
+      "dueSoon": "Bald fällig",
+      "ok": "OK",
+      "inactive": "Deaktiviert"
+    },
+    "intervalType": {
+      "TIME_BASED": "Zeit-basiert",
+      "CALENDAR_FIXED": "Kalender-fix"
+    },
+    "intervalUnit": {
+      "DAYS": "Tage",
+      "MONTHS": "Monate",
+      "YEARS": "Jahre"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    },
+    "form": {
+      "titleCreate": "Neuer Wartungsplan",
+      "titleEdit": "Wartungsplan bearbeiten",
+      "description": "Pflichtfelder: Bezeichnung, Intervall.",
+      "serviceObject": "Serviceobjekt",
+      "serviceObjectPlaceholder": "Serviceobjekt wählen",
+      "name": "Bezeichnung",
+      "intervalType": "Intervall-Typ",
+      "intervalTypeHelp": "Zeit-basiert: alle X Tage/Monate/Jahre ab letzter Wartung. Kalender-fix: Jahr/Quartal zum Fix-Datum.",
+      "intervalValue": "Intervall",
+      "intervalUnit": "Einheit",
+      "anchorDate": "Fix-Datum",
+      "defaultActivity": "Standard-Aktivität",
+      "defaultActivityPlaceholder": "Aktivität wählen",
+      "noActivity": "— keine —",
+      "responsibleEmployee": "Verantwortliche/r",
+      "responsibleEmployeePlaceholder": "Mitarbeitende/r wählen",
+      "noEmployee": "— keine/r —",
+      "estimatedHours": "Geschätzte Stunden",
+      "leadTimeDays": "Vorlaufzeit (Tage)",
+      "leadTimeDaysHelp": "Wie viele Tage vor Fälligkeit wird als „bald fällig“ markiert.",
+      "isActive": "Aktiv",
+      "isActiveHelp": "Deaktivierte Pläne erzeugen keine Fälligkeiten.",
+      "cancel": "Abbrechen",
+      "saveButton": "Speichern",
+      "createButton": "Anlegen",
+      "successCreated": "Wartungsplan angelegt",
+      "successUpdated": "Wartungsplan gespeichert",
+      "error": "Fehler beim Speichern",
+      "errorMissingName": "Bezeichnung fehlt",
+      "errorMissingServiceObject": "Serviceobjekt fehlt",
+      "errorIntervalValue": "Intervall muss eine positive Ganzzahl sein",
+      "errorLeadTimeDays": "Vorlaufzeit muss ≥ 0 sein",
+      "errorAnchorDateRequired": "Fix-Datum ist bei Kalender-fix erforderlich",
+      "errorEstimatedHours": "Geschätzte Stunden muss eine Zahl sein"
+    },
+    "generateOrder": {
+      "button": "Auftrag erzeugen",
+      "dialogTitle": "Auftrag aus Wartungsplan erzeugen",
+      "dialogDescription": "Es wird ein neuer Auftrag mit automatischer Nummerierung (WA-) angelegt.",
+      "createAssignmentCheckbox": "Erste Zuweisung mit {employeeName} anlegen",
+      "noResponsibleEmployee": "Kein/e Verantwortliche/r am Plan hinterlegt — der Auftrag wird ohne Zuweisung angelegt.",
+      "confirmButton": "Auftrag jetzt erzeugen",
+      "cancel": "Abbrechen",
+      "success": "Auftrag {code} wurde erzeugt",
+      "error": "Auftrag konnte nicht erzeugt werden",
+      "goToOrder": "Zum Auftrag"
+    },
+    "deleteDialog": {
+      "title": "Wartungsplan löschen",
+      "description": "Der Plan wird endgültig gelöscht. Bereits erzeugte Aufträge bleiben erhalten, verlieren aber die Plan-Zuordnung.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "empty": {
+      "global": "Noch keine Wartungspläne angelegt.",
+      "serviceObject": "Für dieses Serviceobjekt ist noch kein Wartungsplan hinterlegt.",
+      "byStatus": "Keine Wartungspläne mit diesem Status."
+    },
+    "widget": {
+      "title": "Anstehende Wartungen",
+      "description": "Überfällige und bald fällige Wartungspläne.",
+      "overdueCount": "{count, plural, =0 {Keine überfällig} =1 {1 überfällig} other {# überfällig}}",
+      "dueSoonCount": "{count, plural, =0 {Keine bald fällig} =1 {1 bald fällig} other {# bald fällig}}",
+      "viewAll": "Alle anzeigen",
+      "viewOverdue": "Überfällige anzeigen",
+      "loadError": "Wartungs-Übersicht konnte nicht geladen werden",
+      "retry": "Erneut versuchen"
+    },
+    "lastCompleted": {
+      "never": "Noch nie ausgeführt"
     }
   }
 }
