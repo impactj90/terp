@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { Upload, X, CheckCircle, AlertCircle, Loader2, FileText, FileSpreadsheet, Image, File } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CameraCaptureButton } from '@/components/ui/camera-capture-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { useUploadCrmCorrespondenceAttachment } from '@/hooks'
@@ -224,6 +225,16 @@ export function CorrespondenceAttachmentUpload({
 
   return (
     <div className="space-y-3">
+      {/* Mobile-only direct camera capture */}
+      {canAddMore && (
+        <CameraCaptureButton
+          onChange={handleFileSelect}
+          label={tc('takePhoto')}
+          disabled={isUploading || disabled}
+          className="w-full"
+        />
+      )}
+
       {/* Drop zone */}
       {canAddMore && (
         <div

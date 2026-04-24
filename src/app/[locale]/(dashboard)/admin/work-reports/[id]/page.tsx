@@ -44,6 +44,7 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CameraCaptureButton } from "@/components/ui/camera-capture-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Label } from "@/components/ui/label"
@@ -620,7 +621,7 @@ export default function WorkReportDetailPage() {
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Fotos &amp; Dokumente</CardTitle>
-                <div>
+                <div className="flex items-center gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -628,6 +629,13 @@ export default function WorkReportDetailPage() {
                     onChange={handleFileSelected}
                     accept={ALLOWED_MIME_TYPES.join(",")}
                     data-testid="work-report-attachment-input"
+                  />
+                  <CameraCaptureButton
+                    onChange={handleFileSelected}
+                    label="Foto aufnehmen"
+                    disabled={uploading}
+                    size="sm"
+                    dataTestId="work-report-camera-capture"
                   />
                   <Button
                     size="sm"

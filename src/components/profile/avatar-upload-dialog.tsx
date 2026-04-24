@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { CameraCaptureButton } from '@/components/ui/camera-capture-button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useTRPC } from '@/trpc'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -34,6 +35,7 @@ export function AvatarUploadDialog({
   initials,
 }: AvatarUploadDialogProps) {
   const t = useTranslations('profile')
+  const tc = useTranslations('common')
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { refetch } = useAuth()
@@ -179,6 +181,14 @@ export function AvatarUploadDialog({
             </AvatarFallback>
           </Avatar>
         </div>
+
+        {/* Mobile-only direct camera capture */}
+        <CameraCaptureButton
+          onChange={handleFileSelect}
+          label={tc('takePhoto')}
+          disabled={isUploading}
+          className="w-full"
+        />
 
         {/* Drop zone */}
         <div

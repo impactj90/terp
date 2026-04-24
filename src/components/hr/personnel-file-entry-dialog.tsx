@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 import { CalendarIcon, Loader2, Paperclip, Trash2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CameraCaptureButton } from '@/components/ui/camera-capture-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -410,22 +411,30 @@ export function PersonnelFileEntryDialog({
             {/* Attachments section — only in edit mode */}
             {isEdit && entry?.id && (
               <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <Label className="text-base">{t('attachments')}</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Paperclip className="mr-2 h-4 w-4" />
-                    )}
-                    {t('uploadFile')}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <CameraCaptureButton
+                      onChange={(e) => handleFileUpload(e.target.files)}
+                      label={tc('takePhoto')}
+                      disabled={uploading}
+                      size="sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Paperclip className="mr-2 h-4 w-4" />
+                      )}
+                      {t('uploadFile')}
+                    </Button>
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"

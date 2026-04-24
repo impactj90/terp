@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { CameraCaptureButton } from '@/components/ui/camera-capture-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUploadWhArticleImage } from '@/hooks'
 
@@ -227,6 +228,14 @@ export function ArticleImageUpload({
           <DialogTitle>{t('uploadDialogTitle')}</DialogTitle>
           <DialogDescription>{t('uploadDialogDescription')}</DialogDescription>
         </DialogHeader>
+
+        {/* Mobile-only direct camera capture */}
+        <CameraCaptureButton
+          onChange={handleFileSelect}
+          label={tc('takePhoto')}
+          disabled={isUploading}
+          className="w-full"
+        />
 
         {/* Drop zone */}
         <div

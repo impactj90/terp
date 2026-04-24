@@ -4,6 +4,7 @@ import * as React from 'react'
 import { toast } from 'sonner'
 import { Paperclip, Trash2, Download, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CameraCaptureButton } from '@/components/ui/camera-capture-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   useServiceObjectAttachments,
@@ -112,13 +113,19 @@ export function AttachmentList({ serviceObjectId }: Props) {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Anhänge</CardTitle>
-        <div>
+        <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
             className="hidden"
             onChange={handleFileSelected}
             accept={ALLOWED_MIME_TYPES.join(',')}
+          />
+          <CameraCaptureButton
+            onChange={handleFileSelected}
+            label="Foto aufnehmen"
+            disabled={uploading}
+            size="sm"
           />
           <Button
             size="sm"
