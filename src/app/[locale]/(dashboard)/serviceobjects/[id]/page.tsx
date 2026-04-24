@@ -20,13 +20,23 @@ import { QrLabelButton } from '@/components/serviceobjects/qr-label-button'
 import { LastServiceCard } from '@/components/serviceobjects/last-service-card'
 import { ServiceObjectHistoryTab } from '@/components/serviceobjects/service-object-history-tab'
 import { ServiceObjectScheduleTab } from '@/components/serviceobjects/service-object-schedule-tab'
+import { WorkReportStatusBadge } from '@/components/work-reports/work-report-status-badge'
+import { useWorkReportsByServiceObject } from '@/hooks/use-work-reports'
+import { Plus } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   kindLabel,
   statusLabel,
   buildingUsageLabel,
 } from '@/components/serviceobjects/labels'
 
-type TabValue = 'overview' | 'history' | 'schedule' | 'tree' | 'attachments'
+type TabValue =
+  | 'overview'
+  | 'history'
+  | 'workreports'
+  | 'schedule'
+  | 'tree'
+  | 'attachments'
 
 export default function ServiceObjectDetailPage() {
   const params = useParams<{ id: string }>()
@@ -37,6 +47,11 @@ export default function ServiceObjectDetailPage() {
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<TabValue>('overview')
+
+  // Work reports for this service object (Phase 8 integration)
+  const { data: workReportsData, isLoading: workReportsLoading } =
+    useWorkReportsByServiceObject(id, { limit: 20 }, !!id)
+  const workReports = workReportsData?.items ?? []
 
   if (isLoading || !obj) {
     return (
@@ -101,6 +116,7 @@ export default function ServiceObjectDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="history">Historie</TabsTrigger>
+          <TabsTrigger value="workreports">Arbeitsscheine</TabsTrigger>
           <TabsTrigger value="schedule">Wartungsplan</TabsTrigger>
           <TabsTrigger value="tree">Hierarchie</TabsTrigger>
           <TabsTrigger value="attachments">Anhänge</TabsTrigger>
@@ -216,6 +232,80 @@ export default function ServiceObjectDetailPage() {
 
         <TabsContent value="history">
           <ServiceObjectHistoryTab serviceObjectId={id} />
+        </TabsContent>
+
+        <TabsContent value="workreports" className="space-y-4">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Arbeitsscheine</CardTitle>
+              <Button
+                size="sm"
+                onClick={() =>
+                  router.push(
+                    `/admin/work-reports/new?serviceObjectId=${id}`
+                  )
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Neu
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {workReportsLoading ? (
+                <div className="p-6 text-sm text-muted-foreground">Lade…</div>
+              ) : workReports.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Noch keine Arbeitsscheine für dieses Serviceobjekt.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nr.</TableHead>
+                      <TableHead>Einsatzdatum</TableHead>
+                      <TableHead>Auftrag</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workReports.map((wr) => (
+                      <TableRow
+                        key={wr.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() =>
+                          router.push(`/admin/work-reports/${wr.id}`)
+                        }
+                      >
+                        <TableCell className="font-mono font-medium">
+                          {wr.code}
+                        </TableCell>
+                        <TableCell>
+                          {wr.visitDate
+                            ? (() => {
+                                const [y, m, d] = wr.visitDate
+                                  .slice(0, 10)
+                                  .split('-')
+                                return `${d}.${m}.${y}`
+                              })()
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {wr.order
+                            ? `${wr.order.code} — ${wr.order.name}`
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <WorkReportStatusBadge status={wr.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="schedule">

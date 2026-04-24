@@ -38,3 +38,62 @@ describe("permission-catalog: dunning permission UUIDs are stable", () => {
     )
   })
 })
+
+/**
+ * WorkReport permissions — Plan 2026-04-22-workreport-arbeitsschein-m1.md
+ *
+ * These UUIDs are hard-coded into the SQL migration that grants the
+ * permissions to the default system user groups. If the key strings
+ * here or in permission-catalog.ts change, the grants become orphans
+ * and UI access breaks silently across tenants.
+ */
+describe("permission-catalog: work_reports permission UUIDs are stable", () => {
+  it("work_reports.view", () => {
+    expect(permissionIdByKey("work_reports.view")).toBe(
+      "3900e091-b05b-588c-a33c-b0dbbcc9390e"
+    )
+  })
+
+  it("work_reports.manage", () => {
+    expect(permissionIdByKey("work_reports.manage")).toBe(
+      "765828bb-fc82-54bc-bccd-090a9b1ceee7"
+    )
+  })
+
+  it("work_reports.sign", () => {
+    expect(permissionIdByKey("work_reports.sign")).toBe(
+      "8adc32f0-34d6-511c-98ea-047b33b4fe0e"
+    )
+  })
+
+  it("work_reports.void", () => {
+    expect(permissionIdByKey("work_reports.void")).toBe(
+      "5b0caa91-6571-5b04-a5bb-ecd382f042b3"
+    )
+  })
+
+  it("all four work_reports keys yield distinct UUIDs", () => {
+    const ids = [
+      permissionIdByKey("work_reports.view"),
+      permissionIdByKey("work_reports.manage"),
+      permissionIdByKey("work_reports.sign"),
+      permissionIdByKey("work_reports.void"),
+    ]
+    expect(new Set(ids).size).toBe(4)
+    expect(ids.every(Boolean)).toBe(true)
+  })
+
+  it("all four work_reports keys yield UUIDv5-shaped strings (36 chars, version 5 in position 14)", () => {
+    const ids = [
+      permissionIdByKey("work_reports.view")!,
+      permissionIdByKey("work_reports.manage")!,
+      permissionIdByKey("work_reports.sign")!,
+      permissionIdByKey("work_reports.void")!,
+    ]
+    for (const id of ids) {
+      expect(id).toHaveLength(36)
+      // Position 14 (0-indexed) is the version nibble in UUID canonical form.
+      expect(id.charAt(14)).toBe("5")
+    }
+  })
+})

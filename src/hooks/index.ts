@@ -509,6 +509,28 @@ export {
   useDeleteOrder,
 } from './use-orders'
 
+// Work Reports (Arbeitsscheine)
+export {
+  useWorkReports,
+  useWorkReport,
+  useWorkReportsByOrder,
+  useWorkReportsByServiceObject,
+  useWorkReportAssignments,
+  useWorkReportAttachments,
+  useCreateWorkReport,
+  useUpdateWorkReport,
+  useDeleteWorkReport,
+  useSignWorkReport,
+  useVoidWorkReport,
+  useDownloadWorkReportPdf,
+  useAddWorkReportAssignment,
+  useRemoveWorkReportAssignment,
+  useGetWorkReportAttachmentUploadUrl,
+  useConfirmWorkReportAttachmentUpload,
+  useGetWorkReportAttachmentDownloadUrl,
+  useRemoveWorkReportAttachment,
+} from './use-work-reports'
+
 // Activities
 export {
   useActivities,

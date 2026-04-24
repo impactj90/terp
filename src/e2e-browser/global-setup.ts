@@ -120,6 +120,23 @@ DELETE FROM reminders WHERE tenant_id = '10000000-0000-0000-0000-000000000001';
 -- Reset dunning number sequences so each run starts from a clean state.
 DELETE FROM number_sequences WHERE tenant_id = '10000000-0000-0000-0000-000000000001' AND key LIKE 'dunning_%';
 
+-- Work report records (spec 84) — delete before orders/crm so FK cascades
+-- are predictable; reset the AS- number sequence so re-runs stay deterministic.
+DELETE FROM work_report_assignments WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND work_report_id IN (
+    SELECT id FROM work_reports WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+      AND code LIKE 'AS-%'
+  );
+DELETE FROM work_report_attachments WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND work_report_id IN (
+    SELECT id FROM work_reports WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+      AND code LIKE 'AS-%'
+  );
+DELETE FROM work_reports WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND code LIKE 'AS-%';
+DELETE FROM number_sequences WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+  AND key = 'work_report';
+
 -- Billing document records (spec 30, 31)
 DELETE FROM billing_document_positions WHERE document_id IN (
   SELECT bd.id FROM billing_documents bd

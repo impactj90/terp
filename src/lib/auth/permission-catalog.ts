@@ -265,6 +265,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   p("service_schedules.delete", "service_schedules", "delete", "Wartungspläne löschen"),
   p("service_schedules.generate_order", "service_schedules", "generate_order", "Auftrag aus Wartungsplan erzeugen"),
 
+  // WorkReports — Arbeitsscheine (Plan 2026-04-22-workreport-arbeitsschein-m1.md)
+  p("work_reports.view", "work_reports", "view", "Arbeitsscheine anzeigen"),
+  p("work_reports.manage", "work_reports", "manage", "Arbeitsscheine erstellen und bearbeiten"),
+  p("work_reports.sign", "work_reports", "sign", "Arbeitsschein signieren"),
+  p("work_reports.void", "work_reports", "void", "Signierten Arbeitsschein stornieren"),
+
   // Billing Documents
   p("billing_documents.view", "billing_documents", "view", "View billing documents"),
   p("billing_documents.create", "billing_documents", "create", "Create billing documents"),

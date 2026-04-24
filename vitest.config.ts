@@ -8,8 +8,11 @@ dotenv.config({ path: path.resolve(__dirname, ".env.local") })
 export default defineConfig({
   test: {
     globals: true,
+    // Default environment is `node` — individual `.tsx` component tests
+    // opt into `jsdom` via the `@vitest-environment jsdom` pragma at the
+    // top of the file so we keep the server-side tests fast.
     environment: "node",
-    include: ["src/**/__tests__/**/*.test.ts"],
+    include: ["src/**/__tests__/**/*.test.ts", "src/**/__tests__/**/*.test.tsx"],
   },
   resolve: {
     alias: {

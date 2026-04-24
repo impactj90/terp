@@ -17,6 +17,7 @@ import {
   useDeleteOrderBooking,
 } from '@/hooks'
 import { useInboundInvoices } from '@/hooks/useInboundInvoices'
+import { useWorkReportsByOrder } from '@/hooks/use-work-reports'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,6 +34,7 @@ import {
   OrderBookingDataTable,
   OrderBookingFormSheet,
 } from '@/components/orders'
+import { WorkReportStatusBadge } from '@/components/work-reports/work-report-status-badge'
 
 interface OrderAssignment {
   id: string
@@ -92,6 +94,14 @@ export default function OrderDetailPage() {
 
   const assignments = assignmentsData?.data ?? []
   const bookings = bookingsData?.items ?? []
+
+  // Work reports for this order (Phase 8 integration)
+  const { data: workReportsData, isLoading: workReportsLoading } =
+    useWorkReportsByOrder(
+      orderId,
+      !authLoading && !permLoading && canAccess && !!orderId,
+    )
+  const workReports = workReportsData?.items ?? []
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -197,6 +207,7 @@ export default function OrderDetailPage() {
         <TabsList>
           <TabsTrigger value="details">{t('tabDetails')}</TabsTrigger>
           <TabsTrigger value="assignments">{t('tabAssignments')}</TabsTrigger>
+          <TabsTrigger value="workreports">{t('tabWorkReports')}</TabsTrigger>
           <TabsTrigger value="bookings">{t('tabBookings')}</TabsTrigger>
           <TabsTrigger value="inbound-invoices">{t('tabInboundInvoices')}</TabsTrigger>
         </TabsList>
@@ -273,6 +284,79 @@ export default function OrderDetailPage() {
                   onEdit={(a) => { setEditAssignment(a); setAssignmentFormOpen(true) }}
                   onDelete={(a) => setDeleteAssignment(a)}
                 />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="workreports" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">{t('tabWorkReports')}</h3>
+            <Button
+              onClick={() =>
+                router.push(`/admin/work-reports/new?orderId=${orderId}`)
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Neu
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              {workReportsLoading ? (
+                <div className="p-6">
+                  <Skeleton className="h-32" />
+                </div>
+              ) : workReports.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Noch keine Arbeitsscheine für diesen Auftrag.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nr.</TableHead>
+                      <TableHead>Einsatzdatum</TableHead>
+                      <TableHead>Serviceobjekt</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workReports.map((wr) => (
+                      <TableRow
+                        key={wr.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() =>
+                          router.push(`/admin/work-reports/${wr.id}`)
+                        }
+                      >
+                        <TableCell className="font-mono font-medium">
+                          {wr.code}
+                        </TableCell>
+                        <TableCell>
+                          {wr.visitDate
+                            ? (() => {
+                                const [y, m, d] = wr.visitDate
+                                  .slice(0, 10)
+                                  .split('-')
+                                return `${d}.${m}.${y}`
+                              })()
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {wr.serviceObject
+                            ? `${wr.serviceObject.number} — ${wr.serviceObject.name}`
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <WorkReportStatusBadge status={wr.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>

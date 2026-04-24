@@ -428,6 +428,13 @@ export const navConfig: NavSection[] = [
         module: 'crm',
         permissions: ['service_schedules.view'],
       },
+      {
+        titleKey: 'crmWorkReports',
+        href: '/admin/work-reports',
+        icon: Stamp,
+        module: 'crm',
+        permissions: ['work_reports.view'],
+      },
     ],
   },
   {

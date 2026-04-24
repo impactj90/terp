@@ -100,6 +100,16 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
 
+[storage.buckets.workreport-signatures]
+public = false
+file_size_limit = "1MiB"
+allowed_mime_types = ["image/png"]
+
+[storage.buckets.workreport-attachments]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"]
+
 [auth]
 enabled = true
 # Base URL the app is served from. Used by auth.admin.generateLink() as the

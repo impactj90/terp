@@ -65,6 +65,9 @@ const DEFAULT_PREFIXES: Record<string, string> = {
   // ServiceSchedule-generated maintenance orders
   // (Plan 2026-04-22-serviceobjekte-wartungsintervalle.md)
   maintenance_order: "WA-",
+  // WorkReport (Arbeitsschein)
+  // (Plan 2026-04-22-workreport-arbeitsschein-m1.md)
+  work_report: "AS-",
 }
 
 export interface TenantPrefixSnapshot {

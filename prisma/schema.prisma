@@ -77,6 +77,11 @@ model User {
   remindersCreated         Reminder[]         @relation("ReminderCreatedBy")
   remindersSent            Reminder[]         @relation("ReminderSentBy")
 
+  // WorkReports (Plan 2026-04-22-workreport-arbeitsschein-m1.md)
+  workReportsSigned  WorkReport[] @relation("WorkReportSignedBy")
+  workReportsVoided  WorkReport[] @relation("WorkReportVoidedBy")
+  workReportsCreated WorkReport[] @relation("WorkReportCreatedBy")
+
   // Indexes
   @@unique([tenantId, email], map: "idx_users_tenant_email")
   @@index([email], map: "idx_users_email")
@@ -214,6 +219,9 @@ model Tenant {
   serviceObjects              ServiceObject[]
   serviceObjectAttachments    ServiceObjectAttachment[]
   serviceSchedules            ServiceSchedule[]
+  workReports                 WorkReport[]
+  workReportAssignments       WorkReportAssignment[]
+  workReportAttachments       WorkReportAttachment[]
   billingDocuments            BillingDocument[]
   billingDocumentTemplates    BillingDocumentTemplate[]
   billingTenantConfig         BillingTenantConfig?
@@ -652,6 +660,14 @@ enum BillingDocumentStatus {
   @@map("billing_document_status")
 }
 
+enum WorkReportStatus {
+  DRAFT
+  SIGNED
+  VOID
+
+  @@map("work_report_status")
+}
+
 enum BillingPositionType {
   ARTICLE
   FREE
@@ -966,6 +982,7 @@ model ServiceObject {
   orders             Order[]
   stockMovements     WhStockMovement[]
   schedules          ServiceSchedule[]
+  workReports        WorkReport[]
 
   @@unique([tenantId, number], map: "uq_service_objects_tenant_number")
   @@index([tenantId], map: "idx_service_objects_tenant")
@@ -2264,6 +2281,7 @@ model Employee {
   overtimePayoutOverrides        EmployeeOvertimePayoutOverride[]
   overtimeRequests               OvertimeRequest[]
   responsibleForSchedules        ServiceSchedule[]          @relation("ServiceScheduleResponsible")
+  workReportAssignments          WorkReportAssignment[]
 
   // Indexes
   @@unique([tenantId, personnelNumber], map: "employees_tenant_id_personnel_number_key")
@@ -2575,6 +2593,7 @@ model Order {
   billingDocuments    BillingDocument[]
   billingServiceCases BillingServiceCase[]
   inboundInvoices     InboundInvoice[]
+  workReports         WorkReport[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")
@@ -2618,6 +2637,111 @@ model OrderAssignment {
   @@index([employeeId], map: "idx_order_assignments_employee")
   @@index([employeeId, isActive], map: "idx_order_assignments_employee_active")
   @@map("order_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// WorkReport (Arbeitsschein)
+// -----------------------------------------------------------------------------
+// Plan: 2026-04-22-workreport-arbeitsschein-m1.md
+//
+// Work report ("Arbeitsschein") — per-visit documentation linked to an Order
+// and optionally a ServiceObject. Status lifecycle DRAFT → SIGNED → VOID with
+// atomic transitions. Holds signer metadata, stored signature PNG path in the
+// workreport-signatures bucket, and archived PDF URL in the documents bucket.
+//
+// Additional SQL-only constraints (declared in migration, not modeled in Prisma):
+//   - Partial unique index on (work_report_id, employee_id) WHERE role IS NULL
+//     guarantees no duplicate null-role assignments for the same employee on
+//     the same report (Postgres treats NULLs as distinct for normal unique
+//     constraints, so this partial index fills the gap).
+
+model WorkReport {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String           @map("tenant_id") @db.Uuid
+  orderId            String           @map("order_id") @db.Uuid
+  serviceObjectId    String?          @map("service_object_id") @db.Uuid
+
+  code               String           @db.VarChar(50)
+  visitDate          DateTime         @map("visit_date") @db.Date
+  travelMinutes      Int?             @map("travel_minutes")
+  workDescription    String?          @map("work_description") @db.Text
+
+  status             WorkReportStatus @default(DRAFT)
+
+  signedAt           DateTime?        @map("signed_at") @db.Timestamptz(6)
+  signedById         String?          @map("signed_by_id") @db.Uuid
+  signerName         String?          @map("signer_name") @db.VarChar(255)
+  signerRole         String?          @map("signer_role") @db.VarChar(100)
+  signerIpHash       String?          @map("signer_ip_hash") @db.VarChar(100)
+  signaturePath      String?          @map("signature_path") @db.Text
+  pdfUrl             String?          @map("pdf_url") @db.Text
+
+  voidedAt           DateTime?        @map("voided_at") @db.Timestamptz(6)
+  voidedById         String?          @map("voided_by_id") @db.Uuid
+  voidReason         String?          @map("void_reason") @db.Text
+
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdById        String?          @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order          Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceObject  ServiceObject?         @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
+  signedBy       User?                  @relation("WorkReportSignedBy", fields: [signedById], references: [id], onDelete: SetNull)
+  voidedBy       User?                  @relation("WorkReportVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  createdBy      User?                  @relation("WorkReportCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignments    WorkReportAssignment[]
+  attachments    WorkReportAttachment[]
+  stockMovements WhStockMovement[]
+
+  @@unique([tenantId, code], map: "work_reports_tenant_id_code_key")
+  @@index([tenantId, status], map: "idx_work_reports_tenant_status")
+  @@index([tenantId, orderId], map: "idx_work_reports_tenant_order")
+  @@index([tenantId, serviceObjectId], map: "idx_work_reports_tenant_service_object")
+  @@index([tenantId, visitDate], map: "idx_work_reports_tenant_visit_date")
+  @@map("work_reports")
+}
+
+model WorkReportAssignment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  workReportId String   @map("work_report_id") @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  role         String?  @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workReport WorkReport @relation(fields: [workReportId], references: [id], onDelete: Cascade)
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([workReportId, employeeId, role], map: "work_report_assignments_work_report_id_employee_id_role_key")
+  @@index([tenantId], map: "idx_work_report_assignments_tenant")
+  @@index([workReportId], map: "idx_work_report_assignments_work_report")
+  @@index([employeeId], map: "idx_work_report_assignments_employee")
+  @@map("work_report_assignments")
+}
+
+model WorkReportAttachment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  workReportId String   @map("work_report_id") @db.Uuid
+
+  filename     String   @db.VarChar(255)
+  storagePath  String   @map("storage_path") @db.Text
+  mimeType     String   @map("mime_type") @db.VarChar(100)
+  sizeBytes    Int      @map("size_bytes")
+
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdById  String?  @map("created_by_id") @db.Uuid
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workReport WorkReport @relation(fields: [workReportId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, workReportId], map: "idx_work_report_attachments_tenant_report")
+  @@map("work_report_attachments")
 }
 
 // -----------------------------------------------------------------------------
@@ -5613,6 +5737,7 @@ model WhStockMovement {
   inventorySessionId       String?             @map("inventory_session_id") @db.Uuid
   machineId                String?             @map("machine_id")
   serviceObjectId          String?             @map("service_object_id") @db.Uuid
+  workReportId             String?             @map("work_report_id") @db.Uuid
 
   reason                   String?
   notes                    String?
@@ -5624,6 +5749,7 @@ model WhStockMovement {
   purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   stocktake     WhStocktake?     @relation(fields: [inventorySessionId], references: [id], onDelete: SetNull)
   serviceObject ServiceObject?   @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
+  workReport    WorkReport?      @relation(fields: [workReportId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, articleId])
   @@index([tenantId, type])
@@ -5631,6 +5757,7 @@ model WhStockMovement {
   @@index([tenantId, purchaseOrderId])
   @@index([tenantId, machineId])
   @@index([tenantId, serviceObjectId])
+  @@index([tenantId, workReportId], map: "idx_wh_stock_movements_tenant_work_report")
   @@map("wh_stock_movements")
 }
 

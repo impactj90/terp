@@ -63,6 +63,17 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12b.4 Praxisbeispiel: Überfällige Wartung erkennen und Auftrag erzeugen](#12b4-praxisbeispiel-überfällige-wartung-erkennen-und-auftrag-erzeugen)
     - [12b.5 Praxisbeispiel: Wartung als abgeschlossen markieren](#12b5-praxisbeispiel-wartung-als-abgeschlossen-markieren)
     - [12b.6 Praxisbeispiel: DGUV V3 mit fixem Kalender-Termin](#12b6-praxisbeispiel-dguv-v3-mit-fixem-kalender-termin)
+12c. [Arbeitsscheine — Mobile Einsatzdokumentation mit Signatur](#12c-arbeitsscheine--mobile-einsatzdokumentation-mit-signatur)
+    - [12c.1 Lebenszyklus](#12c1-lebenszyklus)
+    - [12c.2 Felder und Pflichtfelder](#12c2-felder-und-pflichtfelder)
+    - [12c.3 Permissions](#12c3-permissions)
+    - [12c.4 Praxisbeispiel: Arbeitsschein vor Ort erfassen](#12c4-praxisbeispiel-arbeitsschein-vor-ort-erfassen)
+    - [12c.5 Praxisbeispiel: Signatur erfassen und signieren](#12c5-praxisbeispiel-signatur-erfassen-und-signieren)
+    - [12c.6 Praxisbeispiel: Signierten Arbeitsschein stornieren](#12c6-praxisbeispiel-signierten-arbeitsschein-stornieren)
+    - [12c.7 Technische Integration](#12c7-technische-integration)
+    - [12c.8 Dateien und Storage](#12c8-dateien-und-storage)
+    - [12c.9 PDF-Archivierung und GoBD](#12c9-pdf-archivierung-und-gobd)
+    - [12c.10 Offene Erweiterungen](#12c10-offene-erweiterungen)
 13. [Belege & Fakturierung](#13-belege--fakturierung)
     - [13.1 Belegtypen](#131-belegtypen)
     - [13.2 Belegliste](#132-belegliste)
@@ -6092,6 +6103,200 @@ Weitere Felder:
    - Kalender-fix bleibt strikt beim 1. März, egal wann die letzte Ausführung war
 
 **Ergebnis:** Ein festes Wartungs- und Prüfsystem, das ohne Excel-Listen auskommt: Pläne → Dashboard-Überblick → 1-Klick-Auftrag → Zeitbuchung → Completion → automatisches Fortschreiben. Jeder Dispatcher sieht sofort, was überfällig ist; jeder Techniker hat einen klaren Auftrag mit Kontext zum Serviceobjekt.
+
+---
+
+## 12c. Arbeitsscheine — Mobile Einsatzdokumentation mit Signatur
+
+**Was ist es?** Ein Arbeitsschein (`WorkReport`) dokumentiert einen einzelnen Kundenbesuch — wer war da, wann, wie lange, was wurde gemacht, welche Fotos wurden vor Ort aufgenommen und — entscheidend — die **Kundensignatur**. Ein Auftrag kann beliebig viele Arbeitsscheine haben; bei einer dreitägigen Servicewoche entstehen drei Arbeitsscheine zum selben Auftrag.
+
+**Wozu dient es?** Der Arbeitsschein ersetzt den Papier-Stundenzettel vor Ort. Der Kunde bekommt auf dem Tablet/Laptop einen signierbaren Ausdruck präsentiert, zeichnet mit dem Finger oder Stift, klickt „Signieren" — Terp legt im selben Moment eine **unveränderliche PDF mit Signatur** ab, hashiert die IP des Signier-Geräts zur Beweissicherung und loggt den Vorgang im Audit-Trail. Die PDF ist GoBD-konform 10 Jahre archiviert und kann jederzeit als Signed-URL heruntergeladen werden.
+
+⚠️ Modul: Das **CRM-Modul** muss aktiviert sein (dasselbe Modul wie Serviceobjekte und Wartungspläne).
+
+⚠️ Berechtigungen:
+
+| Permission | Default-Gruppen |
+|---|---|
+| `work_reports.view` — Arbeitsscheine anzeigen | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.manage` — Arbeitsscheine erstellen & bearbeiten | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.sign` — Arbeitsschein signieren | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.void` — Signierten Arbeitsschein stornieren | **nur ADMIN** |
+
+💡 Die Trennung `manage` ↔ `sign` ↔ `void` ist bewusst granular: Field-Staff dürfen Entwürfe pflegen und signieren; nur der Admin kann einen rechtlich bindenden Schein stornieren.
+
+📍 Drei Einstiegspunkte:
+
+- **Global-Liste** für den Büro-Mitarbeiter: Seitenleiste → **CRM** → **Arbeitsscheine** (`/admin/work-reports`)
+- **Pro Auftrag**: Auftrags-Detailseite → Tab **„Arbeitsscheine"** (zwischen „Zuweisungen" und „Buchungen")
+- **Pro Serviceobjekt**: Serviceobjekt-Detailseite → Tab **„Arbeitsscheine"** (zwischen „Historie" und „Wartungsplan")
+
+### 12c.1 Lebenszyklus
+
+Ein Arbeitsschein durchläuft drei Zustände:
+
+| Status | Bedeutung | Übergänge | Was ist erlaubt? |
+|---|---|---|---|
+| **DRAFT** (Entwurf) | Der Schein wird vor/während des Einsatzes gepflegt — Mitarbeiter zuweisen, Fotos hochladen, Arbeitsbeschreibung erfassen. | → SIGNED (Signatur), → gelöscht | Alle Felder änderbar; Attachments / Assignments CRUD. |
+| **SIGNED** (Signiert) | Nach Kunden-Signatur: unveränderlich. PDF mit Signatur ist archiviert. | → VOID (nur ADMIN) | Nur Read + PDF-Download. |
+| **VOID** (Storniert) | Nach Stornierung durch ADMIN: terminaler Zustand. Archivierte SIGNED-PDF bleibt, frische PDF-Downloads zeigen einen roten diagonalen „STORNIERT"-Stempel mit Grund. | — | Nur Read + PDF-Download (mit Storno-Overlay). |
+
+💡 **DRAFT → SIGNED ist atomar**: Bei zwei gleichzeitigen Sign-Calls gewinnt genau einer, der andere erhält einen Conflict-Fehler. Das ist integrationsgetestet und verhindert doppelte Signaturen.
+
+💡 **VOID löscht nichts**: Stornierung ist eine Status-Änderung, keine DB-Löschung. Die archivierte SIGNED-PDF bleibt unter dem Originalpfad; sie ist weiterhin Beweis, dass der Kunde ursprünglich signiert hat. Der Grund und der Zeitpunkt der Stornierung sind im Schein und im Audit-Log nachvollziehbar.
+
+### 12c.2 Felder und Pflichtfelder
+
+| Feld | Beschreibung | Pflicht im Status |
+|---|---|---|
+| **Nummer (`code`)** | Auto-generiert `AS-<laufende Nummer>`, eigener Zahlenkreis. | immer vorhanden |
+| **Auftrag (`orderId`)** | Pflicht-Referenz zum `Order`. | ab Create |
+| **Serviceobjekt (`serviceObjectId`)** | Optional — nützlich, wenn der Einsatz ein konkretes Serviceobjekt betrifft. | optional |
+| **Einsatzdatum (`visitDate`)** | Datum des Besuchs (yyyy-mm-dd). | ab Create |
+| **Anfahrt-Minuten (`travelMinutes`)** | Gesamtzeit An- und Abfahrt (0–1440). | optional |
+| **Arbeitsbeschreibung (`workDescription`)** | Freitext, max. 5000 Zeichen. | **ab SIGNED: nicht-leer** |
+| **Mitarbeiter-Zuweisungen** | Beliebig viele Employees, optional mit Rollen-Freitext. | **ab SIGNED: min. 1** |
+| **Fotos / Dokumente** | JPEG, PNG, WebP, HEIC, PDF, max. 10 MB, max. 30 Dateien. | optional |
+| **Signer-Name** | Name des Unterzeichners. | ab SIGNED: min. 2 Zeichen |
+| **Signer-Rolle** | Funktion / Rolle („Werkmeister", „Kunde", …). | ab SIGNED: min. 2 Zeichen |
+| **Signatur-PNG** | Canvas-Output, < 1 MB. | ab SIGNED: Pflicht |
+| **IP-Hash** | SHA-256 der Client-IP (gekürzt in der UI). | automatisch beim Signieren |
+| **Storno-Grund (`voidReason`)** | Pflicht-Text mit mindestens 10 Zeichen. | ab VOID: Pflicht |
+
+### 12c.3 Permissions
+
+Die vier Permission-Keys sind fein granular:
+
+| Permission-Key | Default-Gruppen (System) |
+|---|---|
+| `work_reports.view` | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.manage` | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.sign` | ADMIN, PERSONAL, VERTRIEB, MITARBEITER |
+| `work_reports.void` | **ADMIN** (ausdrücklich nur Admin) |
+
+💡 Die Rolle `VORGESETZTER` ist bewusst nicht standardmäßig berechtigt — sie ist Schichtplanungs-Rolle und typischerweise nicht im Field-Service-Flow aktiv. Admins können die Permission bei Bedarf manuell zuweisen.
+
+### 12c.4 Praxisbeispiel: Arbeitsschein vor Ort erfassen
+
+**Szenario:** Hans Müller ist beim Kunden „Müller Maschinenbau GmbH" und führt einen Quartalsservice an `KÄL-001` durch. Er öffnet sein Tablet, legt einen Arbeitsschein an und dokumentiert den Einsatz.
+
+*Vorbedingung:* Der zugehörige Auftrag (z. B. `WA-42` aus §12b.4) ist bereits angelegt. Hans Müller hat die Permissions `work_reports.manage` und `work_reports.sign`.
+
+1. 📍 Seitenleiste → **CRM** → **Arbeitsscheine**
+2. Oben rechts **„Neu"** klicken → Formular-Sheet öffnet sich von rechts
+3. Felder:
+   - **Auftrag**: `WA-42 — Quartalsservice Kältemaschine` wählen
+   - **Serviceobjekt**: `KÄL-001 — Kältemaschine Halle 2`
+   - **Einsatzdatum**: Tag des Besuchs (Default: heute)
+   - **Anfahrt-Minuten**: `45`
+   - **Arbeitsbeschreibung** (optional jetzt, Pflicht vor dem Signieren): `Quartalsservice durchgeführt: Dichtungen erneuert, Kältemitteldruck geprüft, Ölstand OK.`
+4. 📍 **„Erstellen"** klicken
+5. ✅ Toast *„Arbeitsschein angelegt"*, Redirect auf die Detailseite mit neuem Code (z. B. `AS-17`) und Status-Badge **„Entwurf"**
+6. Tab **„Mitarbeiter"** öffnen → `Hans Müller` auswählen, Rolle „Monteur" eintragen → **„Hinzufügen"**
+7. ✅ Hans Müller erscheint in der Assignments-Tabelle
+8. Tab **„Fotos"** öffnen → **„Hochladen"** → Bild des Wartungsetiketts
+9. ✅ Foto erscheint in der Liste mit Größe und MIME-Type
+10. 💡 **Unter der Haube**: Der Upload läuft in 3 Schritten — `getUploadUrl` liefert eine Signed PUT-URL, der Browser lädt direkt zu Supabase-Storage hoch, `confirmUpload` schreibt den DB-Eintrag und den Audit-Log. Pfad: `{tenantId}/{workReportId}/{uuid}.jpg`.
+
+### 12c.5 Praxisbeispiel: Signatur erfassen und signieren
+
+**Szenario:** Der Einsatz ist erledigt, Hans Müller präsentiert dem Kunden den Arbeitsschein auf dem Tablet zur Unterschrift.
+
+*Vorbedingung:* Der Arbeitsschein `AS-17` (aus §12c.4) ist im Status **„Entwurf"**. Mindestens ein Mitarbeiter ist zugewiesen und eine Arbeitsbeschreibung ist erfasst.
+
+1. 📍 Detailseite von `AS-17` öffnen
+2. Oben rechts **„Signieren"** klicken → Sign-Sheet öffnet sich
+3. Sheet zeigt:
+   - Kurz-Summary: Code, Einsatzdatum, Auftrag-Referenz
+   - **Pflichtprüfungs-Panel** mit grünem Haken für „Arbeitsbeschreibung vorhanden" und „Mindestens ein Mitarbeiter zugewiesen". Fehlt eine Prüfung, wird der „Signieren"-Button deaktiviert und der Hinweis ist rot
+   - Pflicht-Textfelder **„Name des Unterzeichners"** und **„Rolle / Funktion"**
+   - **Canvas-Zeichenfläche** mit Button „Signatur löschen"
+   - Warnhinweis: *„Mit dem Klick auf 'Signieren' bestätigen Sie, dass der Arbeitsschein korrekt ist. Nach dem Signieren kann der Arbeitsschein nicht mehr bearbeitet werden."*
+4. Felder ausfüllen:
+   - **Name**: `Max Mustermann` (der Kunde)
+   - **Rolle**: `Betriebsleiter`
+5. Kunde signiert auf dem Canvas (Finger / Stift)
+6. ✅ Der **„Signieren"**-Button wird aktiv (alle Vorbedingungen grün + Canvas nicht leer + Name und Rolle ≥ 2 Zeichen)
+7. 📍 **„Signieren"** klicken
+8. ✅ Toast *„Arbeitsschein signiert"*, Sheet schließt
+9. ✅ Der Status-Badge auf der Detailseite wechselt auf **„Signiert"**
+10. ✅ Im Abschnitt **„Signatur"**:
+    - **Signiert am** zeigt Datum & Uhrzeit (`DD.MM.YYYY HH:MM`)
+    - **Unterzeichner**: `Max Mustermann`
+    - **Rolle**: `Betriebsleiter`
+    - **IP-Hash (gekürzt)**: erste 8 Zeichen des SHA-256 der Client-IP (Rest zur Privatsphäre weggelassen)
+11. 📍 **„PDF herunterladen"** öffnet die archivierte PDF in einem neuen Tab — mit Signatur sichtbar und allen Meta-Daten im Fuß
+12. 💡 **Unter der Haube**: Terp führt beim Signieren **atomar** folgendes aus:
+    - Pflicht-Validierung (Arbeitsbeschreibung, mindestens 1 Assignment, Name ≥ 2, Rolle ≥ 2, PNG-Datenformat, Buffer ≤ 1 MB)
+    - Signatur-PNG auf den Bucket `workreport-signatures` unter `{tenantId}/{id}-{uuid}.png` hochladen (kein Upsert — Race-Condition-sicher)
+    - SHA-256 der Client-IP hashen
+    - DRAFT → SIGNED per `updateMany` mit Status-Condition (Atomic-Guard)
+    - PDF `arbeitsscheine/{tenantId}/{id}.pdf` rendern und persistieren (best-effort; schlägt der PDF-Render fehl, bleibt der Status SIGNED und der nächste `downloadPdf`-Call rendert frisch)
+    - Audit-Log-Zeile mit `action: "sign"`, `entityType: "work_report"`, Meta-Daten (`assignmentCount`, `signerName`, `signerRole`, `signerIpHash`)
+
+### 12c.6 Praxisbeispiel: Signierten Arbeitsschein stornieren
+
+**Szenario:** Der Admin stellt im Nachgang fest, dass der Arbeitsschein `AS-17` versehentlich mit falschem Einsatzdatum signiert wurde. Der Kunde hat bereits eine Rechnung auf Basis dieser Dokumentation erhalten — sie wird als Gutschrift ausgebucht und eine neue Rechnung ausgestellt. Der ursprüngliche Arbeitsschein muss als „storniert" markiert werden.
+
+*Vorbedingung:* Der Admin hat die Permission `work_reports.void`. Der Arbeitsschein ist im Status **„Signiert"**.
+
+1. 📍 Seitenleiste → **CRM** → **Arbeitsscheine** → Zeile `AS-17` klicken
+2. Oben rechts **„Stornieren"** klicken (nur sichtbar bei `work_reports.void`-Permission und Status SIGNED)
+3. Dialog öffnet sich:
+   - Warnung: *„Achtung: Dies storniert den signierten Arbeitsschein. Die archivierte PDF bleibt erhalten, neue PDF-Downloads zeigen den Storno-Diagonalstempel."*
+   - Pflicht-Textarea **„Begründung"** (mindestens 10 Zeichen)
+4. Begründung eintragen: `Einsatzdatum inkorrekt — ursprünglich 12.02. statt 15.02.; neuer Schein AS-18 folgt.`
+5. 📍 **„Stornieren"** (Destructive-Button) klicken
+6. ✅ Toast *„Arbeitsschein storniert"*, Dialog schließt
+7. ✅ Der Status-Badge wechselt auf **„Storniert"** (rot)
+8. ✅ Auf der Detailseite erscheint ein rotes Banner oben: **„Storniert am DD.MM.YYYY HH:MM — Grund: Einsatzdatum inkorrekt …"**
+9. 📍 **„PDF herunterladen"** öffnet die **Overlay-PDF**: die Original-Signatur ist sichtbar, darüber liegt diagonal ein großer roter Schriftzug **„STORNIERT am DD.MM.YYYY — Grund: …"**
+10. ✅ Die archivierte SIGNED-PDF existiert weiterhin unter `arbeitsscheine/{tenantId}/{id}.pdf`. Der Overlay ist ein frisch gerenderter Extra-Download, der die Original-PDF **nicht überschreibt**.
+11. 💡 **Unter der Haube**: Die Stornierung ist atomar (SIGNED → VOID per `updateMany` mit Status-Condition). Audit-Log-Zeile mit `action: "void"` und dem Grund in den Metadaten. Nur Admins — bewusste Absicherung gegen unbeabsichtigte Stornierung durch Field-Staff.
+
+### 12c.7 Technische Integration
+
+Ein Arbeitsschein integriert sich mit folgenden Terp-Domänen:
+
+- **`Order`** (Pflichtbeziehung) — Jeder Arbeitsschein gehört zu genau einem Auftrag. Der Tab „Arbeitsscheine" auf der Auftrags-Detailseite listet alle zugehörigen Arbeitsscheine mit Code, Datum, Serviceobjekt und Status.
+- **`ServiceObject`** (optional) — Für gegenständliche Einsätze; Tab „Arbeitsscheine" auf der Serviceobjekt-Detailseite zeigt die letzten 20 Arbeitsscheine dieses Objekts.
+- **`Employee`** (n:m über `WorkReportAssignment`) — Mehrere Mitarbeiter pro Schein; optionale Rollen-Freitext pro Zuweisung.
+- **`WhStockMovement`** (Schema-Feld, UI in M-1 **nicht** integriert) — `workReportId`-Nullable-FK ist im Schema vorhanden, damit Warenentnahmen künftig direkt auf einen Arbeitsschein gebucht werden können. Die UI-Integration (Scanner-Terminal mit Arbeitsschein-Auswahl) ist ein eigenes Folge-Ticket.
+- **`AuditLog`** — Jede Mutation (`create`, `update`, `delete`, `assignment_added`, `assignment_removed`, `attachment_added`, `attachment_removed`, `sign`, `void`) schreibt exakt eine Audit-Zeile. Impersonation (Platform-Admin tätig im Tenant) triggert wie überall das `impersonation.*`-Präfix.
+
+💡 **Strikt additiv**: Terp-Code für Orders, Assignments, Attachments bleibt unverändert. Der WorkReport-Service und -Router sind komplett neu und modifizieren keinen bestehenden Service.
+
+### 12c.8 Dateien und Storage
+
+Ein Arbeitsschein verwendet drei Supabase-Storage-Buckets:
+
+| Bucket | Pfad-Konvention | MIME | Zweck |
+|---|---|---|---|
+| `workreport-signatures` | `{tenantId}/{workReportId}-{uuid}.png` | `image/png` | Signatur-Canvas-Output. Upsert `false` (Race-sicher). |
+| `workreport-attachments` | `{tenantId}/{workReportId}/{uuid}.{ext}` | JPEG, PNG, WebP, HEIC, PDF | Fotos vor Ort, bis 10 MB. Max. 30 pro Schein. |
+| `documents` | `arbeitsscheine/{tenantId}/{workReportId}.pdf` | `application/pdf` | Archivierte signierte PDF. Geschrieben beim `sign()`. Bleibt beim Storno erhalten. |
+
+💡 Alle Buckets sind **privat**. Zugriff ausschließlich über kurzlebige Signed-URLs (5 Minuten Expiry für Attachments und PDFs; bei Overlay-PDF 60 s).
+
+### 12c.9 PDF-Archivierung und GoBD
+
+- Die PDF wird beim `sign()` synchron gerendert (`@react-pdf/renderer`) und im `documents`-Bucket abgelegt. Pfad-Konvention: `arbeitsscheine/{tenantId}/{workReportId}.pdf`.
+- Der Fuß der PDF enthält — konsistent mit allen Terp-PDFs (Rechnungen, Bestellungen, Reminders) — das **Tenant-Branding** (Logo, Adresse, IBAN, USt-IdNr., Geschäftsführung).
+- Die PDF ist **unveränderlich**: Nach dem Signieren wird kein Feld in der DB mehr modifiziert (außer bei Stornierung — und auch dann bleibt die archivierte PDF bestehen).
+- Die PDF ist **10 Jahre** aufzubewahren (GoBD/HGB/AO) — konsistent mit Rechnungen und anderen handels-/steuerrechtlichen Dokumenten.
+- PDF-Sprache: **Deutsch**. Bilinguale PDFs sind bewusst ausgelassen (konsistent mit allen anderen Terp-PDFs).
+
+### 12c.10 Offene Erweiterungen
+
+M-1 liefert den vollständigen Desktop-Workflow. Folgende Ausbaustufen sind geplant:
+
+- **M-2: Mobile-optimierte UI** — Touch-Targets ≥ 44 px, responsive Breakpoints, Fullscreen-Canvas für Signatur. Das Canvas-Component ist bereits für Touch vorbereitet (`touch-none` CSS).
+- **M-3: Offline-Fähigkeit** — Service Worker + IndexedDB + Background-Sync. Ein im Feld erfasster Arbeitsschein soll ohne Internet signierbar sein und automatisch nachziehen, sobald Verbindung wieder da ist.
+- **Warenentnahme auf Arbeitsschein im UI** — `WhStockMovement.workReportId`-Feld ist im Schema vorhanden (M-1), aber die Scanner-Terminal-UI bietet die Arbeitsschein-Auswahl noch nicht an.
+- **E-Mail-Versand der signierten PDF** — Ein separates Ticket wird den Versand an den Kunden über den bestehenden Email-Service ergänzen.
+- **Rechnungs-Übernahme** — WorkReport-Leistungen (Mitarbeiter-Stunden, Anfahrt) als Vorschlag in BillingDocument-Positionen übernehmen.
+- **Checklisten pro Anlagentyp** — Vordefinierte Prüf-Items pro ServiceObject-Kind (z. B. „Dichtheitsprüfung OK", „Ölstand OK"), die im Schein abgehakt werden.
+- **Qualifizierte elektronische Signatur (eIDAS QES)** — Derzeit bewusst nicht im Scope; die Canvas-Signatur ist rechtlich ausreichend für typische Wartungsprotokolle, nicht aber für Verträge mit Formvorschrift.
 
 ---
 
