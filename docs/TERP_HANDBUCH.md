@@ -68,12 +68,15 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [12c.2 Felder und Pflichtfelder](#12c2-felder-und-pflichtfelder)
     - [12c.3 Permissions](#12c3-permissions)
     - [12c.4 Praxisbeispiel: Arbeitsschein vor Ort erfassen](#12c4-praxisbeispiel-arbeitsschein-vor-ort-erfassen)
-    - [12c.5 Praxisbeispiel: Signatur erfassen und signieren](#12c5-praxisbeispiel-signatur-erfassen-und-signieren)
-    - [12c.6 Praxisbeispiel: Signierten Arbeitsschein stornieren](#12c6-praxisbeispiel-signierten-arbeitsschein-stornieren)
-    - [12c.7 Technische Integration](#12c7-technische-integration)
-    - [12c.8 Dateien und Storage](#12c8-dateien-und-storage)
-    - [12c.9 PDF-Archivierung und GoBD](#12c9-pdf-archivierung-und-gobd)
-    - [12c.10 Offene Erweiterungen](#12c10-offene-erweiterungen)
+    - [12c.5 Praxisbeispiel: Mitarbeiter zu einem Arbeitsschein zuweisen](#12c5-praxisbeispiel-mitarbeiter-zu-einem-arbeitsschein-zuweisen)
+    - [12c.6 Praxisbeispiel: Fotos & Dokumente anhängen](#12c6-praxisbeispiel-fotos--dokumente-anhängen)
+    - [12c.7 Listenansicht und Status-Filter](#12c7-listenansicht-und-status-filter)
+    - [12c.8 Praxisbeispiel: Signatur erfassen und signieren](#12c8-praxisbeispiel-signatur-erfassen-und-signieren)
+    - [12c.9 Praxisbeispiel: Signierten Arbeitsschein stornieren](#12c9-praxisbeispiel-signierten-arbeitsschein-stornieren)
+    - [12c.10 Technische Integration](#12c10-technische-integration)
+    - [12c.11 Dateien und Storage](#12c11-dateien-und-storage)
+    - [12c.12 PDF-Archivierung und GoBD](#12c12-pdf-archivierung-und-gobd)
+    - [12c.13 Offene Erweiterungen](#12c13-offene-erweiterungen)
 13. [Belege & Fakturierung](#13-belege--fakturierung)
     - [13.1 Belegtypen](#131-belegtypen)
     - [13.2 Belegliste](#132-belegliste)
@@ -6198,7 +6201,166 @@ Die vier Permission-Keys sind fein granular:
 9. ✅ Foto erscheint in der Liste mit Größe und MIME-Type
 10. 💡 **Unter der Haube**: Der Upload läuft in 3 Schritten — `getUploadUrl` liefert eine Signed PUT-URL, der Browser lädt direkt zu Supabase-Storage hoch, `confirmUpload` schreibt den DB-Eintrag und den Audit-Log. Pfad: `{tenantId}/{workReportId}/{uuid}.jpg`.
 
-### 12c.5 Praxisbeispiel: Signatur erfassen und signieren
+### 12c.5 Praxisbeispiel: Mitarbeiter zu einem Arbeitsschein zuweisen
+
+**Szenario:** Hans Müller kommt von einem Einsatz am Kältemaschinen-Arbeitsschein `AS-17` zurück. Er war nicht alleine — Sandra Koch war mit, und für den kniffligen Teil mit der Druckprobe war Werkmeister Tolga Yilmaz dazu gestoßen. Hans dokumentiert alle drei im Schein.
+
+*Vorbedingung:* Der Arbeitsschein `AS-17` ist im Status **„Entwurf"**. Hans hat die Permission `work_reports.manage`. Alle drei Mitarbeiter sind in Terp als Employees erfasst.
+
+1. 📍 Detailseite von `AS-17` öffnen → Tab **„Mitarbeiter"**
+2. ✅ Empty-State zeigt: *„Noch keine Mitarbeiter zugewiesen."* mit Hinweis *„Vor dem Signieren muss mindestens ein Mitarbeiter zugewiesen sein."*
+3. Card **„Mitarbeiter zuweisen"** ausfüllen:
+   - **Mitarbeiter**: `Hans Müller` im Combobox wählen
+   - **Rolle (optional)**: `Monteur`
+4. 📍 **„Hinzufügen"** klicken
+5. ✅ Toast *„Mitarbeiter hinzugefügt"*, Zeile erscheint mit Name + Personalnummer + Rolle + Papierkorb-Icon
+6. Zweiten Eintrag anlegen:
+   - **Mitarbeiter**: `Sandra Koch`
+   - **Rolle**: leer lassen (optional)
+7. 📍 **„Hinzufügen"** → ✅ Zeile erscheint mit Rolle-Spalte „—" (keine Rolle erfasst)
+8. Dritten Eintrag: `Tolga Yilmaz`, Rolle `Werkmeister` → **„Hinzufügen"**
+
+✅ Liste enthält jetzt drei Zeilen.
+
+**Duplikat-Schutz** (⚠️ wichtig):
+
+9. Hans tippt sich und klickt aus Versehen nochmal auf **„Mitarbeiter hinzufügen"** mit `Hans Müller`, diesmal ohne Rolle
+10. 📍 **„Hinzufügen"**
+11. ❌ Error-Toast: *„Employee is already assigned to this WorkReport"*
+12. ✅ Die Liste bleibt bei **drei** Einträgen — der Duplikat-Versuch ist abgelehnt
+13. 💡 Warum? Ein Mitarbeiter darf **höchstens einmal** pro Arbeitsschein erscheinen. Die Rolle ist optionale Metadaten, kein Schlüssel. Wenn Hans seine Rolle nachträglich auf „Werkmeister" ändern wollte, müsste er sich zuerst entfernen und mit neuer Rolle wieder hinzufügen — Inline-Rollen-Edit ist als M-2-Erweiterung geplant.
+
+**Eintrag korrigieren:**
+
+14. Sandra Koch sollte eigentlich Rolle „Helfer" bekommen
+15. 📍 Papierkorb-Icon in Sandra Kochs Zeile klicken
+16. Confirm-Dialog *„Mitarbeiter entfernen — Möchten Sie diesen Mitarbeiter vom Arbeitsschein entfernen?"* öffnet sich
+17. 📍 **„Entfernen"** klicken → ✅ Toast *„Mitarbeiter entfernt"*, Zeile verschwindet
+18. Sandra Koch neu hinzufügen, diesmal mit Rolle `Helfer` → **„Hinzufügen"**
+19. ✅ Drei Zeilen wieder komplett, jetzt mit korrekten Rollen
+
+💡 **Unter der Haube**: Jedes Add/Remove schreibt eine Audit-Log-Zeile (`assignment_added` / `assignment_removed`) mit `employeeId` und `role` in den Metadaten. Der Duplikat-Check läuft auf DB-Ebene per UNIQUE-Constraint `(work_report_id, employee_id)` und zusätzlich im Service-Layer als defense-in-depth — auch ein manueller API-Call via curl würde mit `CONFLICT` abgelehnt.
+
+⚠️ **Status-Guard:** Mitarbeiter lassen sich nur auf einem **DRAFT**-Arbeitsschein ändern. Nach dem Signieren verschwinden die „Mitarbeiter zuweisen"-Card und die Papierkorb-Icons — die Liste bleibt als Dokumentation erhalten, ist aber nur noch lesend.
+
+### 12c.6 Praxisbeispiel: Fotos & Dokumente anhängen
+
+**Szenario:** Hans Müller will den Einsatz an `AS-17` fotografisch dokumentieren: ein Foto vom Typenschild des Kompressors, zwei Fotos der Leckage-Stelle, und das unterzeichnete Dichtigkeitsprotokoll als PDF. Anschließend korrigiert er einen Upload den er doppelt hochgeladen hat.
+
+*Vorbedingung:* Arbeitsschein `AS-17` ist im Status **„Entwurf"**. Hans hat `work_reports.manage`. Die Fotos auf dem Tablet sind unter 10 MB jeweils.
+
+1. 📍 Detailseite `AS-17` → Tab **„Fotos"**
+2. ✅ Card **„Fotos & Dokumente"** oben zeigt den Hinweis *„Erlaubt: JPEG, PNG, WebP, HEIC, PDF (max. 10 MB, max. 30 Dateien)."* mit Button **„Hochladen"**
+3. ✅ Empty-State unten: *„Noch keine Fotos."*
+
+**Erster Upload (JPEG):**
+
+4. 📍 **„Hochladen"** → Dateidialog öffnet sich
+5. `typenschild.jpg` wählen
+6. ✅ Dialog schließt, Button zeigt kurz Spinner *„Lade hoch…"*, dann Toast *„Foto hochgeladen"*
+7. ✅ Eine Zeile erscheint in der Liste:
+   - **Dateiname**: `typenschild.jpg`
+   - **Metadaten**: `847.3 KB · image/jpeg`
+   - rechts: **Download**-Icon und **Papierkorb**-Icon
+
+**Zwei weitere Fotos + ein PDF:**
+
+8. Upload für `leckage-vorne.jpg`, `leckage-seitlich.webp`, `dichtigkeitsprotokoll.pdf` wiederholen
+9. ✅ Liste enthält jetzt 4 Zeilen mit unterschiedlichen MIME-Types
+
+**Download testen:**
+
+10. 📍 Download-Icon bei `dichtigkeitsprotokoll.pdf` klicken
+11. ✅ Neuer Browser-Tab öffnet sich mit dem PDF (Signed-URL mit 5-Minuten-TTL — nach 5 Min kommt bei erneutem Aufruf HTTP 403, dann einfach den Download-Button erneut klicken)
+
+**Dateityp-Fehler (⚠️ wichtig):**
+
+12. Hans versucht versehentlich `auftragsbestaetigung.docx` hochzuladen
+13. 📍 **„Hochladen"** → `auftragsbestaetigung.docx` wählen
+14. ❌ Error-Toast: *„Dateityp nicht erlaubt: application/vnd.openxmlformats-officedocument.wordprocessingml.document"*
+15. ✅ Kein Upload passiert, Liste bleibt bei 4 Einträgen
+16. 💡 Die MIME-Prüfung läuft **zweifach**: einmal im Browser (sofortiger Toast ohne Netzwerk-Request) und einmal server-seitig im `getUploadUrl`-Call. Das schützt auch gegen manipulierte Clients, die den Client-Check umgehen.
+
+**Größen-Limit:**
+
+17. Hans versucht `video-rundgang.mov` mit 85 MB hochzuladen (falsches File, aber mal testen)
+18. ❌ Error-Toast: *„Datei überschreitet 10 MB."*
+19. ✅ Kein Upload, keine Server-Anfrage. Der Check ist rein client-seitig.
+20. 💡 Das Server-Limit wäre 10 MB pro File + 30 Files pro Schein — der Client-Check fängt den Großteil ab, bevor Bytes über die Leitung gehen.
+
+**Duplikat entfernen:**
+
+21. Hans merkt, dass er `leckage-seitlich.webp` versehentlich zweimal hochgeladen hat (es gibt keinen Duplikat-Check bei Dateinamen — jedes File kriegt einen eigenen UUID-Pfad, auch bei identischem Namen)
+22. 📍 Papierkorb-Icon bei der zweiten `leckage-seitlich.webp`-Zeile klicken
+23. Confirm-Dialog *„Foto entfernen — Die Datei wird aus dem Speicher gelöscht."* öffnet sich
+24. 📍 **„Entfernen"** → ✅ Toast *„Foto entfernt"*, Zeile verschwindet
+25. ✅ Liste enthält jetzt 4 korrekte Einträge
+
+💡 **Unter der Haube**: Beim Remove löscht Terp **zwei** Dinge:
+- Den DB-Eintrag `work_report_attachments`-Row (synchron, tenant-scoped)
+- Den Blob im Supabase-Storage (`workreport-attachments` bucket, Pfad `{tenantId}/{workReportId}/{uuid}.ext`) — als **Best-Effort**: wenn der Storage gerade nicht erreichbar ist, wird die Row trotzdem gelöscht und ein Log-Warnung geschrieben. Das verhindert, dass ein Storage-Ausfall das UI blockiert. Bei Bedarf räumt ein separater Cleanup-Job verwaiste Blobs.
+
+⚠️ **Status-Guard:** Auch für Attachments gilt — nach dem Signieren sind die Upload- und Remove-Buttons weg. Vorhandene Fotos bleiben download-bar als Teil des signierten Dokuments.
+
+### 12c.7 Listenansicht und Status-Filter
+
+Die globale Arbeitsscheine-Liste unter `/admin/work-reports` ist der Einstieg für den Büro-Mitarbeiter, der Übersicht über alle laufenden und abgeschlossenen Einsätze braucht — z. B. für Abrechnung, Disposition oder Monats-Reporting.
+
+**Layout:**
+
+Oben: Titel **„Arbeitsscheine"** und **„+ Neu"**-Button rechts (nur sichtbar mit `work_reports.manage`-Permission).
+
+Darunter: **Vier Status-Tabs:**
+
+| Tab | Zeigt |
+|---|---|
+| **Alle** | Alle Scheine unabhängig vom Status (Default) |
+| **Entwurf** | Nur DRAFT — in Bearbeitung, noch nicht signiert |
+| **Signiert** | Nur SIGNED — rechtlich bindend, mit Kundensignatur |
+| **Storniert** | Nur VOID — nachträglich zurückgenommen |
+
+Unter den Tabs steht der **Total-Count** für den aktuell aktiven Filter (z. B. *„17 Arbeitsscheine"*).
+
+**Tabelle:**
+
+| Spalte | Inhalt |
+|---|---|
+| **Nr.** | Code `AS-…` in Mono-Font |
+| **Einsatzdatum** | Datum im Format `dd.mm.jjjj` |
+| **Auftrag** | Code + Auftragsname |
+| **Kunde** | Aus dem Auftrag (Customer-Referenz) |
+| **Serviceobjekt** | Wenn gesetzt: Nummer + Name; sonst „—" |
+| **Status** | Farbiger Badge |
+
+Ein **Klick auf eine Zeile** öffnet die Detail-Seite.
+
+**URL-Persistenz:**
+
+Der aktive Status-Filter wird als Query-Parameter in der URL festgeschrieben — so bleibt der Filter über Hard-Reload erhalten:
+
+| Aktion | URL |
+|---|---|
+| Tab „Alle" aktiv | `/admin/work-reports` |
+| Tab „Entwurf" aktiv | `/admin/work-reports?status=DRAFT` |
+| Tab „Signiert" aktiv | `/admin/work-reports?status=SIGNED` |
+| Tab „Storniert" aktiv | `/admin/work-reports?status=VOID` |
+
+Ungültige Werte (`?status=FOOBAR`) werden abgefangen und fallen auf „Alle" zurück — kein Crash.
+
+**Empty-States:**
+
+- **Tab „Alle" ohne Scheine**: Große Stamp-Icon, Text *„Noch keine Arbeitsscheine — Legen Sie den ersten Arbeitsschein an, um den Einsatz vor Ort zu dokumentieren."*, darunter **„Neuer Arbeitsschein"**-Button als Shortcut
+- **Tab mit Filter ohne Matches**: Gleiches Icon, Text *„In der gewählten Status-Ansicht sind keine Arbeitsscheine vorhanden."* — kein „Neu"-Button (weil der Filter das Kernproblem ist, nicht das Fehlen von Daten)
+
+**Pagination:**
+
+Seitengröße ist fix bei **50 Einträgen** pro Seite. Darunter erscheint keine Paginierung. Ab 51 wird eine Pagination-Leiste unten eingeblendet, Page-Wechsel per Click + URL-Param `?page=2`.
+
+💡 **Live-Aktualisierung:** Signiert oder storniert ein User einen Schein auf der Detailseite und navigiert zurück zur Liste, wird der Status-Badge in der Tabelle **sofort** aktualisiert — ohne Hard-Reload. Möglich wird das durch Cross-Page-Cache-Invalidation (React-Query-Invalidation mit `refetchType: "all"`).
+
+💡 **Cross-Surface-Einstiege statt Global-Liste:** Wer auf einem konkreten Auftrag oder Serviceobjekt arbeitet, braucht nicht die Global-Liste. Der Tab **„Arbeitsscheine"** auf der Auftrags-Detailseite zeigt die zum Auftrag gehörenden Scheine (gefiltert per `listByOrder`). Analog auf der Serviceobjekt-Detailseite (`listByServiceObject`, limitiert auf die 20 jüngsten). Beide Tabs sind permission-gated und live-aktualisiert.
+
+### 12c.8 Praxisbeispiel: Signatur erfassen und signieren
 
 **Szenario:** Der Einsatz ist erledigt, Hans Müller präsentiert dem Kunden den Arbeitsschein auf dem Tablet zur Unterschrift.
 
@@ -6234,7 +6396,7 @@ Die vier Permission-Keys sind fein granular:
     - PDF `arbeitsscheine/{tenantId}/{id}.pdf` rendern und persistieren (best-effort; schlägt der PDF-Render fehl, bleibt der Status SIGNED und der nächste `downloadPdf`-Call rendert frisch)
     - Audit-Log-Zeile mit `action: "sign"`, `entityType: "work_report"`, Meta-Daten (`assignmentCount`, `signerName`, `signerRole`, `signerIpHash`)
 
-### 12c.6 Praxisbeispiel: Signierten Arbeitsschein stornieren
+### 12c.9 Praxisbeispiel: Signierten Arbeitsschein stornieren
 
 **Szenario:** Der Admin stellt im Nachgang fest, dass der Arbeitsschein `AS-17` versehentlich mit falschem Einsatzdatum signiert wurde. Der Kunde hat bereits eine Rechnung auf Basis dieser Dokumentation erhalten — sie wird als Gutschrift ausgebucht und eine neue Rechnung ausgestellt. Der ursprüngliche Arbeitsschein muss als „storniert" markiert werden.
 
@@ -6254,7 +6416,7 @@ Die vier Permission-Keys sind fein granular:
 10. ✅ Die archivierte SIGNED-PDF existiert weiterhin unter `arbeitsscheine/{tenantId}/{id}.pdf`. Der Overlay ist ein frisch gerenderter Extra-Download, der die Original-PDF **nicht überschreibt**.
 11. 💡 **Unter der Haube**: Die Stornierung ist atomar (SIGNED → VOID per `updateMany` mit Status-Condition). Audit-Log-Zeile mit `action: "void"` und dem Grund in den Metadaten. Nur Admins — bewusste Absicherung gegen unbeabsichtigte Stornierung durch Field-Staff.
 
-### 12c.7 Technische Integration
+### 12c.10 Technische Integration
 
 Ein Arbeitsschein integriert sich mit folgenden Terp-Domänen:
 
@@ -6266,7 +6428,7 @@ Ein Arbeitsschein integriert sich mit folgenden Terp-Domänen:
 
 💡 **Strikt additiv**: Terp-Code für Orders, Assignments, Attachments bleibt unverändert. Der WorkReport-Service und -Router sind komplett neu und modifizieren keinen bestehenden Service.
 
-### 12c.8 Dateien und Storage
+### 12c.11 Dateien und Storage
 
 Ein Arbeitsschein verwendet drei Supabase-Storage-Buckets:
 
@@ -6278,7 +6440,7 @@ Ein Arbeitsschein verwendet drei Supabase-Storage-Buckets:
 
 💡 Alle Buckets sind **privat**. Zugriff ausschließlich über kurzlebige Signed-URLs (5 Minuten Expiry für Attachments und PDFs; bei Overlay-PDF 60 s).
 
-### 12c.9 PDF-Archivierung und GoBD
+### 12c.12 PDF-Archivierung und GoBD
 
 - Die PDF wird beim `sign()` synchron gerendert (`@react-pdf/renderer`) und im `documents`-Bucket abgelegt. Pfad-Konvention: `arbeitsscheine/{tenantId}/{workReportId}.pdf`.
 - Der Fuß der PDF enthält — konsistent mit allen Terp-PDFs (Rechnungen, Bestellungen, Reminders) — das **Tenant-Branding** (Logo, Adresse, IBAN, USt-IdNr., Geschäftsführung).
@@ -6286,7 +6448,7 @@ Ein Arbeitsschein verwendet drei Supabase-Storage-Buckets:
 - Die PDF ist **10 Jahre** aufzubewahren (GoBD/HGB/AO) — konsistent mit Rechnungen und anderen handels-/steuerrechtlichen Dokumenten.
 - PDF-Sprache: **Deutsch**. Bilinguale PDFs sind bewusst ausgelassen (konsistent mit allen anderen Terp-PDFs).
 
-### 12c.10 Offene Erweiterungen
+### 12c.13 Offene Erweiterungen
 
 M-1 liefert den vollständigen Desktop-Workflow. Folgende Ausbaustufen sind geplant:
 
