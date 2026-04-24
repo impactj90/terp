@@ -93,7 +93,7 @@
     "iconv-lite": "^0.7.2",
     "imapflow": "^1.2.18",
     "jose": "^5.9.6",
-    "liquidjs": "^10.25.4",
+    "liquidjs": "^10.25.7",
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.6",
     "next": "^16.2.3",
