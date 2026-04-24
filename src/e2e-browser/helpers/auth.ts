@@ -4,6 +4,8 @@ export const ADMIN_STORAGE = ".auth/admin.json";
 export const USER_STORAGE = ".auth/user.json";
 export const APPROVER_STORAGE = ".auth/approver.json";
 export const HR_STORAGE = ".auth/hr.json";
+export const WR_VIEWER_STORAGE = ".auth/wr-viewer.json";
+export const WR_MANAGER_STORAGE = ".auth/wr-manager.json";
 
 export const SEED = {
   TENANT_ID: "10000000-0000-0000-0000-000000000001",
@@ -15,6 +17,10 @@ export const SEED = {
   APPROVER_PASSWORD: "dev-password-approver",
   HR_EMAIL: "hr@dev.local",
   HR_PASSWORD: "dev-password-hr",
+  WR_VIEWER_EMAIL: "wr-viewer@dev.local",
+  WR_VIEWER_PASSWORD: "dev-password-wr-viewer",
+  WR_MANAGER_EMAIL: "wr-manager@dev.local",
+  WR_MANAGER_PASSWORD: "dev-password-wr-manager",
   // Employee IDs (from seed.sql)
   ADMIN_EMPLOYEE_ID: "00000000-0000-0000-0000-000000000011",
   USER_EMPLOYEE_ID: "00000000-0000-0000-0000-000000000012",
@@ -84,4 +90,12 @@ export async function loginAsApprover(page: Page): Promise<void> {
 
 export async function loginAsHr(page: Page): Promise<void> {
   await login(page, SEED.HR_EMAIL, SEED.HR_PASSWORD);
+}
+
+export async function loginAsWrViewer(page: Page): Promise<void> {
+  await login(page, SEED.WR_VIEWER_EMAIL, SEED.WR_VIEWER_PASSWORD);
+}
+
+export async function loginAsWrManager(page: Page): Promise<void> {
+  await login(page, SEED.WR_MANAGER_EMAIL, SEED.WR_MANAGER_PASSWORD);
 }

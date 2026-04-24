@@ -5,10 +5,14 @@ import {
   HR_STORAGE,
   SEED,
   USER_STORAGE,
+  WR_MANAGER_STORAGE,
+  WR_VIEWER_STORAGE,
   loginAsAdmin,
   loginAsApprover,
   loginAsHr,
   loginAsUser,
+  loginAsWrManager,
+  loginAsWrViewer,
 } from "./helpers/auth";
 
 async function persistTenant(page: { evaluate: (fn: (id: string) => void, arg: string) => Promise<void> }) {
@@ -39,4 +43,16 @@ setup("authenticate as hr", async ({ page }) => {
   await loginAsHr(page);
   await persistTenant(page);
   await page.context().storageState({ path: HR_STORAGE });
+});
+
+setup("authenticate as wr-viewer", async ({ page }) => {
+  await loginAsWrViewer(page);
+  await persistTenant(page);
+  await page.context().storageState({ path: WR_VIEWER_STORAGE });
+});
+
+setup("authenticate as wr-manager", async ({ page }) => {
+  await loginAsWrManager(page);
+  await persistTenant(page);
+  await page.context().storageState({ path: WR_MANAGER_STORAGE });
 });

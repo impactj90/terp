@@ -308,6 +308,140 @@ VALUES
 ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 -- =============================================================
+-- 5a. WorkReport E2E test users (plan 2026-04-24-workreport-e2e-coverage)
+-- =============================================================
+-- Two dedicated users with precise permission subsets used by
+-- 86-workreport-permissions.spec.ts. Kept in their own block so the
+-- existing users/groups above stay untouched.
+--
+--   wr-viewer@dev.local   — only work_reports.view
+--   wr-manager@dev.local  — view + manage + sign (NO void)
+
+-- Auth users
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new, email_change_token_current
+) VALUES (
+  '00000000-0000-0000-0000-000000000005',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  'wr-viewer@dev.local',
+  crypt('dev-password-wr-viewer', gen_salt('bf')),
+  NOW(), '{"display_name": "WR Viewer (E2E)"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  NOW(), NOW(),
+  '', '',
+  '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, user_id, identity_data, provider, provider_id,
+  last_sign_in_at, created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000005',
+  '00000000-0000-0000-0000-000000000005',
+  jsonb_build_object('sub', '00000000-0000-0000-0000-000000000005', 'email', 'wr-viewer@dev.local'),
+  'email', '00000000-0000-0000-0000-000000000005',
+  NOW(), NOW(), NOW()
+) ON CONFLICT (provider_id, provider) DO NOTHING;
+
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new, email_change_token_current
+) VALUES (
+  '00000000-0000-0000-0000-000000000006',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  'wr-manager@dev.local',
+  crypt('dev-password-wr-manager', gen_salt('bf')),
+  NOW(), '{"display_name": "WR Manager (E2E)"}'::jsonb,
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  NOW(), NOW(),
+  '', '',
+  '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, user_id, identity_data, provider, provider_id,
+  last_sign_in_at, created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000006',
+  '00000000-0000-0000-0000-000000000006',
+  jsonb_build_object('sub', '00000000-0000-0000-0000-000000000006', 'email', 'wr-manager@dev.local'),
+  'email', '00000000-0000-0000-0000-000000000006',
+  NOW(), NOW(), NOW()
+) ON CONFLICT (provider_id, provider) DO NOTHING;
+
+-- User groups for the two test users
+INSERT INTO user_groups (id, tenant_id, name, code, description, permissions, is_admin, is_system, is_active, created_at, updated_at)
+VALUES (
+  '20000000-0000-0000-0000-000000000005',
+  '10000000-0000-0000-0000-000000000001',
+  'WR Viewer (E2E)',
+  'wr-viewer',
+  'E2E group: read-only WorkReport access',
+  '["work_reports.view"]'::jsonb,
+  false, false, true,
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  permissions = EXCLUDED.permissions,
+  name = EXCLUDED.name;
+
+INSERT INTO user_groups (id, tenant_id, name, code, description, permissions, is_admin, is_system, is_active, created_at, updated_at)
+VALUES (
+  '20000000-0000-0000-0000-000000000006',
+  '10000000-0000-0000-0000-000000000001',
+  'WR Manager (E2E)',
+  'wr-manager',
+  'E2E group: view + manage + sign WorkReports (no void)',
+  '["work_reports.view", "work_reports.manage", "work_reports.sign"]'::jsonb,
+  false, false, true,
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  permissions = EXCLUDED.permissions,
+  name = EXCLUDED.name;
+
+-- Public users linked to the groups
+INSERT INTO users (id, email, username, display_name, role, is_active, tenant_id, user_group_id, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000005',
+  'wr-viewer@dev.local', 'wr-viewer@dev.local', 'WR Viewer (E2E)', 'user', true,
+  '10000000-0000-0000-0000-000000000001',
+  '20000000-0000-0000-0000-000000000005',
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  tenant_id = EXCLUDED.tenant_id,
+  user_group_id = EXCLUDED.user_group_id,
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
+INSERT INTO users (id, email, username, display_name, role, is_active, tenant_id, user_group_id, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000006',
+  'wr-manager@dev.local', 'wr-manager@dev.local', 'WR Manager (E2E)', 'user', true,
+  '10000000-0000-0000-0000-000000000001',
+  '20000000-0000-0000-0000-000000000006',
+  NOW(), NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  tenant_id = EXCLUDED.tenant_id,
+  user_group_id = EXCLUDED.user_group_id,
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
+-- User-tenant access for the two test users
+INSERT INTO user_tenants (user_id, tenant_id, role, created_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'member', NOW()),
+  ('00000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', 'member', NOW())
+ON CONFLICT (user_id, tenant_id) DO NOTHING;
+
+-- =============================================================
 -- 6. Employees (insert BEFORE departments so manager_employee_id FK works)
 -- =============================================================
 -- Employee IDs:
