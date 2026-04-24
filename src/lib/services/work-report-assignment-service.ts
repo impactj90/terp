@@ -130,7 +130,7 @@ export async function add(
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
       throw new WorkReportAssignmentConflictError(
-        "Assignment already exists for this employee+role",
+        "Employee is already assigned to this WorkReport",
       )
     }
     throw error

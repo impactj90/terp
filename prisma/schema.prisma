@@ -2716,7 +2716,7 @@ model WorkReportAssignment {
   workReport WorkReport @relation(fields: [workReportId], references: [id], onDelete: Cascade)
   employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  @@unique([workReportId, employeeId, role], map: "work_report_assignments_work_report_id_employee_id_role_key")
+  @@unique([workReportId, employeeId], map: "work_report_assignments_work_report_id_employee_id_key")
   @@index([tenantId], map: "idx_work_report_assignments_tenant")
   @@index([workReportId], map: "idx_work_report_assignments_work_report")
   @@index([employeeId], map: "idx_work_report_assignments_employee")

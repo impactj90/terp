@@ -663,7 +663,9 @@ export const workReportsRouter = createTRPCRouter({
 
     /**
      * workReports.assignments.add — Adds an employee to a DRAFT
-     * WorkReport. Duplicate (employee, role) assignments return CONFLICT.
+     * WorkReport. Each employee may appear at most once per report —
+     * a second add for the same employee (regardless of role) returns
+     * CONFLICT.
      */
     add: tenantProcedure
       .use(requirePermission(WORK_REPORTS_MANAGE))

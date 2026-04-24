@@ -212,6 +212,56 @@ describe.skipIf(!HAS_DB).sequential(
       expect(count).toBe(1)
     })
 
+    it("rejects second add of same employee even when roles differ (role=X then role=null)", async () => {
+      const report = await createDraftReport()
+
+      await assignmentService.add(
+        prisma,
+        TENANT_A,
+        { workReportId: report.id, employeeId: EMPLOYEE_A, role: "Werkmeister" },
+        { userId: USER_A },
+      )
+
+      await expect(
+        assignmentService.add(
+          prisma,
+          TENANT_A,
+          { workReportId: report.id, employeeId: EMPLOYEE_A, role: null },
+          { userId: USER_A },
+        ),
+      ).rejects.toMatchObject({ name: "WorkReportAssignmentConflictError" })
+
+      const count = await prisma.workReportAssignment.count({
+        where: { workReportId: report.id, employeeId: EMPLOYEE_A },
+      })
+      expect(count).toBe(1)
+    })
+
+    it("rejects second add of same employee with a different non-null role", async () => {
+      const report = await createDraftReport()
+
+      await assignmentService.add(
+        prisma,
+        TENANT_A,
+        { workReportId: report.id, employeeId: EMPLOYEE_A, role: "Monteur" },
+        { userId: USER_A },
+      )
+
+      await expect(
+        assignmentService.add(
+          prisma,
+          TENANT_A,
+          { workReportId: report.id, employeeId: EMPLOYEE_A, role: "Werkmeister" },
+          { userId: USER_A },
+        ),
+      ).rejects.toMatchObject({ name: "WorkReportAssignmentConflictError" })
+
+      const count = await prisma.workReportAssignment.count({
+        where: { workReportId: report.id, employeeId: EMPLOYEE_A },
+      })
+      expect(count).toBe(1)
+    })
+
     it("delete of the parent DRAFT WorkReport cascades assignments", async () => {
       const report = await createDraftReport()
       await assignmentService.add(
