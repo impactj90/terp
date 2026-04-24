@@ -107,18 +107,34 @@ export function useWorkReportAttachments(
 
 /**
  * Helper: invalidates all list-shaped WorkReport queries (list, listByOrder,
- * listByServiceObject). Used by most mutations because a create/update/sign
- * can affect any of them depending on which filter the user has active.
+ * listByServiceObject). Used by most mutations because a create/update/sign/
+ * void can affect any of them depending on which filter the user has active.
+ *
+ * `refetchType: "all"` forces a refetch even for queries without an active
+ * observer. Mutations like sign/void are typically triggered from the detail
+ * page, so the list queries are inactive at that moment. Default
+ * `refetchType: "active"` would only mark them stale — and if Next.js App
+ * Router returns a cached route segment on back-navigation (no re-mount),
+ * `refetchOnMount` never fires and the user sees stale status badges until
+ * a hard reload. Forcing `"all"` refetches in the background so that by the
+ * time the user is back on the list, fresh data is already there.
  */
 function invalidateAllWorkReportLists(
   qc: ReturnType<typeof useQueryClient>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trpc: any,
 ) {
-  qc.invalidateQueries({ queryKey: trpc.workReports.list.queryKey() })
-  qc.invalidateQueries({ queryKey: trpc.workReports.listByOrder.queryKey() })
+  qc.invalidateQueries({
+    queryKey: trpc.workReports.list.queryKey(),
+    refetchType: "all",
+  })
+  qc.invalidateQueries({
+    queryKey: trpc.workReports.listByOrder.queryKey(),
+    refetchType: "all",
+  })
   qc.invalidateQueries({
     queryKey: trpc.workReports.listByServiceObject.queryKey(),
+    refetchType: "all",
   })
 }
 
