@@ -57,6 +57,7 @@ export default function WorkReportsListPage() {
     "work_reports.view",
     "work_reports.manage",
   ])
+  const { allowed: canManage } = useHasPermission(["work_reports.manage"])
 
   const statusFilter = parseStatus(searchParams?.get("status") ?? null)
   const page = Math.max(
@@ -111,10 +112,12 @@ export default function WorkReportsListPage() {
             Einsatzprotokolle mit Kundensignatur und archivierter PDF.
           </p>
         </div>
-        <Button onClick={() => router.push("/admin/work-reports/new")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Neu
-        </Button>
+        {canManage && (
+          <Button onClick={() => router.push("/admin/work-reports/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neu
+          </Button>
+        )}
       </div>
 
       {/* Status tabs */}
@@ -143,6 +146,7 @@ export default function WorkReportsListPage() {
           ) : items.length === 0 ? (
             <WorkReportsEmptyState
               filterActive={statusFilter !== "ALL"}
+              canCreate={canManage}
               onCreate={() => router.push("/admin/work-reports/new")}
             />
           ) : (
@@ -224,9 +228,11 @@ export default function WorkReportsListPage() {
 
 function WorkReportsEmptyState({
   filterActive,
+  canCreate,
   onCreate,
 }: {
   filterActive: boolean
+  canCreate: boolean
   onCreate: () => void
 }) {
   return (
@@ -238,7 +244,7 @@ function WorkReportsEmptyState({
           ? "In der gewählten Status-Ansicht sind keine Arbeitsscheine vorhanden."
           : "Legen Sie den ersten Arbeitsschein an, um den Einsatz vor Ort zu dokumentieren."}
       </p>
-      {!filterActive && (
+      {!filterActive && canCreate && (
         <Button className="mt-4" onClick={onCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Neuer Arbeitsschein

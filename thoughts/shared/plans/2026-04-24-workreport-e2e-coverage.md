@@ -396,9 +396,9 @@ test("Post-Void: Audit-Eintrag mit Aktion voided", async ({ page }) => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `84`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/84-workreport-arbeitsschein.spec.ts`
+- [x] `84`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/84-workreport-arbeitsschein.spec.ts`
 - [ ] Tests sind deterministisch (3× hintereinander grün ohne Flakes): `for i in 1 2 3; do pnpm playwright test src/e2e-browser/84-workreport-arbeitsschein.spec.ts || break; done`
-- [ ] Keine neuen Typecheck-Errors: `pnpm typecheck`
+- [x] Keine neuen Typecheck-Errors: `pnpm typecheck`
 
 #### Manual Verification:
 - [ ] `pnpm playwright test --headed src/e2e-browser/84-workreport-arbeitsschein.spec.ts` einmal im Browser anschauen — Tests sollten sichtbar die UI-Interaktionen durchlaufen
@@ -531,7 +531,7 @@ export async function createDraftWorkReportWithServiceObject(params: {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `85`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/85-workreport-list-crosssurface.spec.ts`
+- [x] `85`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/85-workreport-list-crosssurface.spec.ts`
 - [ ] 3× hintereinander grün: keine Flakes
 - [ ] Cache-Invalidation-Test würde OHNE den Fix aus commit `d42dcc1d` scheitern — die Implementierung kann das verifizieren indem sie testweise auf Commit `2f733adc` cherry-pickt und den Test laufen lässt (sollte rot sein) und dann auf `d42dcc1d` (sollte grün sein). Nicht in die Suite einchecken, nur zur Einmal-Verifikation.
 
@@ -685,9 +685,9 @@ test.describe.serial("UC-WR-03: Permissions", () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `86`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/86-workreport-permissions.spec.ts`
+- [x] `86`-Spec läuft grün komplett durch: `pnpm playwright test src/e2e-browser/86-workreport-permissions.spec.ts`
 - [ ] 3× hintereinander grün ohne Flakes
-- [ ] Keine neuen Typecheck-Errors: `pnpm typecheck`
+- [x] Keine neuen Typecheck-Errors: `pnpm typecheck`
 
 #### Manual Verification:
 - [ ] Spec einmal `--headed` durchlaufen lassen — visuell bestätigen dass die Buttons wirklich ausgeblendet sind (nicht nur disabled) für die Viewer/Manager-Kontexte
