@@ -69,6 +69,7 @@ const orderBookingOutputSchema = z.object({
   employeeId: z.string(),
   orderId: z.string(),
   activityId: z.string().nullable(),
+  workReportId: z.string().nullable(),
   bookingDate: z.date(),
   timeMinutes: z.number().int(),
   description: z.string().nullable(),
@@ -102,6 +103,7 @@ const createInputSchema = z.object({
   employeeId: z.string(),
   orderId: z.string(),
   activityId: z.string().optional(),
+  workReportId: z.string().nullable().optional(),
   bookingDate: z.string().date(), // YYYY-MM-DD
   timeMinutes: z.number().int().min(1).max(1440),
   description: z.string().max(2000).optional(),
@@ -111,6 +113,7 @@ const updateInputSchema = z.object({
   id: z.string(),
   orderId: z.string().optional(),
   activityId: z.string().nullable().optional(),
+  workReportId: z.string().nullable().optional(),
   bookingDate: z.string().date().optional(),
   timeMinutes: z.number().int().min(1).max(1440).optional(),
   description: z.string().max(2000).nullable().optional(),
@@ -167,6 +170,7 @@ function mapToOutput(record: Record<string, unknown>): OrderBookingOutput {
     employeeId: record.employeeId as string,
     orderId: record.orderId as string,
     activityId: (record.activityId as string | null) ?? null,
+    workReportId: (record.workReportId as string | null) ?? null,
     bookingDate: record.bookingDate as Date,
     timeMinutes: record.timeMinutes as number,
     description: (record.description as string | null) ?? null,
@@ -390,6 +394,26 @@ export const orderBookingsRouter = createTRPCRouter({
           }
         }
 
+        // Validate workReport exists in tenant, belongs to the same order,
+        // and is still in DRAFT (signed scheine cannot be re-tagged).
+        if (input.workReportId) {
+          const wr = await ctx.prisma.workReport.findFirst({
+            where: {
+              id: input.workReportId,
+              tenantId,
+              orderId: input.orderId,
+              status: "DRAFT",
+            },
+          })
+          if (!wr) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Arbeitsschein muss DRAFT sein und zum gleichen Auftrag gehören",
+            })
+          }
+        }
+
         // Create order booking
         const created = await ctx.prisma.orderBooking.create({
           data: {
@@ -397,6 +421,7 @@ export const orderBookingsRouter = createTRPCRouter({
             employeeId: input.employeeId,
             orderId: input.orderId,
             activityId: input.activityId || null,
+            workReportId: input.workReportId ?? null,
             bookingDate: new Date(input.bookingDate),
             timeMinutes: input.timeMinutes,
             description: input.description?.trim() || null,

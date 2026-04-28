@@ -28,6 +28,7 @@ import {
   useCreateOrderBooking,
   useUpdateOrderBooking,
   useActivities,
+  useWorkReportsByOrder,
 } from '@/hooks'
 import { EmployeePicker } from '@/components/employees/employee-picker'
 import type { components } from '@/types/legacy-api-types'
@@ -45,6 +46,7 @@ interface OrderBookingFormSheetProps {
 interface FormState {
   employeeId: string
   activityId: string
+  workReportId: string
   bookingDate: string
   hours: string
   minutes: string
@@ -58,6 +60,7 @@ function getTodayDate(): string {
 const INITIAL_STATE: FormState = {
   employeeId: '',
   activityId: '',
+  workReportId: '',
   bookingDate: getTodayDate(),
   hours: '0',
   minutes: '0',
@@ -81,15 +84,32 @@ export function OrderBookingFormSheet({
   const { data: activitiesData } = useActivities({ isActive: true, enabled: open })
   const activities = activitiesData?.data ?? []
 
+  // Work-Report dropdown: only DRAFT scheine for the current order are
+  // selectable. Signed scheine are immutable and can't accept new bookings.
+  const { data: workReportsData } = useWorkReportsByOrder(orderId, open)
+  const draftWorkReports = (workReportsData?.items ?? []).filter(
+    (wr) => wr.status === 'DRAFT',
+  )
+
   React.useEffect(() => {
     if (open) {
       if (booking) {
         const totalMinutes = booking.time_minutes || 0
         const hours = Math.floor(totalMinutes / 60)
         const minutes = totalMinutes % 60
+        // The legacy OpenAPI types don't include work_report_id, so we
+        // read it via a structural cast. tRPC-emitted records carry the
+        // field directly.
+        const wrId =
+          (booking as unknown as { work_report_id?: string | null; workReportId?: string | null })
+            .work_report_id ??
+          (booking as unknown as { work_report_id?: string | null; workReportId?: string | null })
+            .workReportId ??
+          ''
         setForm({
           employeeId: booking.employee_id || '',
           activityId: booking.activity_id || '',
+          workReportId: wrId,
           bookingDate: booking.booking_date?.split('T')[0] || '',
           hours: hours.toString(),
           minutes: minutes.toString(),
@@ -132,11 +152,15 @@ export function OrderBookingFormSheet({
 
     const timeMinutes = parseInt(form.hours || '0') * 60 + parseInt(form.minutes || '0')
 
+    // Empty string -> null (clears the assignment); a UUID -> set.
+    const workReportId = form.workReportId.trim().length > 0 ? form.workReportId : null
+
     try {
       if (isEdit && booking) {
         await updateMutation.mutateAsync({
           id: booking.id,
           activityId: form.activityId || undefined,
+          workReportId,
           bookingDate: form.bookingDate,
           timeMinutes: timeMinutes,
           description: form.description.trim() || undefined,
@@ -146,6 +170,7 @@ export function OrderBookingFormSheet({
           orderId: orderId,
           employeeId: form.employeeId,
           activityId: form.activityId || undefined,
+          workReportId,
           bookingDate: form.bookingDate,
           timeMinutes: timeMinutes,
           description: form.description.trim() || undefined,
@@ -213,6 +238,42 @@ export function OrderBookingFormSheet({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                {/*
+                 * Arbeitsschein dropdown — links the booking to a DRAFT
+                 * WorkReport so it materializes as a labor position when
+                 * the schein is signed and converted to an invoice
+                 * (R-1). Hardcoded German strings per plan §11
+                 * (i18n out of scope for this module).
+                 */}
+                <Label htmlFor="orderBookingWorkReportId">Arbeitsschein</Label>
+                <Select
+                  value={form.workReportId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      workReportId: value === '__none__' ? '' : value,
+                    }))
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="orderBookingWorkReportId">
+                    <SelectValue placeholder="Kein Arbeitsschein" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Kein Arbeitsschein —</SelectItem>
+                    {draftWorkReports.map((wr) => (
+                      <SelectItem key={wr.id} value={wr.id}>
+                        {wr.code} ({wr.visitDate})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nur DRAFT-Arbeitsscheine wählbar. Signierte Scheine sind gesperrt.
+                </p>
               </div>
 
               <div className="space-y-2">

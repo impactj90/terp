@@ -146,6 +146,7 @@ export async function update(
     id: string
     orderId?: string
     activityId?: string | null
+    workReportId?: string | null
     bookingDate?: string
     timeMinutes?: number
     description?: string | null
@@ -195,6 +196,29 @@ export async function update(
       }
     }
     data.activityId = input.activityId
+  }
+
+  if (input.workReportId !== undefined) {
+    if (input.workReportId !== null) {
+      // The work report must exist in the tenant, belong to the same
+      // order this booking targets, and still be DRAFT — signed scheine
+      // are immutable so we cannot stamp new bookings on them.
+      const targetOrderId = (input.orderId ?? (existing as { orderId: string }).orderId) as string
+      const wr = await prisma.workReport.findFirst({
+        where: {
+          id: input.workReportId,
+          tenantId,
+          orderId: targetOrderId,
+          status: "DRAFT",
+        },
+      })
+      if (!wr) {
+        throw new OrderBookingValidationError(
+          "Arbeitsschein muss DRAFT sein und zum gleichen Auftrag gehören",
+        )
+      }
+    }
+    data.workReportId = input.workReportId
   }
 
   if (input.bookingDate !== undefined) {
