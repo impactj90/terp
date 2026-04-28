@@ -47,6 +47,21 @@ export function handleServiceError(err: unknown): never {
       })
     }
 
+    // Precondition errors — used when the operation is rejected because
+    // the entity is in the wrong state or a required prerequisite is
+    // missing (e.g., "WorkReport must be SIGNED to generate an invoice",
+    // "no customer address on Service Object"). Distinct from validation
+    // (BAD_REQUEST) because the input itself is fine; from conflict
+    // (CONFLICT) because there's no concurrent-update race; and from
+    // forbidden (FORBIDDEN) because there's no permission gap.
+    if (name.endsWith("PreconditionFailedError")) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: err.message,
+        cause: err,
+      })
+    }
+
     // Permission / access errors
     if (name.endsWith("ForbiddenError") || name.endsWith("AccessDeniedError")) {
       throw new TRPCError({

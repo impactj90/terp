@@ -213,6 +213,7 @@ export async function create(
     invoiceAddressId?: string
     inquiryId?: string
     orderId?: string
+    workReportId?: string
     orderDate?: Date
     documentDate?: Date
     deliveryDate?: Date
@@ -318,6 +319,7 @@ export async function create(
       invoiceAddressId: input.invoiceAddressId || null,
       inquiryId: input.inquiryId || null,
       orderId: input.orderId || null,
+      workReportId: input.workReportId || null,
       orderDate: input.orderDate || null,
       documentDate: input.documentDate || new Date(),
       deliveryDate: input.deliveryDate || null,

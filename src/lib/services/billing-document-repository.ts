@@ -92,6 +92,7 @@ export async function create(
     invoiceAddressId?: string | null
     inquiryId?: string | null
     orderId?: string | null
+    workReportId?: string | null
     parentDocumentId?: string | null
     orderDate?: Date | null
     documentDate?: Date
