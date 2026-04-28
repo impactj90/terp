@@ -1116,6 +1116,7 @@ model BillingDocument {
   inquiryId           String?                @map("inquiry_id") @db.Uuid
   orderId             String?                @map("order_id") @db.Uuid
   parentDocumentId    String?                @map("parent_document_id") @db.Uuid
+  workReportId        String?                @map("work_report_id") @db.Uuid
 
   // Dates
   orderDate           DateTime?              @map("order_date") @db.Timestamptz(6)
@@ -1172,6 +1173,7 @@ model BillingDocument {
   inquiry          CrmInquiry?               @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   order            Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
   parentDocument   BillingDocument?          @relation("DocumentChain", fields: [parentDocumentId], references: [id], onDelete: SetNull)
+  workReport       WorkReport?               @relation(fields: [workReportId], references: [id], onDelete: SetNull)
   childDocuments      BillingDocument[]         @relation("DocumentChain")
   positions           BillingDocumentPosition[]
   billingServiceCases BillingServiceCase[]
@@ -1186,6 +1188,7 @@ model BillingDocument {
   @@index([tenantId, inquiryId])
   @@index([tenantId, parentDocumentId])
   @@index([tenantId, documentDate])
+  @@index([tenantId, workReportId], map: "idx_billing_documents_tenant_workreport")
   @@map("billing_documents")
 }
 
@@ -2691,9 +2694,11 @@ model WorkReport {
   signedBy       User?                  @relation("WorkReportSignedBy", fields: [signedById], references: [id], onDelete: SetNull)
   voidedBy       User?                  @relation("WorkReportVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
   createdBy      User?                  @relation("WorkReportCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  assignments    WorkReportAssignment[]
-  attachments    WorkReportAttachment[]
-  stockMovements WhStockMovement[]
+  assignments      WorkReportAssignment[]
+  attachments      WorkReportAttachment[]
+  stockMovements   WhStockMovement[]
+  bookings         OrderBooking[]
+  billingDocuments BillingDocument[]
 
   @@unique([tenantId, code], map: "work_reports_tenant_id_code_key")
   @@index([tenantId, status], map: "idx_work_reports_tenant_status")
@@ -5445,25 +5450,27 @@ model Correction {
 //
 // Trigger: update_order_bookings_updated_at auto-sets updated_at on UPDATE
 model OrderBooking {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  employeeId  String   @map("employee_id") @db.Uuid
-  orderId     String   @map("order_id") @db.Uuid
-  activityId  String?  @map("activity_id") @db.Uuid
-  bookingDate DateTime @map("booking_date") @db.Date
-  timeMinutes Int      @map("time_minutes") @db.Integer
-  description String?  @db.Text
-  source      String   @default("manual") @db.VarChar(20)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdBy   String?  @map("created_by") @db.Uuid
-  updatedBy   String?  @map("updated_by") @db.Uuid
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  orderId      String   @map("order_id") @db.Uuid
+  activityId   String?  @map("activity_id") @db.Uuid
+  workReportId String?  @map("work_report_id") @db.Uuid
+  bookingDate  DateTime @map("booking_date") @db.Date
+  timeMinutes  Int      @map("time_minutes") @db.Integer
+  description  String?  @db.Text
+  source       String   @default("manual") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String?  @map("created_by") @db.Uuid
+  updatedBy    String?  @map("updated_by") @db.Uuid
 
   // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  activity   Activity?   @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  workReport WorkReport? @relation(fields: [workReportId], references: [id], onDelete: SetNull)
 
   // Indexes
   @@index([tenantId], map: "idx_order_bookings_tenant")
@@ -5472,6 +5479,7 @@ model OrderBooking {
   @@index([activityId], map: "idx_order_bookings_activity")
   @@index([tenantId, employeeId, bookingDate], map: "idx_order_bookings_tenant_employee_date")
   @@index([tenantId, orderId, bookingDate], map: "idx_order_bookings_tenant_order_date")
+  @@index([tenantId, workReportId], map: "idx_order_bookings_tenant_workreport")
   @@map("order_bookings")
 }
 
