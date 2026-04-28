@@ -531,6 +531,10 @@ export {
   useRemoveWorkReportAttachment,
 } from './use-work-reports'
 
+// WorkReport → BillingDocument bridge (R-1)
+export { useWorkReportInvoicePreview } from './use-work-report-invoice-preview'
+export { useGenerateWorkReportInvoice } from './use-generate-work-report-invoice'
+
 // Activities
 export {
   useActivities,

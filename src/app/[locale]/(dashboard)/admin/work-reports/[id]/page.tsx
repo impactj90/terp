@@ -28,7 +28,7 @@ import { toast } from "sonner"
 import { format } from "date-fns"
 
 import { useAuth } from "@/providers/auth-provider"
-import { useHasPermission } from "@/hooks"
+import { useHasPermission, useWorkReportInvoicePreview } from "@/hooks"
 import { useAuditLogs } from "@/hooks/use-audit-logs"
 import {
   useAddWorkReportAssignment,
@@ -74,8 +74,13 @@ import {
   WorkReportFormSheet,
 } from "@/components/work-reports/work-report-form-sheet"
 import {
+  WorkReportGenerateInvoiceDialog,
+} from "@/components/work-reports/work-report-generate-invoice-dialog"
+import {
   WorkReportStatusBadge,
 } from "@/components/work-reports/work-report-status-badge"
+import Link from "next/link"
+import { Receipt } from "lucide-react"
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -119,6 +124,9 @@ export default function WorkReportDetailPage() {
   const { allowed: canManage } = useHasPermission(["work_reports.manage"])
   const { allowed: canSign } = useHasPermission(["work_reports.sign"])
   const { allowed: canVoid } = useHasPermission(["work_reports.void"])
+  const { allowed: canCreateInvoice } = useHasPermission([
+    "billing_documents.create",
+  ])
 
   const { data: report, isLoading } = useWorkReport(
     id,
@@ -129,6 +137,21 @@ export default function WorkReportDetailPage() {
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [signOpen, setSignOpen] = React.useState(false)
   const [voidOpen, setVoidOpen] = React.useState(false)
+  const [generateInvoiceOpen, setGenerateInvoiceOpen] = React.useState(false)
+
+  // Preview query — drives both the action-button decision (between
+  // "Rechnung erzeugen" and "Zur Rechnung …") and the dialog content.
+  // Skipping the query for non-SIGNED reports prevents superfluous
+  // round-trips on DRAFT/VOID detail pages.
+  const previewEnabled =
+    !authLoading &&
+    !permLoading &&
+    !!id &&
+    canCreateInvoice
+  const { data: invoicePreview } = useWorkReportInvoicePreview(
+    id,
+    previewEnabled,
+  )
 
   // Assignments state
   const [assignEmployeeId, setAssignEmployeeId] = React.useState<string | null>(
@@ -378,6 +401,21 @@ export default function WorkReportDetailPage() {
               <FileSignature className="mr-2 h-4 w-4" /> Signieren
             </Button>
           )}
+          {isSigned && canCreateInvoice &&
+            (invoicePreview?.existingInvoice ? (
+              <Button asChild variant="secondary">
+                <Link
+                  href={`/orders/documents/${invoicePreview.existingInvoice.id}`}
+                >
+                  <Receipt className="mr-2 h-4 w-4" /> Zur Rechnung{" "}
+                  {invoicePreview.existingInvoice.number}
+                </Link>
+              </Button>
+            ) : (
+              <Button onClick={() => setGenerateInvoiceOpen(true)}>
+                <Receipt className="mr-2 h-4 w-4" /> Rechnung erzeugen
+              </Button>
+            ))}
           {isSigned && canVoid && (
             <Button
               variant="outline"
@@ -797,6 +835,12 @@ export default function WorkReportDetailPage() {
         workReport={
           isSigned ? { id: report.id, code: report.code } : null
         }
+      />
+
+      <WorkReportGenerateInvoiceDialog
+        open={generateInvoiceOpen}
+        onOpenChange={setGenerateInvoiceOpen}
+        workReport={{ id: report.id, code: report.code }}
       />
 
       <ConfirmDialog
