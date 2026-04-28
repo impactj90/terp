@@ -17,6 +17,7 @@ import * as workReportService from "@/lib/services/work-report-service"
 import * as workReportAssignmentService from "@/lib/services/work-report-assignment-service"
 import * as workReportAttachmentService from "@/lib/services/work-report-attachment-service"
 import * as workReportPdfService from "@/lib/services/work-report-pdf-service"
+import * as bridgeService from "@/lib/services/work-report-invoice-bridge-service"
 import type { WorkReportAssignmentWithIncludes } from "@/lib/services/work-report-assignment-repository"
 import type { WorkReportWithIncludes } from "@/lib/services/work-report-repository"
 import type { WorkReportAttachment } from "@/generated/prisma/client"
@@ -30,6 +31,7 @@ const WORK_REPORTS_VIEW = permissionIdByKey("work_reports.view")!
 const WORK_REPORTS_MANAGE = permissionIdByKey("work_reports.manage")!
 const WORK_REPORTS_SIGN = permissionIdByKey("work_reports.sign")!
 const WORK_REPORTS_VOID = permissionIdByKey("work_reports.void")!
+const BILLING_DOCUMENTS_CREATE = permissionIdByKey("billing_documents.create")!
 
 // --- Output Types ---
 
@@ -318,6 +320,37 @@ const voidInput = z.object({
   // placeholder like "x" — the service layer re-checks this as
   // defence-in-depth for scripted callers.
   reason: z.string().min(10).max(2000),
+})
+
+// --- Invoice Generation Schemas (R-1) ---
+//
+// Output schema for proposed positions (preview). Mirrors the bridge
+// service's `ProposedPosition` type plus the UI-only metadata used by
+// the dialog (sourceBookingId, employeeId, requiresManualPrice).
+const proposedPositionSchema = z.object({
+  kind: z.enum(["labor", "travel"]),
+  description: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+  unitPrice: z.number(),
+  vatRate: z.number(),
+  sourceBookingId: z.string().optional(),
+  employeeId: z.string().optional(),
+  requiresManualPrice: z.boolean(),
+})
+
+// Input schema for operator-edited overrides on generate. Stricter than
+// `proposedPositionSchema` (no UI-only fields, length caps on free-form
+// strings) — the values land in `BillingDocumentPosition` so the
+// constraints mirror that model's varchar limits.
+const positionOverrideSchema = z.object({
+  kind: z.enum(["labor", "travel", "manual"]),
+  description: z.string().min(1).max(2000),
+  quantity: z.number().min(0),
+  unit: z.string().min(1).max(20),
+  unitPrice: z.number().min(0),
+  vatRate: z.number().min(0).max(100),
+  sourceBookingId: z.string().optional(),
 })
 
 // --- Router ---
@@ -635,6 +668,141 @@ export const workReportsRouter = createTRPCRouter({
           },
         )
         return mapWorkReportToOutput(result)
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * workReports.previewInvoiceGeneration — Returns the proposed invoice
+   * positions for a SIGNED Arbeitsschein, plus existing-doc and
+   * non-blocking warning information so the dialog can render the
+   * correct affordances (Generate vs. "Zur Rechnung").
+   *
+   * Pure read — safe to call repeatedly while the operator tweaks
+   * positions in the dialog. Existing-invoice lookup uses the index
+   * `[tenantId, workReportId]` added by migration 20260507000000.
+   *
+   * Permissions: `work_reports.view` only (preview is read-only;
+   * generate requires `billing_documents.create`).
+   */
+  previewInvoiceGeneration: tenantProcedure
+    .use(requirePermission(WORK_REPORTS_VIEW, WORK_REPORTS_MANAGE))
+    .input(z.object({ workReportId: uuidField }))
+    .output(
+      z.object({
+        proposedPositions: z.array(proposedPositionSchema),
+        existingInvoice: z
+          .object({
+            id: z.string(),
+            number: z.string(),
+            status: z.string(),
+          })
+          .nullable(),
+        warnings: z.array(z.enum(["noAddress", "noEligibleBookings"])),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const tenantId = ctx.tenantId!
+
+        // Existing-invoice lookup (idempotency awareness for the UI).
+        const existing = await ctx.prisma.billingDocument.findFirst({
+          where: {
+            tenantId,
+            workReportId: input.workReportId,
+            status: { not: "CANCELLED" },
+          },
+          select: { id: true, number: true, status: true },
+        })
+
+        // Address-resolution warning. Mirrors the hard-fail check in
+        // the bridge service so the dialog can disable "Erzeugen" with
+        // an informative banner instead of letting the user submit
+        // and surface the PreconditionFailed only at click time.
+        const wr = await ctx.prisma.workReport.findFirst({
+          where: { id: input.workReportId, tenantId },
+          include: { serviceObject: true },
+        })
+        if (!wr) {
+          throw new bridgeService.WorkReportNotFoundError()
+        }
+
+        const warnings: ("noAddress" | "noEligibleBookings")[] = []
+        if (!wr.serviceObject?.customerAddressId) {
+          warnings.push("noAddress")
+        }
+
+        const proposedPositions = await bridgeService.computeProposedPositions(
+          ctx.prisma,
+          tenantId,
+          input.workReportId,
+        )
+        if (proposedPositions.length === 0) {
+          warnings.push("noEligibleBookings")
+        }
+
+        return {
+          proposedPositions,
+          existingInvoice: existing,
+          warnings,
+        }
+      } catch (err) {
+        handleServiceError(err)
+      }
+    }),
+
+  /**
+   * workReports.generateInvoice — Atomically creates a DRAFT
+   * BillingDocument from a SIGNED Arbeitsschein with proposed-or-
+   * overridden positions and dual cross-link audit logs.
+   *
+   * Permissions: BOTH `work_reports.view` (or .manage) AND
+   * `billing_documents.create` are required (separation of concerns —
+   * an operator who can read the report still needs the billing
+   * write permission to materialize the invoice).
+   *
+   * Error cases (mapped by handleServiceError):
+   *   - Missing report → NOT_FOUND
+   *   - DRAFT/VOID report → PRECONDITION_FAILED
+   *   - Existing non-CANCELLED invoice → CONFLICT (with existing-doc
+   *     metadata in the cause for the UI to render a link)
+   *   - No customer address on ServiceObject → PRECONDITION_FAILED
+   */
+  generateInvoice: tenantProcedure
+    .use(requirePermission(WORK_REPORTS_VIEW, WORK_REPORTS_MANAGE))
+    .use(requirePermission(BILLING_DOCUMENTS_CREATE))
+    .input(
+      z.object({
+        workReportId: uuidField,
+        positions: z.array(positionOverrideSchema).optional(),
+      }),
+    )
+    .output(
+      z.object({
+        billingDocumentId: z.string(),
+        billingDocumentNumber: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const tenantId = ctx.tenantId!
+        const result = await bridgeService.generateInvoiceFromWorkReport(
+          ctx.prisma,
+          tenantId,
+          input.workReportId,
+          ctx.user!.id,
+          input.positions ? { positionsOverride: input.positions } : undefined,
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+        )
+        return {
+          billingDocumentId: result.id,
+          billingDocumentNumber: result.number,
+        }
       } catch (err) {
         handleServiceError(err)
       }
