@@ -7963,6 +7963,69 @@ Am Ende der Tabelle:
 - Gutschriften werden mit **negativen** Betraegen angezeigt (sowohl in der Tabelle als auch im PDF / CSV). Dadurch ergibt die Gesamtsumme automatisch den korrekten Netto-Umsatz nach Gutschriften.
 - Jeder Export wird im Audit-Log mitgeschrieben (`action=export`, `entityType=outgoing_invoice_book`).
 
+### 13.17 Rechnung aus Arbeitsschein erzeugen
+
+**Was ist es?** Aus einem signierten Arbeitsschein wird per 1-Klick ein Rechnungs-Entwurf (DRAFT-`BillingDocument` vom Typ Rechnung) erzeugt — vorbefüllt mit Positionen aus den dem Schein zugeordneten Zeitbuchungen sowie der Anfahrtsdauer. Im Generate-Dialog kann der Disponent jede Position inline anpassen, entfernen oder manuelle Positionen ergänzen, bevor die Rechnung angelegt wird.
+
+**Wozu dient es?** Vermeidet manuelles Übertragen der Felder zwischen Arbeitsschein und Rechnung. Die Auswertung der Lookup-Chain für Stundensätze (Auftrag > Mitarbeiter > manuell) und die Multi-Mitarbeiter-Anfahrt-Logik laufen automatisch.
+
+⚠️ Modul: **Billing** muss aktiviert sein.
+
+⚠️ Berechtigung: `work_reports.view` (oder `.manage`) **und** `billing_documents.create`.
+
+#### Voraussetzungen
+
+- Arbeitsschein im Status SIGNED (gezeichnet vom Kunden).
+- Service-Objekt am Auftrag mit zugeordneter Kunden-Adresse (für die Lieferadresse der Rechnung).
+- Mindestens eine `OrderBooking` mit Arbeitsschein-Zuordnung **oder** `travelMinutes > 0`. Andernfalls steht der Empty-State-Banner mit Option auf manuelle Position bereit.
+
+#### Praxisbeispiel
+
+1. Auftrag „A-2026-0042" öffnen → Tab „Buchungen".
+2. „Neue Buchung" → Mitarbeiter wählen, Aktivität, Datum, Zeit (in Minuten), Beschreibung. **Wichtig:** Im Dropdown „Arbeitsschein" den Schein „WS-2026-0017" auswählen (nur DRAFT-Scheine sind sichtbar).
+3. Buchung speichern. Wiederholen für alle Einsatzzeiten.
+4. Tab „Arbeitsscheine" → den Schein „WS-2026-0017" öffnen → „Signieren" → Kunde unterzeichnet im Tablet-Workflow.
+5. Status springt auf SIGNED.
+6. Im Action-Bar des Arbeitsscheins erscheint der Button „Rechnung erzeugen". Klicken.
+7. Dialog zeigt Vorschlag: pro Buchung eine Labor-Position (Beschreibung = `Aktivitäts-Name: Buchungs-Beschreibung`, Menge = Minuten/60 als Stunden, Stundensatz aus Lookup-Chain) plus eine Travel-Position („Anfahrt: 45 Minuten").
+8. Bei Bedarf: einzelne Felder inline editieren, eine Position via „Entfernen" (Mülleimer) löschen, oder unten „Manuelle Position hinzufügen" für Sondermaterial / Kleinteile / Zuschläge.
+9. Live-Summen werden im Footer angezeigt: Summe netto, Summe VAT, Summe brutto.
+10. „Erzeugen" → Browser leitet zur DRAFT-Rechnung „RE-2026-0123" weiter.
+11. In der DRAFT-Rechnung: Adresse + Positionen prüfen, ggf. Header/Footer setzen, dann „Drucken/Finalisieren".
+
+#### Hinweise zum Stundensatz
+
+**Stundensatz pro Buchung** (Lookup-Reihenfolge):
+
+1. `Auftrag.Stundensatz` (Auftrags-Stammdaten, Feld „Abrechnungsstundensatz") — gilt einheitlich für alle Mitarbeiter dieses Auftrags.
+2. Sonst `Mitarbeiter.Stundensatz` (Mitarbeiter-Stammdaten, Reiter Personalverwaltung) — der individuelle Satz des Mitarbeiters, der die Buchung erfasst hat.
+3. Sonst `0,00 EUR` — die Position erscheint im Dialog rot markiert mit dem Tooltip „Stundensatz nicht ermittelbar — bitte manuell eintragen". Der Disponent muss vor dem Klick auf „Erzeugen" einen Wert eintragen oder die Position entfernen.
+
+**Stundensatz für die Anfahrt-Position** (Multi-Mitarbeiter-Logik):
+
+Wenn an einem Arbeitsschein **mehrere Mitarbeiter** zugewiesen sind und diese unterschiedliche `Mitarbeiter.Stundensatz`-Werte haben, wählt das System für die Anfahrt-Position automatisch den **höchsten Stundensatz** aller zugewiesenen Mitarbeiter (Maximum-Strategie).
+
+*Beispiel:* Arbeitsschein hat Anna (50,00 EUR/h) und Bert (75,00 EUR/h). Anfahrt 45 Minuten → Position „Anfahrt: 45 Minuten", Menge 0,75 h, Einzelpreis **75,00 EUR** (Maximum aus 50,00 und 75,00).
+
+*Begründung:* Defensive Vorbefüllung — der Disponent kann den Wert im Dialog jederzeit manuell überschreiben oder die Position komplett entfernen. Der Maximum-Wert verhindert, dass eine teure Mitarbeiter-Stunde unbeabsichtigt zum günstigeren Satz abgerechnet wird, wenn der Disponent die Anfahrt nicht aktiv prüft.
+
+*Wenn `Auftrag.Stundensatz` gesetzt ist:* dieser hat Vorrang vor allen Mitarbeiter-Sätzen, auch bei der Anfahrt — keine Maximum-Logik nötig, weil die Order-Rate für alle Mitarbeiter gleich gilt.
+
+*Wenn keiner der Mitarbeiter einen Stundensatz hat und auch kein Auftrags-Stundensatz gesetzt ist:* Position erscheint rot markiert mit 0,00 EUR — manuelle Eingabe erforderlich.
+
+#### Idempotenz und Storno-Re-Generate
+
+- Pro Arbeitsschein kann **nur eine** Rechnung im Status DRAFT, PRINTED oder FORWARDED existieren. Ein zweiter Klick auf „Rechnung erzeugen" zeigt im Dialog einen Fehler-Banner mit Link „Zur Rechnung RE-…".
+- Ist die Rechnung **storniert** (CANCELLED), erscheint der Button „Rechnung erzeugen" wieder. Eine neue Rechnung kann angelegt werden; die alte bleibt als historische Referenz erhalten und behält die FK-Verknüpfung zum Arbeitsschein.
+
+#### Sonstige Hinweise
+
+- Wenn Arbeitsschein storniert (VOID): „Rechnung erzeugen" verschwindet aus der Action-Bar (Action-Bar ist Status-konditional).
+- Wenn dem Arbeitsschein **kein Service-Objekt** mit Kunden-Adresse zugeordnet ist: Generate ist gesperrt mit Hinweis-Banner „Diesem Arbeitsschein ist kein Service-Objekt mit Kunden-Adresse zugeordnet. Bitte das Service-Objekt im Auftrag setzen, dann erneut versuchen.". Erst Service-Objekt am Auftrag pflegen, dann erneut versuchen.
+- Wenn der Schein **keine Buchungen** hat und **keine Anfahrt** erfasst ist: informativer Banner „Keine Buchungen oder Anfahrt zugeordnet. Sie können manuelle Positionen ergänzen." Button „Erzeugen" ist disabled bis mindestens eine manuelle Position via „Manuelle Position hinzufügen" angelegt ist.
+- VAT-Vorbelegung: 19 % (Regelsteuersatz). Im Dialog pro Position individuell überschreibbar.
+- Audit: Ein Generate schreibt zwei Audit-Log-Einträge — einer auf den Arbeitsschein (`action=generate_invoice`, Cross-Link auf das BillingDocument) und einer auf das BillingDocument (`action=create_from_wr`, Cross-Link auf den Arbeitsschein).
+
 ---
 
 ## 14. Lagerverwaltung — Artikelstamm
