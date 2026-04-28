@@ -251,3 +251,180 @@ export async function ensureSeedServiceObject(): Promise<{
   )
   return insert.rows[0]!
 }
+
+// ---------------------------------------------------------------------------
+// R-1 invoice-bridge fixture helpers
+//
+// Reusable helpers for the WorkReport → Invoice E2E spec (UC-WR-87). They
+// cover Stundensatz manipulation, NoAddress regression, audit-log assertions
+// and second-order seeding for filter tests. Storno + VOID are intentionally
+// driven through the UI (not exposed here) so the audit + state transitions
+// match real operator behavior.
+// ---------------------------------------------------------------------------
+
+/**
+ * Set `orders.billing_rate_per_hour` for a single order. Pass `null` to
+ * clear the rate entirely so the bridge service falls back to the
+ * Employee.hourlyRate chain.
+ */
+export async function setOrderRate(
+  orderId: string,
+  rate: number | null,
+): Promise<void> {
+  await pool().query(
+    `UPDATE orders SET billing_rate_per_hour = $2, updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $3`,
+    [orderId, rate, SEED.TENANT_ID],
+  )
+}
+
+/**
+ * Set `employees.hourly_rate` for a single employee. Pass `null` to
+ * clear the rate, forcing the bridge to flag `requiresManualPrice`.
+ */
+export async function setEmployeeRate(
+  employeeId: string,
+  rate: number | null,
+): Promise<void> {
+  await pool().query(
+    `UPDATE employees SET hourly_rate = $2, updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $3`,
+    [employeeId, rate, SEED.TENANT_ID],
+  )
+}
+
+/**
+ * Detach the ServiceObject from a WorkReport. Used to drive the
+ * NoAddress-banner test — the bridge service refuses to generate when
+ * `WorkReport.serviceObject?.customerAddressId` is null/missing.
+ */
+export async function clearServiceObject(
+  workReportId: string,
+): Promise<void> {
+  await pool().query(
+    `UPDATE work_reports SET service_object_id = NULL, updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $2`,
+    [workReportId, SEED.TENANT_ID],
+  )
+}
+
+/**
+ * Build a second seed Order (idempotent) and ensure it has its own
+ * ServiceObject + customer address attached. Used by the booking-sheet
+ * filter test which proves the WR-Select shows only DRAFT-Scheine of
+ * the currently-opened order.
+ */
+export async function seedSecondOrderWithSO(): Promise<{
+  id: string
+  code: string
+  customerAddressId: string
+  serviceObjectId: string
+}> {
+  const order = await ensureSecondSeedOrder()
+
+  // Reuse first available CUSTOMER address; tests don't care which.
+  const customerRes = await pool().query<{ id: string }>(
+    `SELECT id FROM crm_addresses
+       WHERE tenant_id = $1 AND type IN ('CUSTOMER','BOTH')
+       ORDER BY created_at ASC LIMIT 1`,
+    [SEED.TENANT_ID],
+  )
+  let addressId = customerRes.rows[0]?.id
+  if (!addressId) {
+    const ins = await pool().query<{ id: string }>(
+      `INSERT INTO crm_addresses (tenant_id, number, type, company, is_active)
+        VALUES ($1, 'K-E2E-INV-2', 'CUSTOMER', 'E2E Invoice Kunde 2 GmbH', true)
+        RETURNING id`,
+      [SEED.TENANT_ID],
+    )
+    addressId = ins.rows[0]!.id
+  }
+
+  const soRes = await pool().query<{ id: string }>(
+    `SELECT id FROM service_objects
+       WHERE tenant_id = $1 AND number = 'SO-E2E-INV-2' LIMIT 1`,
+    [SEED.TENANT_ID],
+  )
+  let serviceObjectId = soRes.rows[0]?.id
+  if (!serviceObjectId) {
+    const ins = await pool().query<{ id: string }>(
+      `INSERT INTO service_objects (
+          tenant_id, number, name, customer_address_id, is_active,
+          status, kind, qr_code_payload, created_at, updated_at
+        )
+        VALUES ($1, 'SO-E2E-INV-2', 'E2E Invoice Anlage 2', $2, true,
+                'OPERATIONAL', 'EQUIPMENT',
+                'TERP:SO:1000:SO-E2E-INV-2', NOW(), NOW())
+        RETURNING id`,
+      [SEED.TENANT_ID, addressId],
+    )
+    serviceObjectId = ins.rows[0]!.id
+  }
+
+  await pool().query(
+    `UPDATE orders SET service_object_id = $2,
+                       billing_rate_per_hour = 75.00,
+                       updated_at = NOW()
+       WHERE id = $1`,
+    [order.id, serviceObjectId],
+  )
+
+  return {
+    id: order.id,
+    code: order.code,
+    customerAddressId: addressId,
+    serviceObjectId,
+  }
+}
+
+/**
+ * Read all `audit_logs` rows for a given (entity_type, entity_id) tuple
+ * within the seed tenant. Returned ordered by `performed_at ASC` so
+ * tests that care about sequence can assert deterministically.
+ */
+export async function fetchAuditLogsForEntity(
+  entityType: string,
+  entityId: string,
+): Promise<Array<{ action: string; metadata: Record<string, unknown> }>> {
+  const { rows } = await pool().query<{
+    action: string
+    metadata: Record<string, unknown> | null
+  }>(
+    `SELECT action, metadata
+       FROM audit_logs
+      WHERE tenant_id = $1 AND entity_type = $2 AND entity_id = $3
+      ORDER BY performed_at ASC`,
+    [SEED.TENANT_ID, entityType, entityId],
+  )
+  return rows.map((r) => ({
+    action: r.action,
+    metadata: (r.metadata ?? {}) as Record<string, unknown>,
+  }))
+}
+
+/**
+ * Fetch the (single, non-CANCELLED) BillingDocument that references a
+ * WorkReport, or null if none exists. Used by tests that need to
+ * jump from the WR-page back to the freshly-generated invoice.
+ *
+ * Note: when a doc has been cancelled and re-generated, multiple rows
+ * with the same `work_report_id` exist; we return the latest non-
+ * CANCELLED one (deterministic via `created_at DESC`).
+ */
+export async function fetchBillingDocumentByWorkReport(
+  workReportId: string,
+): Promise<{ id: string; number: string; status: string } | null> {
+  const { rows } = await pool().query<{
+    id: string
+    number: string
+    status: string
+  }>(
+    `SELECT id, number, status FROM billing_documents
+       WHERE tenant_id = $1 AND work_report_id = $2
+         AND status != 'CANCELLED'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    [SEED.TENANT_ID, workReportId],
+  )
+  return rows[0] ?? null
+}
