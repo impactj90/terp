@@ -310,55 +310,49 @@ test.describe.serial("UC-NK-91: NK-1 Thresholds + Dashboard + Reports", () => {
     await expect(page.locator("#dateFrom")).toBeVisible()
     await expect(page.locator("#dateTo")).toBeVisible()
 
-    // dateTo auf morgen erweitern, damit unser heute angelegter Auftrag
-    // im Filter `createdAt: { lte: dateTo }` enthalten ist.
-    // BEKANNTE UI-DEVIATION (closing-pass 2026-05-06): der Default-`dateTo`
-    // ist `today` und parst zu Mitternacht UTC — Aufträge, die nach
-    // Mitternacht erstellt wurden, fallen aus dem Filter raus. Saubere
-    // Lösung: Backend interpretiert `dateTo` als Tagesende (`+1 day` oder
-    // `<` statt `<=`). Bis dahin: Test umgeht es via dateTo=morgen.
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowIso = tomorrow.toISOString().split("T")[0]!
-    await page.locator("#dateTo").fill(tomorrowIso)
+    // FIX-AGG-1 verified: der Default-Filter `dateTo = today` schließt
+    // jetzt auch Aufträge ein, die heute erstellt wurden (Backend bumpt
+    // dateTo intern auf den nächsten Tag und vergleicht via `<`). Der
+    // Test verlässt sich darum auf die Default-Filter-Range und prüft,
+    // dass unser heute angelegter Auftrag im Aggregat erscheint.
 
-    // Standard-Tab "Pro Kunde" — die `dimensionLabel` für customer wird
-    // korrekt als Customer-String aus `Order.customer` zurückgegeben.
-    // Für `order_type` liefert die Aggregator-Funktion derzeit den
-    // OrderType-UUID statt des Namens (separate UI-Deviation, dokumentiert
-    // im Plan), darum testen wir hier mit der Customer-Dimension.
-    await page.getByRole("tab", { name: /Pro Kunde/ }).click()
-    await expect(page.getByRole("tab", { name: /Pro Kunde/ })).toHaveAttribute(
-      "data-state",
-      "active",
-    )
+    // FIX-AGG-2 verified: die `Pro Auftragstyp`-Dimension liefert jetzt
+    // human-readable Labels (`{code} - {name}`) statt der OrderType-UUID.
+    await page.getByRole("tab", { name: /Pro Auftragstyp/ }).click()
+    await expect(
+      page.getByRole("tab", { name: /Pro Auftragstyp/ }),
+    ).toHaveAttribute("data-state", "active")
 
-    // Tabelle erscheint mit dem Customer "E2E Dashboard Kunde" als
-    // Dimension-Label (das ist der Wert von `Order.customer`).
-    const dimensionRow = page
+    // Erwartet: Tabelle hat einen Eintrag für unseren OrderType
+    // ("E2E Notdienst …"). Vorher hätte hier eine UUID gestanden.
+    const otRow = page
       .locator("table tbody tr")
-      .filter({ hasText: "E2E Dashboard Kunde" })
+      .filter({ hasText: OT_NAME })
       .first()
-    await expect(dimensionRow).toBeVisible({ timeout: 15_000 })
+    await expect(otRow).toBeVisible({ timeout: 15_000 })
 
     // Klick → Drill-Sheet öffnet
-    await dimensionRow.click()
+    await otRow.click()
     const drillSheet = page.locator(
       '[data-slot="sheet-content"][data-state="open"]',
     )
     await drillSheet.waitFor({ state: "visible" })
-    // BEKANNTE UI-DEVIATION (closing-pass 2026-05-06): die Aggregator-
-    // Funktion `aggregateByDimension` returniert `DimensionAggregate`-Objekte
-    // ohne `orders[]`-Feld. Die Reports-Page extrahiert `row.orders ?? []`
-    // und übergibt also immer eine leere Liste an `NkDimensionDrillSheet`.
-    // Saubere Lösung: Aggregator returniert pro Bucket die zugeordneten
-    // Order-IDs + Codes, oder das Drill-Sheet macht einen separaten Query.
-    // Bis dahin testen wir nur, dass das Sheet öffnet + Title rendert.
     await expect(
       drillSheet.getByRole("heading", { name: "Dimensionsdetails" }),
     ).toBeVisible({ timeout: 5_000 })
-    // Order-Code/Link assertion deaktiviert bis Aggregator orders[] befüllt.
-    void orderId
-    void ORDER_CODE
+
+    // FIX-AGG-3 verified: das Drill-Sheet zeigt jetzt die underlying
+    // Orders mit Code-Link statt einer leeren Tabelle.
+    const orderCodeLink = drillSheet.getByRole("link", {
+      name: new RegExp(ORDER_CODE),
+    })
+    await expect(orderCodeLink.first()).toBeVisible({ timeout: 10_000 })
+
+    // Klick → Order-Detail mit ?tab=nachkalkulation
+    await orderCodeLink.first().click()
+    await expect(page).toHaveURL(
+      new RegExp(`/admin/orders/${orderId}\\?tab=nachkalkulation`),
+      { timeout: 10_000 },
+    )
   })
 })

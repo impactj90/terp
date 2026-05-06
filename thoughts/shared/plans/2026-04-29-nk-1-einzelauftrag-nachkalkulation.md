@@ -14,10 +14,11 @@ followup_backlog: thoughts/shared/backlog/nachkalkulation-vertragsmodi.md
 related_backlog: thoughts/shared/backlog/r2-billing-modes-flat-rate-followup.md
 ---
 
-> **Status-Hinweis (closing-pass 2026-05-06)**: NK-1 ist ehrlich done.
-> Backend + UI sind in zwei Sprints umgesetzt (2026-04-29 + 2026-05-05).
-> Im Closing-Pass 2026-05-06 wurden die letzten drei Lücken aus dem
-> Verifikations-Report geschlossen:
+> **Status-Hinweis (closing-pass 2026-05-06 + UI-Bug-Fix-Pass 2026-05-06)**:
+> NK-1 ist ehrlich, vollständig und production-quality done. Backend +
+> UI sind in zwei Sprints umgesetzt (2026-04-29 + 2026-05-05). Im
+> Closing-Pass 2026-05-06 wurden drei Lücken aus dem Verifikations-
+> Report geschlossen:
 > 1. Backlog `nachkalkulation-vertragsmodi.md` Frontmatter aktualisiert
 >    (`source_plan` + `related_research` zeigen jetzt auf reale Pfade).
 > 2. **Demo-Bewegungsdaten** (`seedNkBewegungsdaten`) implementiert —
@@ -29,6 +30,15 @@ related_backlog: thoughts/shared/backlog/r2-billing-modes-flat-rate-followup.md
 >    Test deckt die Counts ab.
 > 3. **E2E-Specs 88–92 grün** gegen laufenden Dev-Server (32 Tests in
 >    3.1min). Selektor-Fixes + UI-Bug-Dokumentation in Deviations.
+>
+> Im UI-Bug-Fix-Pass 2026-05-06 (am selben Tag) wurden alle vier in
+> der Closing-Pass-Deviation dokumentierten UI-Bugs implementiert:
+> NK-1-FIX-AGG-1 (dateTo als Tagesende), NK-1-FIX-AGG-2 (order_type-
+> Label aus DB statt UUID), NK-1-FIX-AGG-3 (DimensionAggregate.orders[]
+> befüllt), NK-1-FIX-FORM-1 (activities.update akzeptiert Pricing-
+> Felder mit Permission-Gating). Spec-Assertions verschärft, 32/32
+> E2E weiterhin grün, 56/56 Service-Tests grün. Siehe Deviation-
+> Sektion "UI-Bug-Fixes 2026-05-06" für Details.
 >
 > Decision 30 wurde implizit verifiziert durch das erfolgreiche Schreiben
 > der Phase-1-Migration und das Funktionieren des Aggregators in
@@ -5042,6 +5052,59 @@ DEFERRED in eigenen Backlog-Tickets.
 - `NK-1-FIX-FORM-1`: Activity-Form-Sheet im Edit-Modus muss
   `updatePricing` separat aufrufen, oder Schema +
   Permission-Check anpassen.
+
+### UI-Bug-Fixes 2026-05-06 (closing-pass-followup)
+
+Alle vier oben benannten Folge-Tickets wurden in einem dedizierten
+Bug-Fix-Pass am selben Tag implementiert. Die abgeschwächten
+Spec-Assertions im Closing-Pass sind wieder strikt.
+
+**FIX-AGG-1**: `aggregateByDimension` bumpt `dateTo` jetzt intern
+um einen Tag und vergleicht mit `<` statt `<=`. Aufträge, die am
+Filter-Endtag erstellt wurden, sind jetzt im Range. Test-Coverage:
+neue Test-Datei `nk-aggregator.test.ts > "FIX-AGG-1: dateTo
+includes orders created on the filter's last day"`.
+
+**FIX-AGG-2**: `aggregateByDimension` löst Labels für die
+`order_type`-Dimension via separater `prisma.orderType.findMany`-
+Query auf — Format: `{code} - {name}`. Analog wurde auch die
+`service_object`-Dimension aufgewertet (Format: `{number} —
+{name}`). Test-Coverage: zwei neue Tests im selben Block.
+
+**FIX-AGG-3**: Neuer optionaler Sub-Type `DimensionAggregateOrder`
+(orderId, code, name, db2Percent, hourlyMargin) und `orders[]`-Feld
+auf `DimensionAggregate`. Aggregator füllt das Array per Bucket
+mit allen enthaltenen Aufträgen plus per-Order-Margin-Berechnung.
+Drill-Sheet zeigt jetzt Order-Codes mit Detail-Link statt einer
+leeren Tabelle. Test-Coverage: neuer Test im selben Block prüft
+`orders.length`, `code`, `name`.
+
+**FIX-FORM-1**: `activities.update` tRPC-Schema akzeptiert jetzt
+optionale Pricing-Felder. Procedure führt einen Runtime-
+Permission-Check durch — wenn das Payload mindestens eine
+Pricing-Spalte enthält, MUSS der User zusätzlich
+`activities.manage_pricing` haben (sonst 403). Service-Funktion
+`activity-service.update` erweitert um Pricing-Block: merged mit
+existierenden Werten, validiert via `validatePricing`, schreibt
+in einer einzigen `repo.update`-Operation. Test-Coverage: 3 neue
+Tests in `activity-service.pricing.test.ts` (FIX-FORM-1 happy-
+path, validation, merge mit Name-Update).
+
+**Spec-Assertions verschärft**:
+- Spec 88 (`Activity PER_UNIT EDIT switching`) erwartet jetzt
+  `pricingType = HOURLY` + `hourlyRate = 70` + `unit = null` nach
+  dem Speichern (statt vorher: weiterhin `PER_UNIT`).
+- Spec 91 (`Reports-Page: 4 Dimensions-Tabs + Filter + Drill`)
+  nutzt wieder den Default-`dateTo` (kein Tomorrow-Workaround mehr),
+  klickt auf `Pro Auftragstyp`-Tab statt `Pro Kunde`, erwartet das
+  human-readable OrderType-Label statt UUID, und prüft, dass das
+  Drill-Sheet den Order-Code-Link zeigt + Klick zur Order-Detail-
+  Page mit `?tab=nachkalkulation` führt.
+
+**Verifikation**: 32/32 E2E-Tests grün gegen Dev-Server in 3.3 min.
+56/56 Service-Tests grün (NK-Aggregator + Activity-Pricing +
+Order-Target + OrderBookings + Demo-Tenant-Integration). Typecheck
+clean für alle vier modifizierten Files.
 
 ---
 

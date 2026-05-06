@@ -365,15 +365,13 @@ test.describe.serial("UC-NK-88: NK-1 Stammdaten", () => {
       page.locator('[data-slot="sheet-content"][data-state="open"]'),
     ).toHaveCount(0, { timeout: 10_000 })
 
-    // BEKANNTE UI-DEVIATION (closing-pass 2026-05-06): activities.update
-    // tRPC akzeptiert per Decision 29 *keine* Pricing-Felder — die werden
-    // serverseitig zod-stripped. Der Form-Sheet sendet sie trotzdem, also
-    // bleibt die Activity in der DB beim alten pricingType. Fix erfordert
-    // entweder einen separaten updatePricing-Call im Form-Sheet ODER
-    // tRPC-Schema-Aufweitung mit zusätzlicher Permission-Prüfung. Bis dahin
-    // dokumentieren wir die Realität: pricingType = PER_UNIT bleibt.
+    // FIX-FORM-1 verified (closing-pass-followup 2026-05-06): activities.update
+    // akzeptiert jetzt Pricing-Felder im selben Payload. Permission-Check
+    // `activities.manage_pricing` erfolgt server-seitig in der Procedure.
+    // Der Admin hat alle Permissions, also persistiert der Wechsel hier.
     const dbAfterEdit = await getActivityByCode(ACT_UNIT)
-    expect(dbAfterEdit!.pricingType).toBe("PER_UNIT")
-    expect(dbAfterEdit!.unit).toBe("lfm")
+    expect(dbAfterEdit!.pricingType).toBe("HOURLY")
+    expect(dbAfterEdit!.hourlyRate).toBe(70)
+    expect(dbAfterEdit!.unit).toBeNull()
   })
 })

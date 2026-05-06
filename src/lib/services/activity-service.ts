@@ -16,7 +16,65 @@ const TRACKED_FIELDS = [
   "name",
   "description",
   "isActive",
+  // NK-1 Pricing fields (Decision 7, Decision 29)
+  "pricingType",
+  "flatRate",
+  "hourlyRate",
+  "unit",
+  "calculatedHourEquivalent",
 ]
+
+export type ActivityPricingTypeInput = "HOURLY" | "FLAT_RATE" | "PER_UNIT"
+
+/**
+ * Validate Activity pricing fields against `pricingType` (NK-1, Decision 7).
+ *
+ * Rules:
+ * - FLAT_RATE → `flatRate` is required (>= 0)
+ * - PER_UNIT  → `unit` is required
+ * - HOURLY    → `hourlyRate` is OPTIONAL (lookup-resolver fallback path)
+ * - all numeric rates must be >= 0 when set
+ * - calculatedHourEquivalent must be > 0 when set
+ *
+ * Throws ActivityValidationError on any violation.
+ */
+export function validatePricing(input: {
+  pricingType?: ActivityPricingTypeInput
+  flatRate?: number | null
+  hourlyRate?: number | null
+  unit?: string | null
+  calculatedHourEquivalent?: number | null
+}) {
+  const pt = input.pricingType ?? "HOURLY"
+  if (pt === "FLAT_RATE") {
+    if (input.flatRate == null) {
+      throw new ActivityValidationError(
+        "FLAT_RATE-Aktivität benötigt flatRate",
+      )
+    }
+  }
+  if (pt === "PER_UNIT") {
+    if (input.unit == null || input.unit.trim().length === 0) {
+      throw new ActivityValidationError(
+        "PER_UNIT-Aktivität benötigt unit",
+      )
+    }
+  }
+  if (input.flatRate != null && input.flatRate < 0) {
+    throw new ActivityValidationError("flatRate must be >= 0")
+  }
+  if (input.hourlyRate != null && input.hourlyRate < 0) {
+    throw new ActivityValidationError("hourlyRate must be >= 0")
+  }
+  if (
+    input.calculatedHourEquivalent != null &&
+    input.calculatedHourEquivalent <= 0
+  ) {
+    throw new ActivityValidationError(
+      "calculatedHourEquivalent must be > 0 when set",
+    )
+  }
+}
 
 // --- Error Classes ---
 
@@ -70,6 +128,12 @@ export async function create(
     code: string
     name: string
     description?: string
+    // NK-1 Pricing fields (Decision 7, Decision 29)
+    pricingType?: ActivityPricingTypeInput
+    flatRate?: number | null
+    hourlyRate?: number | null
+    unit?: string | null
+    calculatedHourEquivalent?: number | null
   },
   audit?: AuditContext
 ) {
@@ -84,6 +148,9 @@ export async function create(
   if (name.length === 0) {
     throw new ActivityValidationError("Activity name is required")
   }
+
+  // Validate pricing block
+  validatePricing(input)
 
   // Check code uniqueness within tenant
   const existingByCode = await repo.findByCode(prisma, tenantId, code)
@@ -100,6 +167,11 @@ export async function create(
     name,
     description,
     isActive: true,
+    pricingType: input.pricingType ?? "HOURLY",
+    flatRate: input.flatRate ?? null,
+    hourlyRate: input.hourlyRate ?? null,
+    unit: input.unit?.trim() || null,
+    calculatedHourEquivalent: input.calculatedHourEquivalent ?? null,
   })
 
   if (audit) {
@@ -128,6 +200,15 @@ export async function update(
     name?: string
     description?: string | null
     isActive?: boolean
+    // NK-1-FIX-FORM-1 (closing-pass-followup 2026-05-06): pricing fields
+    // are accepted in the same payload now. The router still gates
+    // pricing changes behind `activities.manage_pricing` permission per
+    // Decision 29 — at this service layer we just persist what we get.
+    pricingType?: ActivityPricingTypeInput
+    flatRate?: number | null
+    hourlyRate?: number | null
+    unit?: string | null
+    calculatedHourEquivalent?: number | null
   },
   audit?: AuditContext
 ) {
@@ -181,6 +262,58 @@ export async function update(
     data.isActive = input.isActive
   }
 
+  // NK-1-FIX-FORM-1: handle pricing fields in the same atomic update.
+  // Cross-field validation merges the new values with the existing record
+  // so users can patch a subset of fields without losing the others.
+  const hasPricingChange =
+    input.pricingType !== undefined ||
+    input.flatRate !== undefined ||
+    input.hourlyRate !== undefined ||
+    input.unit !== undefined ||
+    input.calculatedHourEquivalent !== undefined
+  if (hasPricingChange) {
+    const merged: {
+      pricingType: ActivityPricingTypeInput
+      flatRate: number | null
+      hourlyRate: number | null
+      unit: string | null
+      calculatedHourEquivalent: number | null
+    } = {
+      pricingType:
+        input.pricingType ??
+        (existing.pricingType as ActivityPricingTypeInput),
+      flatRate:
+        input.flatRate !== undefined
+          ? input.flatRate
+          : existing.flatRate == null
+            ? null
+            : Number(existing.flatRate),
+      hourlyRate:
+        input.hourlyRate !== undefined
+          ? input.hourlyRate
+          : existing.hourlyRate == null
+            ? null
+            : Number(existing.hourlyRate),
+      unit: input.unit !== undefined ? input.unit : existing.unit,
+      calculatedHourEquivalent:
+        input.calculatedHourEquivalent !== undefined
+          ? input.calculatedHourEquivalent
+          : existing.calculatedHourEquivalent == null
+            ? null
+            : Number(existing.calculatedHourEquivalent),
+    }
+    validatePricing(merged)
+    if (input.pricingType !== undefined) data.pricingType = input.pricingType
+    if (input.flatRate !== undefined) data.flatRate = input.flatRate
+    if (input.hourlyRate !== undefined) data.hourlyRate = input.hourlyRate
+    if (input.unit !== undefined) {
+      data.unit = input.unit === null ? null : input.unit.trim() || null
+    }
+    if (input.calculatedHourEquivalent !== undefined) {
+      data.calculatedHourEquivalent = input.calculatedHourEquivalent
+    }
+  }
+
   const updated = (await repo.update(prisma, tenantId, input.id, data))!
 
   if (audit) {
@@ -200,6 +333,104 @@ export async function update(
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     }).catch(err => console.error('[AuditLog] Failed:', err))
+  }
+
+  return updated
+}
+
+/**
+ * Update Activity pricing fields only (NK-1, Decision 29).
+ *
+ * Gated by `activities.manage_pricing` at the router layer; the service
+ * accepts the input as long as it validates against `validatePricing`.
+ *
+ * Existing CRUD `update` does NOT touch pricing fields.
+ */
+export async function updatePricing(
+  prisma: PrismaClient,
+  tenantId: string,
+  input: {
+    id: string
+    pricingType?: ActivityPricingTypeInput
+    flatRate?: number | null
+    hourlyRate?: number | null
+    unit?: string | null
+    calculatedHourEquivalent?: number | null
+  },
+  audit?: AuditContext,
+) {
+  const existing = await repo.findById(prisma, tenantId, input.id)
+  if (!existing) {
+    throw new ActivityNotFoundError()
+  }
+
+  // Merge with existing values for cross-field validation. The user
+  // may only patch a subset of pricing fields; the existing record
+  // determines defaults.
+  const merged: {
+    pricingType: ActivityPricingTypeInput
+    flatRate: number | null
+    hourlyRate: number | null
+    unit: string | null
+    calculatedHourEquivalent: number | null
+  } = {
+    pricingType:
+      input.pricingType ?? (existing.pricingType as ActivityPricingTypeInput),
+    flatRate:
+      input.flatRate !== undefined
+        ? input.flatRate
+        : existing.flatRate == null
+          ? null
+          : Number(existing.flatRate),
+    hourlyRate:
+      input.hourlyRate !== undefined
+        ? input.hourlyRate
+        : existing.hourlyRate == null
+          ? null
+          : Number(existing.hourlyRate),
+    unit: input.unit !== undefined ? input.unit : existing.unit,
+    calculatedHourEquivalent:
+      input.calculatedHourEquivalent !== undefined
+        ? input.calculatedHourEquivalent
+        : existing.calculatedHourEquivalent == null
+          ? null
+          : Number(existing.calculatedHourEquivalent),
+  }
+
+  validatePricing(merged)
+
+  const data: Record<string, unknown> = {}
+  if (input.pricingType !== undefined) data.pricingType = input.pricingType
+  if (input.flatRate !== undefined) data.flatRate = input.flatRate
+  if (input.hourlyRate !== undefined) data.hourlyRate = input.hourlyRate
+  if (input.unit !== undefined) {
+    data.unit = input.unit === null ? null : input.unit.trim() || null
+  }
+  if (input.calculatedHourEquivalent !== undefined) {
+    data.calculatedHourEquivalent = input.calculatedHourEquivalent
+  }
+
+  const updated = (await repo.update(prisma, tenantId, input.id, data))!
+
+  if (audit) {
+    const changes = auditLog.computeChanges(
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      TRACKED_FIELDS,
+    )
+    await auditLog
+      .log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "update_pricing",
+        entityType: "activity",
+        entityId: input.id,
+        entityName: updated.name ?? null,
+        changes,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      })
+      .catch((err) => console.error("[AuditLog] Failed:", err))
   }
 
   return updated
