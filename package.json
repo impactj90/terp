@@ -97,7 +97,7 @@
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.6",
     "next": "^16.2.3",
-    "next-intl": "^4.7.0",
+    "next-intl": "^4.9.2",
     "nodemailer": "^8.0.5",
     "openapi-fetch": "^0.17.0",
     "otpauth": "^9.3.4",
