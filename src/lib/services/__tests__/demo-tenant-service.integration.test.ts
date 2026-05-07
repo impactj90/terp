@@ -181,7 +181,9 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
       expect(diffDays).toBeGreaterThan(13)
       expect(diffDays).toBeLessThan(15)
 
-      // 4 tenant_modules attributed to the platform fixture
+      // 5 tenant_modules attributed to the platform fixture (4 from the
+      // platform router's per-tenant default set + `nachkalkulation` from
+      // the showcase template's `modulesToEnable` (NK-1 Decision 32))
       const modules = await prisma.tenantModule.findMany({
         where: { tenantId: result.tenantId },
       })
@@ -189,6 +191,7 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         "billing",
         "core",
         "crm",
+        "nachkalkulation",
         "warehouse",
       ])
       for (const m of modules) {
@@ -341,10 +344,13 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         created.tenantId,
         { discardData: false },
       )
+      // NK-1 (Decision 32): showcase template auto-enables nachkalkulation,
+      // so the convert-snapshot must include it as a 5th entry.
       expect(result.snapshottedModules.sort()).toEqual([
         "billing",
         "core",
         "crm",
+        "nachkalkulation",
         "warehouse",
       ])
       expect(result.originalTemplate).toBe(created.demoTemplate)
@@ -387,7 +393,8 @@ describe.skipIf(!HAS_DB)("demo-tenant-service integration", () => {
         created.tenantId,
         { discardData: true },
       )
-      expect(result.snapshottedModules.length).toBe(4)
+      // NK-1 (Decision 32): 4 platform-defaults + nachkalkulation = 5
+      expect(result.snapshottedModules.length).toBe(5)
 
       // Tenant stays, is no longer a demo
       const tenant = await prisma.tenant.findUnique({

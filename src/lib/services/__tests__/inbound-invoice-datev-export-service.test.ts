@@ -197,6 +197,7 @@ describe.sequential("DATEV export integration", () => {
     // Add a line item with 19% VAT
     await prisma.inboundInvoiceLineItem.create({
       data: {
+        tenantId: TEST_TENANT_ID,
         invoiceId: invoice.id,
         position: 1,
         description: "Büromaterial",

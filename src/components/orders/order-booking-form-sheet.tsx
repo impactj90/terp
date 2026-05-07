@@ -51,6 +51,7 @@ interface FormState {
   hours: string
   minutes: string
   description: string
+  quantity: string
 }
 
 function getTodayDate(): string {
@@ -65,6 +66,7 @@ const INITIAL_STATE: FormState = {
   hours: '0',
   minutes: '0',
   description: '',
+  quantity: '',
 }
 
 export function OrderBookingFormSheet({
@@ -106,6 +108,7 @@ export function OrderBookingFormSheet({
           (booking as unknown as { work_report_id?: string | null; workReportId?: string | null })
             .workReportId ??
           ''
+        const qty = (booking as unknown as { quantity?: number | null }).quantity
         setForm({
           employeeId: booking.employee_id || '',
           activityId: booking.activity_id || '',
@@ -114,6 +117,7 @@ export function OrderBookingFormSheet({
           hours: hours.toString(),
           minutes: minutes.toString(),
           description: booking.description || '',
+          quantity: qty != null ? String(qty) : '',
         })
       } else {
         setForm(INITIAL_STATE)
@@ -121,6 +125,13 @@ export function OrderBookingFormSheet({
       setError(null)
     }
   }, [open, booking])
+
+  // Find selected activity to drive PER_UNIT conditional UI
+  const selectedActivity = activities.find(
+    (a) => a.id === form.activityId,
+  ) as { id: string; pricingType?: string; unit?: string | null } | undefined
+
+  const isPerUnit = selectedActivity?.pricingType === 'PER_UNIT'
 
   function validateForm(formData: FormState): string[] {
     const errors: string[] = []
@@ -136,6 +147,13 @@ export function OrderBookingFormSheet({
     const totalMinutes = parseInt(formData.hours || '0') * 60 + parseInt(formData.minutes || '0')
     if (totalMinutes <= 0) {
       errors.push(t('validationTimeRequired'))
+    }
+
+    if (isPerUnit) {
+      const qty = formData.quantity ? Number(formData.quantity) : 0
+      if (Number.isNaN(qty) || qty <= 0) {
+        errors.push(t('validationQuantityRequired'))
+      }
     }
 
     return errors
@@ -155,6 +173,10 @@ export function OrderBookingFormSheet({
     // Empty string -> null (clears the assignment); a UUID -> set.
     const workReportId = form.workReportId.trim().length > 0 ? form.workReportId : null
 
+    const quantityForPayload = isPerUnit && form.quantity
+      ? Number(form.quantity)
+      : undefined
+
     try {
       if (isEdit && booking) {
         await updateMutation.mutateAsync({
@@ -164,6 +186,7 @@ export function OrderBookingFormSheet({
           bookingDate: form.bookingDate,
           timeMinutes: timeMinutes,
           description: form.description.trim() || undefined,
+          quantity: quantityForPayload ?? null,
         })
       } else {
         await createMutation.mutateAsync({
@@ -174,6 +197,7 @@ export function OrderBookingFormSheet({
           bookingDate: form.bookingDate,
           timeMinutes: timeMinutes,
           description: form.description.trim() || undefined,
+          quantity: quantityForPayload,
         })
       }
 
@@ -239,6 +263,30 @@ export function OrderBookingFormSheet({
                   </SelectContent>
                 </Select>
               </div>
+
+              {isPerUnit && (
+                <div className="space-y-2">
+                  <Label htmlFor="orderBookingQuantity">
+                    {t('fieldQuantity')} *
+                    {selectedActivity?.unit ? ` (${selectedActivity.unit})` : ''}
+                  </Label>
+                  <Input
+                    id="orderBookingQuantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.quantity}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, quantity: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('fieldQuantityHint')}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 {/*

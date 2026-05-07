@@ -10,6 +10,10 @@ import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
 import { checkRelatedEmployeeDataScope } from "@/lib/auth/data-scope"
 import type { DataScope } from "@/lib/auth/middleware"
+import {
+  resolveLaborRateExtended,
+  type HourlyRateSource,
+} from "./labor-rate-resolver"
 
 // --- Audit ---
 
@@ -17,7 +21,58 @@ const TRACKED_FIELDS = [
   "orderId",
   "employeeId",
   "bookingDate",
+  // NK-1 (Decision 14, Decision 26)
+  "hourlyRateAtBooking",
+  "hourlyRateSourceAtBooking",
+  "quantity",
 ]
+
+/**
+ * NK-1 (Decision 14): resolve the labor rate for a booking and
+ * return both the rate and the source-of-record. Used by `create`/
+ * `update` to populate the snapshot fields.
+ */
+async function resolveBookingHourlyRate(
+  prisma: PrismaClient,
+  tenantId: string,
+  args: {
+    activityId: string | null
+    orderId: string
+    employeeId: string
+  },
+): Promise<{ rate: number | null; source: HourlyRateSource }> {
+  const [activity, order, employee] = await Promise.all([
+    args.activityId
+      ? prisma.activity.findFirst({
+          where: { id: args.activityId, tenantId },
+          select: {
+            pricingType: true,
+            flatRate: true,
+            hourlyRate: true,
+            unit: true,
+          },
+        })
+      : Promise.resolve(null),
+    prisma.order.findFirst({
+      where: { id: args.orderId, tenantId },
+      select: { billingRatePerHour: true },
+    }),
+    prisma.employee.findFirst({
+      where: { id: args.employeeId, tenantId },
+      select: {
+        hourlyRate: true,
+        wageGroup: { select: { billingHourlyRate: true } },
+      },
+    }),
+  ])
+
+  return resolveLaborRateExtended({
+    bookingActivity: activity,
+    orderRate: order?.billingRatePerHour ?? null,
+    employeeWageGroupRate: employee?.wageGroup?.billingHourlyRate ?? null,
+    employeeRate: employee?.hourlyRate ?? null,
+  })
+}
 
 // --- Error Classes ---
 
@@ -75,6 +130,8 @@ export async function create(
     bookingDate: string
     timeMinutes: number
     description?: string
+    // NK-1 (Decision 26): PER_UNIT quantity
+    quantity?: number | null
   },
   audit?: AuditContext
 ) {
@@ -90,17 +147,38 @@ export async function create(
     throw new OrderBookingValidationError("Order not found")
   }
 
-  // Validate activity exists in tenant (if provided)
+  // Validate activity exists in tenant (if provided), enforce PER_UNIT
+  // quantity (NK-1, Decision 26).
+  let activityRecord: {
+    id: string
+    pricingType: "HOURLY" | "FLAT_RATE" | "PER_UNIT"
+  } | null = null
   if (input.activityId) {
-    const activity = await repo.findActivity(
-      prisma,
-      tenantId,
-      input.activityId
-    )
+    const activity = await prisma.activity.findFirst({
+      where: { id: input.activityId, tenantId },
+      select: { id: true, pricingType: true },
+    })
     if (!activity) {
       throw new OrderBookingValidationError("Activity not found")
     }
+    activityRecord = activity
+    if (activity.pricingType === "PER_UNIT") {
+      if (input.quantity == null || Number(input.quantity) <= 0) {
+        throw new OrderBookingValidationError(
+          "PER_UNIT-Aktivität benötigt quantity",
+        )
+      }
+    }
   }
+
+  // NK-1 Snapshot (Decision 14): resolve and persist the rate at
+  // booking time so subsequent rate changes don't retroactively
+  // alter historical aggregates.
+  const resolved = await resolveBookingHourlyRate(prisma, tenantId, {
+    activityId: input.activityId ?? null,
+    orderId: input.orderId,
+    employeeId: input.employeeId,
+  })
 
   // Create order booking
   const created = await repo.create(prisma, {
@@ -114,6 +192,13 @@ export async function create(
     source: "manual",
     createdBy: userId,
     updatedBy: userId,
+    // NK-1 fields
+    hourlyRateAtBooking: resolved.rate,
+    hourlyRateSourceAtBooking: resolved.source,
+    quantity:
+      activityRecord?.pricingType === "PER_UNIT"
+        ? (input.quantity ?? null)
+        : null,
   })
 
   if (audit) {
@@ -150,6 +235,8 @@ export async function update(
     bookingDate?: string
     timeMinutes?: number
     description?: string | null
+    // NK-1 (Decision 26)
+    quantity?: number | null
   },
   audit?: AuditContext,
   dataScope?: DataScope
@@ -183,19 +270,42 @@ export async function update(
     data.orderId = input.orderId
   }
 
+  // Determine the activity used for PER_UNIT-validation and snapshot
+  // resolution. Defaults to the existing booking's activityId, then
+  // is overridden if the caller is patching activityId.
+  const existingTyped = existing as unknown as {
+    employeeId: string
+    orderId: string
+    activityId: string | null
+  }
+  let effectiveActivityId: string | null = existingTyped.activityId
+  let effectiveActivity: {
+    id: string
+    pricingType: "HOURLY" | "FLAT_RATE" | "PER_UNIT"
+  } | null = null
+
   if (input.activityId !== undefined) {
     if (input.activityId !== null) {
       // Validate activity exists in tenant
-      const activity = await repo.findActivity(
-        prisma,
-        tenantId,
-        input.activityId
-      )
+      const activity = await prisma.activity.findFirst({
+        where: { id: input.activityId, tenantId },
+        select: { id: true, pricingType: true },
+      })
       if (!activity) {
         throw new OrderBookingValidationError("Activity not found")
       }
+      effectiveActivity = activity
+      effectiveActivityId = activity.id
+    } else {
+      effectiveActivityId = null
     }
     data.activityId = input.activityId
+  } else if (existingTyped.activityId) {
+    const activity = await prisma.activity.findFirst({
+      where: { id: existingTyped.activityId, tenantId },
+      select: { id: true, pricingType: true },
+    })
+    effectiveActivity = activity
   }
 
   if (input.workReportId !== undefined) {
@@ -233,6 +343,50 @@ export async function update(
     data.description =
       input.description === null ? null : input.description.trim()
   }
+
+  // NK-1 (Decision 26): PER_UNIT activities require quantity > 0.
+  // We validate against the *effective* activity (post-update if
+  // activityId is being patched, else the existing one).
+  if (effectiveActivity?.pricingType === "PER_UNIT") {
+    const effectiveQuantity =
+      input.quantity !== undefined
+        ? input.quantity
+        : (existing as unknown as { quantity: { toString(): string } | null })
+            .quantity
+    const qNum = effectiveQuantity == null ? null : Number(effectiveQuantity)
+    if (qNum == null || qNum <= 0) {
+      throw new OrderBookingValidationError(
+        "PER_UNIT-Aktivität benötigt quantity",
+      )
+    }
+  }
+
+  if (input.quantity !== undefined) {
+    // Only persist quantity for PER_UNIT activities; otherwise null
+    data.quantity =
+      effectiveActivity?.pricingType === "PER_UNIT"
+        ? input.quantity
+        : null
+  } else if (
+    input.activityId !== undefined &&
+    effectiveActivity?.pricingType !== "PER_UNIT"
+  ) {
+    // If the activity is being changed away from PER_UNIT, clear quantity
+    data.quantity = null
+  }
+
+  // NK-1 Snapshot (Decision 14): re-resolve the labor rate on every
+  // update because activityId / orderId / employee data may have
+  // changed since the previous snapshot.
+  const targetOrderId = (input.orderId ?? existingTyped.orderId) as string
+  const targetEmployeeId = existingTyped.employeeId
+  const resolved = await resolveBookingHourlyRate(prisma, tenantId, {
+    activityId: effectiveActivityId,
+    orderId: targetOrderId,
+    employeeId: targetEmployeeId,
+  })
+  data.hourlyRateAtBooking = resolved.rate
+  data.hourlyRateSourceAtBooking = resolved.source
 
   // Update
   await repo.update(prisma, tenantId, input.id, data)

@@ -196,6 +196,14 @@ export function EmployeeDetailSheet({
                   label={t('labelTariff')}
                   value={employee.tariff?.name}
                 />
+                <DetailRow
+                  label={t('labelWageGroup')}
+                  value={
+                    (employee as unknown as { wageGroup?: { code: string; name: string } | null }).wageGroup
+                      ? `${(employee as unknown as { wageGroup: { code: string; name: string } }).wageGroup.code} - ${(employee as unknown as { wageGroup: { code: string; name: string } }).wageGroup.name}`
+                      : undefined
+                  }
+                />
                 <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate as unknown as string)} />
                 <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate as unknown as string)} />
 

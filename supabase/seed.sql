@@ -4430,18 +4430,18 @@ INSERT INTO inbound_invoices (
 ON CONFLICT (id) DO NOTHING;
 
 -- Line items for ER-2 (ZUGFeRD)
-INSERT INTO inbound_invoice_line_items (id, invoice_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
+INSERT INTO inbound_invoice_line_items (id, invoice_id, tenant_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
 VALUES
-  ('d4000000-0000-4000-a000-000000000001', 'd3000000-0000-4000-a000-000000000002', 1, 'PE-Granulat 500kg', 500, 'kg', 1.20, 600.00, 19, 114.00, 1),
-  ('d4000000-0000-4000-a000-000000000002', 'd3000000-0000-4000-a000-000000000002', 2, 'PP-Folie 200m Rolle', 4, 'Stk', 62.50, 250.00, 19, 47.50, 2)
+  ('d4000000-0000-4000-a000-000000000001', 'd3000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 1, 'PE-Granulat 500kg', 500, 'kg', 1.20, 600.00, 19, 114.00, 1),
+  ('d4000000-0000-4000-a000-000000000002', 'd3000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001', 2, 'PP-Folie 200m Rolle', 4, 'Stk', 62.50, 250.00, 19, 47.50, 2)
 ON CONFLICT (id) DO NOTHING;
 
 -- Line items for ER-3
-INSERT INTO inbound_invoice_line_items (id, invoice_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
+INSERT INTO inbound_invoice_line_items (id, invoice_id, tenant_id, position, description, quantity, unit, unit_price_net, total_net, vat_rate, vat_amount, sort_order)
 VALUES
-  ('d4000000-0000-4000-a000-000000000003', 'd3000000-0000-4000-a000-000000000003', 1, 'Kabelkanal 2m (10 Stk)', 10, 'Stk', 12.00, 120.00, 19, 22.80, 1),
-  ('d4000000-0000-4000-a000-000000000004', 'd3000000-0000-4000-a000-000000000003', 2, 'Sicherungsautomat B16', 20, 'Stk', 8.50, 170.00, 19, 32.30, 2),
-  ('d4000000-0000-4000-a000-000000000005', 'd3000000-0000-4000-a000-000000000003', 3, 'Leitungsschutzschalter 3-polig', 5, 'Stk', 26.00, 130.00, 19, 24.70, 3)
+  ('d4000000-0000-4000-a000-000000000003', 'd3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 1, 'Kabelkanal 2m (10 Stk)', 10, 'Stk', 12.00, 120.00, 19, 22.80, 1),
+  ('d4000000-0000-4000-a000-000000000004', 'd3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 2, 'Sicherungsautomat B16', 20, 'Stk', 8.50, 170.00, 19, 32.30, 2),
+  ('d4000000-0000-4000-a000-000000000005', 'd3000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001', 3, 'Leitungsschutzschalter 3-polig', 5, 'Stk', 26.00, 130.00, 19, 24.70, 3)
 ON CONFLICT (id) DO NOTHING;
 
 -- Approval step for ER-2 (pending — Dev User must approve)
@@ -5500,3 +5500,859 @@ INSERT INTO service_objects (
     '00000000-0000-0000-0000-000000000001'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- Wartung & Lieferscheine — Demo Data with Full History
+-- =============================================================
+-- Tenant: 10000000-0000-0000-0000-000000000001 (Dev Company)
+--
+-- Builds on top of the Service Objects seeded above. Adds:
+--   (1) Wartungs-Activities (ACT-WART-*)
+--   (2) Auftragsarten (Wartung / Inspektion / Reparatur)
+--   (3) Service Schedules — 6 Wartungspläne (TIME_BASED + CALENDAR_FIXED)
+--   (4) Wartungsaufträge (Orders linked to ServiceObject + ServiceSchedule)
+--   (5) Order Assignments (Techniker pro Auftrag)
+--   (6) Arbeitsscheine (WorkReports — 3 SIGNED + 2 DRAFT)
+--   (7) WorkReport Assignments
+--   (8) Stock Movements: Verbrauchsmaterial pro Wartungseinsatz
+--   (9) Lieferscheine LS-5..LS-9 (DRAFT, PRINTED, FORWARDED, CANCELLED)
+--  (10) Folge-Rechnung RE-7-W (Wartungsteile Verdichter, aus LS-7)
+--  (11) Lieferschein-Positionen
+--  (12) Lieferschein-Lagerbuchungen (DELIVERY_NOTE)
+--  (13) Reservierungen (für DRAFT-LS-5)
+--  (14) Update wh_articles current_stock
+--  (15) Bump number_sequences for delivery_note + work_report
+
+-- =============================================================
+-- (1) Wartungs-Activities
+-- =============================================================
+INSERT INTO activities (id, tenant_id, code, name, description, is_active, pricing_type, hourly_rate, unit, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000b05', '10000000-0000-0000-0000-000000000001',
+   'ACT-WART-PREV', 'Wartung präventiv',
+   'Planmäßige Wartung nach Wartungsplan (Inspektion, Reinigung, Schmierung, Verschleißteile)',
+   true, 'HOURLY', 78.00, 'Std', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b06', '10000000-0000-0000-0000-000000000001',
+   'ACT-WART-INSP', 'Inspektion / UVV-Prüfung',
+   'Sicherheitstechnische Prüfung gemäß DGUV / UVV mit Prüfprotokoll',
+   true, 'HOURLY', 92.00, 'Std', NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000b07', '10000000-0000-0000-0000-000000000001',
+   'ACT-WART-REP', 'Reparatur Störung',
+   'Außerplanmäßige Reparatur nach Störungsmeldung (Diagnose + Instandsetzung)',
+   true, 'HOURLY', 95.00, 'Std', NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- (2) Auftragsarten (OrderTypes)
+-- =============================================================
+INSERT INTO order_types (id, tenant_id, code, name, sort_order, is_active, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000d01', '10000000-0000-0000-0000-000000000001',
+   'WARTUNG', 'Wartung', 10, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000d02', '10000000-0000-0000-0000-000000000001',
+   'INSPEKTION', 'Inspektion / UVV', 20, true, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000d03', '10000000-0000-0000-0000-000000000001',
+   'REPARATUR', 'Reparatur (Störung)', 30, true, NOW(), NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- (3) Service Schedules (Wartungspläne)
+-- =============================================================
+-- 6 Pläne, die das ganze Spektrum abdecken:
+--   SCH-1: TIME_BASED 6mo, ÜBERFÄLLIG (Kälteanlage Halle A)        -> nextDueAt = -30d
+--   SCH-2: TIME_BASED 3mo, FÄLLIG (CNC, läuft gerade Wartung)      -> nextDueAt = +5d
+--   SCH-3: CALENDAR_FIXED 1y/01.11. (Gabelstapler UVV)             -> nextDueAt = 2026-11-01
+--   SCH-4: CALENDAR_FIXED 1y/15.04. (Klimaanlage Schmidt)          -> ÜBERFÄLLIG (2026-04-15)
+--   SCH-5: CALENDAR_FIXED 1y/22.08. (EMV-Prüfstand Kalibrierung)   -> nextDueAt = 2026-08-22
+--   SCH-6: TIME_BASED 12mo, OK (Verdichter — letzte Wartung 03/26) -> nextDueAt = 2027-03-15
+
+-- SCH-1 — Kälteanlage Halle A (überfällig, TIME_BASED)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '50000001-0000-4000-a000-000000000004',  -- MUE-ANL-01 Kälteanlage Halle A
+    'Halbjahreswartung Kälteanlage',
+    'Filterwechsel, Kältemittelstand, Dichtigkeitsprüfung gem. F-Gase-VO',
+    'TIME_BASED', 6, 'MONTHS', NULL,
+    '00000000-0000-0000-0000-000000000b05',  -- ACT-WART-PREV
+    '00000000-0000-0000-0000-000000000017',  -- Markus Braun
+    4.00,
+    '2025-09-12 14:00:00+02',
+    '2026-04-05 09:00:00+02',                -- ÜBERFÄLLIG (heute = 2026-05-05)
+    14,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- SCH-2 — CNC-Drehmaschine (in Wartung, TIME_BASED)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000002',
+    '10000000-0000-0000-0000-000000000001',
+    '50000001-0000-4000-a000-000000000006',  -- MUE-GER-02 CNC-Drehmaschine
+    'Quartalswartung CNC-Drehmaschine',
+    'Spindelölwechsel, Achsenkalibrierung, Kühlschmierstoff-Aufbereitung',
+    'TIME_BASED', 3, 'MONTHS', NULL,
+    '00000000-0000-0000-0000-000000000b05',  -- ACT-WART-PREV
+    '00000000-0000-0000-0000-000000000014',  -- Thomas Mueller
+    6.00,
+    '2026-02-08 16:00:00+01',
+    '2026-05-10 08:00:00+02',                -- läuft AKTUELL (heute 2026-05-05, in 5 Tagen fällig — Auftrag offen)
+    7,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- SCH-3 — Gabelstapler UVV-Prüfung (jährlich CALENDAR_FIXED)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000003',
+    '10000000-0000-0000-0000-000000000001',
+    '50000001-0000-4000-a000-000000000005',  -- MUE-GER-01 Gabelstapler
+    'UVV-Prüfung Flurförderzeug (jährlich)',
+    'Sachkundigenprüfung gem. DGUV V 68 — Hubgerüst, Bremsen, Hydraulik, Beleuchtung',
+    'CALENDAR_FIXED', 1, 'YEARS', '2025-11-01',
+    '00000000-0000-0000-0000-000000000b06',  -- ACT-WART-INSP
+    '00000000-0000-0000-0000-000000000019',  -- Stefan Lang
+    2.50,
+    '2025-11-05 11:00:00+01',
+    '2026-11-01 09:00:00+01',                -- 6 Monate Vorlauf
+    30,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- SCH-4 — Klimaanlage Schmidt (CALENDAR_FIXED, überfällig)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000004',
+    '10000000-0000-0000-0000-000000000001',
+    '50000002-0000-4000-a000-000000000001',  -- SCH-ANL-01 Klimaanlage Schmidt (DEGRADED)
+    'Frühjahrswartung Klimaanlage',
+    'Filterreinigung, Verdampfer-Desinfektion, Kondensatorwartung — vor der Sommersaison',
+    'CALENDAR_FIXED', 1, 'YEARS', '2025-04-15',
+    '00000000-0000-0000-0000-000000000b05',  -- ACT-WART-PREV
+    '00000000-0000-0000-0000-000000000017',  -- Markus Braun
+    3.00,
+    '2025-04-12 13:30:00+02',
+    '2026-04-15 09:00:00+02',                -- ÜBERFÄLLIG, Anlage zeigt Status DEGRADED
+    30,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- SCH-5 — EMV-Prüfstand Weber (jährliche Kalibrierung)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000005',
+    '10000000-0000-0000-0000-000000000001',
+    '50000003-0000-4000-a000-000000000003',  -- WEB-GER-01 EMV-Prüfstand
+    'Kalibrierung EMV-Prüfstand',
+    'DAkkS-konforme Jahreskalibrierung durch externen Dienstleister, Begleitung vor Ort',
+    'CALENDAR_FIXED', 1, 'YEARS', '2025-08-22',
+    '00000000-0000-0000-0000-000000000b06',  -- ACT-WART-INSP
+    '00000000-0000-0000-0000-000000000014',  -- Thomas Mueller
+    4.00,
+    '2025-08-22 10:00:00+02',
+    '2026-08-22 09:00:00+02',                -- Future, ~3.5 Monate
+    30,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- SCH-6 — Verdichter Kälteanlage (TIME_BASED 12mo, gerade gewartet)
+INSERT INTO service_schedules (
+    id, tenant_id, service_object_id, name, description,
+    interval_type, interval_value, interval_unit, anchor_date,
+    default_activity_id, responsible_employee_id, estimated_hours,
+    last_completed_at, next_due_at, lead_time_days,
+    is_active, created_at, updated_at, created_by_id
+) VALUES (
+    '51000000-0000-4000-a000-000000000006',
+    '10000000-0000-0000-0000-000000000001',
+    '50000001-0000-4000-a000-000000000007',  -- MUE-KOMP-01 Verdichter
+    'Jahreswartung Verdichter',
+    'Ölwechsel, Riemenspannung, Schwingungsmessung, Lagerprüfung',
+    'TIME_BASED', 12, 'MONTHS', NULL,
+    '00000000-0000-0000-0000-000000000b05',  -- ACT-WART-PREV
+    '00000000-0000-0000-0000-000000000017',  -- Markus Braun
+    3.00,
+    '2026-03-15 11:30:00+01',
+    '2027-03-15 09:00:00+01',                -- Future
+    21,
+    true, NOW(), NOW(), '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (4) Wartungsaufträge (Orders linked to ServiceObject + ServiceSchedule)
+-- =============================================================
+-- 6 Aufträge die die Wartungs-History pro Anlage zeigen:
+--   W-2025-001 — UVV Gabelstapler 11/2025                  (completed)
+--   W-2025-002 — Halbjahreswartung Kälteanlage 09/2025     (completed)
+--   W-2026-001 — Verdichter-Wartung 03/2026                (completed)
+--   W-2026-002 — CNC Quartalswartung Mai 2026              (active, läuft jetzt)
+--   W-2026-003 — Klimaanlage Schmidt Frühjahrswartung      (active, überfällig)
+--   W-2026-004 — Kälteanlage neue Halbjahreswartung        (active, überfällig)
+
+INSERT INTO orders (
+    id, tenant_id, code, name, description, status, customer,
+    cost_center_id, billing_rate_per_hour, valid_from, valid_to,
+    is_active, service_object_id, service_schedule_id, order_type_id,
+    created_at, updated_at
+) VALUES
+  ('52000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'W-2025-001', 'UVV Gabelstapler MUE-GER-01 (2025)',
+   'Jährliche Sachkundigenprüfung gem. DGUV V 68 für Linde E25-HL',
+   'completed', 'Müller Maschinenbau GmbH',
+   '00000000-0000-0000-0000-000000000c03', 92.00,
+   '2025-10-25', '2025-11-15', false,
+   '50000001-0000-4000-a000-000000000005',                  -- MUE-GER-01
+   '51000000-0000-4000-a000-000000000003',                  -- SCH-3
+   '00000000-0000-0000-0000-000000000d02',                  -- INSPEKTION
+   '2025-10-25 08:00:00+02', '2025-11-05 16:00:00+01'),
+
+  ('52000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'W-2025-002', 'Halbjahreswartung Kälteanlage (09/2025)',
+   'Filterwechsel + F-Gase-Dichtigkeitsprüfung MUE-ANL-01',
+   'completed', 'Müller Maschinenbau GmbH',
+   '00000000-0000-0000-0000-000000000c03', 78.00,
+   '2025-09-05', '2025-09-20', false,
+   '50000001-0000-4000-a000-000000000004',                  -- MUE-ANL-01
+   '51000000-0000-4000-a000-000000000001',                  -- SCH-1
+   '00000000-0000-0000-0000-000000000d01',                  -- WARTUNG
+   '2025-09-05 08:00:00+02', '2025-09-12 18:00:00+02'),
+
+  ('52000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'W-2026-001', 'Jahreswartung Verdichter MUE-KOMP-01',
+   'Ölwechsel, Riemen, Lagerprüfung — inkl. Verdichteröl + Riemensatz vor Ort verbaut',
+   'completed', 'Müller Maschinenbau GmbH',
+   '00000000-0000-0000-0000-000000000c03', 78.00,
+   '2026-03-08', '2026-03-25', false,
+   '50000001-0000-4000-a000-000000000007',                  -- MUE-KOMP-01
+   '51000000-0000-4000-a000-000000000006',                  -- SCH-6
+   '00000000-0000-0000-0000-000000000d01',                  -- WARTUNG
+   '2026-03-08 08:00:00+01', '2026-03-15 17:00:00+01'),
+
+  ('52000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   'W-2026-002', 'Quartalswartung CNC-Drehmaschine',
+   'Spindelölwechsel + Achsenkalibrierung MUE-GER-02 (Maschine in Wartung)',
+   'active', 'Müller Maschinenbau GmbH',
+   '00000000-0000-0000-0000-000000000c03', 78.00,
+   '2026-04-28', NULL, true,
+   '50000001-0000-4000-a000-000000000006',                  -- MUE-GER-02 (IN_MAINTENANCE)
+   '51000000-0000-4000-a000-000000000002',                  -- SCH-2
+   '00000000-0000-0000-0000-000000000d01',                  -- WARTUNG
+   '2026-04-28 08:00:00+02', NOW()),
+
+  ('52000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   'W-2026-003', 'Frühjahrswartung Klimaanlage Schmidt',
+   'Anlage SCH-ANL-01 zeigt Status DEGRADED — Wartung überfällig seit 15.04.2026',
+   'active', 'Schmidt & Partner OHG',
+   '00000000-0000-0000-0000-000000000c03', 78.00,
+   '2026-04-10', NULL, true,
+   '50000002-0000-4000-a000-000000000001',                  -- SCH-ANL-01
+   '51000000-0000-4000-a000-000000000004',                  -- SCH-4
+   '00000000-0000-0000-0000-000000000d01',                  -- WARTUNG
+   '2026-04-10 09:00:00+02', NOW()),
+
+  ('52000000-0000-4000-a000-000000000006', '10000000-0000-0000-0000-000000000001',
+   'W-2026-004', 'Halbjahreswartung Kälteanlage (Frühjahr 2026)',
+   'Nächste Halbjahreswartung MUE-ANL-01 — überfällig seit 05.04.2026',
+   'active', 'Müller Maschinenbau GmbH',
+   '00000000-0000-0000-0000-000000000c03', 78.00,
+   '2026-03-22', NULL, true,
+   '50000001-0000-4000-a000-000000000004',                  -- MUE-ANL-01
+   '51000000-0000-4000-a000-000000000001',                  -- SCH-1
+   '00000000-0000-0000-0000-000000000d01',                  -- WARTUNG
+   '2026-03-22 08:00:00+01', NOW())
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- (5) Order Assignments (Techniker pro Wartungsauftrag)
+-- =============================================================
+INSERT INTO order_assignments (id, tenant_id, order_id, employee_id, role, valid_from, is_active, created_at, updated_at)
+VALUES
+  -- W-2025-001 UVV Gabelstapler: Stefan (leader)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000001', '00000000-0000-0000-0000-000000000019', 'leader',
+   '2025-10-25', true, '2025-10-25 08:00:00+02', '2025-10-25 08:00:00+02'),
+
+  -- W-2025-002 Kälteanlage 09/2025: Markus (leader) + Thomas (worker)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000002', '00000000-0000-0000-0000-000000000017', 'leader',
+   '2025-09-05', true, '2025-09-05 08:00:00+02', '2025-09-05 08:00:00+02'),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000002', '00000000-0000-0000-0000-000000000014', 'worker',
+   '2025-09-05', true, '2025-09-05 08:00:00+02', '2025-09-05 08:00:00+02'),
+
+  -- W-2026-001 Verdichter 03/2026: Markus (leader)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000003', '00000000-0000-0000-0000-000000000017', 'leader',
+   '2026-03-08', true, '2026-03-08 08:00:00+01', '2026-03-08 08:00:00+01'),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000003', '00000000-0000-0000-0000-000000000019', 'worker',
+   '2026-03-08', true, '2026-03-08 08:00:00+01', '2026-03-08 08:00:00+01'),
+
+  -- W-2026-002 CNC (active): Thomas (leader)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000004', '00000000-0000-0000-0000-000000000014', 'leader',
+   '2026-04-28', true, '2026-04-28 08:00:00+02', '2026-04-28 08:00:00+02'),
+
+  -- W-2026-003 Klimaanlage Schmidt (active overdue): Markus (leader)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000005', '00000000-0000-0000-0000-000000000017', 'leader',
+   '2026-04-10', true, '2026-04-10 09:00:00+02', '2026-04-10 09:00:00+02'),
+
+  -- W-2026-004 Kälteanlage Frühjahr (overdue): Markus (leader) + Thomas (worker)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000006', '00000000-0000-0000-0000-000000000017', 'leader',
+   '2026-03-22', true, '2026-03-22 08:00:00+01', '2026-03-22 08:00:00+01'),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000006', '00000000-0000-0000-0000-000000000014', 'worker',
+   '2026-03-22', true, '2026-03-22 08:00:00+01', '2026-03-22 08:00:00+01')
+ON CONFLICT (order_id, employee_id, role) DO NOTHING;
+
+-- =============================================================
+-- (6) Arbeitsscheine (WorkReports) — 3 SIGNED + 2 DRAFT
+-- =============================================================
+-- AS-2025-001: Gabelstapler UVV signiert
+-- AS-2025-002: Kälteanlage Halbjahr 09/2025 signiert
+-- AS-2026-001: Verdichter Jahreswartung 03/2026 signiert
+-- AS-2026-002: CNC Quartalswartung — DRAFT (Techniker vor Ort)
+-- AS-2026-003: Klimaanlage Schmidt — DRAFT (Termin steht)
+
+INSERT INTO work_reports (
+    id, tenant_id, order_id, service_object_id, code,
+    visit_date, travel_minutes, work_description, status,
+    signed_at, signed_by_id, signer_name, signer_role,
+    signature_path, pdf_url,
+    travel_rate_at_sign, travel_rate_source_at_sign,
+    created_at, updated_at, created_by_id
+) VALUES
+  -- AS-2025-001 Gabelstapler UVV — SIGNED
+  ('53000000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000001', '50000001-0000-4000-a000-000000000005',
+   'AS-2025-001',
+   '2025-11-05', 35,
+   E'UVV-Prüfung gem. DGUV V 68 durchgeführt:\n- Bremsen: i.O.\n- Hubgerüst inkl. Hydraulik: i.O.\n- Beleuchtung Front+Heck: i.O.\n- Hupe + Rückfahrwarner: i.O.\n- Plakette 11/2026 angebracht.\nKeine Beanstandungen.',
+   'SIGNED',
+   '2025-11-05 14:45:00+01', '00000000-0000-0000-0000-000000000001',
+   'Hans Müller', 'Geschäftsführer',
+   'workreport-signatures/53000000-0000-4000-a000-000000000001.png',
+   'documents/work-reports/AS-2025-001.pdf',
+   45.00, 'tenant_default',
+   '2025-11-05 09:00:00+01', '2025-11-05 14:45:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- AS-2025-002 Kälteanlage 09/2025 — SIGNED
+  ('53000000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000002', '50000001-0000-4000-a000-000000000004',
+   'AS-2025-002',
+   '2025-09-12', 50,
+   E'Halbjahreswartung Kälteanlage:\n- Vor- und Nachfilter getauscht (2x F7).\n- Kältemittelfüllstand: 98% (Soll: >95%).\n- Dichtigkeitsprüfung (F-Gase-VO): keine Leckagen.\n- Schauglas: trocken/grün.\n- Verflüssiger gereinigt.\nProtokoll dem Kunden ausgehändigt.',
+   'SIGNED',
+   '2025-09-12 17:30:00+02', '00000000-0000-0000-0000-000000000001',
+   'Claudia Berger', 'Einkaufsleiterin',
+   'workreport-signatures/53000000-0000-4000-a000-000000000002.png',
+   'documents/work-reports/AS-2025-002.pdf',
+   45.00, 'tenant_default',
+   '2025-09-12 09:00:00+02', '2025-09-12 17:30:00+02', '00000000-0000-0000-0000-000000000001'),
+
+  -- AS-2026-001 Verdichter — SIGNED (mit Materialverbrauch über Lieferschein LS-7)
+  ('53000000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000003', '50000001-0000-4000-a000-000000000007',
+   'AS-2026-001',
+   '2026-03-15', 40,
+   E'Jahreswartung Verdichter Bitzer 4TES-9Y-40P:\n- Verdichteröl getauscht (15 L Bitzer BSE 170).\n- Riemensatz erneuert.\n- Schwingungsmessung an allen 3 Lagern: <2,3 mm/s (Soll <4,5).\n- Lagertemperatur: 52 °C nach 30 min Lauf.\n- Materialnachweis: siehe LS-7.\nKeine weiteren Maßnahmen erforderlich.',
+   'SIGNED',
+   '2026-03-15 16:50:00+01', '00000000-0000-0000-0000-000000000001',
+   'Hans Müller', 'Geschäftsführer',
+   'workreport-signatures/53000000-0000-4000-a000-000000000003.png',
+   'documents/work-reports/AS-2026-001.pdf',
+   45.00, 'tenant_default',
+   '2026-03-15 08:00:00+01', '2026-03-15 16:50:00+01', '00000000-0000-0000-0000-000000000001'),
+
+  -- AS-2026-002 CNC Wartung läuft AKTUELL — DRAFT
+  ('53000000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000004', '50000001-0000-4000-a000-000000000006',
+   'AS-2026-002',
+   '2026-05-04', 45,
+   E'CNC-Drehmaschine DMG NLX 2500 — Wartung läuft seit gestern.\n- Spindelöl entnommen, Probe ans Labor.\n- X-Achse vermessen: leichte Drift (0,02 mm/m).\n- Y/Z laufen einwandfrei.\nMorgen: KSS-Aufbereitung + Achsenkalibrierung X.\n[Bericht noch nicht abgeschlossen]',
+   'DRAFT',
+   NULL, NULL, NULL, NULL, NULL, NULL,
+   NULL, NULL,
+   '2026-05-04 08:00:00+02', '2026-05-04 17:00:00+02', '00000000-0000-0000-0000-000000000001'),
+
+  -- AS-2026-003 Klimaanlage Schmidt — DRAFT (Anfahrt geplant)
+  ('53000000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   '52000000-0000-4000-a000-000000000005', '50000002-0000-4000-a000-000000000001',
+   'AS-2026-003',
+   '2026-05-07', 90,
+   E'Geplanter Wartungstermin Klimaanlage Schmidt & Partner (Berlin).\nVorbereitung: Filtersatz F7 + Desinfektionsmittel mitnehmen.\nAnlage zeigt seit 04/2026 Status DEGRADED — Druckverlust am Verdampfer prüfen.\n[Vor Ort noch nicht erstellt]',
+   'DRAFT',
+   NULL, NULL, NULL, NULL, NULL, NULL,
+   NULL, NULL,
+   '2026-04-30 14:00:00+02', '2026-04-30 14:00:00+02', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- =============================================================
+-- (7) WorkReport Assignments
+-- =============================================================
+INSERT INTO work_report_assignments (id, tenant_id, work_report_id, employee_id, role, created_at)
+VALUES
+  -- AS-2025-001 (UVV): Stefan
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000001', '00000000-0000-0000-0000-000000000019', 'sachkundiger',
+   '2025-11-05 09:00:00+01'),
+
+  -- AS-2025-002 (Kälteanlage 09/2025): Markus + Thomas
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000002', '00000000-0000-0000-0000-000000000017', 'verantwortlich',
+   '2025-09-12 09:00:00+02'),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000002', '00000000-0000-0000-0000-000000000014', 'mitarbeiter',
+   '2025-09-12 09:00:00+02'),
+
+  -- AS-2026-001 (Verdichter): Markus + Stefan
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000003', '00000000-0000-0000-0000-000000000017', 'verantwortlich',
+   '2026-03-15 08:00:00+01'),
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000003', '00000000-0000-0000-0000-000000000019', 'mitarbeiter',
+   '2026-03-15 08:00:00+01'),
+
+  -- AS-2026-002 (CNC, draft): Thomas (alleine)
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000004', '00000000-0000-0000-0000-000000000014', 'verantwortlich',
+   '2026-05-04 08:00:00+02'),
+
+  -- AS-2026-003 (Klimaanlage Schmidt, draft): Markus
+  (gen_random_uuid(), '10000000-0000-0000-0000-000000000001',
+   '53000000-0000-4000-a000-000000000005', '00000000-0000-0000-0000-000000000017', 'verantwortlich',
+   '2026-04-30 14:00:00+02')
+ON CONFLICT (work_report_id, employee_id) DO NOTHING;
+
+-- =============================================================
+-- (8) Stock Movements: Verbrauchsmaterial bei Wartungseinsätzen
+-- =============================================================
+-- Bei der Verdichter-Wartung 03/2026 wurden Kleinteile direkt vor Ort verbaut
+-- (KEIN Lieferschein — Materialnachweis nur über Stock Movement mit
+--  service_object_id + work_report_id + order_id).
+INSERT INTO wh_stock_movements (
+    id, tenant_id, article_id, type, quantity, previous_stock, new_stock,
+    date, order_id, service_object_id, work_report_id,
+    reason, notes, created_by_id, created_at
+) VALUES
+  -- 8x Sechskantschraube M8 für Riemenspannvorrichtung
+  ('d8100000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000001', 'WITHDRAWAL', -8, 430, 422,
+   '2026-03-15 12:30:00+01',
+   '52000000-0000-4000-a000-000000000003',                  -- W-2026-001
+   '50000001-0000-4000-a000-000000000007',                  -- MUE-KOMP-01
+   '53000000-0000-4000-a000-000000000003',                  -- AS-2026-001
+   'Wartung', 'Verbrauchsmaterial Verdichter-Wartung (Riemenspanner)',
+   '00000000-0000-0000-0000-000000000017', '2026-03-15 12:30:00+01'),
+
+  -- 8x Sechskantmutter M8 dazu
+  ('d8100000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000004', 'WITHDRAWAL', -8, 750, 742,
+   '2026-03-15 12:32:00+01',
+   '52000000-0000-4000-a000-000000000003',
+   '50000001-0000-4000-a000-000000000007',
+   '53000000-0000-4000-a000-000000000003',
+   'Wartung', 'Verbrauchsmaterial Verdichter-Wartung (Riemenspanner)',
+   '00000000-0000-0000-0000-000000000017', '2026-03-15 12:32:00+01'),
+
+  -- 16x Unterlegscheibe M8
+  ('d8100000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000005', 'WITHDRAWAL', -16, 1385, 1369,
+   '2026-03-15 12:34:00+01',
+   '52000000-0000-4000-a000-000000000003',
+   '50000001-0000-4000-a000-000000000007',
+   '53000000-0000-4000-a000-000000000003',
+   'Wartung', 'Verbrauchsmaterial Verdichter-Wartung',
+   '00000000-0000-0000-0000-000000000017', '2026-03-15 12:34:00+01'),
+
+  -- Aktuell laufende CNC-Wartung: 4x Schraube + 4x Mutter (gestern entnommen)
+  ('d8100000-0000-4000-a000-000000000004', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000001', 'WITHDRAWAL', -4, 422, 418,
+   '2026-05-04 09:15:00+02',
+   '52000000-0000-4000-a000-000000000004',                  -- W-2026-002
+   '50000001-0000-4000-a000-000000000006',                  -- MUE-GER-02
+   '53000000-0000-4000-a000-000000000004',                  -- AS-2026-002
+   'Wartung', 'Spindel-Abdeckung montiert',
+   '00000000-0000-0000-0000-000000000014', '2026-05-04 09:15:00+02'),
+  ('d8100000-0000-4000-a000-000000000005', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000004', 'WITHDRAWAL', -4, 742, 738,
+   '2026-05-04 09:16:00+02',
+   '52000000-0000-4000-a000-000000000004',
+   '50000001-0000-4000-a000-000000000006',
+   '53000000-0000-4000-a000-000000000004',
+   'Wartung', 'Spindel-Abdeckung montiert',
+   '00000000-0000-0000-0000-000000000014', '2026-05-04 09:16:00+02')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (9) Lieferscheine LS-5..LS-9 + Folge-Rechnung RE-7-W
+-- =============================================================
+-- Erweitert die existierenden Lieferscheine LS-1..LS-4 um neue Szenarien:
+--   LS-5: DRAFT — wird gerade vorbereitet, Reservierungen aktiv
+--   LS-6: PRINTED — heute gedruckt, Lager bereits gebucht
+--   LS-7: FORWARDED — verkettet zu Folgerechnung RE-7-W
+--          (Wartungs-Material Verdichter, Bezug zu W-2026-001 + AS-2026-001)
+--   LS-8: FORWARDED — eigenständig, ohne Folgerechnung (offen)
+--   LS-9: CANCELLED — wegen falscher Adresse storniert vor Versand
+--   RE-7-W: INVOICE PRINTED — Folge zu LS-7
+
+-- LS-5 — DRAFT (Müller, in Vorbereitung)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id, contact_id,
+    document_date, delivery_date, delivery_type, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000081', '10000000-0000-0000-0000-000000000001',
+    'LS-5', 'DELIVERY_NOTE', 'DRAFT',
+    'c1000000-0000-4000-a000-000000000001',                 -- Müller
+    'c2000000-0000-4000-a000-000000000002',                 -- Claudia Berger
+    '2026-05-04', NULL, 'Spedition', 30,
+    35.00, 6.65, 41.65,
+    'Vorbereitung: Schraubensortiment für Bauphase 2',
+    '2026-05-04 16:00:00+02', '2026-05-04 16:00:00+02', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- LS-6 — PRINTED (Weber, heute gedruckt)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id,
+    document_date, delivery_date, delivery_type, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    printed_at, printed_by_id,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000082', '10000000-0000-0000-0000-000000000001',
+    'LS-6', 'DELIVERY_NOTE', 'PRINTED',
+    'c1000000-0000-4000-a000-000000000003',                 -- Weber
+    '2026-05-01', '2026-05-01', 'Paketdienst', 30,
+    98.50, 18.72, 117.22,
+    'Eilbestellung Schaltschrank-Nachrüstung',
+    '2026-05-01 10:00:00+02', '00000000-0000-0000-0000-000000000001',
+    '2026-05-01 09:30:00+02', '2026-05-01 10:00:00+02', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- LS-7 — FORWARDED (Müller, Wartungsmaterial Verdichter)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id, contact_id, order_id, work_report_id,
+    document_date, delivery_date, delivery_type, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    printed_at, printed_by_id,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000083', '10000000-0000-0000-0000-000000000001',
+    'LS-7', 'DELIVERY_NOTE', 'FORWARDED',
+    'c1000000-0000-4000-a000-000000000001',                 -- Müller
+    'c2000000-0000-4000-a000-000000000001',                 -- Hans Müller
+    '52000000-0000-4000-a000-000000000003',                 -- W-2026-001 (Verdichter-Wartung)
+    '53000000-0000-4000-a000-000000000003',                 -- AS-2026-001
+    '2026-03-15', '2026-03-15', 'Vor-Ort-Übergabe', 30,
+    412.00, 78.28, 490.28,
+    'Materialnachweis Verdichter-Jahreswartung (Öl + Riemen)',
+    '2026-03-15 17:00:00+01', '00000000-0000-0000-0000-000000000017',
+    '2026-03-15 16:55:00+01', '2026-03-25 10:00:00+01', '00000000-0000-0000-0000-000000000017'
+) ON CONFLICT (id) DO NOTHING;
+
+-- LS-8 — FORWARDED (Schmidt, eigenständige Lieferung)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id, contact_id,
+    document_date, delivery_date, delivery_type, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    printed_at, printed_by_id,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000084', '10000000-0000-0000-0000-000000000001',
+    'LS-8', 'DELIVERY_NOTE', 'FORWARDED',
+    'c1000000-0000-4000-a000-000000000002',                 -- Schmidt
+    'c2000000-0000-4000-a000-000000000003',                 -- Peter Schmidt
+    '2026-04-10', '2026-04-12', 'Spedition', 14,
+    45.00, 8.55, 53.55,
+    'Befestigungsmaterial Baustelle Berlin-Mitte (Nachlieferung)',
+    '2026-04-10 11:00:00+02', '00000000-0000-0000-0000-000000000001',
+    '2026-04-10 10:30:00+02', '2026-04-12 09:00:00+02', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- LS-9 — CANCELLED (Adressfehler, vor Versand storniert)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id,
+    document_date, delivery_date, delivery_type, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000085', '10000000-0000-0000-0000-000000000001',
+    'LS-9', 'DELIVERY_NOTE', 'CANCELLED',
+    'c1000000-0000-4000-a000-000000000004',                 -- Bauer Logistik
+    '2026-04-20', NULL, 'Spedition', 30,
+    1280.00, 243.20, 1523.20,
+    E'Storniert am 2026-04-22:\nFalsche Lieferadresse (Werk Hamburg statt Bremen).\nNeu erstellt mit korrigierter Adresse als Folgedokument (extern).',
+    '2026-04-20 14:00:00+02', '2026-04-22 09:30:00+02', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- RE-7-W — INVOICE Folge zu LS-7 (Wartungs-Materialrechnung)
+INSERT INTO billing_documents (
+    id, tenant_id, number, type, status,
+    address_id, contact_id, order_id, work_report_id, parent_document_id,
+    document_date, delivery_date, payment_term_days,
+    subtotal_net, total_vat, total_gross, notes,
+    printed_at, printed_by_id,
+    created_at, updated_at, created_by_id
+) VALUES (
+    'b1000000-0000-4000-a000-000000000086', '10000000-0000-0000-0000-000000000001',
+    'RE-7-W', 'INVOICE', 'PRINTED',
+    'c1000000-0000-4000-a000-000000000001',
+    'c2000000-0000-4000-a000-000000000001',
+    '52000000-0000-4000-a000-000000000003',
+    '53000000-0000-4000-a000-000000000003',
+    'b1000000-0000-4000-a000-000000000083',                 -- LS-7
+    '2026-03-25', '2026-03-15', 30,
+    412.00, 78.28, 490.28,
+    'Materialrechnung Verdichter-Wartung (Bezug Lieferschein LS-7)',
+    '2026-03-25 10:00:00+01', '00000000-0000-0000-0000-000000000001',
+    '2026-03-25 09:30:00+01', '2026-03-25 10:00:00+01', '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (11) Lieferschein-Positionen
+-- =============================================================
+-- LS-5 (DRAFT): 50x Schraube + 50x Mutter (35,00 EUR)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000081', 'b1000000-0000-4000-a000-000000000081', 1, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000001', 'ART-1', 'Sechskantschraube M8x40 DIN 933',
+   50, 'Stk', 0.35, 17.50, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000082', 'b1000000-0000-4000-a000-000000000081', 2, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000004', 'ART-4', 'Sechskantmutter M8 DIN 934',
+   50, 'Stk', 0.08, 4.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000083', 'b1000000-0000-4000-a000-000000000081', 3, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000005', 'ART-5', 'Unterlegscheibe M8 DIN 125',
+   100, 'Stk', 0.04, 4.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000084', 'b1000000-0000-4000-a000-000000000081', 4, 'TEXT',
+   NULL, NULL, '— Lieferung Bauphase 2 abhängig von Freigabe Statik —',
+   NULL, NULL, NULL, NULL, NULL, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- LS-6 (PRINTED): 5m Kabel + 3 LSS (98,50 EUR)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-000000000091', 'b1000000-0000-4000-a000-000000000082', 1, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000006', 'ART-6', 'NYM-J 3x1.5mm² Kabel',
+   5, 'm', 1.20, 6.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-000000000092', 'b1000000-0000-4000-a000-000000000082', 2, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000007', 'ART-7', 'Leitungsschutzschalter B16A 3-polig',
+   5, 'Stk', 18.50, 92.50, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- LS-7 (FORWARDED, Wartung Verdichter): Öl + Riemen + 8x Schrauben/Muttern (412,00 EUR)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-0000000000a1', 'b1000000-0000-4000-a000-000000000083', 1, 'FREE',
+   NULL, NULL, 'Bitzer BSE 170 Verdichteröl (15 L Kanister)',
+   1, 'Kan', 285.00, 285.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000a2', 'b1000000-0000-4000-a000-000000000083', 2, 'FREE',
+   NULL, NULL, 'Riemensatz Bitzer 4TES (Original-Ersatzteil)',
+   1, 'Set', 124.20, 124.20, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000a3', 'b1000000-0000-4000-a000-000000000083', 3, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000001', 'ART-1', 'Sechskantschraube M8x40 (Riemenspanner)',
+   8, 'Stk', 0.35, 2.80, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- LS-8 (FORWARDED, Schmidt Befestigungsmaterial): 50x Schraube + 50x Mutter (45,00 EUR)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-0000000000b1', 'b1000000-0000-4000-a000-000000000084', 1, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000001', 'ART-1', 'Sechskantschraube M8x40 DIN 933',
+   50, 'Stk', 0.35, 17.50, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000b2', 'b1000000-0000-4000-a000-000000000084', 2, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000004', 'ART-4', 'Sechskantmutter M8 DIN 934',
+   50, 'Stk', 0.08, 4.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000b3', 'b1000000-0000-4000-a000-000000000084', 3, 'FREE',
+   NULL, NULL, 'Anlieferpauschale Berlin-Mitte',
+   1, 'Psch', 23.50, 23.50, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- LS-9 (CANCELLED, Bauer): 4 Regalträger (1280,00 EUR)
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-0000000000c1', 'b1000000-0000-4000-a000-000000000085', 1, 'FREE',
+   NULL, NULL, 'Regalträger schwer 3000 mm verzinkt',
+   4, 'Stk', 320.00, 1280.00, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- RE-7-W: gleiche Positionen wie LS-7
+INSERT INTO billing_document_positions (id, document_id, sort_order, type, article_id, article_number, description, quantity, unit, unit_price, total_price, vat_rate, created_at, updated_at)
+VALUES
+  ('b2000000-0000-4000-a000-0000000000d1', 'b1000000-0000-4000-a000-000000000086', 1, 'FREE',
+   NULL, NULL, 'Bitzer BSE 170 Verdichteröl (15 L Kanister)',
+   1, 'Kan', 285.00, 285.00, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000d2', 'b1000000-0000-4000-a000-000000000086', 2, 'FREE',
+   NULL, NULL, 'Riemensatz Bitzer 4TES (Original-Ersatzteil)',
+   1, 'Set', 124.20, 124.20, 19.0, NOW(), NOW()),
+  ('b2000000-0000-4000-a000-0000000000d3', 'b1000000-0000-4000-a000-000000000086', 3, 'ARTICLE',
+   'd2000000-0000-4000-a000-000000000001', 'ART-1', 'Sechskantschraube M8x40 (Riemenspanner)',
+   8, 'Stk', 0.35, 2.80, 19.0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (12) Stock Movements für Lieferscheine (DELIVERY_NOTE)
+-- =============================================================
+-- Chronologisch (älteste zuerst) — basiert auf den current_stock-Werten
+-- nach Section "29. Warehouse: Stock movements" + den Wartungsmaterial-
+-- Movements aus (8). Die Reihenfolge MUSS stimmen, sonst stimmen die
+-- previous/new_stock-Werte nicht.
+--
+-- Stock-Trajektorie pro Artikel:
+--   ART-1: 430 (start) → 422 (W-2026-001 -8) → 418 (W-2026-002 -4)
+--          → 410 (LS-7 -8 @ 03/15) → 360 (LS-8 -50 @ 04/10)
+--   ART-4: 750 → 742 → 738 → 688 (LS-8 -50)
+--   ART-5: 1385 → 1369 (W-2026-001 -16)
+--   ART-6: 8 → 3 (LS-6 -5 @ 05/01)
+--   ART-7: 45 → 40 (LS-6 -5 @ 05/01)
+--
+-- HINWEIS: LS-5 ist DRAFT — daher NUR Reservierung, kein Stock Movement.
+-- HINWEIS: LS-9 ist CANCELLED — kein Stock Movement (vor Versand storniert).
+
+INSERT INTO wh_stock_movements (
+    id, tenant_id, article_id, type, quantity, previous_stock, new_stock,
+    date, document_id, order_id, service_object_id, work_report_id,
+    notes, created_by_id, created_at
+) VALUES
+  -- LS-7 (Müller, 2026-03-15, Wartungsmaterial Verdichter)
+  -- Öl + Riemen sind FREE-Positions (keine Artikel) — NUR ART-1 buchen
+  ('d8100000-0000-4000-a000-000000000011', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000001', 'DELIVERY_NOTE', -8, 418, 410,
+   '2026-03-15 17:00:00+01',
+   'b1000000-0000-4000-a000-000000000083',                  -- LS-7
+   '52000000-0000-4000-a000-000000000003',
+   '50000001-0000-4000-a000-000000000007',                  -- Verdichter
+   '53000000-0000-4000-a000-000000000003',                  -- AS-2026-001
+   'Lieferschein LS-7 — Riemenspanner-Schrauben Verdichter-Wartung',
+   '00000000-0000-0000-0000-000000000017', '2026-03-15 17:00:00+01'),
+
+  -- LS-8 (Schmidt, 2026-04-10) — 50 Schrauben + 50 Muttern
+  ('d8100000-0000-4000-a000-000000000012', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000001', 'DELIVERY_NOTE', -50, 410, 360,
+   '2026-04-10 11:00:00+02',
+   'b1000000-0000-4000-a000-000000000084',                  -- LS-8
+   NULL, NULL, NULL,
+   'Lieferschein LS-8 — Befestigungsmaterial Baustelle Berlin-Mitte',
+   '00000000-0000-0000-0000-000000000001', '2026-04-10 11:00:00+02'),
+  ('d8100000-0000-4000-a000-000000000013', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000004', 'DELIVERY_NOTE', -50, 738, 688,
+   '2026-04-10 11:01:00+02',
+   'b1000000-0000-4000-a000-000000000084',
+   NULL, NULL, NULL,
+   'Lieferschein LS-8 — Befestigungsmaterial Baustelle Berlin-Mitte',
+   '00000000-0000-0000-0000-000000000001', '2026-04-10 11:01:00+02'),
+
+  -- LS-6 (Weber, 2026-05-01) — Kabel + Schalter
+  ('d8100000-0000-4000-a000-000000000014', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000006', 'DELIVERY_NOTE', -5, 8, 3,
+   '2026-05-01 10:00:00+02',
+   'b1000000-0000-4000-a000-000000000082',                  -- LS-6
+   NULL, NULL, NULL,
+   'Lieferschein LS-6 — Schaltschrank-Nachrüstung Weber',
+   '00000000-0000-0000-0000-000000000001', '2026-05-01 10:00:00+02'),
+  ('d8100000-0000-4000-a000-000000000015', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000007', 'DELIVERY_NOTE', -5, 45, 40,
+   '2026-05-01 10:01:00+02',
+   'b1000000-0000-4000-a000-000000000082',
+   NULL, NULL, NULL,
+   'Lieferschein LS-6 — Schaltschrank-Nachrüstung Weber',
+   '00000000-0000-0000-0000-000000000001', '2026-05-01 10:01:00+02')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (13) Stock Reservations für DRAFT-Lieferschein LS-5
+-- =============================================================
+-- Solange LS-5 noch DRAFT ist, sind die Mengen nur reserviert (nicht gebucht).
+INSERT INTO wh_stock_reservations (
+    id, tenant_id, article_id, document_id, position_id, quantity,
+    status, created_at, updated_at, created_by_id
+) VALUES
+  ('d8200000-0000-4000-a000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000001',
+   'b1000000-0000-4000-a000-000000000081',                  -- LS-5
+   'b2000000-0000-4000-a000-000000000081', 50, 'ACTIVE',
+   '2026-05-04 16:00:00+02', '2026-05-04 16:00:00+02', '00000000-0000-0000-0000-000000000001'),
+  ('d8200000-0000-4000-a000-000000000002', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000004',
+   'b1000000-0000-4000-a000-000000000081',
+   'b2000000-0000-4000-a000-000000000082', 50, 'ACTIVE',
+   '2026-05-04 16:00:00+02', '2026-05-04 16:00:00+02', '00000000-0000-0000-0000-000000000001'),
+  ('d8200000-0000-4000-a000-000000000003', '10000000-0000-0000-0000-000000000001',
+   'd2000000-0000-4000-a000-000000000005',
+   'b1000000-0000-4000-a000-000000000081',
+   'b2000000-0000-4000-a000-000000000083', 100, 'ACTIVE',
+   '2026-05-04 16:00:00+02', '2026-05-04 16:00:00+02', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- (14) wh_articles current_stock — finalwerte nach allen Bewegungen
+-- =============================================================
+-- ART-1 Schraube:    430 - 8(W2601) - 4(W2602) - 8(LS-7) - 50(LS-8) = 360
+-- ART-4 Mutter:      750 - 8(W2601) - 4(W2602) - 50(LS-8)            = 688
+-- ART-5 Scheibe:    1385 - 16(W2601)                                  = 1369
+-- ART-6 NYM-Kabel:     8 - 5(LS-6)                                    = 3
+-- ART-7 LSS:          45 - 5(LS-6)                                    = 40
+UPDATE wh_articles SET current_stock = 360  WHERE id = 'd2000000-0000-4000-a000-000000000001';
+UPDATE wh_articles SET current_stock = 688  WHERE id = 'd2000000-0000-4000-a000-000000000004';
+UPDATE wh_articles SET current_stock = 1369 WHERE id = 'd2000000-0000-4000-a000-000000000005';
+UPDATE wh_articles SET current_stock = 3    WHERE id = 'd2000000-0000-4000-a000-000000000006';
+UPDATE wh_articles SET current_stock = 40   WHERE id = 'd2000000-0000-4000-a000-000000000007';
+
+-- =============================================================
+-- (15) Number Sequences anheben
+-- =============================================================
+-- delivery_note nun bei LS-9 (next = 10), invoice bei RE-7-W (W-Suffix
+-- ändert die Nummerngenerierung nicht — bleibt next=8)
+UPDATE number_sequences
+   SET next_value = GREATEST(next_value, 10)
+ WHERE tenant_id = '10000000-0000-0000-0000-000000000001'
+   AND key = 'delivery_note';
+
+-- work_report number sequence (existiert evtl. noch nicht — anlegen)
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'work_report', 'AS-', 4, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 4);
+
+-- service_schedule number sequence
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'service_schedule', 'SCH-', 7, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 7);
+
+-- maintenance_order (Wartungsauftrag) number sequence
+INSERT INTO number_sequences (id, tenant_id, key, prefix, next_value, created_at, updated_at)
+VALUES (gen_random_uuid(), '10000000-0000-0000-0000-000000000001', 'maintenance_order', 'W-', 5, NOW(), NOW())
+ON CONFLICT (tenant_id, key) DO UPDATE SET next_value = GREATEST(number_sequences.next_value, 5);

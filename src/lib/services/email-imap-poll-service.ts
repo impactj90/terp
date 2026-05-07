@@ -244,6 +244,7 @@ async function processMessage(
     if (parsedInvoice?.lineItems && parsedInvoice.lineItems.length > 0) {
       await prisma.inboundInvoiceLineItem.createMany({
         data: parsedInvoice.lineItems.map((li, idx) => ({
+          tenantId,
           invoiceId: invoice.id,
           position: idx + 1,
           articleNumber: li.articleNumber ?? null,

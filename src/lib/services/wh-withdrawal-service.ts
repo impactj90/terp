@@ -118,6 +118,9 @@ export async function createWithdrawal(
     )
 
     // 6. Create stock movement (negative quantity)
+    // NK-1 (Decision 4): persist unit cost from article.buyPrice
+    // at withdrawal time so later price changes don't retroactively
+    // alter material aggregates.
     const movement = await (tx as unknown as PrismaClient).whStockMovement.create({
       data: {
         tenantId,
@@ -132,6 +135,7 @@ export async function createWithdrawal(
         serviceObjectId: refs.serviceObjectId,
         notes: input.notes ?? null,
         createdById: userId,
+        unitCostAtMovement: article.buyPrice ?? null,
       },
       include: {
         article: {
@@ -220,6 +224,7 @@ export async function createBatchWithdrawal(
       )
 
       // 6. Create stock movement (negative quantity)
+      // NK-1 (Decision 4): persist unit cost snapshot.
       const movement = await (tx as unknown as PrismaClient).whStockMovement.create({
         data: {
           tenantId,
@@ -234,6 +239,7 @@ export async function createBatchWithdrawal(
           serviceObjectId: refs.serviceObjectId,
           notes: input.notes ?? null,
           createdById: userId,
+          unitCostAtMovement: article.buyPrice ?? null,
         },
         include: {
           article: {
@@ -317,6 +323,8 @@ export async function cancelWithdrawal(
     const newStock = previousStock + reverseQty
 
     // 6. Create reversal movement (positive quantity)
+    // NK-1 (Decision 4): the reversal carries the same unit cost as
+    // the original (it's a Storno, not a re-evaluation).
     const reversal = await (tx as unknown as PrismaClient).whStockMovement.create({
       data: {
         tenantId,
@@ -332,6 +340,7 @@ export async function cancelWithdrawal(
         reason: `Storno of movement ${movementId}`,
         notes: movement.notes,
         createdById: userId,
+        unitCostAtMovement: movement.unitCostAtMovement ?? article.buyPrice ?? null,
       },
       include: {
         article: {

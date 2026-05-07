@@ -12,10 +12,14 @@ export interface LineItemInput {
   vatAmount?: number | null
   totalGross?: number | null
   sortOrder?: number
+  // NK-1 (Decision 5): position-level Order/CostCenter
+  orderId?: string | null
+  costCenterId?: string | null
 }
 
 export async function createMany(
   prisma: PrismaClient,
+  tenantId: string,
   invoiceId: string,
   items: LineItemInput[]
 ) {
@@ -23,6 +27,7 @@ export async function createMany(
 
   await prisma.inboundInvoiceLineItem.createMany({
     data: items.map((item, idx) => ({
+      tenantId,
       invoiceId,
       position: item.position ?? idx + 1,
       articleNumber: item.articleNumber ?? null,
@@ -35,6 +40,8 @@ export async function createMany(
       vatAmount: item.vatAmount ?? null,
       totalGross: item.totalGross ?? null,
       sortOrder: item.sortOrder ?? idx + 1,
+      orderId: item.orderId ?? null,
+      costCenterId: item.costCenterId ?? null,
     })),
   })
 }
@@ -60,6 +67,7 @@ export async function deleteByInvoiceId(
 
 export async function replaceAll(
   prisma: PrismaClient,
+  tenantId: string,
   invoiceId: string,
   items: LineItemInput[]
 ) {
@@ -70,6 +78,7 @@ export async function replaceAll(
     if (items.length > 0) {
       await tx.inboundInvoiceLineItem.createMany({
         data: items.map((item, idx) => ({
+          tenantId,
           invoiceId,
           position: item.position ?? idx + 1,
           articleNumber: item.articleNumber ?? null,
@@ -82,6 +91,8 @@ export async function replaceAll(
           vatAmount: item.vatAmount ?? null,
           totalGross: item.totalGross ?? null,
           sortOrder: item.sortOrder ?? idx + 1,
+          orderId: item.orderId ?? null,
+          costCenterId: item.costCenterId ?? null,
         })),
       })
     }

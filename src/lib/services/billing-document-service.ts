@@ -1387,6 +1387,7 @@ export async function createDeliveryNoteStockBookings(
       const newStock = previousStock - quantity
 
       // Create stock movement (negative quantity for withdrawal)
+      // NK-1 (Decision 4): persist unit cost snapshot from article.buyPrice.
       await (tx as unknown as PrismaClient).whStockMovement.create({
         data: {
           tenantId,
@@ -1398,6 +1399,7 @@ export async function createDeliveryNoteStockBookings(
           documentId,
           reason: `Lieferschein ${docNumber}`,
           createdById: userId,
+          unitCostAtMovement: article.buyPrice ?? null,
         },
       })
 

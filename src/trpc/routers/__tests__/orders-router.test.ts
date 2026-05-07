@@ -40,6 +40,11 @@ function makeOrder(
     createdAt: Date
     updatedAt: Date
     costCenter: { id: string; code: string; name: string } | null
+    // Output-schema also requires these — defaults below keep tests
+    // backward-compatible but the fields must be present so tRPC's
+    // strict output-validation doesn't reject the row.
+    serviceObjectId: string | null
+    orderTypeId: string | null
   }> = {}
 ) {
   return {
@@ -58,6 +63,8 @@ function makeOrder(
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
     costCenter: null,
+    serviceObjectId: null,
+    orderTypeId: null, // NK-1 (Decision 15) — present on Order output
     ...overrides,
   }
 }

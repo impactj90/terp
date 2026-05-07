@@ -30,6 +30,7 @@ import {
   useUpdateOrder,
   useCostCenters,
 } from '@/hooks'
+import { useOrderTypes } from '@/hooks/use-order-types'
 import { useServiceObject } from '@/hooks/use-service-objects'
 import { ServiceObjectPicker } from '@/components/serviceobjects/service-object-picker'
 
@@ -52,6 +53,8 @@ interface Order {
   is_active?: boolean
   serviceObjectId?: string | null
   service_object_id?: string | null
+  orderTypeId?: string | null
+  order_type_id?: string | null
 }
 
 interface OrderFormSheetProps {
@@ -68,6 +71,7 @@ interface FormState {
   status: 'planned' | 'active' | 'completed' | 'cancelled'
   customer: string
   costCenterId: string
+  orderTypeId: string
   billingRatePerHour: string
   validFrom: string
   validTo: string
@@ -82,6 +86,7 @@ const INITIAL_STATE: FormState = {
   status: 'planned',
   customer: '',
   costCenterId: '',
+  orderTypeId: '',
   billingRatePerHour: '',
   validFrom: '',
   validTo: '',
@@ -104,6 +109,8 @@ export function OrderFormSheet({
   const updateMutation = useUpdateOrder()
   const { data: costCentersData } = useCostCenters({ enabled: open })
   const costCenters = costCentersData?.data ?? []
+  const { data: orderTypesData } = useOrderTypes({ enabled: open, isActive: true })
+  const orderTypes = orderTypesData?.data ?? []
 
   // Track the last SO id we auto-filled the customer from, so we only
   // override the customer field when the user actively changes the SO —
@@ -148,6 +155,7 @@ export function OrderFormSheet({
         const vTo = order.validTo ?? order.valid_to
         const active = order.isActive ?? order.is_active ?? true
         const soId = order.serviceObjectId ?? order.service_object_id ?? null
+        const otId = order.orderTypeId ?? order.order_type_id ?? ''
         setForm({
           code: order.code || '',
           name: order.name || '',
@@ -155,6 +163,7 @@ export function OrderFormSheet({
           status: (order.status as FormState['status']) || 'planned',
           customer: order.customer || '',
           costCenterId: ccId || '',
+          orderTypeId: otId || '',
           billingRatePerHour: rate?.toString() || '',
           validFrom: vFrom ? String(vFrom).split('T')[0] ?? '' : '',
           validTo: vTo ? String(vTo).split('T')[0] ?? '' : '',
@@ -200,6 +209,7 @@ export function OrderFormSheet({
           status: form.status,
           customer: form.customer.trim() || undefined,
           costCenterId: form.costCenterId || undefined,
+          orderTypeId: form.orderTypeId || null,
           billingRatePerHour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
           validFrom: form.validFrom || undefined,
           validTo: form.validTo || undefined,
@@ -214,6 +224,7 @@ export function OrderFormSheet({
           status: form.status,
           customer: form.customer.trim() || undefined,
           costCenterId: form.costCenterId || undefined,
+          orderTypeId: form.orderTypeId || null,
           billingRatePerHour: form.billingRatePerHour ? parseFloat(form.billingRatePerHour) : undefined,
           validFrom: form.validFrom || undefined,
           validTo: form.validTo || undefined,
@@ -339,6 +350,29 @@ export function OrderFormSheet({
                     {costCenters.map((cc) => (
                       <SelectItem key={cc.id} value={cc.id}>
                         {cc.code} - {cc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="orderType">{t('fieldOrderType')}</Label>
+                <Select
+                  value={form.orderTypeId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, orderTypeId: value === '__none__' ? '' : value }))
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="orderType">
+                    <SelectValue placeholder={t('fieldOrderTypeNone')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('fieldOrderTypeNone')}</SelectItem>
+                    {orderTypes.map((ot) => (
+                      <SelectItem key={ot.id} value={ot.id}>
+                        {ot.code} - {ot.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

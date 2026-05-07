@@ -451,9 +451,10 @@ export async function complete(
 
     for (const position of countedPositions) {
       // Fetch current article stock (live, not frozen)
+      // NK-1 (Decision 4): also load buyPrice for the unit-cost snapshot.
       const article = await (tx as unknown as PrismaClient).whArticle.findFirst({
         where: { id: position.articleId, tenantId },
-        select: { id: true, currentStock: true },
+        select: { id: true, currentStock: true, buyPrice: true },
       })
 
       if (!article) continue
@@ -472,6 +473,7 @@ export async function complete(
           newStock: position.countedQuantity!,
           inventorySessionId: stocktake.id,
           createdById: userId,
+          unitCostAtMovement: article.buyPrice ?? null,
         },
       })
       movements.push(movement)

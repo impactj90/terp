@@ -318,6 +318,13 @@ model Tenant {
   // Platform admin domain
   supportSessions SupportSession[]
 
+  // NK-1 — Nachkalkulation
+  wageGroups              WageGroup[]
+  orderTypes              OrderType[]
+  orderTargets            OrderTarget[]
+  nkThresholdConfigs      NkThresholdConfig[]
+  inboundInvoiceLineItems InboundInvoiceLineItem[]
+
   // Indexes
   @@index([slug], map: "idx_tenants_slug")
   @@index([isActive], map: "idx_tenants_is_active")
@@ -1807,6 +1814,7 @@ model CostCenter {
   employees       Employee[]
   orders          Order[]
   inboundInvoices InboundInvoice[]
+  inboundInvoiceLineItems InboundInvoiceLineItem[]
 
   // Indexes
   @@unique([tenantId, code], map: "cost_centers_tenant_id_code_key")
@@ -2219,6 +2227,9 @@ model Employee {
   receivesParentalAllowance        Boolean? @default(false) @map("receives_parental_allowance")
   parentalAllowanceUntil           DateTime? @map("parental_allowance_until") @db.Date
 
+  // NK-1 (Decision 2)
+  wageGroupId                      String?  @map("wage_group_id") @db.Uuid
+
   // Relations to models already in Prisma
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department     Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
@@ -2259,6 +2270,7 @@ model Employee {
   employeeGroup       EmployeeGroup?             @relation(fields: [employeeGroupId], references: [id], onDelete: SetNull)
   workflowGroup       WorkflowGroup?             @relation(fields: [workflowGroupId], references: [id], onDelete: SetNull)
   activityGroup       ActivityGroup?             @relation(fields: [activityGroupId], references: [id], onDelete: SetNull)
+  wageGroup           WageGroup?                 @relation(fields: [wageGroupId], references: [id], onDelete: SetNull)
   defaultOrder        Order?                     @relation("EmployeeDefaultOrder", fields: [defaultOrderId], references: [id], onDelete: SetNull)
   defaultActivity     Activity?                  @relation("EmployeeDefaultActivity", fields: [defaultActivityId], references: [id], onDelete: SetNull)
   orderAssignments    OrderAssignment[]
@@ -2302,6 +2314,7 @@ model Employee {
   @@index([defaultActivityId], map: "idx_employees_default_activity")
   @@index([locationId], map: "idx_employees_location")
   @@index([healthInsuranceProviderId], map: "idx_employees_health_insurance_provider")
+  @@index([tenantId, wageGroupId], map: "idx_employees_tenant_wage_group")
   @@map("employees")
 }
 
@@ -2545,6 +2558,13 @@ model Activity {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  // NK-1 Activity-Pricing-Erweiterung (Decision 7, Decision 33)
+  pricingType              ActivityPricingType @default(HOURLY) @map("pricing_type")
+  flatRate                 Decimal?            @map("flat_rate") @db.Decimal(10, 2)
+  hourlyRate               Decimal?            @map("hourly_rate") @db.Decimal(10, 2)
+  unit                     String?             @db.VarChar(20)
+  calculatedHourEquivalent Decimal?            @map("calculated_hour_equivalent") @db.Decimal(8, 2)
+
   // Relations
   tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   defaultForEmployees Employee[]     @relation("EmployeeDefaultActivity")
@@ -2555,6 +2575,15 @@ model Activity {
   @@index([tenantId], map: "idx_activities_tenant")
   @@index([tenantId, isActive], map: "idx_activities_tenant_active")
   @@map("activities")
+}
+
+// NK-1 Activity-Pricing-Type (Decision 7)
+enum ActivityPricingType {
+  HOURLY
+  FLAT_RATE
+  PER_UNIT
+
+  @@map("activity_pricing_type")
 }
 
 // -----------------------------------------------------------------------------
@@ -2584,11 +2613,15 @@ model Order {
   serviceObjectId    String?   @map("service_object_id") @db.Uuid
   serviceScheduleId  String?   @map("service_schedule_id") @db.Uuid
 
+  // NK-1 (Decision 15)
+  orderTypeId        String?   @map("order_type_id") @db.Uuid
+
   // Relations
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   costCenter          CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   serviceObject       ServiceObject?    @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
   serviceSchedule     ServiceSchedule?  @relation("ServiceScheduleOrders", fields: [serviceScheduleId], references: [id], onDelete: SetNull)
+  orderType           OrderType?        @relation(fields: [orderTypeId], references: [id], onDelete: SetNull)
   assignments         OrderAssignment[]
   defaultForEmployees Employee[]        @relation("EmployeeDefaultOrder")
   orderBookings       OrderBooking[]
@@ -2596,7 +2629,9 @@ model Order {
   billingDocuments    BillingDocument[]
   billingServiceCases BillingServiceCase[]
   inboundInvoices     InboundInvoice[]
+  inboundInvoiceLineItems InboundInvoiceLineItem[]
   workReports         WorkReport[]
+  targets             OrderTarget[]
 
   @@unique([tenantId, code], map: "orders_tenant_id_code_key")
   @@index([tenantId], map: "idx_orders_tenant")
@@ -2605,6 +2640,7 @@ model Order {
   @@index([costCenterId], map: "idx_orders_cost_center")
   @@index([tenantId, serviceObjectId], map: "idx_orders_tenant_service_object")
   @@index([tenantId, serviceScheduleId], map: "idx_orders_tenant_service_schedule")
+  @@index([tenantId, orderTypeId], map: "idx_orders_tenant_order_type")
   @@map("orders")
 }
 
@@ -2686,6 +2722,10 @@ model WorkReport {
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdById        String?          @map("created_by_id") @db.Uuid
+
+  // NK-1 Travel-Snapshot (Decision 27)
+  travelRateAtSign       Decimal? @map("travel_rate_at_sign") @db.Decimal(10, 2)
+  travelRateSourceAtSign String?  @map("travel_rate_source_at_sign") @db.VarChar(20)
 
   // Relations
   tenant         Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -5465,6 +5505,11 @@ model OrderBooking {
   createdBy    String?  @map("created_by") @db.Uuid
   updatedBy    String?  @map("updated_by") @db.Uuid
 
+  // NK-1 Snapshot-Felder (Decision 14, Decision 26)
+  hourlyRateAtBooking       Decimal? @map("hourly_rate_at_booking") @db.Decimal(10, 2)
+  hourlyRateSourceAtBooking String?  @map("hourly_rate_source_at_booking") @db.VarChar(20)
+  quantity                  Decimal? @db.Decimal(10, 2)
+
   // Relations
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -5752,12 +5797,17 @@ model WhStockMovement {
   createdById              String?             @map("created_by_id") @db.Uuid
   createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  // NK-1 (Decision 4, Decision 5)
+  unitCostAtMovement        Decimal? @map("unit_cost_at_movement") @db.Decimal(12, 4)
+  inboundInvoiceLineItemId  String?  @map("inbound_invoice_line_item_id") @db.Uuid
+
   tenant        Tenant           @relation(fields: [tenantId], references: [id])
   article       WhArticle        @relation(fields: [articleId], references: [id])
   purchaseOrder WhPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   stocktake     WhStocktake?     @relation(fields: [inventorySessionId], references: [id], onDelete: SetNull)
   serviceObject ServiceObject?   @relation(fields: [serviceObjectId], references: [id], onDelete: SetNull)
   workReport    WorkReport?      @relation(fields: [workReportId], references: [id], onDelete: SetNull)
+  inboundInvoiceLineItem InboundInvoiceLineItem? @relation(fields: [inboundInvoiceLineItemId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, articleId])
   @@index([tenantId, type])
@@ -5766,6 +5816,8 @@ model WhStockMovement {
   @@index([tenantId, machineId])
   @@index([tenantId, serviceObjectId])
   @@index([tenantId, workReportId], map: "idx_wh_stock_movements_tenant_work_report")
+  @@index([tenantId, orderId], map: "idx_wh_stock_movements_tenant_order")
+  @@index([inboundInvoiceLineItemId], map: "idx_wh_stock_movements_inbound_li")
   @@map("wh_stock_movements")
 }
 
@@ -6435,9 +6487,21 @@ model InboundInvoiceLineItem {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  invoice InboundInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  // NK-1 (Decision 5)
+  tenantId     String   @map("tenant_id") @db.Uuid
+  orderId      String?  @map("order_id") @db.Uuid
+  costCenterId String?  @map("cost_center_id") @db.Uuid
+
+  invoice    InboundInvoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order      Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  costCenter CostCenter?       @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  stockMovements WhStockMovement[]
 
   @@index([invoiceId], map: "idx_inbound_invoice_line_items_invoice")
+  @@index([invoiceId, orderId], map: "idx_inbound_li_invoice_order")
+  @@index([invoiceId, costCenterId], map: "idx_inbound_li_invoice_cost_center")
+  @@index([tenantId], map: "idx_inbound_li_tenant")
   @@map("inbound_invoice_line_items")
 }
 
@@ -7083,4 +7147,103 @@ model InboundInvoiceBankAllocation {
   @@index([tenantId, bankTransactionId], map: "idx_inbound_inv_bank_alloc_tenant_tx")
   @@index([tenantId, inboundInvoiceId], map: "idx_inbound_inv_bank_alloc_tenant_inv")
   @@map("inbound_invoice_bank_allocations")
+}
+
+// =============================================================================
+// Nachkalkulation (NK-1)
+// =============================================================================
+// Migration: 20260429000001
+//
+// Implementation plan: thoughts/shared/plans/2026-04-29-nk-1-einzelauftrag-nachkalkulation.md
+// Research: thoughts/shared/research/2026-04-29-nk-1-einzelauftrag-nachkalkulation.md
+
+// OrderTarget — versionierte Soll-Werte pro Auftrag (Decision 1)
+model OrderTarget {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  orderId  String @map("order_id") @db.Uuid
+  version  Int    @default(1)
+  validFrom DateTime  @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+
+  targetHours          Decimal? @map("target_hours") @db.Decimal(10, 2)
+  targetMaterialCost   Decimal? @map("target_material_cost") @db.Decimal(12, 2)
+  targetTravelMinutes  Int?     @map("target_travel_minutes")
+  targetExternalCost   Decimal? @map("target_external_cost") @db.Decimal(12, 2)
+  targetRevenue        Decimal? @map("target_revenue") @db.Decimal(12, 2)
+  targetUnitItems      Json?    @map("target_unit_items") @db.JsonB
+
+  changeReason String? @map("change_reason") @db.VarChar(50)
+  notes        String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, orderId, validTo], map: "idx_order_targets_tenant_order_valid")
+  @@index([orderId, validFrom, validTo], map: "idx_order_targets_order_valid")
+  @@map("order_targets")
+}
+
+// WageGroup — Lohngruppen pro Tenant (Decision 2)
+model WageGroup {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  code               String   @db.VarChar(50)
+  name               String   @db.VarChar(255)
+  internalHourlyRate Decimal? @map("internal_hourly_rate") @db.Decimal(10, 2)
+  billingHourlyRate  Decimal? @map("billing_hourly_rate") @db.Decimal(10, 2)
+  sortOrder          Int      @default(0) @map("sort_order")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([tenantId, code], map: "wage_groups_tenant_id_code_key")
+  @@index([tenantId, isActive], map: "idx_wage_groups_tenant_active")
+  @@map("wage_groups")
+}
+
+// OrderType — Auftragstypen pro Tenant (Decision 15)
+model OrderType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders     Order[]
+  thresholds NkThresholdConfig[]
+
+  @@unique([tenantId, code], map: "order_types_tenant_id_code_key")
+  @@index([tenantId, isActive], map: "idx_order_types_tenant_active")
+  @@map("order_types")
+}
+
+// NkThresholdConfig — Schwellen pro Tenant + optional Auftragstyp (Decision 9)
+model NkThresholdConfig {
+  id                           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                     String   @map("tenant_id") @db.Uuid
+  orderTypeId                  String?  @map("order_type_id") @db.Uuid
+  marginAmberFromPercent       Decimal  @map("margin_amber_from_percent") @db.Decimal(5, 2)
+  marginRedFromPercent         Decimal  @map("margin_red_from_percent") @db.Decimal(5, 2)
+  productivityAmberFromPercent Decimal  @map("productivity_amber_from_percent") @db.Decimal(5, 2)
+  productivityRedFromPercent   Decimal  @map("productivity_red_from_percent") @db.Decimal(5, 2)
+  createdAt                    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderType OrderType? @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId], map: "idx_nk_threshold_configs_tenant")
+  @@map("nk_threshold_configs")
 }

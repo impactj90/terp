@@ -54,9 +54,28 @@ export async function create(
     name: string
     description: string | null
     isActive: boolean
+    // NK-1 Pricing fields (Decision 7, Decision 33)
+    pricingType?: "HOURLY" | "FLAT_RATE" | "PER_UNIT"
+    flatRate?: number | null
+    hourlyRate?: number | null
+    unit?: string | null
+    calculatedHourEquivalent?: number | null
   }
 ) {
-  return prisma.activity.create({ data })
+  return prisma.activity.create({
+    data: {
+      tenantId: data.tenantId,
+      code: data.code,
+      name: data.name,
+      description: data.description,
+      isActive: data.isActive,
+      pricingType: data.pricingType ?? "HOURLY",
+      flatRate: data.flatRate ?? null,
+      hourlyRate: data.hourlyRate ?? null,
+      unit: data.unit ?? null,
+      calculatedHourEquivalent: data.calculatedHourEquivalent ?? null,
+    },
+  })
 }
 
 export async function update(

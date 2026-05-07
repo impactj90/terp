@@ -54,6 +54,7 @@ debug
 
 # Test artifacts
 .coverage/
+coverage/
 htmlcov/
 .auth/
 playwright-report/

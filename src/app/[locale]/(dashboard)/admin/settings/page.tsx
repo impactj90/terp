@@ -6,7 +6,12 @@ import { useTranslations } from 'next-intl'
 import { useAuth } from '@/providers/auth-provider'
 import { useHasPermission } from '@/hooks'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SystemSettingsForm, CleanupToolsSection, ModuleSettings } from '@/components/settings'
+import {
+  SystemSettingsForm,
+  CleanupToolsSection,
+  ModuleSettings,
+  NachkalkulationThresholdSection,
+} from '@/components/settings'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -41,6 +46,9 @@ export default function SettingsPage() {
 
       {/* Settings form with collapsible sections */}
       <SystemSettingsForm />
+
+      {/* NK-1 threshold settings (module-gated, permission-gated) */}
+      <NachkalkulationThresholdSection />
 
       {/* Separator */}
       <hr className="my-8" />

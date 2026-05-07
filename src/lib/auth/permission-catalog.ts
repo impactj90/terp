@@ -440,6 +440,22 @@ export const ALL_PERMISSIONS: Permission[] = [
     "support_access.grant",
     "Grant platform operators time-limited support access to this tenant"
   ),
+
+  // Nachkalkulation (NK-1)
+  p("nachkalkulation.view", "nachkalkulation", "view", "View Nachkalkulation reports"),
+  p("nachkalkulation.manage", "nachkalkulation", "manage", "Edit OrderTargets, run re-planning"),
+  p("nachkalkulation.config", "nachkalkulation", "config", "Configure Nachkalkulation thresholds"),
+
+  // Wage Groups (NK-1)
+  p("wage_groups.view", "wage_groups", "view", "View wage groups"),
+  p("wage_groups.manage", "wage_groups", "manage", "Manage wage groups"),
+
+  // Order Types (NK-1)
+  p("order_types.view", "order_types", "view", "View order types"),
+  p("order_types.manage", "order_types", "manage", "Manage order types"),
+
+  // Activity Pricing (NK-1, Decision 29)
+  p("activities.manage_pricing", "activities", "manage_pricing", "Configure activity pricing (pricingType, flatRate, hourlyRate)"),
 ]
 
 // Lookup maps

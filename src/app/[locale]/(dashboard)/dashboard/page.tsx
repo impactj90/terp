@@ -16,6 +16,8 @@ import {
 import { ProbationDashboardWidget } from '@/components/dashboard/probation-dashboard-widget'
 import { UpcomingMaintenancesWidget } from '@/components/dashboard/upcoming-maintenances-widget'
 import { PersonnelFileDashboardWidget } from '@/components/hr/personnel-file-dashboard-widget'
+import { NkDashboardCard } from '@/components/nachkalkulation/nk-dashboard-card'
+import { useModules } from '@/hooks/use-modules'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserX } from 'lucide-react'
 
@@ -23,6 +25,10 @@ export default function DashboardPage() {
   const { user, isLoading } = useAuth()
   const { allowed: canViewEmployees, isLoading: permissionLoading } = useHasPermission(['employees.view'])
   const { allowed: canViewSchedules, isLoading: schedPermLoading } = useHasPermission(['service_schedules.view'])
+  const { allowed: canViewNk } = useHasPermission(['nachkalkulation.view'])
+  const { data: modulesData } = useModules(!isLoading)
+  const enabledModules = (modulesData && 'modules' in modulesData ? modulesData.modules : []) as Array<{ module: string }>
+  const isNkEnabled = enabledModules.some((m) => m.module === 'nachkalkulation')
   const t = useTranslations('dashboard')
 
   // Get employee_id directly from user (set via /auth/me from database)
@@ -79,6 +85,12 @@ export default function DashboardPage() {
           {employeeId && <PersonnelFileDashboardWidget />}
           {canViewSchedules && <UpcomingMaintenancesWidget />}
           {canViewEmployees && <ProbationDashboardWidget />}
+        </div>
+      )}
+
+      {isNkEnabled && canViewNk && (
+        <div className="grid gap-4 sm:gap-6">
+          <NkDashboardCard days={7} limit={5} />
         </div>
       )}
     </div>

@@ -108,6 +108,8 @@ export async function create(
     // `serviceScheduleService.generateOrder`. Null for non-plan orders.
     // Plan: 2026-04-22-serviceobjekte-wartungsintervalle.md
     serviceScheduleId?: string | null
+    // NK-1 (Decision 15)
+    orderTypeId?: string | null
   }
 ) {
   return prisma.order.create({ data })

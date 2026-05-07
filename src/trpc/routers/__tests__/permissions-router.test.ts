@@ -24,7 +24,9 @@ describe("permissions.list", () => {
     )
     const result = await caller.permissions.list()
     expect(result.permissions).toHaveLength(ALL_PERMISSIONS.length)
-    expect(result.permissions).toHaveLength(180)
+    // Catalog grows as new modules land; keep this assertion synced with
+    // permission-catalog.test.ts (currently 199 after NK-1's 8 additions).
+    expect(result.permissions).toHaveLength(199)
   })
 
   it("each permission has id, key, resource, action, description", async () => {

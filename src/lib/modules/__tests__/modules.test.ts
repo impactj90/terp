@@ -28,6 +28,7 @@ describe("AVAILABLE_MODULES", () => {
       "inbound_invoices",
       "payment_runs",
       "bank_statements",
+      "nachkalkulation",
     ])
   })
 })

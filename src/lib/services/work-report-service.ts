@@ -32,6 +32,7 @@ import * as numberSeqService from "./number-sequence-service"
 import * as workReportPdfService from "./work-report-pdf-service"
 import { hashField } from "./field-encryption"
 import * as storage from "@/lib/supabase/storage"
+import { resolveTravelRateExtended } from "./labor-rate-resolver"
 
 // --- Constants ---
 
@@ -534,6 +535,32 @@ export async function sign(
   // stored value is deterministic but never reversible.
   const ipHash = audit?.ipAddress ? hashField(audit.ipAddress) : null
 
+  // NK-1 (Decision 27): compute the travel-rate snapshot at sign time
+  // so subsequent rate changes don't retroactively alter historical
+  // travel cost on this WorkReport.
+  const orderForRate = await prisma.order.findFirst({
+    where: { id: existing.orderId, tenantId },
+    select: { billingRatePerHour: true },
+  })
+  const assignmentsForRate = await prisma.workReportAssignment.findMany({
+    where: { workReportId: input.id },
+    include: {
+      employee: {
+        select: {
+          hourlyRate: true,
+          wageGroup: { select: { billingHourlyRate: true } },
+        },
+      },
+    },
+  })
+  const travelSnapshot = resolveTravelRateExtended({
+    orderRate: orderForRate?.billingRatePerHour ?? null,
+    assignmentEmployees: assignmentsForRate.map((a) => ({
+      hourlyRate: a.employee?.hourlyRate ?? null,
+      wageGroup: a.employee?.wageGroup ?? null,
+    })),
+  })
+
   // 5. Atomic DRAFT→SIGNED. `updateMany` with a status filter is the only
   // primitive that gives us both "act conditionally" and "exclusive commit"
   // in a single roundtrip (pattern: billing-document-service.ts:427-442).
@@ -547,6 +574,9 @@ export async function sign(
       signerRole,
       signerIpHash: ipHash,
       signaturePath,
+      // NK-1 Travel-Snapshot (Decision 27)
+      travelRateAtSign: travelSnapshot.rate,
+      travelRateSourceAtSign: travelSnapshot.source,
     },
   })
 

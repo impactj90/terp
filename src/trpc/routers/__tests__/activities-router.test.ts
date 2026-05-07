@@ -31,6 +31,12 @@ function makeActivity(
     isActive: boolean
     createdAt: Date
     updatedAt: Date
+    // NK-1 (Decision 7, Decision 33) — Activity-Pricing fields
+    pricingType: "HOURLY" | "FLAT_RATE" | "PER_UNIT"
+    flatRate: number | null
+    hourlyRate: number | null
+    unit: string | null
+    calculatedHourEquivalent: number | null
   }> = {}
 ) {
   return {
@@ -42,6 +48,14 @@ function makeActivity(
     isActive: true,
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
+    // NK-1 defaults — HOURLY with no rates set, falls through to next
+    // resolver level. Repository toNumber-coerces Decimal → number, so
+    // tests can pass plain numbers / null here.
+    pricingType: "HOURLY" as "HOURLY" | "FLAT_RATE" | "PER_UNIT",
+    flatRate: null as number | null,
+    hourlyRate: null as number | null,
+    unit: null as string | null,
+    calculatedHourEquivalent: null as number | null,
     ...overrides,
   }
 }

@@ -91,6 +91,12 @@ export const MODULE_PRICES: Record<ModuleId, ModulePricing> = {
     vatRate: 19,
     description: "Terp Bankkontoauszüge — CAMT.053-Import und Auto-Matching",
   },
+  nachkalkulation: {
+    monthly: 4,
+    annual: 40,
+    vatRate: 19,
+    description: "Terp Nachkalkulation — Soll/Ist-Auswertungen je Auftrag",
+  },
 }
 
 export function getModulePrice(

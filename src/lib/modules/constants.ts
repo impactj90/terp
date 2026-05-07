@@ -14,5 +14,6 @@ export const AVAILABLE_MODULES = [
   "inbound_invoices",
   "payment_runs",
   "bank_statements",
+  "nachkalkulation",
 ] as const
 export type ModuleId = (typeof AVAILABLE_MODULES)[number]

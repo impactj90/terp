@@ -32,6 +32,10 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import * as billingDocumentService from "./billing-document-service"
 import * as auditLog from "./audit-logs-service"
 import type { AuditContext } from "./audit-logs-service"
+import {
+  resolveLaborRateExtended,
+  resolveTravelRateExtended,
+} from "./labor-rate-resolver"
 
 // --- Constants ---
 
@@ -183,48 +187,10 @@ function toPositiveRate(value: unknown): number | null {
   return n
 }
 
-/**
- * Pick the labor rate for a single booking using the chain:
- *   Order.billingRatePerHour > Employee.hourlyRate > null.
- * Returns `null` when nothing positive is set — caller must flag the
- * row `requiresManualPrice: true` and send `unitPrice: 0`.
- */
-function resolveLaborRate(
-  orderRate: unknown,
-  employeeRate: unknown,
-): number | null {
-  const order = toPositiveRate(orderRate)
-  if (order !== null) return order
-  const employee = toPositiveRate(employeeRate)
-  if (employee !== null) return employee
-  return null
-}
-
-/**
- * Pick the travel rate. If `Order.billingRatePerHour` is set (and
- * positive) it wins uniformly. Otherwise: Maximum across all assigned
- * employees' hourlyRate. If that produces no positive candidates,
- * returns `null`.
- *
- * Maximum-strategy is documented in Handbuch §13 — defensive
- * pre-fill so an expensive employee's hour isn't silently billed
- * at a cheaper rate when the operator skips review.
- */
-function resolveTravelRate(
-  orderRate: unknown,
-  assignmentEmployees: { hourlyRate: unknown }[],
-): number | null {
-  const order = toPositiveRate(orderRate)
-  if (order !== null) return order
-
-  let max: number | null = null
-  for (const a of assignmentEmployees) {
-    const rate = toPositiveRate(a.hourlyRate)
-    if (rate === null) continue
-    if (max === null || rate > max) max = rate
-  }
-  return max
-}
+// NK-1 (Decision 28): Bridge no longer carries its own resolver.
+// Both labor and travel rate resolution live in
+// `labor-rate-resolver.ts`, imported below as
+// `resolveLaborRateExtended` / `resolveTravelRateExtended`.
 
 // --- Public API ---
 
@@ -248,7 +214,11 @@ export async function computeProposedPositions(
   const workReport = await prisma.workReport.findFirst({
     where: { id: workReportId, tenantId },
     include: {
-      assignments: { include: { employee: true } },
+      assignments: {
+        include: {
+          employee: { include: { wageGroup: true } },
+        },
+      },
       order: true,
     },
   })
@@ -260,11 +230,13 @@ export async function computeProposedPositions(
 
   // Selectively scoped to bookings tagged with this WorkReport. Other
   // bookings on the same order remain available for separate generates.
+  // NK-1 (Decision 14): also pull employee.wageGroup and the activity's
+  // pricing config so the resolver has all inputs.
   const bookings = await prisma.orderBooking.findMany({
     where: { tenantId, workReportId },
     include: {
       activity: true,
-      employee: true,
+      employee: { include: { wageGroup: true } },
     },
     orderBy: [{ bookingDate: "asc" }, { createdAt: "asc" }],
   })
@@ -272,7 +244,21 @@ export async function computeProposedPositions(
   const positions: ProposedPosition[] = []
 
   for (const booking of bookings) {
-    const rate = resolveLaborRate(orderRate, booking.employee?.hourlyRate)
+    // NK-1 (Decision 14): prefer the persisted snapshot; live-lookup
+    // is the fallback for legacy bookings that pre-date Phase 3.
+    let rate: number | null
+    if (booking.hourlyRateAtBooking != null) {
+      rate = toPositiveRate(booking.hourlyRateAtBooking)
+    } else {
+      const resolved = resolveLaborRateExtended({
+        bookingActivity: booking.activity,
+        orderRate,
+        employeeWageGroupRate:
+          booking.employee?.wageGroup?.billingHourlyRate ?? null,
+        employeeRate: booking.employee?.hourlyRate ?? null,
+      })
+      rate = resolved.rate
+    }
     const requiresManualPrice = rate === null
     const unitPrice = rate ?? 0
 
@@ -307,12 +293,35 @@ export async function computeProposedPositions(
   }
 
   if (workReport.travelMinutes && workReport.travelMinutes > 0) {
-    const travelRate = resolveTravelRate(
-      orderRate,
-      (workReport.assignments ?? []).map((a) => ({
-        hourlyRate: a.employee?.hourlyRate ?? null,
-      })),
-    )
+    // NK-1 (Decision 27): prefer the snapshot persisted at sign time.
+    // Falls back to a live lookup (which now includes WageGroup) for
+    // DRAFT scheine and pre-NK-1 SIGNED scheine.
+    let travelRate: number | null
+    if (workReport.travelRateAtSign != null) {
+      travelRate = toPositiveRate(workReport.travelRateAtSign)
+    } else {
+      type AssignmentWithWg = {
+        employee: {
+          hourlyRate: import("@prisma/client/runtime/client").Decimal | null
+          wageGroup: {
+            billingHourlyRate:
+              | import("@prisma/client/runtime/client").Decimal
+              | null
+          } | null
+        } | null
+      }
+      const resolved = resolveTravelRateExtended({
+        orderRate,
+        assignmentEmployees: (workReport.assignments ?? []).map((a) => {
+          const aWg = a as unknown as AssignmentWithWg
+          return {
+            hourlyRate: aWg.employee?.hourlyRate ?? null,
+            wageGroup: aWg.employee?.wageGroup ?? null,
+          }
+        }),
+      })
+      travelRate = resolved.rate
+    }
     const requiresManualPrice = travelRate === null
     const unitPrice = travelRate ?? 0
 

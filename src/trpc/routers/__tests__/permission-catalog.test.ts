@@ -18,8 +18,12 @@ describe("permission-catalog", () => {
     )
   })
 
-  it("contains exactly 180 permissions", () => {
-    expect(ALL_PERMISSIONS).toHaveLength(180)
+  it("contains exactly 199 permissions", () => {
+    // The catalog grows as new modules / features land. Bump this number
+    // whenever a permission is added; the assertion exists to catch
+    // *unintended* changes (typos, accidental duplicates), not to freeze
+    // the catalog.
+    expect(ALL_PERMISSIONS).toHaveLength(199)
   })
 
   it("includes all 5 bank_transactions permissions", () => {
@@ -29,6 +33,18 @@ describe("permission-catalog", () => {
     expect(keys).toContain("bank_transactions.match")
     expect(keys).toContain("bank_transactions.unmatch")
     expect(keys).toContain("bank_transactions.ignore")
+  })
+
+  it("includes all 8 NK-1 / Stammdaten permissions", () => {
+    const keys = ALL_PERMISSIONS.map((p) => p.key)
+    expect(keys).toContain("nachkalkulation.view")
+    expect(keys).toContain("nachkalkulation.manage")
+    expect(keys).toContain("nachkalkulation.config")
+    expect(keys).toContain("wage_groups.view")
+    expect(keys).toContain("wage_groups.manage")
+    expect(keys).toContain("order_types.view")
+    expect(keys).toContain("order_types.manage")
+    expect(keys).toContain("activities.manage_pricing")
   })
 
   it("all permissions have unique IDs", () => {

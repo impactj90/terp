@@ -137,6 +137,7 @@ export async function createFromUpload(
   if (parsed?.lineItems && parsed.lineItems.length > 0) {
     await lineItemRepo.createMany(
       prisma,
+      tenantId,
       invoice.id,
       parsed.lineItems.map((li, idx) => ({
         position: idx + 1,
@@ -332,7 +333,7 @@ export async function updateLineItems(
     }
   }
 
-  await lineItemRepo.replaceAll(prisma, invoiceId, items)
+  await lineItemRepo.replaceAll(prisma, tenantId, invoiceId, items)
 
   if (audit) {
     await auditLog
@@ -583,5 +584,113 @@ export async function getPdfSignedUrl(
   return {
     signedUrl,
     filename: invoice.pdfOriginalFilename ?? "invoice.pdf",
+  }
+}
+
+/**
+ * NK-1 (Decision 5): Update per-line-item Order/CostCenter
+ * assignments. Allows operators to split a multi-position invoice
+ * across multiple cost centers / orders without re-uploading.
+ */
+export async function updateLineItemAssignments(
+  prisma: PrismaClient,
+  tenantId: string,
+  invoiceId: string,
+  assignments: Array<{
+    lineItemId: string
+    orderId?: string | null
+    costCenterId?: string | null
+  }>,
+  audit?: AuditContext,
+) {
+  // Verify invoice belongs to tenant
+  const invoice = await getById(prisma, tenantId, invoiceId)
+
+  // Validate all line items belong to the invoice
+  const lineItems = await prisma.inboundInvoiceLineItem.findMany({
+    where: { invoiceId, tenantId },
+  })
+  const validIds = new Set(lineItems.map((li) => li.id))
+  for (const a of assignments) {
+    if (!validIds.has(a.lineItemId)) {
+      throw new InboundInvoiceValidationError(
+        `Line item ${a.lineItemId} does not belong to invoice ${invoiceId}`,
+      )
+    }
+  }
+
+  // Validate assignments tenant-scoped
+  const orderIds = Array.from(
+    new Set(
+      assignments
+        .map((a) => a.orderId)
+        .filter((id): id is string => !!id),
+    ),
+  )
+  if (orderIds.length > 0) {
+    const found = await prisma.order.findMany({
+      where: { tenantId, id: { in: orderIds } },
+      select: { id: true },
+    })
+    const foundIds = new Set(found.map((o) => o.id))
+    for (const id of orderIds) {
+      if (!foundIds.has(id)) {
+        throw new InboundInvoiceValidationError(
+          `Order ${id} not found in tenant`,
+        )
+      }
+    }
+  }
+
+  const ccIds = Array.from(
+    new Set(
+      assignments
+        .map((a) => a.costCenterId)
+        .filter((id): id is string => !!id),
+    ),
+  )
+  if (ccIds.length > 0) {
+    const found = await prisma.costCenter.findMany({
+      where: { tenantId, id: { in: ccIds } },
+      select: { id: true },
+    })
+    const foundIds = new Set(found.map((c) => c.id))
+    for (const id of ccIds) {
+      if (!foundIds.has(id)) {
+        throw new InboundInvoiceValidationError(
+          `Cost center ${id} not found in tenant`,
+        )
+      }
+    }
+  }
+
+  // Apply updates
+  await prisma.$transaction(
+    assignments.map((a) =>
+      prisma.inboundInvoiceLineItem.update({
+        where: { id: a.lineItemId },
+        data: {
+          orderId: a.orderId === undefined ? undefined : a.orderId,
+          costCenterId:
+            a.costCenterId === undefined ? undefined : a.costCenterId,
+        },
+      }),
+    ),
+  )
+
+  if (audit) {
+    await auditLog
+      .log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "update_line_item_assignments",
+        entityType: "inbound_invoice",
+        entityId: invoiceId,
+        entityName: invoice.number,
+        changes: { assignments: { count: assignments.length } },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      })
+      .catch((err) => console.error("[AuditLog] Failed:", err))
   }
 }

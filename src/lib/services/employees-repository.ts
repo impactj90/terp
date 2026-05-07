@@ -29,6 +29,7 @@ export async function findMany(
         department: { select: { id: true, name: true, code: true } },
         location: { select: { id: true, name: true, code: true } },
         tariff: { select: { id: true, name: true, code: true } },
+        wageGroup: { select: { id: true, name: true, code: true } },
       },
     }),
     prisma.employee.count({ where }),
@@ -55,6 +56,7 @@ export async function findManyByIds(
       department: { select: { id: true, name: true, code: true } },
       location: { select: { id: true, name: true, code: true } },
       tariff: { select: { id: true, name: true, code: true } },
+      wageGroup: { select: { id: true, name: true, code: true } },
     },
   })
 }
@@ -90,6 +92,9 @@ export async function findByIdWithRelations(
         select: { id: true, code: true, name: true },
       },
       tariff: {
+        select: { id: true, code: true, name: true },
+      },
+      wageGroup: {
         select: { id: true, code: true, name: true },
       },
       contacts: {

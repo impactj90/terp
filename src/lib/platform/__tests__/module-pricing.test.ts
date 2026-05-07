@@ -14,7 +14,7 @@ describe("platform module pricing", () => {
     expect(unitPrice).toBe(40)
   })
 
-  it("defines all 7 modules", () => {
+  it("defines all 8 modules", () => {
     const keys = Object.keys(MODULE_PRICES).sort()
     expect(keys).toEqual(
       [
@@ -23,10 +23,17 @@ describe("platform module pricing", () => {
         "core",
         "crm",
         "inbound_invoices",
+        "nachkalkulation",
         "payment_runs",
         "warehouse",
       ].sort(),
     )
+  })
+
+  // NK-1 (Decision 16): Nachkalkulation module pricing
+  it("nachkalkulation is priced at 4€ monthly / 40€ annually", () => {
+    expect(getModulePrice("nachkalkulation", "MONTHLY").unitPrice).toBe(4)
+    expect(getModulePrice("nachkalkulation", "ANNUALLY").unitPrice).toBe(40)
   })
 
   it("each module has positive prices and a non-empty description", () => {

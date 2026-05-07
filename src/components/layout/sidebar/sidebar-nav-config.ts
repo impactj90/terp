@@ -194,6 +194,18 @@ export const navConfig: NavSection[] = [
             permissions: ['departments.manage'],
           },
           {
+            titleKey: 'wageGroups',
+            href: '/admin/wage-groups',
+            icon: Wallet,
+            permissions: ['wage_groups.view', 'wage_groups.manage'],
+          },
+          {
+            titleKey: 'orderTypes',
+            href: '/admin/order-types',
+            icon: Tag,
+            permissions: ['order_types.view', 'order_types.manage'],
+          },
+          {
             titleKey: 'locations',
             href: '/admin/locations',
             icon: MapPin,
@@ -379,6 +391,26 @@ export const navConfig: NavSection[] = [
         href: '/hr/personnel-file/categories',
         icon: Tag,
         permissions: ['hr_personnel_file_categories.manage'],
+      },
+    ],
+  },
+  {
+    titleKey: 'nachkalkulationSection',
+    module: 'nachkalkulation',
+    items: [
+      {
+        titleKey: 'nachkalkulationReports',
+        href: '/admin/nachkalkulation/reports',
+        icon: BarChart3,
+        module: 'nachkalkulation',
+        permissions: ['nachkalkulation.view', 'nachkalkulation.manage'],
+      },
+      {
+        titleKey: 'nachkalkulationSettings',
+        href: '/admin/settings#nachkalkulation',
+        icon: Calculator,
+        module: 'nachkalkulation',
+        permissions: ['nachkalkulation.config'],
       },
     ],
   },

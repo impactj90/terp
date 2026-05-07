@@ -107,6 +107,8 @@ const createInputSchema = z.object({
   bookingDate: z.string().date(), // YYYY-MM-DD
   timeMinutes: z.number().int().min(1).max(1440),
   description: z.string().max(2000).optional(),
+  // NK-1 (Decision 26): quantity for PER_UNIT activities
+  quantity: z.number().min(0).max(99999.99).optional(),
 })
 
 const updateInputSchema = z.object({
@@ -117,6 +119,8 @@ const updateInputSchema = z.object({
   bookingDate: z.string().date().optional(),
   timeMinutes: z.number().int().min(1).max(1440).optional(),
   description: z.string().max(2000).nullable().optional(),
+  // NK-1 (Decision 26): quantity for PER_UNIT activities
+  quantity: z.number().min(0).max(99999.99).nullable().optional(),
 })
 
 // --- Prisma Include Objects ---
@@ -414,49 +418,44 @@ export const orderBookingsRouter = createTRPCRouter({
           }
         }
 
-        // Create order booking
-        const created = await ctx.prisma.orderBooking.create({
-          data: {
-            tenantId,
+        // NK-1: route create through the service so the snapshot
+        // (Decision 14) and PER_UNIT validation (Decision 26) run.
+        const booking = await orderBookingService.create(
+          ctx.prisma,
+          tenantId,
+          ctx.user!.id,
+          {
             employeeId: input.employeeId,
             orderId: input.orderId,
-            activityId: input.activityId || null,
-            workReportId: input.workReportId ?? null,
-            bookingDate: new Date(input.bookingDate),
+            activityId: input.activityId,
+            bookingDate: input.bookingDate,
             timeMinutes: input.timeMinutes,
-            description: input.description?.trim() || null,
-            source: "manual",
-            createdBy: ctx.user!.id,
-            updatedBy: ctx.user!.id,
+            description: input.description,
+            quantity: input.quantity,
           },
-        })
+          {
+            userId: ctx.user!.id,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+        )
 
-        await auditLog.log(ctx.prisma, {
-          tenantId,
-          userId: ctx.user!.id,
-          action: "create",
-          entityType: "order_booking",
-          entityId: created.id,
-          entityName: null,
-          changes: null,
-          ipAddress: ctx.ipAddress,
-          userAgent: ctx.userAgent,
-        }).catch(err => console.error('[AuditLog] Failed:', err))
-
-        // Re-fetch with includes (matching Go pattern)
-        const booking = await ctx.prisma.orderBooking.findUnique({
-          where: { id: created.id },
-          include: orderBookingInclude,
-        })
-
-        if (!booking) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Order booking not found after creation",
+        // Patch workReportId via update if requested (the service
+        // create does not currently accept workReportId)
+        let finalBooking = booking
+        if (input.workReportId !== undefined) {
+          await ctx.prisma.orderBooking.update({
+            where: { id: booking.id },
+            data: { workReportId: input.workReportId ?? null },
           })
+          const refetched = await ctx.prisma.orderBooking.findUnique({
+            where: { id: booking.id },
+            include: orderBookingInclude,
+          })
+          if (refetched) finalBooking = refetched
         }
 
-        return mapToOutput(booking as unknown as Record<string, unknown>)
+        return mapToOutput(finalBooking as unknown as Record<string, unknown>)
       } catch (err) {
         handleServiceError(err)
       }

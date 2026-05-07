@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client"
+import type { ModuleId } from "@/lib/modules/constants"
 
 /** Subset of PrismaClient methods available inside a transaction. */
 export type TenantTemplateTx = Prisma.TransactionClient
@@ -66,4 +67,12 @@ export interface TenantTemplate {
     ctx: TenantTemplateContext,
     config: TenantTemplateConfigResult,
   ) => Promise<void>
+
+  /**
+   * NK-1 (Decision 32): Modules to auto-enable for this template
+   * after `applyConfig` / `applySeedData`. Avoids the demo tenant
+   * landing without `nachkalkulation` — operators can disable
+   * post-create if they want the bare module set.
+   */
+  modulesToEnable?: ModuleId[]
 }

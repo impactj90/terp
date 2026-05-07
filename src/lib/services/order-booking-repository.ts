@@ -136,6 +136,10 @@ export async function create(
     source: string
     createdBy: string
     updatedBy: string
+    // NK-1 (Decision 14, Decision 26)
+    hourlyRateAtBooking?: number | null
+    hourlyRateSourceAtBooking?: string | null
+    quantity?: number | null
   }
 ) {
   return prisma.orderBooking.create({ data })

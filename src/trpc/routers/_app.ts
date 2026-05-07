@@ -28,6 +28,9 @@ import { groupsRouter } from "./groups"
 import { activitiesRouter } from "./activities"
 import { ordersRouter } from "./orders"
 import { orderAssignmentsRouter } from "./orderAssignments"
+import { wageGroupsRouter } from "./wageGroups"
+import { orderTypesRouter } from "./orderTypes"
+import { nachkalkulationRouter } from "./nachkalkulation"
 import { orderBookingsRouter } from "./orderBookings"
 import { bookingTypesRouter } from "./bookingTypes"
 import { bookingReasonsRouter } from "./bookingReasons"
@@ -144,6 +147,9 @@ export const appRouter = createTRPCRouter({
   orders: ordersRouter,
   orderAssignments: orderAssignmentsRouter,
   orderBookings: orderBookingsRouter,
+  wageGroups: wageGroupsRouter,
+  orderTypes: orderTypesRouter,
+  nachkalkulation: nachkalkulationRouter,
   bookingTypes: bookingTypesRouter,
   bookingReasons: bookingReasonsRouter,
   bookings: bookingsRouter,

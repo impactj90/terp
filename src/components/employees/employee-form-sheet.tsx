@@ -39,6 +39,7 @@ import {
   useTariffs,
   useLocations,
 } from '@/hooks'
+import { useWageGroups } from '@/hooks/use-wage-groups'
 import { cn } from '@/lib/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +69,7 @@ interface FormState {
   employmentTypeId: string
   locationId: string
   tariffId: string
+  wageGroupId: string
   weeklyHours: string
   vacationDaysPerYear: string
 }
@@ -85,6 +87,7 @@ const INITIAL_STATE: FormState = {
   employmentTypeId: '',
   locationId: '',
   tariffId: '',
+  wageGroupId: '',
   weeklyHours: '',
   vacationDaysPerYear: '',
 }
@@ -146,12 +149,14 @@ export function EmployeeFormSheet({
   const { data: employmentTypesData, isLoading: loadingEmploymentTypes } = useEmploymentTypes({ enabled: open })
   const { data: tariffsData, isLoading: loadingTariffs } = useTariffs({ isActive: true, enabled: open })
   const { data: locationsData, isLoading: loadingLocations } = useLocations({ isActive: true, enabled: open })
+  const { data: wageGroupsData, isLoading: loadingWageGroups } = useWageGroups({ isActive: true, enabled: open })
 
   const departments = departmentsData?.data ?? []
   const costCenters = costCentersData?.data ?? []
   const employmentTypes = employmentTypesData?.data ?? []
   const tariffs = tariffsData?.data ?? []
   const locations = locationsData?.data ?? []
+  const wageGroups = wageGroupsData?.data ?? []
 
   // Reset form when opening/closing or employee changes
   React.useEffect(() => {
@@ -172,6 +177,10 @@ export function EmployeeFormSheet({
           employmentTypeId: employee.employment_type_id || '',
           locationId: employee.locationId || '',
           tariffId: employee.tariffId || '',
+          wageGroupId:
+            employee.wageGroupId
+              ?? employee.wage_group_id
+              ?? '',
           weeklyHours: employee.weekly_hours?.toString() || '',
           vacationDaysPerYear: employee.vacation_days_per_year?.toString() || '',
         })
@@ -210,6 +219,7 @@ export function EmployeeFormSheet({
           employmentTypeId: form.employmentTypeId || undefined,
           locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
+          wageGroupId: form.wageGroupId || null,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
         })
@@ -226,6 +236,7 @@ export function EmployeeFormSheet({
           employmentTypeId: form.employmentTypeId || undefined,
           locationId: form.locationId || undefined,
           tariffId: form.tariffId || undefined,
+          wageGroupId: form.wageGroupId || null,
           weeklyHours: form.weeklyHours ? parseFloat(form.weeklyHours) : undefined,
           vacationDaysPerYear: form.vacationDaysPerYear ? parseFloat(form.vacationDaysPerYear) : undefined,
         })
@@ -501,6 +512,29 @@ export function EmployeeFormSheet({
                     {tariffs.map((tariff) => (
                       <SelectItem key={tariff.id} value={tariff.id}>
                         {tariff.code} - {tariff.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('fieldWageGroup')}</Label>
+                <Select
+                  value={form.wageGroupId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, wageGroupId: value === '__none__' ? '' : value }))
+                  }
+                  disabled={isSubmitting || loadingWageGroups}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectWageGroup')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('wageGroupNone')}</SelectItem>
+                    {wageGroups.map((wg) => (
+                      <SelectItem key={wg.id} value={wg.id}>
+                        {wg.code} - {wg.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

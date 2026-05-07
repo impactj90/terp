@@ -67,6 +67,8 @@ const employeeOutputSchema = z.object({
   employmentTypeId: z.string().nullable(),
   locationId: z.string().nullable(),
   tariffId: z.string().nullable(),
+  // NK-1 (Decision 2): wage group FK
+  wageGroupId: z.string().nullable(),
   weeklyHours: z.number(),
   vacationDaysPerYear: z.number(),
   isActive: z.boolean(),
@@ -183,6 +185,7 @@ const employeeListItemOutputSchema = employeeOutputSchema.extend({
   department: relationSchema,
   location: relationSchema,
   tariff: relationSchema,
+  wageGroup: relationSchema,
 })
 
 const employeeDetailOutputSchema = employeeOutputSchema.extend({
@@ -192,6 +195,7 @@ const employeeDetailOutputSchema = employeeOutputSchema.extend({
   employmentType: relationSchema,
   location: relationSchema,
   tariff: relationSchema,
+  wageGroup: relationSchema,
   contacts: z.array(
     z.object({
       id: z.string(),
@@ -269,6 +273,8 @@ const createEmployeeInputSchema = z.object({
   employmentTypeId: z.string().optional(),
   locationId: z.string().optional(),
   tariffId: z.string().optional(),
+  // NK-1 (Decision 2): wage group FK
+  wageGroupId: z.string().nullable().optional(),
   weeklyHours: z.number().min(0).max(168).optional(),
   vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
@@ -322,6 +328,8 @@ const updateEmployeeInputSchema = z.object({
   employmentTypeId: z.string().optional(),
   locationId: z.string().optional(),
   tariffId: z.string().optional(),
+  // NK-1 (Decision 2): wage group FK
+  wageGroupId: z.string().nullable().optional(),
   weeklyHours: z.number().min(0).max(168).optional(),
   vacationDaysPerYear: z.number().min(0).max(365).optional(),
   isActive: z.boolean().optional(),
@@ -478,6 +486,7 @@ function mapEmployeeToOutput(emp: {
   employmentTypeId: string | null
   locationId: string | null
   tariffId: string | null
+  wageGroupId: string | null
   weeklyHours: Prisma.Decimal | number
   vacationDaysPerYear: Prisma.Decimal | number
   isActive: boolean
@@ -528,6 +537,7 @@ function mapEmployeeToOutput(emp: {
     employmentTypeId: emp.employmentTypeId,
     locationId: emp.locationId,
     tariffId: emp.tariffId,
+    wageGroupId: emp.wageGroupId,
     weeklyHours: Number(emp.weeklyHours),
     vacationDaysPerYear: Number(emp.vacationDaysPerYear),
     isActive: emp.isActive,
@@ -796,6 +806,7 @@ export const employeesRouter = createTRPCRouter({
               department?: { id: string; code: string; name: string } | null
               location?: { id: string; code: string; name: string } | null
               tariff?: { id: string; code: string; name: string } | null
+              wageGroup?: { id: string; code: string; name: string } | null
             }
             return {
               ...base,
@@ -803,6 +814,7 @@ export const employeesRouter = createTRPCRouter({
               department: rel.department ?? null,
               location: rel.location ?? null,
               tariff: rel.tariff ?? null,
+              wageGroup: rel.wageGroup ?? null,
             }
           }),
           total,
@@ -877,6 +889,13 @@ export const employeesRouter = createTRPCRouter({
                 id: employee.tariff.id,
                 code: employee.tariff.code,
                 name: employee.tariff.name,
+              }
+            : null,
+          wageGroup: (employee as unknown as { wageGroup?: { id: string; code: string; name: string } | null }).wageGroup
+            ? {
+                id: (employee as unknown as { wageGroup: { id: string; code: string; name: string } }).wageGroup.id,
+                code: (employee as unknown as { wageGroup: { id: string; code: string; name: string } }).wageGroup.code,
+                name: (employee as unknown as { wageGroup: { id: string; code: string; name: string } }).wageGroup.name,
               }
             : null,
           contacts: employee.contacts.map((c) => ({

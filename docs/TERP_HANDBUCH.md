@@ -95,6 +95,17 @@ Dieses Handbuch erklärt jede Funktion von Terp und zeigt genau, wo sie in der A
     - [13.14 E-Rechnung (ZUGFeRD / XRechnung)](#1314-e-rechnung-zugferd--xrechnung)
     - [13.15 Leistungszeitraum (§14 UStG)](#1315-leistungszeitraum-14-ustg)
     - [13.16 Rechnungsausgangsbuch (Steuerberater-Export)](#1316-rechnungsausgangsbuch-steuerberater-export)
+    - [13.17 Rechnung aus Arbeitsschein erzeugen](#1317-rechnung-aus-arbeitsschein-erzeugen)
+    - [13.18 Nachkalkulation (Soll/Ist auf Auftragsebene)](#1318-nachkalkulation-sollist-auf-auftragsebene)
+        - [13.18.1 Wofür Nachkalkulation? — fachliche Einführung](#13181-wofür-nachkalkulation--fachliche-einführung)
+        - [13.18.2 Stammdaten anlegen](#13182-stammdaten-anlegen)
+        - [13.18.3 Soll-Werte erfassen](#13183-soll-werte-erfassen)
+        - [13.18.4 Ist-Werte sehen](#13184-ist-werte-sehen)
+        - [13.18.5 DB-Stufen verstehen](#13185-db-stufen-verstehen)
+        - [13.18.6 Schwellen-Konfiguration](#13186-schwellen-konfiguration)
+        - [13.18.7 Reports und Dashboard](#13187-reports-und-dashboard)
+        - [13.18.8 Modul aktivieren](#13188-modul-aktivieren)
+        - [13.18.9 Praxisbeispiel End-to-End: Notdienst-Auftrag bis Soll/Ist-Bewertung](#13189-praxisbeispiel-end-to-end-notdienst-auftrag-bis-sollist-bewertung)
 14. [Lagerverwaltung — Artikelstamm](#14-lagerverwaltung--artikelstamm)
     - [14.1 Artikelliste](#141-artikelliste)
     - [14.2 Artikeldetailseite](#142-artikeldetailseite)
@@ -8025,6 +8036,729 @@ Wenn an einem Arbeitsschein **mehrere Mitarbeiter** zugewiesen sind und diese un
 - Wenn der Schein **keine Buchungen** hat und **keine Anfahrt** erfasst ist: informativer Banner „Keine Buchungen oder Anfahrt zugeordnet. Sie können manuelle Positionen ergänzen." Button „Erzeugen" ist disabled bis mindestens eine manuelle Position via „Manuelle Position hinzufügen" angelegt ist.
 - VAT-Vorbelegung: 19 % (Regelsteuersatz). Im Dialog pro Position individuell überschreibbar.
 - Audit: Ein Generate schreibt zwei Audit-Log-Einträge — einer auf den Arbeitsschein (`action=generate_invoice`, Cross-Link auf das BillingDocument) und einer auf das BillingDocument (`action=create_from_wr`, Cross-Link auf den Arbeitsschein).
+
+---
+
+### 13.18 Nachkalkulation (Soll/Ist auf Auftragsebene)
+
+**Was ist es?** Die Nachkalkulation vergleicht für jeden Auftrag die **geplanten Werte (Soll)** mit den **tatsächlich angefallenen Werten (Ist)** — für Stunden, Material, Reisezeit, externe Kosten und Erlös. Aus dieser Differenz berechnet das System die drei Deckungsbeitrags-Stufen (DB I / DB II / DB III), die Produktivität und den Rohertrag pro Stunde. Je Auftragstyp lassen sich Schwellenwerte definieren, die jede Marge automatisch in die Ampelfarben Grün / Gelb / Rot klassifizieren.
+
+**Wozu dient es?** Macht ad-hoc transparent, ob ein Auftrag profitabel war oder ob z. B. Material überzogen wurde, Mitarbeiter länger brauchten als geplant, oder die Pauschal-Anfahrt zu knapp kalkuliert war. Notdienst-Aufträge mit hoher erwarteter Marge können separat von Wartungsaufträgen mit niedriger Marge bewertet werden — die Ampel passt sich pro Auftragstyp an.
+
+⚠️ Modul: **Nachkalkulation** muss aktiviert sein (4 EUR/Mitarbeiter/Monat — siehe §13.18.8).
+
+⚠️ Berechtigungen:
+- `nachkalkulation.view` — Reports anzeigen (Disponent, Vorarbeiter)
+- `nachkalkulation.manage` — Soll-Werte erfassen, Re-Planung (Disponent, Geschäftsführer)
+- `nachkalkulation.config` — Schwellenwerte konfigurieren (Admin)
+- `wage_groups.manage` — Lohngruppen verwalten (Admin)
+- `order_types.manage` — Auftragstypen verwalten (Admin)
+- `activities.manage_pricing` — Pricing pro Aktivität konfigurieren (Admin / GF)
+
+📍 Aufträge > [Auftrag öffnen] > Tab **„Nachkalkulation"**
+
+📍 Administration > **„Lohngruppen"** und Administration > **„Auftragstypen"** (jeweils direkte Sidebar-Einträge)
+
+📍 Administration > Einstellungen, Section **„Nachkalkulations-Schwellen"** (Anchor `#nachkalkulation` auf der Single-Page-Settings-Route)
+
+📍 Sidebar (sofern Modul aktiv): eigene Sektion **„Nachkalkulation"** mit zwei Einträgen — **Reports** (`/admin/nachkalkulation/reports`) und **Schwellen-Konfig** (`/admin/settings#nachkalkulation`).
+
+#### 13.18.1 Wofür Nachkalkulation? — fachliche Einführung
+
+Klassisch in der Industriedienstleistung gibt es zwei Sichten auf einen Auftrag:
+
+| Sicht | Frage | Wer |
+|---|---|---|
+| **Operativ** | „Wann ist der Einsatz fertig?" | Disponent, Vorarbeiter |
+| **Kaufmännisch** | „Hat sich der Einsatz gelohnt?" | Geschäftsführer, Controlling |
+
+Die Nachkalkulation beantwortet die zweite Frage **automatisch** auf Auftragsebene. Sie kombiniert vier Datenquellen:
+
+1. **Zeitbuchungen** auf den Auftrag (`OrderBooking` aus dem Zeitterminal oder Arbeitsschein)
+2. **Materialbewegungen** auf den Auftrag (`WhStockMovement`, z. B. Lagerentnahmen, Wareneingänge)
+3. **Eingangsrechnungen** mit Position-Level-Zuordnung (`InboundInvoiceLineItem.orderId`)
+4. **Reisezeit** aus signierten Arbeitsscheinen (`WorkReport.travelMinutes`)
+
+Daraus ergeben sich vier Output-Kennzahlen je Auftrag:
+
+- **DB I** = `Soll-Erlös – Material-Ist` — wie viel verbleibt nach Materialeinsatz?
+- **DB II** = `DB I – Lohn-Ist` — wie viel verbleibt nach Lohnzahlung?
+- **DB III** = `DB II – Reisezeit-Ist – Externe-Kosten-Ist` — was bleibt unter dem Strich?
+- **Rohertrag pro Stunde** = `DB II / produktive Stunden` — wie viel hat jede Mitarbeiter-Stunde verdient?
+
+Jede Stufe wird über eine **Ampel** klassifiziert: grün, gelb, rot. Die Schwellenwerte können pro Auftragstyp überschrieben werden — ein Notdienst hat naturgemäß höhere Margen-Erwartungen als eine Wartung.
+
+> 💡 **Tipp:** Die Nachkalkulation ist read-only und arbeitet ausschließlich auf bereits erfassten Daten. Sie ändert keine Buchungen, schreibt keine Rechnungen — sie wertet nur aus. Daher gibt es keine „Statuswechsel" oder „Festschreiben" — der Report ist immer aktuell, sobald neue Buchungen / Bewegungen / Eingangsrechnungen erfasst werden.
+
+#### 13.18.2 Stammdaten anlegen
+
+Bevor Nachkalkulation sinnvoll auswerten kann, müssen drei Stammdaten-Bereiche eingerichtet sein.
+
+##### 13.18.2.1 Lohngruppen
+
+Lohngruppen bündeln Tarifgruppen / Erfahrungsstufen mit zwei Stundensätzen:
+
+- **Interner Stundensatz** — Was kostet die Stunde dieses Mitarbeiters intern (Lohn + Lohnnebenkosten)? Fließt in die Lohn-Kosten-Berechnung des Soll/Ist-Reports.
+- **Abrechnungs-Stundensatz** — Welcher Satz wird dem Kunden in Rechnung gestellt, wenn weder Auftrag noch Activity einen eigenen Satz vorgeben? Fließt in die Lookup-Chain für Rechnungspositionen (siehe §13.17).
+
+📍 Administration → **„Lohngruppen"** (direkter Sidebar-Eintrag, Pfad `/admin/wage-groups`)
+
+1. Klick auf **„Neue Lohngruppe"** (oben rechts)
+2. Felder ausfüllen:
+   - **Code** (Pflicht, eindeutig pro Tenant): z. B. `MEISTER`
+   - **Name** (Pflicht): z. B. `Meister`
+   - **Interner Stundensatz** (optional): z. B. `35,00`
+   - **Abrechnungs-Stundensatz** (optional): z. B. `95,00`
+   - **Sortierreihenfolge** (optional): z. B. `10` (kleinere Zahl = weiter oben)
+3. **„Speichern"**
+4. ✅ Lohngruppe erscheint in der Liste
+
+**Empfehlung — typische Lohngruppen für die Vertikale Industriedienstleister:**
+
+| Code | Name | Intern €/h | Abrechnung €/h |
+|---|---|---|---|
+| `MEISTER` | Meister | 35,00 | 95,00 |
+| `MONTEUR` | Monteur | 28,00 | 85,00 |
+| `GESELLE` | Geselle | 24,00 | 75,00 |
+| `AZUBI` | Auszubildender | 12,00 | 45,00 |
+| `HILFE` | Hilfskraft | 18,00 | 55,00 |
+
+**Mitarbeiter zur Lohngruppe zuordnen:**
+
+1. 📍 Personal > Mitarbeiter > [Mitarbeiter öffnen]
+2. Tab **„Vergütung"** → Feld **„Lohngruppe"** → Dropdown wählen
+3. **„Speichern"**
+
+> 💡 **Tipp:** Eine Lohngruppe lässt sich solange löschen, wie noch kein Mitarbeiter zugeordnet ist. Sind Mitarbeiter zugeordnet, erscheint stattdessen die Fehlermeldung „Wird von N Mitarbeitern verwendet" — in dem Fall die Lohngruppe nur **deaktivieren** (Schalter `Aktiv` aus), damit historische Daten erhalten bleiben.
+
+> 💡 **Migration aus Bestand:** Falls ihr bisher das Freitext-Feld `Mitarbeiter.salaryGroup` (Reiter Personalverwaltung) gepflegt habt, wandelt das einmalige Backfill-Skript `pnpm tsx src/scripts/migrate-employee-salary-group-to-wage-group.ts` jeden distinct Wert pro Tenant in einen Lohngruppen-Eintrag um und setzt automatisch die FK-Verknüpfung am Mitarbeiter. Das Skript ist **idempotent** — mehrfacher Aufruf ist gefahrlos.
+
+##### 13.18.2.2 Auftragstypen
+
+Auftragstypen kategorisieren Aufträge fachlich (Wartung, Notdienst, …) und ermöglichen separate Schwellenwerte je Typ.
+
+📍 Administration → **„Auftragstypen"** (direkter Sidebar-Eintrag, Pfad `/admin/order-types`)
+
+1. Klick auf **„Neuer Auftragstyp"**
+2. Felder ausfüllen:
+   - **Code** (Pflicht, eindeutig): z. B. `NOTDIENST`
+   - **Name** (Pflicht): z. B. `Notdienst`
+   - **Sortierreihenfolge** (optional): z. B. `20`
+3. **„Speichern"**
+
+**Empfehlung — typische Auftragstypen:**
+
+| Code | Name |
+|---|---|
+| `WARTUNG` | Wartung |
+| `NOTDIENST` | Notdienst |
+| `REPARATUR` | Reparatur |
+| `INSPEKTION` | Inspektion |
+| `PROJEKT` | Projekt |
+
+**Auftrag dem Auftragstyp zuweisen:**
+
+1. 📍 Aufträge > [Auftrag öffnen] → **„Bearbeiten"**
+2. Feld **„Auftragstyp"** → Dropdown wählen
+3. **„Speichern"**
+
+> 💡 **Tipp:** Aufträge ohne Auftragstyp werden in der Nachkalkulation mit den Tenant-Default-Schwellen bewertet. Sind dem Tenant Auftragstypen zugeordnet, lässt sich pro Auftragstyp eine eigene Schwelle hinterlegen (siehe §13.18.6).
+
+##### 13.18.2.3 Aktivitäts-Pricing
+
+Aktivitäten gibt es bereits aus den Stammdaten (Reiter Personalverwaltung > Aktivitäten). Die Nachkalkulation erweitert jede Aktivität um drei Pricing-Modi:
+
+| Modus | Bedeutung | Beispiel |
+|---|---|---|
+| `HOURLY` | Aktivität wird **stundenweise** abgerechnet — Standardfall | „Reparatur" → 75 €/h |
+| `FLAT_RATE` | Aktivität wird als **Pauschale** abgerechnet — Anzahl × fester Preis | „Notdienst-Anfahrt" → 89 € pro Einsatz |
+| `PER_UNIT` | Aktivität wird **mengenweise** abgerechnet — Menge × Stückpreis | „Rohrverlegung" → 18 €/lfm |
+
+Pro Aktivität sind je nach Modus weitere Felder verfügbar:
+
+- `HOURLY`: optional `hourlyRate` (Euro pro Stunde) — wenn nicht gesetzt, fällt die Rechnungs-Lookup-Chain durch zu Auftrag → Lohngruppe → Mitarbeiter (siehe §13.17)
+- `FLAT_RATE`: Pflicht `flatRate` (Pauschale in EUR), optional `calculatedHourEquivalent` (z. B. `0,5h` für eine Notdienst-Anfahrt — fließt als rechnerische Soll-Stundenzeit in die Produktivitäts-Berechnung ein)
+- `PER_UNIT`: Pflicht `unit` (Einheit, z. B. `lfm`, `Stk`, `m²`), optional `hourlyRate` als Stückpreis
+
+📍 Administration → **Aufträge** (`/admin/orders`) → Tab **„Tätigkeiten"** → [Aktivität öffnen oder „Neue Tätigkeit"] → Section **„Preisgestaltung"** im Form-Sheet
+
+1. **Pricing-Modus** wählen: HOURLY / FLAT_RATE / PER_UNIT
+2. Je nach Modus die Pflichtfelder ausfüllen
+3. **„Speichern"**
+
+**Empfehlung — typische Pricing-Konfiguration für die Vertikale:**
+
+| Code | Name | Modus | Felder |
+|---|---|---|---|
+| `ARBEIT` | Arbeitsleistung | HOURLY | hourlyRate leer (fällt durch zur Lohngruppe) |
+| `BERATUNG` | Beratung | HOURLY | hourlyRate = 95 |
+| `NOTANFAHRT` | Notdienst-Anfahrt | FLAT_RATE | flatRate = 89, calculatedHourEquivalent = 0,5 |
+| `VERLEGUNG` | Rohrverlegung | PER_UNIT | unit = `lfm`, hourlyRate = 18 |
+
+> 💡 **Berechtigung getrennt:** Anlegen / Bearbeiten der Activity (Code, Name, Beschreibung) erfordert `activities.manage` (Disponent). Die Pricing-Felder editiert nur, wer **zusätzlich** `activities.manage_pricing` hat (GF / Admin) — finanzielle Auswirkungen sollen nicht versehentlich vom Disponenten verschoben werden.
+
+> 💡 **HOURLY-Default für Bestand:** Alle bestehenden Aktivitäten bekommen automatisch `pricingType = HOURLY` ohne gesetzte Rate. Ihr Verhalten ist 1:1 wie vor der NK-Einführung — der Lookup für die Rechnung fällt weiterhin auf Auftrag → Lohngruppe → Mitarbeiter durch.
+
+#### 13.18.3 Soll-Werte erfassen
+
+Soll-Werte werden **versioniert** erfasst — pro Auftrag gibt es immer **genau eine aktive Version** (gesichert über einen DB-Index). Wird ein Auftrag re-geplant (z. B. weil sich der Notdienst ausweitet), legt das System eine neue Version an und schließt die alte automatisch durch ein `validTo`-Datum (= neue.validFrom – 1 Tag).
+
+📍 Aufträge > [Auftrag öffnen] > Tab **„Nachkalkulation"** → Sektion **„Soll"**
+
+##### 13.18.3.1 Erste Version anlegen
+
+Wenn der Tab leer ist:
+
+1. Klick auf **„Soll-Werte erfassen"**
+2. Sheet öffnet sich mit folgenden Feldern:
+   - **Gültig ab** (Pflicht): Datum, ab dem das Soll gilt — vorbelegt mit heute
+   - **Geplante Stunden**: Decimal, z. B. `10`
+   - **Geplantes Material** (EUR): Decimal, z. B. `250`
+   - **Geplante Reisezeit** (Minuten): Integer, z. B. `60`
+   - **Geplante externe Kosten** (EUR): Decimal, z. B. `0`
+   - **Geplanter Erlös** (EUR): Decimal, z. B. `1.200`
+   - **PER_UNIT-Mengen** (optional, Editor): Liste `[{ Activity, Menge }]` — nur für Aktivitäten mit `pricingType = PER_UNIT`. Beispiel: `Rohrverlegung × 50 lfm`
+   - **Änderungsgrund**: Dropdown `INITIAL` (default) / `REPLAN` / `CORRECTION` / `OTHER`
+   - **Notizen** (optional, Freitext)
+3. **„Soll erfassen"** — Submit-Button
+4. ✅ Version 1 wird angelegt, Sektion zeigt jetzt eine Card mit Badge **„v1"**, validFrom-Datum und Read-only-Werte
+
+##### 13.18.3.2 Re-Planung (neue Version)
+
+Sobald eine aktive Version existiert, ändert sich der Button-Text:
+
+1. Klick auf **„Soll re-planen"**
+2. Sheet öffnet sich — der Hinweis-Text oben zeigt: **„Aktive Version v1 (gültig ab dd.mm.yyyy) wird abgelöst"**
+3. **Gültig ab** muss **größer** als das aktuelle validFrom der aktiven Version sein — bei Verstoß: Fehlermeldung „Re-Planung muss nach dem aktiven Soll liegen"
+4. Werte anpassen (z. B. Stunden auf `12` erhöhen, Erlös auf `1.500` anpassen)
+5. **Änderungsgrund**: in der Regel `REPLAN`
+6. **„Soll re-planen"** — Submit-Button
+7. ✅ Version 2 ist jetzt aktiv, Version 1 wurde automatisch geschlossen mit `validTo = neue_validFrom - 1 Tag`
+
+##### 13.18.3.3 Versions-Verlauf einsehen
+
+1. In der Soll-Sektion: Klick auf **„Verlauf anzeigen"**
+2. Sheet öffnet sich als Timeline:
+   - Pro Version: **v1**, **v2**, … mit Datum-Range (`dd.mm.yyyy – dd.mm.yyyy` oder `aktiv`)
+   - Soll-Werte tabellarisch
+   - Änderungsgrund + Notizen
+   - „Erstellt von … am …"
+3. Schließen — der Verlauf ist read-only, eine alte Version kann nicht reaktiviert werden (eine Re-Planung ist immer additiv)
+
+> 💡 **Audit:** Jede Re-Planung schreibt einen Audit-Log-Eintrag mit dem Detail-Diff (welche Felder sich geändert haben). Forensisch nachvollziehbar in der Audit-Übersicht (Administration > System > Audit-Logs).
+
+> 💡 **Race-Schutz:** Auf DB-Ebene verhindert ein partieller Unique-Index `(order_id) WHERE valid_to IS NULL`, dass zwei parallele Re-Planungen gleichzeitig zwei aktive Versionen erzeugen. Im seltenen Conflict-Fall sieht der zweite Aufrufer die Fehlermeldung „Concurrent re-plan detected — please retry" und kann die Aktion neu starten.
+
+#### 13.18.4 Ist-Werte sehen
+
+Sobald eine aktive Soll-Version vorhanden ist, zeigt der Tab automatisch die **Soll/Ist-Sektion**.
+
+##### 13.18.4.1 Soll/Ist-Tabelle
+
+Die Tabelle hat fünf Zeilen — eine pro Komponente:
+
+| Komponente | Soll | Ist | Abweichung | % |
+|---|---|---|---|---|
+| Stunden | 10,00 | 11,75 | 1,75 | +17,5 % |
+| Material | 250,00 € | 312,50 € | 62,50 € | +25,0 % |
+| Reisezeit (min) | 60 | 75 | 15 | +25,0 % |
+| Externe Kosten | 0,00 € | 0,00 € | 0,00 € | — |
+| Erlös (Soll) | 1.200,00 € | — | — | — |
+
+> 💡 **Erlös ist Soll-only:** Im klassischen Auftrag wird der Erlös **erst bei Rechnungsstellung** real erfasst — vorher gibt es keinen Ist-Erlös. Die DB-Stufen rechnen daher konsequent gegen den **Soll-Erlös** (siehe §13.18.5). Eine spätere Erweiterung könnte einen `Erlös-Ist`-Wert aus tatsächlich gestellten Rechnungen aggregieren — heute nicht im Scope.
+
+##### 13.18.4.2 Pending vs. Committed (Stunden-Trennung)
+
+Das Ist-Modell unterscheidet drei Zustände einer Stundenbuchung:
+
+| Zustand | Bedingung | Ampel-Sicht |
+|---|---|---|
+| **Committed** | OrderBooking ist mit einem **SIGNED** WorkReport verknüpft | Standard: gezählt im Ist |
+| **Pending** | OrderBooking ist mit einem **DRAFT** WorkReport verknüpft, oder hat keinen WorkReport | Toggle: optional gezählt |
+| **Excluded** | OrderBooking ist mit einem **VOID** WorkReport verknüpft | Nie gezählt |
+
+Standardmäßig zeigt die Sektion **„Inkl. unsigned"** (Total = Committed + Pending) mit dem dezenten Hinweis-Text:
+
+> ⓘ Davon **X %** noch nicht abgenommen.
+
+Zum Wechsel:
+
+1. Über der Tabelle: Toggle **„Nur abgenommen"** / **„Inkl. unsigned"**
+2. Werte aktualisieren sich live — der Hinweis verschwindet, wenn alle Stunden committed sind
+
+##### 13.18.4.3 ≈-Markierung (Estimated)
+
+Wenn der Aggregator einen Wert nicht aus einem **Snapshot** (= persistierter Wert zum Zeitpunkt der Erfassung) berechnen konnte, sondern auf einen **Live-Lookup** der aktuellen Stammdaten zurückfallen musste, wird der Wert mit einem dezenten **≈** vorgestellt:
+
+> ≈ 1.234,56 €
+
+Hover öffnet einen Tooltip:
+
+> Wert basiert teilweise auf aktuellen Stammdatenpreisen oder Mitarbeiter-Sätzen, weil Buchungen oder Bewegungen vor dem Migrations-Zeitpunkt liegen.
+
+Außerdem erscheint **über der Sektion** ein gelber Banner „**Dieser Report enthält Schätzwerte aus Bestandsdaten**", wenn mindestens eine Komponente Schätzwerte enthält. Klick auf den Banner öffnet ein Drill-Down-Sheet mit der Liste der betroffenen Buchungen / Bewegungen / Eingangsrechnungen — von dort lässt sich direkt zur Bewegung navigieren, falls man den Snapshot manuell setzen möchte.
+
+> 💡 **Praktisch heißt das:** Aufträge, die **nach** der Einführung der Nachkalkulation begonnen wurden, haben in aller Regel keine ≈-Markierung — alle Snapshots werden automatisch beim Anlegen der Buchung / Bewegung / des Schein-Sign befüllt. Der ≈ erscheint nur bei migrierten Bestandsdaten oder Sonderfällen (z. B. eine Buchung ohne Activity auf einem Auftrag ohne Stundensatz auf einem Mitarbeiter ohne Stundensatz und ohne Lohngruppe).
+
+##### 13.18.4.4 Datenqualitäts-Indikatoren
+
+Unter der Soll/Ist-Tabelle steht eine Sub-Card **„Hinweise zur Datenqualität"** mit allen erkannten Issues:
+
+| Code | Severity | Bedeutung |
+|---|---|---|
+| `BOOKING_WITHOUT_RATE` | 🔴 error | OrderBooking ohne ermittelbaren Stundensatz (auch nicht über die Live-Lookup-Chain) |
+| `BOOKING_RATE_NULL_SNAPSHOT` | ⓘ info | OrderBooking ohne Snapshot — Live-Lookup wurde verwendet (Bestandsdaten) |
+| `PER_UNIT_WITHOUT_QUANTITY` | 🔴 error | OrderBooking auf einer PER_UNIT-Activity ohne `quantity` |
+| `TRAVEL_NULL_SNAPSHOT` | ⓘ info | WorkReport ohne `travelRateAtSign`-Snapshot — DRAFT oder Bestand |
+| `WORKREPORT_DRAFT` | ⚠ warning | WorkReport im DRAFT-Status (Stunden zählen als Pending) |
+| `BOOKING_WITHOUT_WORKREPORT` | ⚠ warning | OrderBooking ohne WorkReport-Zuordnung |
+| `MOVEMENT_NO_UNIT_COST` | ⓘ info | WhStockMovement ohne `unitCostAtMovement` (Bestandsdaten) |
+| `INVOICE_LI_LINKED_VIA_STOCK` | ⓘ info | Eingangsrechnungs-Position ist über `WhStockMovement` erfasst — wird in `externalCost` ausgenommen, um Doppelzählung zu vermeiden |
+| `EMPLOYEE_INACTIVE_OR_DELETED` | ⚠ warning | Buchung referenziert einen inaktiven oder gelöschten Mitarbeiter |
+| `EMPLOYEE_NO_WAGE_GROUP` | ⓘ info | Mitarbeiter mit Buchung, aber ohne Lohngruppen-Zuordnung |
+
+**Drill-Down:**
+
+1. Klick auf den **„Datenqualitäts-Hinweis"**-Button (rechts in der Issue-Zeile)
+2. Sheet **„Datenqualitäts-Hinweis"** öffnet mit:
+   - **Severity-Badge** (Info / Warnung / Fehler)
+   - **Issue-Code** (monospace, z. B. `BOOKING_WITHOUT_WORKREPORT`)
+   - **Übersetztes Label + Beschreibung** (i18n) — erklärt verständlich, was das Issue bedeutet
+   - **Liste der betroffenen Datensätze als human-readable Labels** — z. B. „2026-05-06 • 4:00h • Hans Müller" (Datum • Dauer • Mitarbeiter) statt rohe UUIDs. Die ersten 8 Zeichen der UUID werden als Sekundär-Text gezeigt, damit man bei Bedarf trotzdem die Roh-Referenz hat.
+   - **↗-Pfeil-Button** pro Eintrag — springt zur Detail-Page der jeweiligen Entität (z. B. WorkReport-Detail) oder zum richtigen Tab am aktuellen Auftrag (Tab-Deeplink via `?tab=...`, z. B. `?tab=bookings` für OrderBookings, da diese keine eigene Detail-Page haben)
+3. Footer-Button **„Schließen"** schließt das Sheet
+4. Beheben: z. B. Mitarbeiter-Lohngruppe nachpflegen, fehlenden WorkReport zuordnen, Snapshot bei Bestandsbuchungen via Backfill nachrüsten
+
+##### 13.18.4.5 Drei Position-Typen
+
+Unterhalb der DB-Stufen-Card werden drei separate Tabellen gerendert — jede für einen Position-Typ aus dem Aggregator:
+
+**A) Stunden-Positionen (laborHours)** — alle Buchungen mit `Activity = HOURLY` (oder ohne Activity):
+
+| Status | Stunden | Lohnkosten |
+|---|---|---|
+| Committed (SIGNED) | 8,75 | 743,75 € |
+| Pending (DRAFT / ohne WR) | 3,00 | 255,00 € |
+| Total | 11,75 | 998,75 € |
+
+**B) Pauschalpositionen (flatItems)** — Buchungen mit `Activity = FLAT_RATE`:
+
+| Aktivität | Anzahl | Pauschale | Σ € | Soll-h Äquiv. |
+|---|---|---|---|---|
+| Notdienst-Anfahrt | 2 | 89,00 € | 178,00 € | 1,00 h |
+
+> 💡 Die **Soll-h-Äquivalent**-Spalte addiert die `calculatedHourEquivalent` aller Buchungen einer Pauschal-Activity. Diese Stunden werden in der Produktivitäts-Berechnung **als zusätzliche Soll-Stunden gezählt** — eine Notdienst-Anfahrt wird also als „0,5 produktive Stunden" gewertet, obwohl sie tatsächlich vielleicht keine eigene Zeit-Buchung trug.
+
+**C) Mengen-Positionen (unitItems)** — Buchungen mit `Activity = PER_UNIT`:
+
+| Aktivität | Einheit | Soll | Ist | €/Einheit | Σ € |
+|---|---|---|---|---|---|
+| Rohrverlegung | lfm | 50 | 48 | 18,00 € | 864,00 € |
+
+> 💡 Die **Soll**-Spalte kommt aus `OrderTarget.targetUnitItems[].quantity` (siehe §13.18.3.1). Aktivitäten mit Soll-Wert aber **ohne** Ist-Buchung werden mit Ist=0 gezeigt — so ist sofort sichtbar, was geplant aber nicht erfasst wurde.
+
+#### 13.18.5 DB-Stufen verstehen
+
+Die Card **„DB-Stufen"** rechnet kaskadierend gegen den Soll-Erlös:
+
+```
+Soll-Erlös                       1.200,00 €
+   – Material Ist                  312,50 €
+   ───────────────────────
+DB I                                887,50 €  (74,0 %)  [grün]
+   – Lohn Ist                      998,75 €
+   ───────────────────────
+DB II                              -111,25 €  (-9,3 %)  [rot]
+   – Reisezeit Ist                  75,00 €  (75 min × Travel-Rate)
+   – Externe Kosten Ist              0,00 €
+   ───────────────────────
+DB III                             -186,25 €  (-15,5 %)  [rot]
+```
+
+| Stufe | Formel | Bedeutung |
+|---|---|---|
+| **DB I** | `Soll-Erlös – Material-Ist` | Was bleibt nach dem reinen Materialeinsatz? Klassisch der „Handelsspanne"-Teil. |
+| **DB II** | `DB I – Lohn-Ist` | Was bleibt nach Lohn? Operatives Ergebnis pro Auftrag. |
+| **DB III** | `DB II – Reisezeit-Ist – Externe-Kosten-Ist` | Vollständiges operatives Ergebnis nach allen direkt zurechenbaren Kosten. |
+
+> 💡 **Lohn-Ist umfasst alle drei Position-Typen:** Stunden × Stundensatz **plus** Pauschal-Buchungen × Pauschalpreis **plus** Mengen-Buchungen × Stückpreis. So zählt eine Notdienst-Anfahrt-Pauschale (89 €) korrekt als Lohnkosten in DB II, obwohl sie technisch eine FLAT_RATE-Position ist.
+
+> 💡 **Negative DB-Werte** sind valide und kommen vor — z. B. bei einem Kulanz-Auftrag oder einer übermäßig ausgeweiteten Reparatur. Sie werden mit der Ampel-Stufe `rot` (default `< 0 %`) markiert.
+
+##### 13.18.5.1 Produktivität & Rohertrag pro Stunde
+
+Die Card **„Produktivität"** zeigt zwei abgeleitete Kennzahlen:
+
+```
+Brutto-Stunden Ist:               11,75 h
+Pauschal-Äquivalent:               1,00 h   (aus FLAT_RATE-Buchungen)
+Produktive Stunden gesamt:        12,75 h
+Soll-Stunden:                     10,00 h
+Produktivität:                     127,5 %  [rot]
+
+Rohertrag pro Stunde (DB II/h):    -8,73 €/h
+```
+
+**Produktivität** zeigt, wie viele produktive Ist-Stunden gegen die Soll-Stunden anfallen. **127,5 %** heißt: Der Auftrag hat **27,5 % mehr Stunden gebraucht** als geplant — operativ rot.
+
+**Rohertrag pro Stunde** = `DB II / Produktive Stunden gesamt`. Ein negativer Wert (wie hier `-8,73 €/h`) bedeutet, dass jede Stunde am Auftrag rot war.
+
+> 💡 **Default-Schwellen** für Produktivität: < 50 % → rot, 50–70 % → gelb, > 70 % → grün. Anders als bei der Marge ist hier `niedriger = besser` — eine Produktivität von 80 % heißt: nur 80 % der geplanten Stunden wurden gebraucht (= 20 % schneller als geplant).
+
+#### 13.18.6 Schwellen-Konfiguration
+
+Schwellenwerte definieren, ab welchem Prozentsatz die Ampel auf gelb / rot springt. Sie sind **pro Tenant** und optional **pro Auftragstyp** überschreibbar.
+
+📍 Administration → **Einstellungen** (`/admin/settings`), Section **„Nachkalkulations-Schwellen"** (Anchor `#nachkalkulation`). Die Section ist Teil der Single-Page-Settings, nicht eine eigene Sub-Route — der Sidebar-Link **„Schwellen-Konfig"** scrollt direkt zur Section.
+
+##### 13.18.6.1 Default-Schwellen
+
+Die Seite hat zwei Sektionen. Die obere Card **„Default-Schwellen"** ist immer vorbelegt:
+
+| Kennzahl | Schwelle gelb | Schwelle rot |
+|---|---|---|
+| Marge (DB II) | ≥ 5 % | < 0 % |
+| Produktivität | ≥ 70 % | < 50 % |
+
+> Konkret heißt das: DB II-% ≥ 5 → grün; 0 ≤ % < 5 → gelb; % < 0 → rot. Produktivität ≥ 70 % → grün; 50 ≤ % < 70 → gelb; % < 50 → rot.
+
+1. Werte anpassen
+2. **„Speichern"**
+3. ✅ Validierung: Gelb-Schwelle muss **größer** als Rot-Schwelle sein (für beide Kennzahlen)
+
+##### 13.18.6.2 Override pro Auftragstyp
+
+Die untere Card **„Schwellen pro Auftragstyp"** listet alle aktiven Auftragstypen mit dem aktuellen Wert (entweder Override oder „Default verwenden"):
+
+| Auftragstyp | Marge gelb | Marge rot | Produktivität gelb | Produktivität rot | Aktion |
+|---|---|---|---|---|---|
+| Wartung | 5 % | 0 % | 70 % | 50 % | _Default verwenden_ |
+| Notdienst | **15 %** | **5 %** | **80 %** | **60 %** | „Override löschen" |
+| Reparatur | 5 % | 0 % | 70 % | 50 % | „Override anlegen" |
+
+Pro Zeile:
+- **„Override anlegen"** öffnet ein Sheet mit den vier Inputs → speichern legt einen Override-Eintrag an
+- **„Override löschen"** entfernt den Override → Auftragstyp fällt auf Tenant-Default zurück
+
+> 💡 **Beispiel-Logik:** Bei einem Notdienst-Auftrag wird ein DB II = 8 % als **gelb** klassifiziert (weil der Notdienst-Override „rot < 5 %, gelb < 15 %, grün ≥ 15 %" sagt). Bei einem Wartungs-Auftrag wäre derselbe Wert **grün** (weil Default „gelb < 5 %, grün ≥ 5 %"). Die Ampel passt sich automatisch je nach Auftragstyp an.
+
+> 💡 **Auto-Init:** Wenn kein Default existiert und der erste Soll/Ist-Report aufgerufen wird, legt das System die Default-Zeile mit den oben genannten Werten **automatisch** an. Der Operator kann sie danach jederzeit anpassen.
+
+#### 13.18.7 Reports und Dashboard
+
+Die Soll/Ist-Sicht pro Auftrag ist das eine. Die andere Sicht ist die Aggregation **über mehrere Aufträge** — z. B. Top/Flop nach Marge, oder pro Kunde / Anlage / Mitarbeiter.
+
+##### 13.18.7.1 Dashboard-Karte
+
+📍 Dashboard (Startseite) → Karte **„Top X Aufträge nach Rohertrag/h"**
+
+Die Karte zeigt die fünf Aufträge der letzten 7 Tage mit dem höchsten Rohertrag pro Stunde:
+
+```
+A-2026-0042 — Notdienst Mustermann   75,80 €/h  [grün]
+A-2026-0033 — Wartung Müller GmbH    45,30 €/h  [grün]
+A-2026-0039 — Reparatur Bauer KG     32,15 €/h  [gelb]
+A-2026-0028 — Wartung Schmidt        18,40 €/h  [gelb]
+A-2026-0035 — Notdienst Becker      -8,73 €/h  [rot]
+```
+
+Klick auf einen Auftrag → Order-Detail-Page mit Tab Nachkalkulation fokussiert.
+
+> 💡 **Sortierung wechseln:** Über dem Header der Karte gibt es ein Dropdown „Top nach Rohertrag/h" / „Top nach Marge" / „Flop nach Marge" — der Range (letzten 7 Tage) ist fix; für einen anderen Zeitraum siehe Reports-Seite.
+
+##### 13.18.7.2 Reports-Seite
+
+📍 Auswertungen > **„Nachkalkulation Reports"**
+
+Die Seite hat vier Tabs:
+
+| Tab | Aggregation |
+|---|---|
+| **Pro Kunde** | Gruppiert nach `Order.customer` (Freitext) bzw. `Order → ServiceObject → CrmAddress` |
+| **Pro Anlage** | Gruppiert nach `Order.serviceObjectId` |
+| **Pro Mitarbeiter** | Gruppiert nach `OrderBooking.employeeId` |
+| **Pro Auftragstyp** | Gruppiert nach `Order.orderTypeId` |
+
+Jeder Tab zeigt eine Tabelle mit den Spalten:
+
+| Dimension | Aufträge | Σ Stunden | Σ Material | Σ Reisezeit | Σ Externe | Σ Erlös | DB I | DB II | DB III | Rohertrag/h | Ampel |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+**Filter-Toolbar:**
+
+- **Datums-Range-Picker** — default: letzten 30 Tage
+- **Auftragstyp-Filter** (optional)
+- **Sortierung**: Marge ↓ / Marge ↑ / Rohertrag/h ↓ / Erlös ↓
+- **Limit**: 10 / 25 / 50 / 100
+
+**Drill-Down:**
+
+1. Klick auf eine Zeile → Sheet öffnet sich mit allen Einzel-Aufträgen dieser Dimension
+2. Pro Auftrag: Code, Marge %, Rohertrag/h, Link zur Detail-Page
+
+> 💡 **Performance:** Die Aggregation arbeitet auf bis zu 100 Aufträgen pro Aufruf. Bei Tenants mit > 100 aktiven Aufträgen pro Monat empfiehlt sich, den Datums-Range zu verkürzen oder die Auftragstyp-Filter zu nutzen.
+
+#### 13.18.8 Modul aktivieren
+
+Die Nachkalkulation ist ein **separates kostenpflichtiges Modul**. Operator-Anleitung:
+
+##### 13.18.8.1 Auf Tenant-Ebene aktivieren
+
+📍 Platform-Admin > Tenants > [Tenant öffnen] > Tab **„Module"**
+
+1. Modul **„Nachkalkulation"** in der Liste finden
+2. Schalter **„Aktiviert"** umlegen
+3. ✅ Modul ist sofort aktiv — der Tab „Nachkalkulation" erscheint in der Order-Detail-Page, die Settings-Seite ist erreichbar, und die Dashboard-Karte wird auf der Startseite angezeigt
+
+##### 13.18.8.2 Preisgestaltung
+
+| Position | Preis |
+|---|---|
+| Modul-Preis monatlich | 4,00 € pro Mitarbeiter pro Monat |
+| Modul-Preis jährlich | 40,00 € pro Mitarbeiter pro Jahr (zwei Monate Rabatt) |
+| Mehrwertsteuer | 19 % (deutsche Regelsteuer) |
+
+Die Abrechnung läuft über die Platform-Subscription-Billing (siehe §13.13 Wiederkehrende Rechnungen) — bei Aktivierung wird automatisch eine wiederkehrende Position auf der nächsten Plattform-Rechnung erzeugt.
+
+##### 13.18.8.3 Demo-Tenant
+
+Beim Anlegen eines Demo-Tenants mit dem Template **„Industriedienstleister (150 MA)"** ist das Nachkalkulations-Modul **automatisch aktiviert** und der Demo-Tenant kommt mit folgenden Stammdaten vorbefüllt:
+
+- 5 Lohngruppen (Meister, Monteur, Geselle, Auszubildender, Hilfskraft) mit realistischen Sätzen
+- 5 Auftragstypen (Wartung, Notdienst, Reparatur, Inspektion, Projekt)
+- Tenant-Default-Schwellenwerte + Notdienst-Override (15 %/5 %, 80 %/60 %)
+- 3 Pricing-Aktivitäten (Notdienst-Anfahrt FLAT_RATE 89 €, Rohrverlegung PER_UNIT €/lfm, Beratung HOURLY 95 €/h)
+
+So ist der erste Klick durch den Demo-Tenant **direkt aussagekräftig** — keine manuelle Einrichtung nötig.
+
+#### 13.18.9 Praxisbeispiel End-to-End: Notdienst-Auftrag bis Soll/Ist-Bewertung
+
+**Szenario:** Eine Notdienst-Anfahrt wegen einer kaputten Heizung. Der Disponent legt den Auftrag an, plant grob die Soll-Werte, ein Monteur fährt vor Ort, bucht Stunden und Material, signiert den Arbeitsschein, der Disponent kontrolliert die Soll/Ist-Werte und prüft die Marge.
+
+##### Schritt 1 — Stammdaten verifizieren
+
+(Nur einmalig nötig — bei Demo-Tenant ist alles vorbefüllt.)
+
+1. 📍 Administration → **„Lohngruppen"** (`/admin/wage-groups`) → mindestens **„Monteur"** mit `internalHourlyRate = 28`, `billingHourlyRate = 85` ist angelegt
+2. 📍 Administration → **„Auftragstypen"** (`/admin/order-types`) → **„Notdienst"** ist angelegt
+3. 📍 Administration → **Aufträge** → Tab **„Tätigkeiten"** → **„Notdienst-Anfahrt"** mit `pricingType = FLAT_RATE`, `flatRate = 89`, `calculatedHourEquivalent = 0,5` ist angelegt
+4. 📍 Administration → **„Mitarbeiter"** → **„Max Müller"** ist der Lohngruppe **„Monteur"** zugeordnet (Edit-Sheet → Feld **„Lohngruppe"**)
+
+##### Schritt 2 — Auftrag anlegen
+
+1. 📍 Aufträge > **„Aufträge"** → **„Neuer Auftrag"**
+2. Felder ausfüllen:
+   - **Code**: `A-2026-0042`
+   - **Name**: `Heizung Notdienst Mustermann`
+   - **Kunde**: `Mustermann GmbH`
+   - **Auftragstyp**: **„Notdienst"** (Pflicht für die Notdienst-Marge-Schwelle)
+   - **Stundensatz**: leer lassen (fällt durch zur Lohngruppe = 85 €/h)
+3. **„Speichern"**
+4. ✅ Auftrag `A-2026-0042` wird angelegt
+
+##### Schritt 3 — Soll-Werte erfassen
+
+1. Auf der Auftrags-Detailseite: Tab **„Nachkalkulation"** → Sektion **„Soll"**
+2. Klick auf **„Soll-Werte erfassen"**
+3. Felder ausfüllen:
+   - **Gültig ab**: heute
+   - **Geplante Stunden**: `2,5` (1 h Anfahrt-Pauschal-Äquivalent + 2 h Reparatur)
+   - **Geplantes Material**: `45,00` (Thermostat)
+   - **Geplante Reisezeit**: `30` (30 min Anfahrt)
+   - **Geplante externe Kosten**: `0`
+   - **Geplanter Erlös**: `350,00` (Pauschal-Anfahrt 89 € + 2 × 85 €/h Reparatur + 45 € Material + Aufschlag = ca. 350)
+   - **Änderungsgrund**: `INITIAL`
+4. **„Soll erfassen"**
+5. ✅ Soll-Version v1 ist aktiv. Die Ist-Sektion zeigt vorerst nur Nullen — keine Buchungen, keine Bewegungen.
+
+##### Schritt 3b — PER_UNIT-Soll-Mengen erfassen (optional)
+
+Hat der Auftrag PER_UNIT-Aktivitäten (z. B. Rohrverlegung mit `unit = lfm`), pflegt man die Soll-Mengen im selben Sheet:
+
+1. Klick auf **„Mengen-Position hinzufügen"** unterhalb der Standard-Felder
+2. **Activity-Dropdown** öffnen — gefiltert auf Aktivitäten mit `pricingType = PER_UNIT`
+3. **Quantity** eingeben (z. B. `50` für 50 Lfdm.)
+4. Die **Einheit** (z. B. `lfm`) erscheint automatisch rechts neben dem Mengenfeld
+5. Mehrere Mengen-Positionen sind möglich (für Aufträge mit mehreren PER_UNIT-Tätigkeiten); Zeilen können mit dem **×**-Button entfernt werden
+
+> 💡 **Im Soll/Ist-Report** erscheint pro Mengen-Position eine separate Card **„Mengen-Positionen"** mit den eingegebenen Soll-Mengen vs. tatsächlich gebuchten Ist-Mengen aus den Buchungen (siehe Schritt 5).
+
+##### Schritt 4 — Arbeitsschein anlegen + Mitarbeiter zuordnen
+
+1. Tab **„Arbeitsscheine"** → **„Neuer Arbeitsschein"**
+2. Felder:
+   - **Code**: `WS-2026-0017`
+   - **Besuchsdatum**: heute
+   - **Reisezeit (min)**: `30`
+   - **Arbeitsbeschreibung**: `Defektes Thermostat ausgetauscht`
+3. **„Speichern"**
+4. Im neu angelegten Schein → Sektion **„Zugewiesene Mitarbeiter"** → **„Mitarbeiter zuweisen"** → **Max Müller** auswählen → **„Speichern"**
+
+##### Schritt 5 — Buchungen erfassen
+
+(Stunden + Pauschal-Anfahrt — beide Position-Typen demonstrieren die Drei-Wege-Aggregation.)
+
+1. Tab **„Buchungen"** → **„Neue Buchung"**
+2. **Buchung 1 — Pauschal-Anfahrt:**
+   - **Mitarbeiter**: Max Müller
+   - **Aktivität**: **„Notdienst-Anfahrt"** (FLAT_RATE)
+   - **Datum**: heute
+   - **Zeit (min)**: `30` (entspricht der Reisezeit am Schein, kann aber auch leer bleiben — bei FLAT_RATE wird die Zeit nicht berücksichtigt)
+   - **Beschreibung**: `Anfahrt Notdienst`
+   - **Arbeitsschein**: `WS-2026-0017`
+   - **„Speichern"** → ✅ Snapshot wird beim Speichern gesetzt: `hourlyRateAtBooking = 89,00 €` (aus `Activity.flatRate`), `source = activity_flat`
+3. **Buchung 2 — Stunden-Reparatur:**
+   - **Mitarbeiter**: Max Müller
+   - **Aktivität**: `Arbeitsleistung` (HOURLY, ohne Rate)
+   - **Zeit (min)**: `135` (= 2,25 h)
+   - **Beschreibung**: `Thermostat-Tausch und Test`
+   - **Arbeitsschein**: `WS-2026-0017`
+   - **„Speichern"** → ✅ Snapshot: `hourlyRateAtBooking = 85,00 €` (aus `WageGroup.billingHourlyRate` der Lohngruppe „Monteur"), `source = wage_group`
+
+> ⚠️ **Conditional Quantity-Feld bei OrderBookings:** Das Feld **„Menge"** im Buchungs-Sheet erscheint **abhängig vom `pricingType`** der gewählten Activity:
+> - `HOURLY` und `FLAT_RATE` → **Quantity-Feld versteckt** (es gibt keine Stückzahl-Logik)
+> - `PER_UNIT` → **Quantity-Feld sichtbar mit Stern (`*`) und ist Pflicht**. Submit ohne Wert wirft eine Validierungs-Meldung („PER_UNIT-Aktivität benötigt quantity"); die Buchung wird nicht gespeichert. Die Einheit (`unit`) der Activity wird neben dem Label angezeigt (z. B. „Menge * (lfm)").
+>
+> Wechselt man im **Edit-Modus** die Activity von einem PER_UNIT- zu einem HOURLY-Typ, verschwindet das Quantity-Feld dynamisch — der zuvor eingegebene Wert wird beim Speichern auf `NULL` gesetzt.
+
+##### Schritt 6 — Material entnehmen
+
+1. 📍 Lager > **„Lagerentnahmen"** → **„Neue Entnahme"**
+2. Felder:
+   - **Artikel**: `Thermostat HK-3000`
+   - **Menge**: `1`
+   - **Referenz-Typ**: `Auftrag`
+   - **Auftrag**: `A-2026-0042`
+3. **„Speichern"**
+4. ✅ WhStockMovement wird angelegt mit `unitCostAtMovement = 42,50 €` (aus `WhArticle.buyPrice`)
+
+##### Schritt 7 — Arbeitsschein signieren
+
+1. Zurück zu Auftrag `A-2026-0042` → Tab **„Arbeitsscheine"** → `WS-2026-0017` öffnen
+2. Klick auf **„Signieren"**
+3. Tablet-Workflow: Kunde unterschreibt → **„Signatur bestätigen"**
+4. ✅ Status `WS-2026-0017` wechselt zu **SIGNED**
+5. ✅ Bei diesem Übergang wird `travelRateAtSign` automatisch befüllt — das System ermittelt die maximale Lohngruppen-Rate aller zugewiesenen Mitarbeiter (= 85 €/h für Max Müller, einziger Zugewiesener) und persistiert sie als Snapshot.
+
+##### Schritt 8 — Soll/Ist-Sektion prüfen
+
+1. Tab **„Nachkalkulation"** → die Ist-Sektion zeigt jetzt:
+
+| Komponente | Soll | Ist | Abweichung | % |
+|---|---|---|---|---|
+| Stunden | 2,50 | 2,75 | 0,25 | +10,0 % |
+| Material | 45,00 € | 42,50 € | -2,50 € | -5,6 % |
+| Reisezeit (min) | 30 | 30 | 0 | 0,0 % |
+| Externe Kosten | 0,00 € | 0,00 € | 0,00 € | — |
+| Erlös (Soll) | 350,00 € | — | — | — |
+
+> Stunden-Soll = 2,5; Stunden-Ist = 2,25 (Reparatur) + 0,5 (Pauschal-Äquivalent der Notdienst-Anfahrt) = 2,75 → 0,25 h Mehrarbeit.
+
+2. **DB-Stufen-Card:**
+
+```
+Soll-Erlös                       350,00 €
+   – Material Ist                  42,50 €
+   ───────────────────────
+DB I                              307,50 €  (87,9 %)  [grün]
+   – Lohn Ist                     280,25 €
+                                    (89 € Pauschal-Anfahrt
+                                     + 2,25 h × 85 €/h = 191,25 €)
+   ───────────────────────
+DB II                              27,25 €   (7,8 %)   [gelb]
+                                   (Notdienst-Override:
+                                    rot < 5 %, gelb < 15 %, grün ≥ 15 %
+                                    → 7,8 % = gelb)
+   – Reisezeit Ist                 42,50 €
+                                    (30 min × 85 €/h = 42,50 €)
+   – Externe Kosten Ist             0,00 €
+   ───────────────────────
+DB III                            -15,25 €  (-4,4 %)   [rot]
+```
+
+3. **Produktivität-Card:**
+
+```
+Brutto-Stunden Ist:                2,25 h
+Pauschal-Äquivalent:               0,50 h  (aus FLAT_RATE)
+Produktive Stunden gesamt:         2,75 h
+Soll-Stunden:                      2,50 h
+Produktivität:                     110,0 %  [rot]
+                                   (Default-Schwelle:
+                                    < 50 % rot, < 70 % gelb,
+                                    ≥ 70 % grün — aber
+                                    > 100 % heißt Überlauf, also rot)
+Rohertrag pro Stunde (DB II/h):    9,91 €/h
+```
+
+4. **Position-Typen-Tabellen:**
+
+   **Stunden-Positionen:**
+   | Status | Stunden | Lohnkosten |
+   |---|---|---|
+   | Committed (SIGNED) | 2,25 | 191,25 € |
+   | Total | 2,25 | 191,25 € |
+
+   **Pauschalpositionen:**
+   | Aktivität | Anzahl | Pauschale | Σ € | Soll-h Äquiv. |
+   |---|---|---|---|---|
+   | Notdienst-Anfahrt | 1 | 89,00 € | 89,00 € | 0,50 h |
+
+##### Schritt 9 — Marge bewerten und ggf. re-planen
+
+Der Auftrag ist mit DB II = 7,8 % (Notdienst-gelb) und DB III = -4,4 % (rot) abgeschlossen. Der Disponent erkennt, dass die Reisezeit-Position den Auftrag in den negativen Bereich gezogen hat — die Anfahrt-Pauschale 89 € hätte vielleicht inklusive Reisezeit kalkuliert werden sollen, oder der Soll-Erlös war zu knapp.
+
+**Optional — Re-Planung der Soll-Werte zur Demonstration:**
+
+1. Klick auf **„Soll re-planen"**
+2. Felder anpassen:
+   - **Gültig ab**: morgen (muss > aktive validFrom sein)
+   - **Geplanter Erlös**: `400,00` (höher kalkuliert)
+   - **Änderungsgrund**: `REPLAN`
+   - **Notizen**: `Erlös auf 400 € erhöht — Anfahrt deckt nicht die ganze Reisezeit ab.`
+3. **„Soll re-planen"**
+4. ✅ v2 ist aktiv. Klick auf **„Verlauf anzeigen"** → beide Versionen sichtbar in Timeline
+
+##### Schritt 10 — Rechnung aus Arbeitsschein erzeugen
+
+(Brücke zur klassischen Rechnungs-Generierung — siehe §13.17.)
+
+1. Zurück zum Arbeitsschein `WS-2026-0017` (SIGNED)
+2. Action-Bar: Klick auf **„Rechnung erzeugen"**
+3. Dialog zeigt vorbefüllte Positionen:
+   - **Notdienst-Anfahrt: Anfahrt Notdienst** — 1 × 89,00 € = 89,00 € (`source = activity_flat`)
+   - **Arbeitsleistung: Thermostat-Tausch und Test** — 2,25 h × 85,00 € = 191,25 € (`source = wage_group`)
+   - **Anfahrt: 30 Minuten** — 0,50 h × 85,00 € = 42,50 € (Travel-Position)
+4. Bei Bedarf manuelle Position **Material** hinzufügen: `Thermostat HK-3000` × 1 × 42,50 € + Aufschlag → Position
+5. **„Erzeugen"** → Browser leitet zu DRAFT-Rechnung weiter
+
+##### Schritt 11 — Dashboard und Reports prüfen
+
+1. 📍 Dashboard → Karte **„Top X Aufträge nach Rohertrag/h"** zeigt `A-2026-0042` mit 9,91 €/h und gelber Ampel
+2. 📍 Auswertungen > **„Nachkalkulation Reports"** → Tab **„Pro Auftragstyp"** → Filter „letzten 7 Tage" → Aggregation zeigt:
+   - **Notdienst** — Aufträge: 1, Σ Erlös: 350, DB II: 27,25 €, DB II %: 7,8 %, Rohertrag/h: 9,91 €
+3. Klick auf die Zeile → Drill-Down-Sheet zeigt den einen Auftrag `A-2026-0042` mit Link zur Detail-Page
+
+##### Ergebnis
+
+Der vollständige Workflow ist abgeschlossen. Die Soll/Ist-Sicht zeigt sofort, dass der Auftrag **bedingt profitabel** war (DB II gelb), aber unter Reisezeit-Berücksichtigung **negativ** (DB III rot). Der Disponent hat die Soll-Werte re-geplant für zukünftige ähnliche Aufträge.
+
+**Audit-Trail:**
+
+- Soll-v1 + Re-Planung-v2 sind im Audit-Log nachvollziehbar (`entity_type = order_target`, `action = create` und `replan`)
+- Alle Snapshots (Booking-Stundensatz, Material-Unit-Cost, Travel-Rate-At-Sign) sind im jeweiligen DB-Record persistiert — auch wenn morgen die Lohngruppen-Rate auf 100 €/h erhöht wird, bleibt dieser Auftrag bei 85 €/h für die historische Auswertung
+
+**Verknüpfungen aus diesem Beispiel:**
+
+- Auftrag `A-2026-0042` (Auftragstyp: Notdienst)
+  - OrderTarget v1 (validFrom: heute, validTo: morgen) — Soll
+  - OrderTarget v2 (validFrom: morgen, validTo: NULL) — aktive Soll
+  - WorkReport `WS-2026-0017` (SIGNED, mit `travelRateAtSign = 85,00 €`)
+    - 2 OrderBookings, beide mit Snapshot
+  - 1 WhStockMovement (WITHDRAWAL, mit `unitCostAtMovement = 42,50 €`)
+  - 1 BillingDocument (DRAFT, aus dem Schein erzeugt)
+
+> 💡 **Tipp:** Dieses Beispiel ist gleichzeitig der **manuelle Akzeptanztest** für das Modul Nachkalkulation. Wer dieses Beispiel auf dem Demo-Tenant Schritt für Schritt durchklickt und die berechneten Werte oben reproduziert, hat das Modul gegen die Implementierung geprüft.
 
 ---
 

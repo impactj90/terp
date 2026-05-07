@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { ArrowLeft, Edit, Trash2, Plus, Package } from 'lucide-react'
 import { format } from 'date-fns'
@@ -18,6 +18,8 @@ import {
 } from '@/hooks'
 import { useInboundInvoices } from '@/hooks/useInboundInvoices'
 import { useWorkReportsByOrder } from '@/hooks/use-work-reports'
+import { useModules } from '@/hooks/use-modules'
+import { useActiveOrderTarget } from '@/hooks/use-order-targets'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
@@ -34,6 +36,9 @@ import {
   OrderBookingDataTable,
   OrderBookingFormSheet,
 } from '@/components/orders'
+import { OrderTargetFormSheet } from '@/components/orders/order-target-form-sheet'
+import { OrderTargetHistorySheet } from '@/components/orders/order-target-history-sheet'
+import { NkSollIstSection } from '@/components/nachkalkulation/nk-soll-ist-section'
 import { WorkReportStatusBadge } from '@/components/work-reports/work-report-status-badge'
 
 interface OrderAssignment {
@@ -48,9 +53,19 @@ interface OrderAssignment {
 }
 
 
+const VALID_TABS = [
+  'details',
+  'assignments',
+  'workreports',
+  'bookings',
+  'inbound-invoices',
+  'nachkalkulation',
+] as const
+
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isLoading: authLoading } = useAuth()
   const { allowed: canAccess, isLoading: permLoading } = useHasPermission(['orders.manage'])
   const t = useTranslations('adminOrders')
@@ -58,6 +73,28 @@ export default function OrderDetailPage() {
   const locale = useLocale()
 
   const orderId = params.id
+
+  // Honour the `?tab=...` query param so deep-links from drill sheets and
+  // dashboard cards land on the right tab. Falls back to "details".
+  // The URL is the single source of truth — Tab-changes call replace() to
+  // keep the deep-link in sync without forcing a navigation.
+  const tabParam = searchParams.get('tab')
+  const activeTab =
+    tabParam && (VALID_TABS as readonly string[]).includes(tabParam)
+      ? tabParam
+      : 'details'
+  const handleTabChange = React.useCallback(
+    (next: string) => {
+      const url = new URL(window.location.href)
+      if (next === 'details') {
+        url.searchParams.delete('tab')
+      } else {
+        url.searchParams.set('tab', next)
+      }
+      router.replace(`${url.pathname}${url.search}`, { scroll: false })
+    },
+    [router],
+  )
   const { data: order, isLoading } = useOrder(orderId, !authLoading && !permLoading && canAccess)
   const { data: inboundInvoicesData, isLoading: inboundInvoicesLoading } =
     useInboundInvoices({ orderId }, !authLoading && !permLoading && canAccess && !!orderId)
@@ -78,6 +115,15 @@ export default function OrderDetailPage() {
   const [bookingFormOpen, setBookingFormOpen] = React.useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editBooking, setEditBooking] = React.useState<any>(null)
+
+  // Nachkalkulation state
+  const { data: modulesData } = useModules(!authLoading && !permLoading && canAccess)
+  const enabledModules = (modulesData && 'modules' in modulesData ? modulesData.modules : []) as Array<{ module: string }>
+  const isNkEnabled = enabledModules.some((m) => m.module === 'nachkalkulation')
+  const { data: activeTarget } = useActiveOrderTarget(orderId, isNkEnabled)
+  const [targetFormOpen, setTargetFormOpen] = React.useState(false)
+  const [targetHistoryOpen, setTargetHistoryOpen] = React.useState(false)
+  const tNk = useTranslations('nachkalkulation')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deleteBooking, setDeleteBooking] = React.useState<any>(null)
   const deleteBookingMutation = useDeleteOrderBooking()
@@ -203,13 +249,16 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Tabbed content */}
-      <Tabs defaultValue="details">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="details">{t('tabDetails')}</TabsTrigger>
           <TabsTrigger value="assignments">{t('tabAssignments')}</TabsTrigger>
           <TabsTrigger value="workreports">{t('tabWorkReports')}</TabsTrigger>
           <TabsTrigger value="bookings">{t('tabBookings')}</TabsTrigger>
           <TabsTrigger value="inbound-invoices">{t('tabInboundInvoices')}</TabsTrigger>
+          {isNkEnabled && (
+            <TabsTrigger value="nachkalkulation">{t('tabNachkalkulation')}</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="details" className="mt-6">
@@ -439,6 +488,26 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isNkEnabled && (
+          <TabsContent value="nachkalkulation" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end gap-2">
+              {activeTarget ? (
+                <Button variant="outline" onClick={() => setTargetFormOpen(true)}>
+                  {tNk('replanButton')}
+                </Button>
+              ) : (
+                <Button onClick={() => setTargetFormOpen(true)}>
+                  {tNk('captureTargetButton')}
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setTargetHistoryOpen(true)}>
+                {tNk('showHistoryButton')}
+              </Button>
+            </div>
+            <NkSollIstSection orderId={orderId} />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Order Form */}
@@ -502,6 +571,41 @@ export default function OrderDetailPage() {
         isLoading={deleteBookingMutation.isPending}
         onConfirm={handleConfirmDeleteBooking}
       />
+
+      {/* Order Target form (NK-1) */}
+      {isNkEnabled && (
+        <>
+          <OrderTargetFormSheet
+            open={targetFormOpen}
+            onOpenChange={setTargetFormOpen}
+            orderId={orderId}
+            activeTarget={
+              activeTarget != null
+                ? {
+                    id: activeTarget.id,
+                    version: activeTarget.version,
+                    validFrom: activeTarget.validFrom,
+                    validTo: activeTarget.validTo,
+                    targetHours: activeTarget.targetHours,
+                    targetMaterialCost: activeTarget.targetMaterialCost,
+                    targetTravelMinutes: activeTarget.targetTravelMinutes,
+                    targetExternalCost: activeTarget.targetExternalCost,
+                    targetRevenue: activeTarget.targetRevenue,
+                    targetUnitItems: activeTarget.targetUnitItems,
+                    changeReason: activeTarget.changeReason,
+                    notes: activeTarget.notes,
+                  }
+                : null
+            }
+            onSuccess={() => setTargetFormOpen(false)}
+          />
+          <OrderTargetHistorySheet
+            open={targetHistoryOpen}
+            onOpenChange={setTargetHistoryOpen}
+            orderId={orderId}
+          />
+        </>
+      )}
     </div>
   )
 }

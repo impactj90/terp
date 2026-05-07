@@ -99,6 +99,8 @@ export async function create(
     reason?: string | null
     notes?: string | null
     createdById?: string | null
+    // NK-1 (Decision 4)
+    unitCostAtMovement?: number | null
   }
 ) {
   return (prisma as PrismaClient).whStockMovement.create({
@@ -119,6 +121,7 @@ export async function create(
       reason: data.reason ?? null,
       notes: data.notes ?? null,
       createdById: data.createdById ?? null,
+      unitCostAtMovement: data.unitCostAtMovement ?? null,
     },
     include: {
       article: {

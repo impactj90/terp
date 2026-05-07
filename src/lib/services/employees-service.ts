@@ -351,6 +351,8 @@ export async function create(
     employmentTypeId?: string;
     locationId?: string;
     tariffId?: string;
+    /** NK-1 (Decision 2): wage group FK */
+    wageGroupId?: string | null;
     weeklyHours?: number;
     vacationDaysPerYear?: number;
     isActive?: boolean;
@@ -436,6 +438,7 @@ export async function create(
       employmentTypeId: input.employmentTypeId ?? null,
       locationId: input.locationId ?? null,
       tariffId: input.tariffId ?? null,
+      wageGroupId: input.wageGroupId ?? null,
       weeklyHours:
         input.weeklyHours !== undefined
           ? new Prisma.Decimal(input.weeklyHours)
@@ -546,6 +549,8 @@ export async function update(
     employmentTypeId?: string;
     locationId?: string;
     tariffId?: string;
+    /** NK-1 (Decision 2): wage group FK; null clears assignment */
+    wageGroupId?: string | null;
     weeklyHours?: number;
     vacationDaysPerYear?: number;
     isActive?: boolean;
@@ -773,6 +778,11 @@ export async function update(
     data.tariffId = null;
   } else if (input.tariffId !== undefined) {
     data.tariffId = input.tariffId;
+  }
+
+  // NK-1 (Decision 2): wage group FK
+  if (input.wageGroupId !== undefined) {
+    data.wageGroupId = input.wageGroupId;
   }
 
   if (input.clearEmployeeGroupId) {

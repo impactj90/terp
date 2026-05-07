@@ -230,6 +230,26 @@ export async function createDemo(
           await template.applySeedData(templateCtx, templateConfig)
         }
 
+        // NK-1 (Decision 32): enable additional template-declared
+        // modules (e.g. nachkalkulation) — same upsert idempotency
+        // as the DEMO_MODULES loop above.
+        if (template.modulesToEnable && template.modulesToEnable.length > 0) {
+          for (const mod of template.modulesToEnable) {
+            await tx.tenantModule.upsert({
+              where: {
+                tenantId_module: { tenantId: tenant.id, module: mod },
+              },
+              create: {
+                tenantId: tenant.id,
+                module: mod,
+                enabledById: null,
+                enabledByPlatformUserId: platformUserId,
+              },
+              update: {},
+            })
+          }
+        }
+
         return { tenant, adminUser, welcomeEmail }
       },
       { timeout: 120_000 }, // 2min — template apply + supabase roundtrip

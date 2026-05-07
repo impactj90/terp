@@ -52,6 +52,8 @@ const orderOutputSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   serviceObjectId: z.string().nullable(),
+  // NK-1 (Decision 15)
+  orderTypeId: z.string().nullable(),
 })
 
 type OrderOutput = z.infer<typeof orderOutputSchema>
@@ -69,6 +71,8 @@ const createOrderInputSchema = z.object({
   validFrom: z.string().date().optional(),
   validTo: z.string().date().optional(),
   serviceObjectId: z.string().uuid().nullable().optional(),
+  // NK-1 (Decision 15)
+  orderTypeId: z.string().nullable().optional(),
 })
 
 const updateOrderInputSchema = z.object({
@@ -84,6 +88,8 @@ const updateOrderInputSchema = z.object({
   validTo: z.string().date().nullable().optional(),
   isActive: z.boolean().optional(),
   serviceObjectId: z.string().uuid().nullable().optional(),
+  // NK-1 (Decision 15)
+  orderTypeId: z.string().nullable().optional(),
 })
 
 // --- Helpers ---
@@ -108,6 +114,7 @@ function mapOrderToOutput(
     createdAt: Date
     updatedAt: Date
     serviceObjectId: string | null
+    orderTypeId?: string | null
     costCenter?: { id: string; code: string; name: string } | null
   }
 ): OrderOutput {
@@ -129,6 +136,7 @@ function mapOrderToOutput(
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     serviceObjectId: o.serviceObjectId,
+    orderTypeId: o.orderTypeId ?? null,
   }
 }
 

@@ -100,6 +100,8 @@ export async function create(
     validFrom?: string
     validTo?: string
     serviceObjectId?: string | null
+    // NK-1 (Decision 15)
+    orderTypeId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -147,6 +149,7 @@ export async function create(
     validFrom: input.validFrom ? parseDate(input.validFrom) : undefined,
     validTo: input.validTo ? parseDate(input.validTo) : undefined,
     serviceObjectId: input.serviceObjectId ?? null,
+    orderTypeId: input.orderTypeId ?? null,
   })
 
   if (audit) {
@@ -187,6 +190,8 @@ export async function update(
     validTo?: string | null
     isActive?: boolean
     serviceObjectId?: string | null
+    // NK-1 (Decision 15)
+    orderTypeId?: string | null
   },
   audit?: AuditContext
 ) {
@@ -282,6 +287,19 @@ export async function update(
       await validateServiceObject(prisma, tenantId, input.serviceObjectId)
     }
     data.serviceObjectId = input.serviceObjectId
+  }
+
+  // Handle orderTypeId update (NK-1, Decision 15)
+  if (input.orderTypeId !== undefined) {
+    if (input.orderTypeId !== null) {
+      const ot = await prisma.orderType.findFirst({
+        where: { id: input.orderTypeId, tenantId },
+      })
+      if (!ot) {
+        throw new OrderValidationError("Order type not found in tenant")
+      }
+    }
+    data.orderTypeId = input.orderTypeId
   }
 
   await repo.update(prisma, tenantId, input.id, data)

@@ -196,6 +196,14 @@ export default function EmployeeDetailPage() {
                   <DetailRow label={t('labelCostCenter')} value={employee.costCenter ? `${employee.costCenter.name} (${employee.costCenter.code})` : undefined} />
                   <DetailRow label={t('labelEmploymentType')} value={employee.employmentType?.name} />
                   <DetailRow label={t('labelTariff')} value={employee.tariff?.name} />
+                  <DetailRow
+                    label={t('labelWageGroup')}
+                    value={
+                      (employee as unknown as { wageGroup?: { code: string; name: string } | null }).wageGroup
+                        ? `${(employee as unknown as { wageGroup: { code: string; name: string } }).wageGroup.name} (${(employee as unknown as { wageGroup: { code: string; name: string } }).wageGroup.code})`
+                        : undefined
+                    }
+                  />
                   <DetailRow label={t('labelEntryDate')} value={formatDate(employee.entryDate)} />
                   <DetailRow label={t('labelExitDate')} value={formatDate(employee.exitDate)} />
                 </div>

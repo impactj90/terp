@@ -179,6 +179,9 @@ export async function bookGoodsReceipt(
       const newStock = previousStock + posInput.quantity
 
       // 3f. Create stock movement
+      // NK-1 (Decision 4): persist unit cost at movement time so
+      // later price changes don't retroactively rewrite material
+      // cost aggregates.
       const movement = await tx.whStockMovement.create({
         data: {
           tenantId,
@@ -190,6 +193,7 @@ export async function bookGoodsReceipt(
           purchaseOrderId: input.purchaseOrderId,
           purchaseOrderPositionId: posInput.positionId,
           createdById: userId,
+          unitCostAtMovement: position.unitPrice ?? null,
         },
         include: {
           article: {
@@ -300,4 +304,67 @@ export async function bookSinglePosition(
     userId,
     audit
   )
+}
+
+/**
+ * NK-1 (Decision 5): Link or unlink a stock movement to an inbound
+ * invoice line item. The link is the deterministic anti-double-count
+ * signal for the aggregator: line items with at least one linked
+ * stock movement are excluded from the externalCost component
+ * (handled in the aggregator).
+ *
+ * Tenant-scoped: validates that both sides belong to the caller's
+ * tenant before persisting.
+ */
+export async function linkToInboundInvoiceLineItem(
+  prisma: PrismaClient,
+  tenantId: string,
+  movementId: string,
+  lineItemId: string | null,
+  audit?: AuditContext,
+) {
+  // Validate movement belongs to tenant
+  const movement = await prisma.whStockMovement.findFirst({
+    where: { id: movementId, tenantId },
+  })
+  if (!movement) {
+    throw new WhStockMovementNotFoundError("Stock movement not found")
+  }
+
+  if (lineItemId !== null) {
+    const li = await prisma.inboundInvoiceLineItem.findFirst({
+      where: { id: lineItemId, tenantId },
+    })
+    if (!li) {
+      throw new WhStockMovementValidationError(
+        "Inbound invoice line item not found in this tenant",
+      )
+    }
+  }
+
+  await prisma.whStockMovement.update({
+    where: { id: movementId },
+    data: { inboundInvoiceLineItemId: lineItemId },
+  })
+
+  if (audit) {
+    await auditLog
+      .log(prisma, {
+        tenantId,
+        userId: audit.userId,
+        action: "link_inbound_invoice_line_item",
+        entityType: "wh_stock_movement",
+        entityId: movementId,
+        entityName: null,
+        changes: {
+          inboundInvoiceLineItemId: {
+            old: movement.inboundInvoiceLineItemId,
+            new: lineItemId,
+          },
+        },
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      })
+      .catch((err) => console.error("[AuditLog] Failed:", err))
+  }
 }

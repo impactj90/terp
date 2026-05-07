@@ -111,10 +111,35 @@ interface PrismaMocks {
   workReportFindFirst: ReturnType<typeof vi.fn>
   workReportUpdateMany: ReturnType<typeof vi.fn>
   workReportUpdate: ReturnType<typeof vi.fn>
+  orderFindFirst: ReturnType<typeof vi.fn>
+  workReportAssignmentFindMany: ReturnType<typeof vi.fn>
+}
+
+interface MakePrismaOptions {
+  /**
+   * Optional override for `prisma.order.findFirst` return value used by the
+   * NK-1 (Decision 27) travel-rate snapshot resolver. Defaults to a plain
+   * order with `billingRatePerHour: null` so the resolver falls through to
+   * the assignment-based path.
+   */
+  orderForRate?: { billingRatePerHour: unknown } | null
+  /**
+   * Optional override for `prisma.workReportAssignment.findMany` used by the
+   * NK-1 travel-rate resolver to pick the maximum WageGroup / Employee rate
+   * across all assigned employees. Defaults to an empty array (no
+   * assignments → resolver returns `{ rate: null, source: "none" }`).
+   */
+  assignmentsForRate?: Array<{
+    employee: {
+      hourlyRate: unknown
+      wageGroup: { billingHourlyRate: unknown } | null
+    } | null
+  }>
 }
 
 function makePrisma(
   reportOverride: ReturnType<typeof makeReport> | null = makeReport(),
+  options: MakePrismaOptions = {},
 ): { prisma: PrismaClient; mocks: PrismaMocks } {
   const mocks: PrismaMocks = {
     // `sign` calls findById (full record) then later findByIdSimple on race,
@@ -124,6 +149,18 @@ function makePrisma(
     workReportFindFirst: vi.fn().mockResolvedValue(reportOverride),
     workReportUpdateMany: vi.fn().mockResolvedValue({ count: 1 }),
     workReportUpdate: vi.fn().mockResolvedValue(reportOverride),
+    // NK-1 (Decision 27) — travel-rate snapshot resolver fetches the order
+    // and all assignments at sign time.
+    orderFindFirst: vi
+      .fn()
+      .mockResolvedValue(
+        options.orderForRate === undefined
+          ? { billingRatePerHour: null }
+          : options.orderForRate,
+      ),
+    workReportAssignmentFindMany: vi
+      .fn()
+      .mockResolvedValue(options.assignmentsForRate ?? []),
   }
 
   const prisma = {
@@ -131,6 +168,12 @@ function makePrisma(
       findFirst: mocks.workReportFindFirst,
       updateMany: mocks.workReportUpdateMany,
       update: mocks.workReportUpdate,
+    },
+    order: {
+      findFirst: mocks.orderFindFirst,
+    },
+    workReportAssignment: {
+      findMany: mocks.workReportAssignmentFindMany,
     },
     auditLog: { create: vi.fn().mockResolvedValue({}) },
     platformAuditLog: { create: vi.fn().mockResolvedValue({}) },
@@ -476,6 +519,172 @@ describe("sign — concurrent status flip", () => {
       }),
     ).rejects.toMatchObject({ name: "WorkReportNotFoundError" })
     expect(storage.remove).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// NK-1 (Decision 27) — Travel-rate snapshot at sign time
+// ---------------------------------------------------------------------------
+
+describe("sign — NK-1 travel-rate snapshot (Decision 27)", () => {
+  it("snapshots Order.billingRatePerHour when set", async () => {
+    const { prisma, mocks } = makePrisma(makeReport(), {
+      orderForRate: { billingRatePerHour: 95 },
+      // Even with assignments, the order rate wins outright.
+      assignmentsForRate: [
+        {
+          employee: {
+            hourlyRate: 999,
+            wageGroup: { billingHourlyRate: 999 },
+          },
+        },
+      ],
+    })
+
+    await service.sign(
+      prisma,
+      TENANT_A,
+      {
+        id: WORK_REPORT_ID,
+        signerName: "Max Müller",
+        signerRole: "Werkmeister",
+        signatureDataUrl: VALID_PNG_DATA_URL,
+      },
+      { userId: USER_ID },
+    )
+
+    expect(mocks.workReportUpdateMany).toHaveBeenCalledTimes(1)
+    const data = mocks.workReportUpdateMany.mock.calls[0]![0].data
+    expect(data.travelRateAtSign).toBe(95)
+    expect(data.travelRateSourceAtSign).toBe("order")
+  })
+
+  it("falls through to max WageGroup rate across assignments when order rate missing", async () => {
+    const { prisma, mocks } = makePrisma(makeReport(), {
+      orderForRate: { billingRatePerHour: null },
+      // Mixed crew — junior (75) + senior (95). Resolver must pick 95.
+      assignmentsForRate: [
+        {
+          employee: {
+            hourlyRate: 22,
+            wageGroup: { billingHourlyRate: 75 },
+          },
+        },
+        {
+          employee: {
+            hourlyRate: 35,
+            wageGroup: { billingHourlyRate: 95 },
+          },
+        },
+      ],
+    })
+
+    await service.sign(
+      prisma,
+      TENANT_A,
+      {
+        id: WORK_REPORT_ID,
+        signerName: "Max Müller",
+        signerRole: "Werkmeister",
+        signatureDataUrl: VALID_PNG_DATA_URL,
+      },
+      { userId: USER_ID },
+    )
+
+    const data = mocks.workReportUpdateMany.mock.calls[0]![0].data
+    expect(data.travelRateAtSign).toBe(95)
+    expect(data.travelRateSourceAtSign).toBe("wage_group")
+  })
+
+  it("falls through to max Employee.hourlyRate when order + wage_group missing", async () => {
+    const { prisma, mocks } = makePrisma(makeReport(), {
+      orderForRate: { billingRatePerHour: null },
+      assignmentsForRate: [
+        {
+          employee: {
+            hourlyRate: 22,
+            wageGroup: null, // no wage group on either employee
+          },
+        },
+        {
+          employee: {
+            hourlyRate: 35,
+            wageGroup: null,
+          },
+        },
+      ],
+    })
+
+    await service.sign(
+      prisma,
+      TENANT_A,
+      {
+        id: WORK_REPORT_ID,
+        signerName: "Max Müller",
+        signerRole: "Werkmeister",
+        signatureDataUrl: VALID_PNG_DATA_URL,
+      },
+      { userId: USER_ID },
+    )
+
+    const data = mocks.workReportUpdateMany.mock.calls[0]![0].data
+    expect(data.travelRateAtSign).toBe(35)
+    expect(data.travelRateSourceAtSign).toBe("employee")
+  })
+
+  it("writes null + 'none' source when no rate is resolvable", async () => {
+    const { prisma, mocks } = makePrisma(makeReport(), {
+      orderForRate: { billingRatePerHour: null },
+      assignmentsForRate: [],
+    })
+
+    await service.sign(
+      prisma,
+      TENANT_A,
+      {
+        id: WORK_REPORT_ID,
+        signerName: "Max Müller",
+        signerRole: "Werkmeister",
+        signatureDataUrl: VALID_PNG_DATA_URL,
+      },
+      { userId: USER_ID },
+    )
+
+    const data = mocks.workReportUpdateMany.mock.calls[0]![0].data
+    expect(data.travelRateAtSign).toBeNull()
+    expect(data.travelRateSourceAtSign).toBe("none")
+  })
+
+  it("ignores zero / negative rates and falls through correctly", async () => {
+    // Defensive — the resolver's `toPositiveRate` guard rejects <= 0 values.
+    const { prisma, mocks } = makePrisma(makeReport(), {
+      orderForRate: { billingRatePerHour: 0 },
+      assignmentsForRate: [
+        {
+          employee: {
+            hourlyRate: -5,
+            wageGroup: { billingHourlyRate: 65 },
+          },
+        },
+      ],
+    })
+
+    await service.sign(
+      prisma,
+      TENANT_A,
+      {
+        id: WORK_REPORT_ID,
+        signerName: "Max Müller",
+        signerRole: "Werkmeister",
+        signatureDataUrl: VALID_PNG_DATA_URL,
+      },
+      { userId: USER_ID },
+    )
+
+    const data = mocks.workReportUpdateMany.mock.calls[0]![0].data
+    // order=0 rejected, employee=-5 rejected → only wage_group=65 wins
+    expect(data.travelRateAtSign).toBe(65)
+    expect(data.travelRateSourceAtSign).toBe("wage_group")
   })
 })
 
